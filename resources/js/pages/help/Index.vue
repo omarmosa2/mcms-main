@@ -76,11 +76,11 @@ const filteredArticles = (query: string): HelpArticle[] => {
 
         <section class="glass-panel-soft p-5">
             <div class="relative">
-                <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Search class="absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                     v-model="searchQuery"
                     placeholder="Search for help articles..."
-                    class="pattern-field-clay pl-10"
+                    class="pattern-field-clay ps-10"
                 />
             </div>
         </section>

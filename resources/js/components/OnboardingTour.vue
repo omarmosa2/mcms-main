@@ -155,12 +155,12 @@ watch(() => isOpen.value, (newValue) => {
 
             <DialogFooter class="flex items-center justify-between">
                 <Button variant="ghost" size="sm" @click="isOpen = false">
-                    <SkipForward class="mr-2 size-4" />
+                    <SkipForward class="me-2 size-4" />
                     Skip Tour
                 </Button>
                 <Button variant="clay" size="sm" @click="startTour">
                     Start Tour
-                    <ChevronRight class="ml-2 size-4" />
+                    <ChevronRight class="ms-2 size-4" />
                 </Button>
             </DialogFooter>
         </DialogContent>

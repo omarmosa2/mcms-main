@@ -9,25 +9,18 @@ const appName = computed<string>(() => {
     const name = page.props.name;
 
     if (typeof name === 'string' && name.trim() !== '') {
-        return name;
-    }
+return name;
+}
 
     return 'MCMS';
 });
 </script>
 
 <template>
-    <div
-        class="flex aspect-square size-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 via-mint-500 to-teal-500 text-white shadow-sm"
-    >
-        <AppLogoIcon class="size-5 fill-current text-white" />
+    <div class="flex aspect-square size-9 items-center justify-center rounded-lg bg-[#1D9E75] text-white">
+        <AppLogoIcon class="size-[18px] fill-current text-white" />
     </div>
-    <div class="ml-2 grid flex-1 text-left leading-tight">
-        <span class="truncate text-base font-bold">{{ appName }}</span>
-        <span
-            class="truncate text-[0.7rem] font-medium tracking-[0.12em] text-sidebar-foreground/60 uppercase"
-        >
-            Operations Suite
-        </span>
+    <div class="me-3 grid flex-1 text-start leading-tight group-data-[collapsible=icon]:hidden">
+        <span class="truncate text-sm text-[#1A1A1A]">{{ appName }}</span>
     </div>
 </template>

@@ -88,7 +88,7 @@ const IconComponent = computed(() => iconConfig.value.icon);
                     :disabled="loading"
                     @click="emit('confirm')"
                 >
-                    <Spinner v-if="loading" class="ml-2 h-4 w-4" />
+                    <Spinner v-if="loading" class="ms-2 h-4 w-4" />
                     {{ options.confirmText }}
                 </Button>
             </DialogFooter>

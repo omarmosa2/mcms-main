@@ -103,7 +103,7 @@ const chartComponent = type === 'line' ? Line : Bar;
 </script>
 
 <template>
-    <div class="h-64 w-full">
+    <div class="h-72 w-full">
         <component :is="chartComponent" :data="resolvedData" :options="chartOptions" />
     </div>
 </template>

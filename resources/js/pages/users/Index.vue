@@ -621,7 +621,7 @@ const deleteUser = async (userId: number) => {
                                     <component :is="sortIconFor('is_active')" class="size-3.5" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2 text-right">الإجراءات</th>
+                            <th class="px-3 py-2 text-start">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -674,7 +674,7 @@ const deleteUser = async (userId: number) => {
                                     {{ user.is_active ? 'نشط' : 'غير نشط' }}
                                 </span>
                             </td>
-                            <td class="table-cell-actions px-3 py-2 md:text-right" data-label="الإجراءات">
+                            <td class="table-cell-actions px-3 py-2 md:text-start" data-label="الإجراءات">
                                 <div class="flex flex-wrap justify-end gap-2">
                                     <Button
                                         v-if="can('users.view')"
@@ -838,7 +838,7 @@ const deleteUser = async (userId: number) => {
                     </div>
 
                     <Button :disabled="processing" variant="clay" class="w-full">
-                        <Plus class="ml-2 size-4" />
+                        <Plus class="ms-2 size-4" />
                         إنشاء مستخدم
                     </Button>
                 </Form>

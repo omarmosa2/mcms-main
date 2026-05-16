@@ -228,13 +228,13 @@ const totalDeletedItems = Object.values(trashData).reduce(
                     <table class="w-full">
                         <thead>
                             <tr class="border-b border-border/70">
-                                <th class="px-4 py-2 text-right text-xs font-medium text-muted-foreground">
-                                    العنصر
+                                <th class="px-4 py-2 text-start text-xs font-medium text-muted-foreground">
+                                    النوع
                                 </th>
-                                <th class="px-4 py-2 text-right text-xs font-medium text-muted-foreground">
-                                    تاريخ الحذف
+                                <th class="px-4 py-2 text-start text-xs font-medium text-muted-foreground">
+                                    حذف
                                 </th>
-                                <th class="px-4 py-2 text-right text-xs font-medium text-muted-foreground">
+                                <th class="px-4 py-2 text-start text-xs font-medium text-muted-foreground">
                                     الإجراءات
                                 </th>
                             </tr>
@@ -249,7 +249,7 @@ const totalDeletedItems = Object.values(trashData).reduce(
                                     <span class="font-medium">{{ item.name }}</span>
                                     <span
                                         v-if="item.number"
-                                        class="mr-2 text-xs text-muted-foreground"
+                                        class="me-2 text-xs text-muted-foreground"
                                     >
                                         ({{ item.number }})
                                     </span>
@@ -268,7 +268,7 @@ const totalDeletedItems = Object.values(trashData).reduce(
                                                 restoreItem(type, item.id, item.name)
                                             "
                                         >
-                                            <RotateCcw class="mr-1 size-3" />
+                                            <RotateCcw class="me-1 size-3" />
                                             استرجاع
                                         </Button>
                                         <Button
@@ -280,7 +280,7 @@ const totalDeletedItems = Object.values(trashData).reduce(
                                                 forceDeleteItem(type, item.id, item.name)
                                             "
                                         >
-                                            <X class="mr-1 size-3" />
+                                            <X class="me-1 size-3" />
                                             حذف نهائي
                                         </Button>
                                     </div>

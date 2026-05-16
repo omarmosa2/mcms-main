@@ -68,7 +68,7 @@ onBeforeUnmount(() => {
             <Bell class="size-4" />
             <span
                 v-if="unreadCount > 0"
-                class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent-coral)] text-[10px] font-bold text-white"
+                class="absolute -top-1 -inset-inline-end-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--accent-coral)] text-[10px] font-bold text-white"
             >
                 {{ unreadCount }}
             </span>
@@ -76,7 +76,7 @@ onBeforeUnmount(() => {
 
         <div
             v-if="isOpen"
-            class="absolute left-0 top-full z-50 mt-2 w-80 rounded-xl border border-border/70 bg-background/95 p-3 shadow-lg backdrop-blur-md"
+            class="absolute inset-inline-start-0 top-full z-50 mt-2 w-80 rounded-xl border border-border/70 bg-background/95 p-3 shadow-lg backdrop-blur-md"
         >
             <div class="mb-2 flex items-center justify-between border-b border-border/50 pb-2">
                 <h3 class="text-sm font-semibold">الإشعارات</h3>
@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
                     v-for="notification in notifications"
                     :key="notification.id"
                     type="button"
-                    class="w-full rounded-lg p-2 text-right transition hover:bg-muted/50"
+                    class="w-full rounded-lg p-2 text-start transition hover:bg-muted/50"
                     :class="!notification.read ? 'bg-info-500/5' : ''"
                     @click="markAsRead(notification.id)"
                 >

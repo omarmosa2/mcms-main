@@ -807,7 +807,7 @@ const deleteDepartment = async (department: Department) => {
                                     />
                                 </button>
                             </th>
-                            <th class="px-3 py-2 text-right">الإجراءات</th>
+                            <th class="px-3 py-2 text-start">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -891,7 +891,7 @@ const deleteDepartment = async (department: Department) => {
                                 }}
                             </td>
                             <td
-                                class="table-cell-actions px-3 py-2 md:text-right"
+                                class="table-cell-actions px-3 py-2 md:text-start"
                                 data-label="الإجراءات"
                             >
                                 <div

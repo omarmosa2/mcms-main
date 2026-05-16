@@ -118,7 +118,7 @@ const savePreferences = (): void => {
 
         <div class="flex items-center gap-4">
             <Button variant="clay" @click="savePreferences">
-                <Bell class="mr-2 size-4" />
+                <Bell class="ms-2 size-4" />
                 حفظ التفضيلات
             </Button>
         </div>

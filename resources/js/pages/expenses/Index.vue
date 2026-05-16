@@ -985,7 +985,7 @@ const closeEditExpense = () => {
                         variant="clay"
                         class="w-full"
                     >
-                        <Plus class="ml-2 size-4" />
+                        <Plus class="ms-2 size-4" />
                         تسجيل مصروف
                     </Button>
                 </Form>

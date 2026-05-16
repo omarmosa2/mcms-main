@@ -187,6 +187,49 @@ Add these tasteful transitions everywhere:
 
 ---
 
+## 🔵 Page-Specific Fixes
+
+### Patients page (صفحة المرضى) — specific fixes:
+
+#### Header section
+- Title "المرضى" on the right with subtitle "سجل المرضى والبيانات الديموغرافية" in muted text below it
+- Action buttons on the left: "إضافة متقدمة" as ghost button, "استيراد" and "تصدير" as secondary outlined buttons, "إضافة سريعة" as primary teal filled button
+- One clean divider below the header — nothing else
+
+#### Quick add form
+- Hidden by default — slides down only when "إضافة سريعة" is clicked
+- Subtle #F7F8FA background with 0.5px teal border (#1D9E75) to signal it's an active form area
+- Fields in one row: الاسم الأول / اسم العائلة / الهاتف / الجنس / تاريخ الميلاد
+- Action buttons right-aligned: "مسح" ghost / "حفظ فقط" secondary / "حفظ وإضافة آخر" primary
+- Enter key hint in small muted text on the left
+
+#### Table controls bar
+- One clean row: search input on the right (placeholder: رقم الملف، الاسم، الهاتف، البريد) — rows-per-page selector on the left
+- Show total count once only, small and muted, next to the rows selector: "الإجمالي: 50"
+- Remove all other duplicate count labels from the page
+
+#### Table
+- Header: #F9FAFB background / 12px / 500 weight / muted color / sort arrows on every column
+- Row height: 52px / bottom border only 0.5px #E5E7EB / hover: #F9FAFB background
+- Zebra striping: off — hover state is enough
+- Column order (RTL): checkbox / رقم الملف / الاسم / تاريخ الميلاد / الجنس / الهاتف / البريد / الإجراءات
+- رقم الملف: monospace font, muted color — it's metadata not primary info
+- الاسم: 500 weight, primary color — it's the most important column
+- الجنس badge: pill shape, 999px radius — ذكر in blue tint (#EFF6FF bg / #1D4ED8 text) — أنثى in pink tint (#FDF2F8 bg / #9D174D text)
+
+#### Row actions — most critical fix
+- Remove the large red "حذف" button from every row completely
+- Replace all three actions (عرض / تعديل / حذف) with three small icon-only buttons that appear on row hover only
+- Icons: ti-eye (عرض) / ti-edit (تعديل) / ti-trash (حذف)
+- Icon color: muted gray by default / teal on hover for عرض and تعديل / red on hover for حذف only
+- Size: 32px × 32px / 6px border radius / 0.5px border
+- On mobile or when hover is unavailable: show a single "⋮" menu button instead
+
+#### Empty state (when no results)
+- Centered: 48px muted icon (ti-users) + "لا يوجد مرضى" heading + "جرب تغيير كلمة البحث أو أضف مريضاً جديداً" subtext + "إضافة سريعة" teal button
+
+---
+
 ## 🏗️ Component Architecture to Create/Refactor
 
 Create these reusable Vue components if they don't exist:

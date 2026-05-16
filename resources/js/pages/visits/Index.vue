@@ -654,14 +654,14 @@ const isDoctorAssigned = (visit: Visit): boolean => {
 <template>
     <Head title="الزيارات" />
 
-    <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6" dir="rtl">
+    <div class="container-modern space-y-5" dir="rtl">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-center gap-3">
                 <div>
                     <h1 class="page-title">الزيارات</h1>
-                    <p class="mt-1 text-sm text-muted-foreground">إدارة الزيارات السريرية وتحويل الحالات.</p>
+                    <p class="mt-1 text-sm text-slate-500">إدارة الزيارات السريرية وتحويل الحالات.</p>
                 </div>
-                <span class="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground">
+                <span class="inline-flex items-center rounded-full border border-slate-100/80 bg-slate-50/60 px-2.5 py-0.5 text-[0.7rem] font-medium text-slate-500">
                     {{ activeRoleLabel }}
                 </span>
             </div>
@@ -669,24 +669,24 @@ const isDoctorAssigned = (visit: Visit): boolean => {
             <div class="flex items-center gap-2">
                 <a
                     :href="VisitExportController.export()"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground min-h-[44px]"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-100/80 bg-white px-3 py-2 text-xs font-medium text-slate-500 transition hover:text-[#0F9D7A] hover:border-[#0F9D7A]/20"
                 >
                     <Download class="size-3.5" />
                     تصدير Excel
                 </a>
                 <a
                     :href="VisitExportController.exportPdf()"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground min-h-[44px]"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-100/80 bg-white px-3 py-2 text-xs font-medium text-slate-500 transition hover:text-[#0F9D7A] hover:border-[#0F9D7A]/20"
                 >
                     <FileText class="size-3.5" />
                     تصدير PDF
                 </a>
 
-                <div class="inline-flex rounded-lg border border-border/60 bg-background/60 p-0.5">
+                <div class="inline-flex rounded-lg border border-slate-100/80 bg-white p-0.5">
                     <button
                         type="button"
-                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all min-h-[44px]"
-                        :class="viewMode === 'kanban' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all"
+                        :class="viewMode === 'kanban' ? 'bg-[#0F9D7A] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
                         @click="viewMode = 'kanban'"
                     >
                         <Kanban class="size-3.5" />
@@ -694,8 +694,8 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                     </button>
                     <button
                         type="button"
-                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all min-h-[44px]"
-                        :class="viewMode === 'table' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all"
+                        :class="viewMode === 'table' ? 'bg-[#0F9D7A] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
                         @click="viewMode = 'table'"
                     >
                         <Table2 class="size-3.5" />
@@ -705,9 +705,9 @@ const isDoctorAssigned = (visit: Visit): boolean => {
 
                 <Button
                     v-if="can('visit.start')"
-                    variant="clay"
+                    variant="default"
                     size="sm"
-                    class="h-10 rounded-lg px-3 text-xs"
+                    class="h-9 rounded-lg bg-[#0F9D7A] text-white hover:bg-[#0B7A5E] shadow-sm"
                     @click="isCreateSheetOpen = true"
                 >
                     <Plus class="size-3.5" />
@@ -716,24 +716,24 @@ const isDoctorAssigned = (visit: Visit): boolean => {
             </div>
         </div>
 
-        <section class="rounded-xl border border-border/70 bg-card px-4 py-3">
+        <section class="card-float px-4 py-3">
             <div class="flex flex-wrap items-center gap-4 md:gap-6">
                 <div class="flex items-center gap-2">
-                    <span class="size-2 rounded-full bg-[var(--accent-teal)]" aria-hidden="true"></span>
-                    <span class="text-sm text-muted-foreground">بدأت</span>
-                    <span class="text-lg font-bold tabular-nums text-[var(--accent-teal-strong)]">{{ startedVisitsCount }}</span>
+                    <span class="size-2.5 rounded-full bg-[#0F9D7A]" aria-hidden="true"></span>
+                    <span class="text-sm text-slate-500">بدأت</span>
+                    <span class="metric-value text-[#0F9D7A]">{{ startedVisitsCount }}</span>
                 </div>
-                <div class="hidden h-5 w-px bg-border/60 md:block" aria-hidden="true"></div>
+                <div class="hidden h-5 w-px bg-slate-100/80 md:block" aria-hidden="true"></div>
                 <div class="flex items-center gap-2">
-                    <span class="size-2 rounded-full bg-[var(--accent-coral)]" aria-hidden="true"></span>
-                    <span class="text-sm text-muted-foreground">قيد التنفيذ</span>
-                    <span class="text-lg font-bold tabular-nums text-[var(--accent-coral-strong)]">{{ inProgressVisitsCount }}</span>
+                    <span class="size-2.5 rounded-full bg-[#F59E0B]" aria-hidden="true"></span>
+                    <span class="text-sm text-slate-500">قيد التنفيذ</span>
+                    <span class="metric-value text-[#F59E0B]">{{ inProgressVisitsCount }}</span>
                 </div>
-                <div class="hidden h-5 w-px bg-border/60 md:block" aria-hidden="true"></div>
+                <div class="hidden h-5 w-px bg-slate-100/80 md:block" aria-hidden="true"></div>
                 <div class="flex items-center gap-2">
-                    <span class="size-2 rounded-full bg-[var(--accent-mint)]" aria-hidden="true"></span>
-                    <span class="text-sm text-muted-foreground">مكتملة</span>
-                    <span class="text-lg font-bold tabular-nums text-[var(--accent-mint-strong)]">{{ completedVisitsCount }}</span>
+                    <span class="size-2.5 rounded-full bg-[#10B981]" aria-hidden="true"></span>
+                    <span class="text-sm text-slate-500">مكتملة</span>
+                    <span class="metric-value text-[#10B981]">{{ completedVisitsCount }}</span>
                 </div>
             </div>
         </section>
@@ -742,14 +742,14 @@ const isDoctorAssigned = (visit: Visit): boolean => {
             <div
                 v-for="col in kanbanColumns"
                 :key="col.key"
-                class="flex flex-col rounded-xl border border-border/60 bg-background/40"
+                class="flex flex-col rounded-xl border border-slate-100/80 bg-slate-50/30"
             >
-                <div class="sticky top-0 flex items-center justify-between rounded-t-xl border-b border-border/60 bg-card p-3">
+                <div class="sticky top-0 flex items-center justify-between rounded-t-xl border-b border-slate-100/80 bg-white px-3 py-2.5">
                     <div class="flex items-center gap-2">
-                        <span class="size-2 rounded-full" :class="col.dotColor"></span>
-                        <h3 class="text-sm font-semibold">{{ col.label }}</h3>
+                        <span class="size-2.5 rounded-full" :class="col.dotColor"></span>
+                        <h3 class="text-sm font-semibold text-slate-700">{{ col.label }}</h3>
                     </div>
-                    <span class="rounded-md bg-muted px-2 py-0.5 text-xs font-bold tabular-nums text-muted-foreground">
+                    <span class="rounded-md bg-slate-50 px-2 py-0.5 text-xs font-bold tabular-nums text-slate-500">
                         {{ getKanbanVisits(col.key).length }}
                     </span>
                 </div>
@@ -758,30 +758,30 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                     <div
                         v-for="visit in getKanbanVisits(col.key)"
                         :key="visit.id"
-                        class="rounded-lg border border-border/60 bg-card p-3 transition-colors hover:border-[var(--accent-mint-soft)]"
-                        :class="{ 'border-r-2 border-r-[var(--accent-teal)]': isDoctorAssigned(visit) }"
+                        class="rounded-lg border border-slate-100/80 bg-white p-3 transition-all hover:border-[#0F9D7A]/20 hover:shadow-sm"
+                        :class="{ 'border-r-2 border-r-[#0F9D7A]': isDoctorAssigned(visit) }"
                     >
                         <div class="mb-2 flex items-center justify-between">
-                            <span class="font-mono text-xs font-medium tracking-wide">{{ visit.visit_number }}</span>
+                            <span class="font-mono text-xs font-medium tracking-wide text-slate-600">{{ visit.visit_number }}</span>
                             <span
-                                class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.65rem] font-medium capitalize"
+                                class="inline-flex items-center gap-1 rounded-full border border-slate-100/80 px-2 py-0.5 text-[0.65rem] font-medium capitalize"
                                 :class="visitStatusClass(visit.status)"
                             >
-                                <span class="size-1 rounded-full" :class="visitStatusDotClass(visit.status)"></span>
+                                <span class="size-1.5 rounded-full" :class="visitStatusDotClass(visit.status)"></span>
                                 {{ visitStatusLabel(visit.status) }}
                             </span>
                         </div>
 
-                        <p class="text-sm font-semibold">{{ visit.patient?.full_name ?? '-' }}</p>
-                        <p class="mt-0.5 text-xs text-muted-foreground">
+                        <p class="text-sm font-semibold text-slate-800">{{ visit.patient?.full_name ?? '-' }}</p>
+                        <p class="mt-0.5 text-xs text-slate-400">
                             {{ visit.doctor?.name ?? 'بدون طبيب' }}
                         </p>
 
-                        <div v-if="visit.chief_complaint" class="mt-2 rounded-md bg-muted/40 p-2 text-xs leading-5 text-muted-foreground">
+                        <div v-if="visit.chief_complaint" class="mt-2 rounded-md bg-slate-50/60 p-2 text-xs leading-5 text-slate-500">
                             {{ visit.chief_complaint.length > 80 ? visit.chief_complaint.slice(0, 80) + '...' : visit.chief_complaint }}
                         </div>
 
-                        <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
                             <span v-if="visit.queue_entry?.queue_number" class="tabular-nums">
                                 طابور #{{ visit.queue_entry.queue_number }}
                             </span>
@@ -794,9 +794,9 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                             <Button
                                 v-if="canViewVisit"
                                 type="button"
-                                variant="neumorphic"
+                                variant="outline"
                                 size="sm"
-                                class="h-10 px-2 text-[0.65rem]"
+                                class="h-8 px-2 text-[0.65rem] rounded-md border-slate-200/80"
                                 @click="openViewVisit(visit)"
                             >
                                 عرض
@@ -804,9 +804,9 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                             <Button
                                 v-if="canEditVisit && visit.status !== 'completed'"
                                 type="button"
-                                variant="clay"
+                                variant="default"
                                 size="sm"
-                                class="h-10 px-2 text-[0.65rem]"
+                                class="h-8 px-2 text-[0.65rem] rounded-md bg-[#0F9D7A] hover:bg-[#0B7A5E]"
                                 @click="openEditVisit(visit)"
                             >
                                 تعديل
@@ -817,7 +817,7 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                                 method="patch"
                                 as="button"
                                 :data="{ status: 'in_progress' }"
-                                class="inline-flex h-10 items-center rounded-md border border-border/60 bg-background/60 px-2 text-[0.65rem] font-medium transition hover:border-[var(--accent-teal)]"
+                                class="inline-flex h-8 items-center rounded-md border border-slate-200/80 bg-white px-2 text-[0.65rem] font-medium text-slate-600 transition hover:border-[#0F9D7A]/30 hover:text-[#0F9D7A]"
                             >
                                 قيد التنفيذ
                             </Link>
@@ -827,7 +827,7 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                                 method="patch"
                                 as="button"
                                 :data="{ status: 'completed' }"
-                                class="inline-flex h-10 items-center rounded-md border border-border/60 bg-background/60 px-2 text-[0.65rem] font-medium text-[var(--accent-mint-strong)] transition hover:border-[var(--accent-mint)]"
+                                class="inline-flex h-8 items-center rounded-md border border-slate-200/80 bg-white px-2 text-[0.65rem] font-medium text-[#10B981] transition hover:border-[#10B981]/30"
                             >
                                 إكمال
                             </Link>
@@ -836,7 +836,7 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                                 type="button"
                                 size="sm"
                                 variant="destructive"
-                                class="h-10 px-2 text-[0.65rem]"
+                                class="h-8 px-2 text-[0.65rem] rounded-md"
                                 @click="handleDeleteVisit(visit)"
                             >
                                 حذف
@@ -844,23 +844,23 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                         </div>
                     </div>
 
-                    <div v-if="getKanbanVisits(col.key).length === 0" class="py-8 text-center text-xs text-muted-foreground">
+                    <div v-if="getKanbanVisits(col.key).length === 0" class="py-8 text-center text-xs text-slate-400">
                         لا توجد زيارات
                     </div>
                 </div>
             </div>
         </div>
 
-        <div v-if="viewMode === 'table'" class="glass-panel-soft p-5">
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                <h3 class="pattern-typographic-title text-[0.76rem]">جميع الزيارات</h3>
-                <span class="text-xs text-muted-foreground">الإجمالي: {{ visits.meta.total }}</span>
+        <div v-if="viewMode === 'table'" class="card-float p-5">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100/80 pb-3">
+                <h3 class="text-sm font-semibold text-slate-700">جميع الزيارات</h3>
+                <span class="text-xs text-slate-400">الإجمالي: {{ visits.meta.total }}</span>
             </div>
 
-            <div class="space-y-3 rounded-2xl border border-border/70 bg-background/60 p-4">
+            <div class="space-y-3 rounded-lg border border-slate-100/80 bg-slate-50/40 p-4">
                 <div class="grid gap-3 md:grid-cols-[repeat(3,minmax(0,1fr))] md:items-end">
                     <div class="grid gap-2 md:col-span-2">
-                        <Label for="visits_search_filter">بحث</Label>
+                        <Label for="visits_search_filter" class="text-xs font-medium text-slate-600">بحث</Label>
                         <FilterSearch
                             id="visits_search_filter"
                             v-model="localSearch"
@@ -868,7 +868,7 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                         />
                     </div>
                     <div class="grid gap-2">
-                        <Label for="visits_status_filter">الحالة</Label>
+                        <Label for="visits_status_filter" class="text-xs font-medium text-slate-600">الحالة</Label>
                         <FilterSelect
                             id="visits_status_filter"
                             v-model="localStatus"
@@ -880,11 +880,11 @@ const isDoctorAssigned = (visit: Visit): boolean => {
 
                 <div class="grid gap-3 md:grid-cols-[repeat(2,minmax(0,1fr))] md:items-end">
                     <div class="grid gap-2 md:max-w-44">
-                        <Label for="visits_per_page">صفوف لكل صفحة</Label>
+                        <Label for="visits_per_page" class="text-xs font-medium text-slate-600">صفوف لكل صفحة</Label>
                         <select
                             id="visits_per_page"
                             v-model.number="localRowsPerPage"
-                            class="pattern-field-clay h-10 px-3 py-1.5"
+                            class="h-9 w-full rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-[#0F9D7A]/40 focus:outline-none focus:ring-1 focus:ring-[#0F9D7A]/20"
                         >
                             <option value="10">10</option>
                             <option value="15">15</option>
@@ -904,85 +904,85 @@ const isDoctorAssigned = (visit: Visit): boolean => {
 
             <div
                 v-if="can('visit.start') && selectedVisitIds.length > 0"
-                class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
+                class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-red-100/80 bg-red-50/40 p-3"
             >
-                <Button type="button" variant="destructive" size="sm" @click="handleBulkDelete">
+                <Button type="button" variant="destructive" size="sm" class="h-9 rounded-md" @click="handleBulkDelete">
                     حذف المحدد ({{ selectedVisitIds.length }})
                 </Button>
-                <Button type="button" variant="ghost" size="sm" @click="clearSelectedVisits">إلغاء التحديد</Button>
+                <Button type="button" variant="ghost" size="sm" class="h-9 rounded-md" @click="clearSelectedVisits">إلغاء التحديد</Button>
             </div>
 
-            <div class="ui-table-shell">
-                <table class="ui-table md:min-w-[980px]">
+            <div class="overflow-x-auto">
+                <table class="w-full">
                     <thead>
-                        <tr>
-                            <th v-if="can('visit.start')" class="px-3 py-2">
+                        <tr class="border-b border-slate-100/80 bg-slate-50/50">
+                            <th v-if="can('visit.start')" class="px-3 py-2.5 text-xs font-medium text-slate-500">
                                 <input
                                     type="checkbox"
-                                    class="size-4 rounded border-border"
+                                    class="size-4 rounded border-slate-200/80"
                                     :checked="areAllDeletableVisitsSelected"
                                     @change="toggleAllVisitsSelection"
                                 />
                             </th>
-                            <th class="px-3 py-2">
-                                <button type="button" class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground" @click="toggleSort('visit_number')">
+                            <th class="px-3 py-2.5 text-xs font-medium text-slate-500">
+                                <button type="button" class="inline-flex items-center gap-1.5 font-medium transition hover:text-slate-700" @click="toggleSort('visit_number')">
                                     رقم الزيارة
                                     <component :is="sortIconFor('visit_number')" class="size-3.5" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2">المريض</th>
-                            <th class="px-3 py-2">الطبيب</th>
-                            <th class="px-3 py-2">الموعد</th>
-                            <th class="px-3 py-2">رقم الطابور</th>
-                            <th class="px-3 py-2">
-                                <button type="button" class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground" @click="toggleSort('status')">
+                            <th class="px-3 py-2.5 text-xs font-medium text-slate-500">المريض</th>
+                            <th class="px-3 py-2.5 text-xs font-medium text-slate-500">الطبيب</th>
+                            <th class="px-3 py-2.5 text-xs font-medium text-slate-500">الموعد</th>
+                            <th class="px-3 py-2.5 text-xs font-medium text-slate-500">رقم الطابور</th>
+                            <th class="px-3 py-2.5 text-xs font-medium text-slate-500">
+                                <button type="button" class="inline-flex items-center gap-1.5 font-medium transition hover:text-slate-700" @click="toggleSort('status')">
                                     الحالة
                                     <component :is="sortIconFor('status')" class="size-3.5" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2">
-                                <button type="button" class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground" @click="toggleSort('started_at')">
+                            <th class="px-3 py-2.5 text-xs font-medium text-slate-500">
+                                <button type="button" class="inline-flex items-center gap-1.5 font-medium transition hover:text-slate-700" @click="toggleSort('started_at')">
                                     بدأت
                                     <component :is="sortIconFor('started_at')" class="size-3.5" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2 text-right">الإجراءات</th>
+                            <th class="px-3 py-2.5 text-xs font-medium text-slate-500 text-start">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="visit in visibleVisits" :key="visit.id" class="ui-table-row align-top">
-                            <td v-if="can('visit.start')" class="px-3 py-2" data-label="تحديد">
+                        <tr v-for="visit in visibleVisits" :key="visit.id" class="border-b border-slate-50 hover:bg-slate-50/40 transition-colors align-top">
+                            <td v-if="can('visit.start')" class="px-3 py-2.5" data-label="تحديد">
                                 <input
                                     v-if="visit.status === 'started'"
                                     v-model="selectedVisitIds"
                                     type="checkbox"
-                                    class="size-4 rounded border-border"
+                                    class="size-4 rounded border-slate-200/80"
                                     :value="visit.id"
                                 />
                             </td>
-                            <td class="px-3 py-2 font-medium" data-label="رقم الزيارة">{{ visit.visit_number }}</td>
-                            <td class="px-3 py-2" data-label="المريض">{{ visit.patient?.full_name ?? '-' }}</td>
-                            <td class="px-3 py-2" data-label="الطبيب">{{ visit.doctor?.name ?? '-' }}</td>
-                            <td class="px-3 py-2" data-label="الموعد">{{ visit.appointment?.appointment_number ?? '-' }}</td>
-                            <td class="px-3 py-2" data-label="رقم الطابور">{{ visit.queue_entry?.queue_number ?? '-' }}</td>
-                            <td class="px-3 py-2" data-label="الحالة">
+                            <td class="px-3 py-2.5 font-medium text-slate-700" data-label="رقم الزيارة">{{ visit.visit_number }}</td>
+                            <td class="px-3 py-2.5 text-slate-600" data-label="المريض">{{ visit.patient?.full_name ?? '-' }}</td>
+                            <td class="px-3 py-2.5 text-slate-600" data-label="الطبيب">{{ visit.doctor?.name ?? '-' }}</td>
+                            <td class="px-3 py-2.5 text-slate-600" data-label="الموعد">{{ visit.appointment?.appointment_number ?? '-' }}</td>
+                            <td class="px-3 py-2.5 text-slate-600" data-label="رقم الطابور">{{ visit.queue_entry?.queue_number ?? '-' }}</td>
+                            <td class="px-3 py-2.5" data-label="الحالة">
                                 <span
-                                    class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium capitalize"
+                                    class="inline-flex items-center gap-1 rounded-full border border-slate-100/80 px-2.5 py-1 text-xs font-medium capitalize"
                                     :class="visitStatusClass(visit.status)"
                                 >
                                     <span class="size-1.5 rounded-full" :class="visitStatusDotClass(visit.status)"></span>
                                     {{ visitStatusLabel(visit.status) }}
                                 </span>
                             </td>
-                            <td class="px-3 py-2" data-label="بدأت">{{ formatDateTime(visit.started_at) }}</td>
-                            <td class="table-cell-actions px-3 py-2 md:text-right" data-label="الإجراءات">
-                                <div class="flex flex-wrap justify-end gap-2">
+                            <td class="px-3 py-2.5 text-slate-500" data-label="بدأت">{{ formatDateTime(visit.started_at) }}</td>
+                            <td class="px-3 py-2.5 md:text-start" data-label="الإجراءات">
+                                <div class="flex flex-wrap justify-end gap-1.5">
                                     <Button
                                         v-if="canViewVisit"
                                         type="button"
-                                        variant="neumorphic"
+                                        variant="outline"
                                         size="sm"
-                                        class="h-10 px-3 text-xs"
+                                        class="h-8 px-2 text-xs rounded-md border-slate-200/80"
                                         @click="openViewVisit(visit)"
                                     >
                                         عرض
@@ -990,9 +990,9 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                                     <Button
                                         v-if="canEditVisit && visit.status !== 'completed'"
                                         type="button"
-                                        variant="clay"
+                                        variant="default"
                                         size="sm"
-                                        class="h-10 px-3 text-xs"
+                                        class="h-8 px-2 text-xs rounded-md bg-[#0F9D7A] hover:bg-[#0B7A5E]"
                                         @click="openEditVisit(visit)"
                                     >
                                         تعديل
@@ -1003,7 +1003,7 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                                         method="patch"
                                         as="button"
                                         :data="{ status: 'in_progress' }"
-                                        class="pattern-control-neumorphic rounded-md px-2 py-1 text-xs font-medium transition hover:border-[var(--accent-teal)] min-h-[44px]"
+                                        class="inline-flex h-8 items-center rounded-md border border-slate-200/80 bg-white px-2 text-xs font-medium text-slate-600 transition hover:border-[#0F9D7A]/30 hover:text-[#0F9D7A]"
                                     >
                                         قيد التنفيذ
                                     </Link>
@@ -1013,7 +1013,7 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                                         method="patch"
                                         as="button"
                                         :data="{ status: 'completed' }"
-                                        class="pattern-control-neumorphic rounded-md px-2 py-1 text-xs font-medium transition hover:border-[var(--accent-mint)] min-h-[44px]"
+                                        class="inline-flex h-8 items-center rounded-md border border-slate-200/80 bg-white px-2 text-xs font-medium text-[#10B981] transition hover:border-[#10B981]/30"
                                     >
                                         إكمال
                                     </Link>
@@ -1022,31 +1022,35 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                                         type="button"
                                         size="sm"
                                         variant="destructive"
-                                        class="h-10 px-3 text-xs"
-@click="handleDeleteVisit(visit)"
+                                        class="h-8 px-2 text-xs rounded-md"
+                                        @click="handleDeleteVisit(visit)"
                                     >
                                         حذف
                                     </Button>
                                 </div>
                             </td>
                         </tr>
-                        <tr v-if="visibleVisits.length === 0" class="table-empty-state">
-                            <td :colspan="can('visit.start') ? 9 : 8" class="px-3 py-10 text-center text-muted-foreground">
-                                لا توجد زيارات.
+                        <tr v-if="visibleVisits.length === 0">
+                            <td :colspan="can('visit.start') ? 9 : 8" class="px-3 py-16 text-center">
+                                <div class="flex flex-col items-center justify-center text-center">
+                                    <Kanban class="size-10 text-slate-200 mb-3" />
+                                    <h3 class="text-sm font-semibold text-slate-700 mb-1">لا توجد زيارات</h3>
+                                    <p class="text-xs text-slate-400">جرب تغيير كلمة البحث أو أضف زيارة جديدة</p>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2">
-                <p class="text-xs text-muted-foreground">
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-100/80 bg-slate-50/40 px-4 py-2.5">
+                <p class="text-xs text-slate-500">
                     عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من {{ visits.meta.total }} سجل
                 </p>
                 <div class="flex items-center gap-2">
-                    <Button type="button" variant="neumorphic" size="sm" class="h-10 px-3 text-xs" :disabled="localPage === 1" @click="goToPreviousPage">السابق</Button>
-                    <span class="text-xs font-semibold text-foreground/85">صفحة {{ localPage }} / {{ totalLocalPages }}</span>
-                    <Button type="button" variant="neumorphic" size="sm" class="h-10 px-3 text-xs" :disabled="localPage >= totalLocalPages" @click="goToNextPage">التالي</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-9 px-3 text-xs rounded-lg border-slate-200/80" :disabled="localPage === 1" @click="goToPreviousPage">السابق</Button>
+                    <span class="text-xs font-semibold text-slate-600">صفحة {{ localPage }} / {{ totalLocalPages }}</span>
+                    <Button type="button" variant="outline" size="sm" class="h-9 px-3 text-xs rounded-lg border-slate-200/80" :disabled="localPage >= totalLocalPages" @click="goToNextPage">التالي</Button>
                 </div>
             </div>
         </div>
@@ -1060,8 +1064,8 @@ const isDoctorAssigned = (visit: Visit): boolean => {
 
                 <Form v-bind="VisitController.store.form()" class="mt-6 space-y-4" v-slot="{ errors, processing }" @success="isCreateSheetOpen = false">
                     <div class="grid gap-2">
-                        <Label for="patient_id">المريض</Label>
-                        <select id="patient_id" name="patient_id" required class="pattern-field-clay h-10 px-3 py-1.5">
+                        <Label for="patient_id" class="text-xs font-medium text-slate-600">المريض</Label>
+                        <select id="patient_id" name="patient_id" required class="h-9 w-full rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-[#0F9D7A]/40 focus:outline-none focus:ring-1 focus:ring-[#0F9D7A]/20">
                             <option value="">اختر المريض</option>
                             <option v-for="patient in patients" :key="patient.id" :value="patient.id">{{ patient.full_name }}</option>
                         </select>
@@ -1069,8 +1073,8 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="queue_entry_id">قائمة الانتظار</Label>
-                        <select id="queue_entry_id" name="queue_entry_id" class="pattern-field-clay h-10 px-3 py-1.5">
+                        <Label for="queue_entry_id" class="text-xs font-medium text-slate-600">قائمة الانتظار</Label>
+                        <select id="queue_entry_id" name="queue_entry_id" class="h-9 w-full rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-[#0F9D7A]/40 focus:outline-none focus:ring-1 focus:ring-[#0F9D7A]/20">
                             <option value="">بدون قائمة انتظار</option>
                             <option v-for="queueEntry in queue_entries" :key="queueEntry.id" :value="queueEntry.id">{{ queueEntry.label }}</option>
                         </select>
@@ -1078,8 +1082,8 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="appointment_id">الموعد</Label>
-                        <select id="appointment_id" name="appointment_id" class="pattern-field-clay h-10 px-3 py-1.5">
+                        <Label for="appointment_id" class="text-xs font-medium text-slate-600">الموعد</Label>
+                        <select id="appointment_id" name="appointment_id" class="h-9 w-full rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-[#0F9D7A]/40 focus:outline-none focus:ring-1 focus:ring-[#0F9D7A]/20">
                             <option value="">بدون موعد</option>
                             <option v-for="appointment in appointments" :key="appointment.id" :value="appointment.id">{{ appointment.appointment_number }}</option>
                         </select>
@@ -1087,8 +1091,8 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="doctor_id">الطبيب</Label>
-                        <select id="doctor_id" name="doctor_id" class="pattern-field-clay h-10 px-3 py-1.5">
+                        <Label for="doctor_id" class="text-xs font-medium text-slate-600">الطبيب</Label>
+                        <select id="doctor_id" name="doctor_id" class="h-9 w-full rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-sm text-slate-700 focus:border-[#0F9D7A]/40 focus:outline-none focus:ring-1 focus:ring-[#0F9D7A]/20">
                             <option value="">غير محدد</option>
                             <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">{{ doctor.name }}</option>
                         </select>
@@ -1096,12 +1100,12 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="chief_complaint">الشكوى الرئيسية</Label>
-                        <textarea id="chief_complaint" name="chief_complaint" rows="3" class="pattern-field-clay"></textarea>
+                        <Label for="chief_complaint" class="text-xs font-medium text-slate-600">الشكوى الرئيسية</Label>
+                        <textarea id="chief_complaint" name="chief_complaint" rows="3" class="h-auto w-full rounded-lg border border-slate-200/80 bg-white px-3 py-2 text-sm text-slate-700 focus:border-[#0F9D7A]/40 focus:outline-none focus:ring-1 focus:ring-[#0F9D7A]/20"></textarea>
                         <InputError :message="errors.chief_complaint" />
                     </div>
 
-                    <Button :disabled="processing" variant="clay" class="w-full min-h-[44px]">بدء الزيارة</Button>
+                    <Button :disabled="processing" variant="default" class="w-full h-9 rounded-lg bg-[#0F9D7A] hover:bg-[#0B7A5E] shadow-sm">بدء الزيارة</Button>
                 </Form>
             </SheetContent>
         </Sheet>
@@ -1113,28 +1117,28 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                     <DialogDescription>لقطة سريعة للزيارة.</DialogDescription>
                 </DialogHeader>
 
-                <dl v-if="viewingVisit" class="grid gap-3 rounded-xl border border-border/70 bg-background/55 p-4 sm:grid-cols-2">
+                <dl v-if="viewingVisit" class="grid gap-3 rounded-lg border border-slate-100/80 bg-slate-50/40 p-4 sm:grid-cols-2">
                     <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">المريض</dt>
-                        <dd class="text-sm">{{ viewingVisit.patient?.full_name ?? '-' }}</dd>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">المريض</dt>
+                        <dd class="text-sm text-slate-700">{{ viewingVisit.patient?.full_name ?? '-' }}</dd>
                     </div>
                     <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الطبيب</dt>
-                        <dd class="text-sm">{{ viewingVisit.doctor?.name ?? '-' }}</dd>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">الطبيب</dt>
+                        <dd class="text-sm text-slate-700">{{ viewingVisit.doctor?.name ?? '-' }}</dd>
                     </div>
                     <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الموعد</dt>
-                        <dd class="text-sm">{{ viewingVisit.appointment?.appointment_number ?? '-' }}</dd>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">الموعد</dt>
+                        <dd class="text-sm text-slate-700">{{ viewingVisit.appointment?.appointment_number ?? '-' }}</dd>
                     </div>
                     <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">رقم الطابور</dt>
-                        <dd class="text-sm">{{ viewingVisit.queue_entry?.queue_number ?? '-' }}</dd>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">رقم الطابور</dt>
+                        <dd class="text-sm text-slate-700">{{ viewingVisit.queue_entry?.queue_number ?? '-' }}</dd>
                     </div>
                     <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الحالة</dt>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">الحالة</dt>
                         <dd class="text-sm">
                             <span
-                                class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium capitalize"
+                                class="inline-flex items-center gap-1 rounded-full border border-slate-100/80 px-2.5 py-1 text-xs font-medium capitalize"
                                 :class="visitStatusClass(viewingVisit.status)"
                             >
                                 <span class="size-1.5 rounded-full" :class="visitStatusDotClass(viewingVisit.status)"></span>
@@ -1143,29 +1147,29 @@ const isDoctorAssigned = (visit: Visit): boolean => {
                         </dd>
                     </div>
                     <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">بدأت في</dt>
-                        <dd class="text-sm">{{ formatDateTime(viewingVisit.started_at) }}</dd>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">بدأت في</dt>
+                        <dd class="text-sm text-slate-700">{{ formatDateTime(viewingVisit.started_at) }}</dd>
                     </div>
                     <div class="space-y-1 sm:col-span-2">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الشكوى الرئيسية</dt>
-                        <dd class="text-sm leading-6 text-muted-foreground">{{ viewingVisit.chief_complaint ?? 'غير محددة' }}</dd>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">الشكوى الرئيسية</dt>
+                        <dd class="text-sm leading-6 text-slate-500">{{ viewingVisit.chief_complaint ?? 'غير محددة' }}</dd>
                     </div>
                     <div class="space-y-1 sm:col-span-2">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">ملاحظات سريرية</dt>
-                        <dd class="text-sm leading-6 text-muted-foreground">{{ viewingVisit.clinical_notes ?? 'غير موجودة' }}</dd>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">ملاحظات سريرية</dt>
+                        <dd class="text-sm leading-6 text-slate-500">{{ viewingVisit.clinical_notes ?? 'غير موجودة' }}</dd>
                     </div>
                     <div class="space-y-1 sm:col-span-2">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">ملاحظات التشخيص</dt>
-                        <dd class="text-sm leading-6 text-muted-foreground">{{ viewingVisit.diagnosis_notes ?? 'غير موجودة' }}</dd>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">ملاحظات التشخيص</dt>
+                        <dd class="text-sm leading-6 text-slate-500">{{ viewingVisit.diagnosis_notes ?? 'غير موجودة' }}</dd>
                     </div>
                     <div class="space-y-1 sm:col-span-2">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">خطة العلاج</dt>
-                        <dd class="text-sm leading-6 text-muted-foreground">{{ viewingVisit.treatment_plan ?? 'غير موجودة' }}</dd>
+                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-400 uppercase">خطة العلاج</dt>
+                        <dd class="text-sm leading-6 text-slate-500">{{ viewingVisit.treatment_plan ?? 'غير موجودة' }}</dd>
                     </div>
                 </dl>
 
                 <DialogFooter>
-                    <Button type="button" variant="ghost" class="min-h-[44px]" @click="closeViewVisit">إغلاق</Button>
+                    <Button type="button" variant="ghost" class="h-9 rounded-md" @click="closeViewVisit">إغلاق</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

@@ -27,19 +27,12 @@ const { isCurrentUrl } = useCurrentUrl();
 
 const navSections = computed<NavSection[]>(() => {
     if (props.sections.length > 0) {
-        return props.sections;
-    }
+return props.sections;
+}
 
     if (props.items.length > 0) {
-        return [
-            {
-                key: 'main',
-                label: 'Navigation',
-                description: '',
-                items: props.items,
-            },
-        ];
-    }
+return [{ key: 'main', label: 'Navigation', description: '', items: props.items }];
+}
 
     return [];
 });
@@ -50,26 +43,26 @@ const visibleSections = computed<NavSection[]>(() => {
 </script>
 
 <template>
-    <div class="flex flex-col gap-5">
+    <div class="flex flex-col">
         <template v-for="section in visibleSections" :key="section.key">
-            <SidebarGroup class="px-1">
+            <SidebarGroup class="px-0.5">
                 <SidebarGroupLabel
-                    class="text-xs font-bold uppercase tracking-[0.14em] text-sidebar-foreground/40 mb-2 px-2 group-data-[collapsible=icon]:hidden"
+                    class="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1 px-2.5 pt-2 pb-0.5 group-data-[collapsible=icon]:hidden"
                 >
                     {{ section.label }}
                 </SidebarGroupLabel>
 
                 <SidebarGroupContent>
-                    <SidebarMenu class="gap-1">
+                    <SidebarMenu class="gap-[2px]">
                         <SidebarMenuItem v-for="item in section.items" :key="item.title">
                             <SidebarMenuButton
                                 as-child
                                 :is-active="isCurrentUrl(item.href, undefined, true)"
                                 :tooltip="item.title"
-                                class="h-10 rounded-xl px-3 text-sm font-semibold transition-all duration-200 border-s-[3px] border-transparent hover:bg-sidebar-accent hover:text-sidebar-foreground data-[active=true]:border-s-[3px] data-[active=true]:border-sidebar-primary data-[active=true]:bg-sidebar-primary/10 data-[active=true]:text-sidebar-primary data-[active=true]:shadow-none"
+                                class="h-9 rounded-lg px-2.5 text-[13px] font-normal transition-all duration-200 hover:bg-slate-50 hover:text-slate-800 data-[active=true]:bg-[#E7F7F2] data-[active=true]:text-[#0F6E56] data-[active=true]:font-medium data-[active=true]:shadow-[inset_3px_0_0_0_#0F9D7A]"
                             >
                                 <Link :href="item.href">
-                                    <component :is="item.icon" class="size-5 text-sidebar-foreground/70 group-data-[state=collapsed]:mx-auto" />
+                                    <component :is="item.icon" class="size-[16px] text-current group-data-[state=collapsed]:mx-auto" />
                                     <span>{{ item.title }}</span>
                                 </Link>
                             </SidebarMenuButton>
@@ -79,12 +72,9 @@ const visibleSections = computed<NavSection[]>(() => {
             </SidebarGroup>
         </template>
 
-        <div
-            v-if="visibleSections.length === 0"
-            class="px-3 py-4"
-        >
-            <div class="rounded-2xl border border-sidebar-border/70 bg-sidebar-accent/40 p-4 text-xs leading-5 text-sidebar-foreground/70 text-center">
-                لا توجد وحدات متاحة حالياً لدورك.
+        <div v-if="visibleSections.length === 0" class="px-3 py-4">
+            <div class="rounded-lg bg-sidebar-accent/40 p-3 text-xs text-sidebar-foreground/60 text-center">
+                لا توجد وحدات متاحة
             </div>
         </div>
     </div>

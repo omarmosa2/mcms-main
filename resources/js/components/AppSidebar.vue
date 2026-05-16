@@ -51,62 +51,6 @@ import type { NavItem, NavSection } from '@/types';
 
 const { can } = usePermissions();
 const { isRtl } = useDirection();
-const page = usePage();
-
-const roleNames = computed<string[]>(() => {
-    return (
-        ((page.props.auth as { roles?: string[] } | undefined)?.roles ?? [])
-            .filter((value): value is string => typeof value === 'string')
-    );
-});
-
-const primaryRole = computed<string>(() => {
-    const rolePriority = [
-        'super_admin',
-        'admin',
-        'clinic_admin',
-        'doctor',
-        'receptionist',
-        'accountant',
-    ];
-
-    return rolePriority.find((role) => roleNames.value.includes(role)) ?? 'staff';
-});
-
-const roleWorkspace = {
-    super_admin: {
-        label: 'مساحة مدير النظام',
-        description: 'وصول كامل لجميع الوحدات.',
-    },
-    admin: {
-        label: 'مساحة المدير',
-        description: 'إدارة العمليات والإيرادات والتقارير.',
-    },
-    clinic_admin: {
-        label: 'مساحة مدير العيادة',
-        description: 'إدارة العمليات والإيرادات والتقارير.',
-    },
-    receptionist: {
-        label: 'مساحة الاستقبال',
-        description: 'التركيز على ملفات المرضى والجدولة.',
-    },
-    doctor: {
-        label: 'مساحة الطبيب',
-        description: 'تتبع قائمة الانتظار والاستشارات.',
-    },
-    accountant: {
-        label: 'مساحة المالية',
-        description: 'التحكم بالفواتير والمدفوعات.',
-    },
-    staff: {
-        label: 'مساحة العمل',
-        description: 'التنقل مفلتر حسب صلاحياتك.',
-    },
-} as const;
-
-const activeWorkspaceProfile = computed(() => {
-    return roleWorkspace[primaryRole.value as keyof typeof roleWorkspace] ?? roleWorkspace.staff;
-});
 
 const roleItemOrder: Record<string, string[]> = {
     doctor: ['قائمة الانتظار', 'الزيارات', 'المواعيد', 'المرضى', 'الأقسام', 'الأطباء', 'جداول الدوام', 'لوحة التحكم'],
@@ -117,119 +61,45 @@ const roleItemOrder: Record<string, string[]> = {
     super_admin: ['لوحة التحكم', 'المرضى', 'الأقسام', 'الأطباء', 'جداول الدوام', 'المواعيد', 'قائمة الانتظار', 'الزيارات', 'المستخدمون', 'الأدوار', 'الفواتير', 'المصروفات', 'الصندوق', 'التقارير'],
 };
 
+const roleNames = computed<string[]>(() => {
+    return (
+        ((usePage().props.auth as { roles?: string[] } | undefined)?.roles ?? [])
+            .filter((value): value is string => typeof value === 'string')
+    );
+});
+
+const primaryRole = computed<string>(() => {
+    const rolePriority = ['super_admin', 'admin', 'clinic_admin', 'doctor', 'receptionist', 'accountant'];
+
+    return rolePriority.find((role) => roleNames.value.includes(role)) ?? 'staff';
+});
+
 const mainNavItems = computed<MainNavItem[]>(() => {
     const visibleItems = (
         [
-            {
-                title: 'لوحة التحكم',
-                href: dashboard(),
-                icon: LayoutGrid,
-                group: 'main',
-            },
-            {
-                title: 'المرضى',
-                href: PatientController.index(),
-                icon: Users,
-                group: 'clinical',
-                permission: 'patient.view',
-            },
-            {
-                title: 'الأقسام',
-                href: DepartmentController.index(),
-                icon: Building2,
-                group: 'clinical',
-                permission: 'department.view',
-            },
-            {
-                title: 'الأطباء',
-                href: DoctorProfileController.index(),
-                icon: UserRound,
-                group: 'clinical',
-                permission: 'doctor_profile.view',
-            },
-            {
-                title: 'جداول الدوام',
-                href: '/doctor-schedules',
-                icon: CalendarDays,
-                group: 'clinical',
-                permission: 'doctor_schedule.view',
-            },
-            {
-                title: 'المواعيد',
-                href: AppointmentController.index(),
-                icon: CalendarClock,
-                group: 'clinical',
-                permission: 'appointment.view',
-            },
-            {
-                title: 'قائمة الانتظار',
-                href: QueueEntryController.index(),
-                icon: ListOrdered,
-                group: 'clinical',
-                permission: 'queue.view',
-            },
-            {
-                title: 'الزيارات',
-                href: VisitController.index(),
-                icon: Stethoscope,
-                group: 'clinical',
-                anyPermissions: [
-                    'visit.start',
-                    'visit.update',
-                    'visit.complete',
-                ],
-            },
-            {
-                title: 'المستخدمون',
-                href: UserController.index(),
-                icon: Shield,
-                group: 'settings',
-                permission: 'users.view',
-            },
-            {
-                title: 'الأدوار',
-                href: RoleController.index(),
-                icon: Key,
-                group: 'settings',
-                permission: 'roles.view',
-            },
-            {
-                title: 'الفواتير',
-                href: InvoiceController.index(),
-                icon: ReceiptText,
-                group: 'finance',
-                permission: 'billing.view',
-            },
-            {
-                title: 'المصروفات',
-                href: ExpenseController.index(),
-                icon: Wallet,
-                group: 'finance',
-                permission: 'expenses.view',
-            },
-            {
-                title: 'الصندوق',
-                href: CashboxController.index(),
-                icon: DollarSign,
-                group: 'finance',
-                permission: 'cashbox.view',
-            },
-            {
-                title: 'التقارير',
-                href: ReportController.index(),
-                icon: BarChart3,
-                group: 'finance',
-                anyPermissions: ['reports.view', 'reports.financial'],
-            },
+            { title: 'لوحة التحكم', href: dashboard(), icon: LayoutGrid, group: 'main' },
+            { title: 'المرضى', href: PatientController.index(), icon: Users, group: 'clinical', permission: 'patient.view' },
+            { title: 'الأقسام', href: DepartmentController.index(), icon: Building2, group: 'clinical', permission: 'department.view' },
+            { title: 'الأطباء', href: DoctorProfileController.index(), icon: UserRound, group: 'clinical', permission: 'doctor_profile.view' },
+            { title: 'جداول الدوام', href: '/doctor-schedules', icon: CalendarDays, group: 'clinical', permission: 'doctor_schedule.view' },
+            { title: 'المواعيد', href: AppointmentController.index(), icon: CalendarClock, group: 'clinical', permission: 'appointment.view' },
+            { title: 'قائمة الانتظار', href: QueueEntryController.index(), icon: ListOrdered, group: 'clinical', permission: 'queue.view' },
+            { title: 'الزيارات', href: VisitController.index(), icon: Stethoscope, group: 'clinical', anyPermissions: ['visit.start', 'visit.update', 'visit.complete'] },
+            { title: 'المستخدمون', href: UserController.index(), icon: Shield, group: 'settings', permission: 'users.view' },
+            { title: 'الأدوار', href: RoleController.index(), icon: Key, group: 'settings', permission: 'roles.view' },
+            { title: 'الفواتير', href: InvoiceController.index(), icon: ReceiptText, group: 'finance', permission: 'billing.view' },
+            { title: 'المصروفات', href: ExpenseController.index(), icon: Wallet, group: 'finance', permission: 'expenses.view' },
+            { title: 'الصندوق', href: CashboxController.index(), icon: DollarSign, group: 'finance', permission: 'cashbox.view' },
+            { title: 'التقارير', href: ReportController.index(), icon: BarChart3, group: 'finance', anyPermissions: ['reports.view', 'reports.financial'] },
         ] as MainNavItem[]
     ).filter((item) => {
         if (item.permission !== undefined && !can(item.permission)) {
-            return false;
-        }
+return false;
+}
 
         if (item.anyPermissions !== undefined) {
-            return item.anyPermissions.some((permission) => can(permission));
-        }
+return item.anyPermissions.some((permission) => can(permission));
+}
 
         return true;
     });
@@ -237,76 +107,49 @@ const mainNavItems = computed<MainNavItem[]>(() => {
     const orderedTitles = roleItemOrder[primaryRole.value] ?? [];
 
     if (orderedTitles.length === 0) {
-        return visibleItems;
-    }
+return visibleItems;
+}
 
-    const orderMap = new Map<string, number>(
-        orderedTitles.map((title, index) => [title, index]),
-    );
+    const orderMap = new Map<string, number>(orderedTitles.map((title, index) => [title, index]));
 
-    return [...visibleItems].sort((firstItem, secondItem) => {
-        const firstOrder = orderMap.get(firstItem.title) ?? Number.MAX_SAFE_INTEGER;
-        const secondOrder = orderMap.get(secondItem.title) ?? Number.MAX_SAFE_INTEGER;
+    return [...visibleItems].sort((a, b) => {
+        const aOrder = orderMap.get(a.title) ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = orderMap.get(b.title) ?? Number.MAX_SAFE_INTEGER;
 
-        return firstOrder - secondOrder;
+        return aOrder - bOrder;
     });
 });
 
 const sectionMetadata: Array<Omit<NavSection, 'items'>> = [
-    {
-        key: 'main',
-        label: 'الرئيسية',
-        description: 'التنقل الرئيسي.',
-    },
-    {
-        key: 'clinical',
-        label: 'سريري',
-        description: 'رعاية المرضى والعمليات.',
-    },
-    {
-        key: 'settings',
-        label: 'الإعدادات',
-        description: 'المستخدمون والأدوار.',
-    },
-    {
-        key: 'finance',
-        label: 'المالية',
-        description: 'الفواتير والتقارير.',
-    },
+    { key: 'main', label: 'الرئيسية', description: '' },
+    { key: 'clinical', label: 'العيادة', description: '' },
+    { key: 'settings', label: 'الإدارة', description: '' },
+    { key: 'finance', label: 'المالية', description: '' },
 ];
 
 const sidebarSections = computed<NavSection[]>(() =>
     sectionMetadata.map((section) => ({
         ...section,
-        items: mainNavItems.value.filter(
-            (item) => (item as MainNavItem).group === section.key,
-        ),
+        items: mainNavItems.value.filter((item) => (item as MainNavItem).group === section.key),
     })),
-);
-
-const totalVisibleModules = computed<number>(() => mainNavItems.value.length);
-
-const clinicalModules = computed<number>(
-    () =>
-        mainNavItems.value.filter((item) => (item as MainNavItem).group === 'clinical')
-            .length,
 );
 </script>
 
 <template>
     <Sidebar
-        :side="isRtl ? 'right' : 'left'"
+        side="right"
         collapsible="icon"
         variant="sidebar"
-        class="border-s-0 [&_[data-sidebar=sidebar]]:bg-sidebar"
+        class="w-[240px] bg-white border-inline-end border-slate-100/80"
     >
-        <SidebarHeader class="px-4 pt-5 pb-2">
+        <!-- Logo & Clinic Name -->
+        <SidebarHeader class="px-4 pt-4 pb-3">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton
                         size="lg"
                         as-child
-                        class="h-14 rounded-2xl border border-sidebar-border/60 bg-sidebar-accent/50 px-4 text-sidebar-foreground transition-all duration-200 hover:bg-sidebar-accent hover:shadow-sm"
+                        class="h-10 rounded-lg px-2 hover:bg-slate-50 transition-colors duration-200"
                     >
                         <Link :href="dashboard()">
                             <AppLogo />
@@ -314,64 +157,65 @@ const clinicalModules = computed<number>(
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
-
-            <div
-                class="mt-4 rounded-2xl border border-sidebar-border/50 bg-sidebar-accent/50 p-4 text-sidebar-foreground group-data-[collapsible=icon]:hidden"
-            >
-                <p
-                    class="text-[0.65rem] font-semibold tracking-[0.12em] text-sidebar-foreground/50 uppercase"
-                >
-                    مساحة العمل
-                </p>
-                <p class="mt-1.5 text-sm font-semibold">
-                    {{ activeWorkspaceProfile.label }}
-                </p>
-                <div class="mt-3 flex items-center gap-2">
-                    <span
-                        class="rounded-full border border-sidebar-primary/20 bg-sidebar-primary/10 px-2.5 py-0.5 text-[0.65rem] font-semibold text-sidebar-primary"
-                    >
-                        {{ totalVisibleModules }} وحدات
-                    </span>
-                    <span
-                        v-if="clinicalModules > 0"
-                        class="rounded-full border border-sidebar-border/50 bg-sidebar-accent/60 px-2.5 py-0.5 text-[0.65rem] font-semibold text-sidebar-foreground/60"
-                    >
-                        {{ clinicalModules }} سريري
-                    </span>
-                </div>
-            </div>
         </SidebarHeader>
 
-        <SidebarContent class="px-2 pb-4">
+        <!-- Main Navigation -->
+        <SidebarContent class="px-2.5 py-2 flex-1 overflow-y-auto">
             <NavMain :sections="sidebarSections" />
         </SidebarContent>
 
-        <SidebarFooter class="border-t border-sidebar-border/60 px-3 py-4">
-            <div class="mb-3 space-y-1.5 group-data-[collapsible=icon]:hidden">
+        <!-- Footer: secondary links + user -->
+        <SidebarFooter class="border-t border-slate-100/80 px-3 pt-2.5 pb-3">
+
+            <!-- Secondary nav links — hidden when sidebar is collapsed to icon-only -->
+            <div class="mb-1.5 space-y-0.5 group-data-[collapsible=icon]:hidden">
                 <Link
                     :href="'/settings/notifications'"
-                    class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-sidebar-foreground/60 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    class="
+                        flex items-center gap-2
+                        rounded-lg px-2.5 py-2
+                        text-[13px] text-slate-400
+                        transition-all duration-200
+                        hover:bg-slate-50 hover:text-slate-700
+                    "
                 >
-                    <Bell class="size-4" />
-                    الإشعارات
+                    <Bell class="size-4 shrink-0" />
+                    <span>الإشعارات</span>
                 </Link>
+
                 <Link
                     :href="'/trash'"
-                    class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-sidebar-foreground/60 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    class="
+                        flex items-center gap-2
+                        rounded-lg px-2.5 py-2
+                        text-[13px] text-slate-400
+                        transition-all duration-200
+                        hover:bg-slate-50 hover:text-slate-700
+                    "
                 >
-                    <Trash2 class="size-4" />
-                    سلة المحذوفات
+                    <Trash2 class="size-4 shrink-0" />
+                    <span>سلة المحذوفات</span>
                 </Link>
+
                 <Link
                     :href="'/help'"
-                    class="flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-medium text-sidebar-foreground/60 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    class="
+                        flex items-center gap-2
+                        rounded-lg px-2.5 py-2
+                        text-[13px] text-slate-400
+                        transition-all duration-200
+                        hover:bg-slate-50 hover:text-slate-700
+                    "
                 >
-                    <HelpCircle class="size-4" />
-                    مركز المساعدة
+                    <HelpCircle class="size-4 shrink-0" />
+                    <span>مركز المساعدة</span>
                 </Link>
             </div>
+
+            <!-- User avatar & info -->
             <NavUser />
         </SidebarFooter>
     </Sidebar>
+
     <slot />
 </template>

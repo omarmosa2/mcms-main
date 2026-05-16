@@ -18,7 +18,7 @@ const className = computed(() => props.class);
     <SidebarInset
         v-if="props.variant === 'sidebar'"
         :class="[
-            'clinical-app-shell surface-grid-lines relative min-h-svh',
+            'bg-background relative flex w-full flex-1 flex-col min-h-svh',
             className,
         ]"
     >
@@ -26,7 +26,7 @@ const className = computed(() => props.class);
     </SidebarInset>
     <main
         v-else
-        class="clinical-app-shell surface-grid-lines relative mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-xl"
+        class="bg-background relative mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-xl"
         :class="className"
     >
         <slot />

@@ -412,7 +412,7 @@ return [];
                         :disabled="!selectedFile || isPreviewing"
                         @click="handlePreview"
                     >
-                        <Eye class="ml-2 size-4" />
+                        <Eye class="ms-2 size-4" />
                         {{ isPreviewing ? 'جاري المعاينة...' : 'معاينة البيانات' }}
                     </Button>
                     <Button
@@ -421,7 +421,7 @@ return [];
                         :disabled="!selectedFile || isUploading"
                         @click="handleImport"
                     >
-                        <Upload class="ml-2 size-4" />
+                        <Upload class="ms-2 size-4" />
                         {{ isUploading ? 'جاري الرفع...' : 'بدء الاستيراد' }}
                     </Button>
                 </div>
@@ -538,7 +538,7 @@ return [];
                 </div>
 
                 <Button variant="clay" class="mt-4 w-full" @click="handleExport">
-                    <Download class="ml-2 size-4" />
+                    <Download class="ms-2 size-4" />
                     تنزيل Excel
                 </Button>
 
@@ -559,11 +559,11 @@ return [];
                         <div v-if="currentStatus.status === 'completed' || currentStatus.status === 'failed'" class="mt-2 grid grid-cols-2 gap-2 text-xs">
                             <div>
                                 <span class="text-muted-foreground">تم استيرادها:</span>
-                                <span class="mr-1 font-semibold text-success-600 dark:text-success-400">{{ currentStatus.imported }}</span>
+                                <span class="me-1 font-semibold text-success-600 dark:text-success-400">{{ currentStatus.imported }}</span>
                             </div>
                             <div>
                                 <span class="text-muted-foreground">فشلت:</span>
-                                <span class="mr-1 font-semibold text-destructive">{{ currentStatus.failed }}</span>
+                                <span class="me-1 font-semibold text-destructive">{{ currentStatus.failed }}</span>
                             </div>
                         </div>
 
@@ -579,7 +579,7 @@ return [];
         </div>
 
         <Button variant="neumorphic" size="sm" @click="router.get(PatientController.index())">
-            <ArrowLeft class="ml-2 size-4" />
+            <ArrowLeft class="ms-2 size-4" />
             العودة إلى المرضى
         </Button>
     </div>

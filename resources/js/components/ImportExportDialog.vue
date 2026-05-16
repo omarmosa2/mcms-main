@@ -163,7 +163,7 @@ const formatFileSize = (bytes: number): string => {
                     ]"
                     @click="activeTab = 'export'"
                 >
-                    <Download class="mr-2 inline-block size-4" />
+                    <Download class="me-2 inline-block size-4" />
                     Export
                 </button>
                 <button
@@ -176,7 +176,7 @@ const formatFileSize = (bytes: number): string => {
                     ]"
                     @click="activeTab = 'import'"
                 >
-                    <Upload class="mr-2 inline-block size-4" />
+                    <Upload class="me-2 inline-block size-4" />
                     Import
                 </button>
             </div>
@@ -259,7 +259,7 @@ const formatFileSize = (bytes: number): string => {
                     :disabled="isUploading"
                     @click="handleExport"
                 >
-                    <Download class="mr-2 size-4" />
+                    <Download class="me-2 size-4" />
                     Download Excel
                 </Button>
                 <Button
@@ -268,7 +268,7 @@ const formatFileSize = (bytes: number): string => {
                     :disabled="!selectedFile || isUploading"
                     @click="handleImport"
                 >
-                    <Upload class="mr-2 size-4" />
+                    <Upload class="me-2 size-4" />
                     {{ isUploading ? 'Uploading...' : 'Start Import' }}
                 </Button>
             </DialogFooter>

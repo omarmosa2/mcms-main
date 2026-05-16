@@ -255,7 +255,7 @@ const auditExportUrl = computed(() => {
                                 :href="AuditReportController.index()"
                                 class="inline-flex h-8 items-center justify-center rounded-lg border border-border/70 bg-background/80 px-3 text-xs font-semibold transition hover:bg-muted"
                             >
-                                <BarChart3 class="mr-1 size-3.5" />
+                                <BarChart3 class="me-1 size-3.5" />
                                 سجل التدقيق
                             </Link>
                         </div>

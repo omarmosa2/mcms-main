@@ -295,7 +295,7 @@ const article = articles[props.slug] ?? {
     <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6">
         <div class="flex items-center gap-2">
             <Button variant="neumorphic" size="sm" @click="$inertia.get('/help')">
-                <ArrowLeft class="mr-2 size-4" />
+                <ArrowLeft class="me-2 size-4" />
                 Back to Help Center
             </Button>
         </div>

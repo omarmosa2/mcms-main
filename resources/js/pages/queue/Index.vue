@@ -717,7 +717,7 @@ const deleteQueueEntry = async (entry: QueueEntry) => {
                         >
                             <span
                                 :class="[
-                                    'ml-2 inline-block size-2 rounded-full',
+                                    'ms-2 inline-block size-2 rounded-full',
                                     isLive ? 'animate-pulse motion-reduce:animate-none bg-success-500' : 'bg-muted-foreground',
                                 ]"
                             />

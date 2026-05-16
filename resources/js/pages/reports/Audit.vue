@@ -255,7 +255,7 @@ const getActionClass = (action: string) => {
                 <div class="md:col-span-2 md:justify-self-end">
                     <div class="flex flex-wrap items-center gap-2">
                         <Button type="button" variant="neumorphic" size="sm" @click="applyFilters">
-                            <Search class="mr-1 size-4" />
+                            <Search class="me-1 size-4" />
                             Apply
                         </Button>
                         <Button type="button" variant="ghost" size="sm" @click="resetFilters">
@@ -265,7 +265,7 @@ const getActionClass = (action: string) => {
                             :href="auditExportUrl"
                             class="inline-flex h-9 items-center justify-center rounded-xl border border-border/70 bg-background/80 px-3 text-xs font-semibold"
                         >
-                            <Download class="mr-1 size-4" />
+                            <Download class="me-1 size-4" />
                             CSV
                         </a>
                     </div>

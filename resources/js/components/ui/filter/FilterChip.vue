@@ -26,7 +26,7 @@ const displayValue = computed(() => props.value ?? props.label);
     <button
       v-if="removable"
       type="button"
-      class="ml-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-primary/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+      class="me-0.5 flex size-4 shrink-0 items-center justify-center rounded-full text-primary/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
       :aria-label="`Remove ${label} filter`"
       @click="emit('remove')"
     >

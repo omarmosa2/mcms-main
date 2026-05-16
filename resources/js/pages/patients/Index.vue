@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Form, Head, Link, router } from '@inertiajs/vue3';
 import {
     ArrowDown,
     ArrowUp,
@@ -8,6 +8,10 @@ import {
     Upload,
     Users,
     Plus,
+    Eye,
+    Pencil,
+    Trash2,
+    MoreVertical,
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
@@ -153,39 +157,6 @@ defineOptions({
 const { can } = usePermissions();
 const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 const toast = useToast();
-const page = usePage();
-
-const roleNames = computed<string[]>(() => {
-    return (
-        ((page.props.auth as { roles?: string[] } | undefined)?.roles ?? [])
-            .filter((value): value is string => typeof value === 'string')
-    );
-});
-
-const primaryRole = computed<string>(() => {
-    const rolePriority = [
-        'super_admin',
-        'admin',
-        'clinic_admin',
-        'doctor',
-        'receptionist',
-        'accountant',
-    ];
-
-    return rolePriority.find((role) => roleNames.value.includes(role)) ?? 'staff';
-});
-
-const roleLabels: Record<string, string> = {
-    super_admin: 'مدير النظام',
-    admin: 'مدير',
-    clinic_admin: 'مدير العيادة',
-    doctor: 'طبيب',
-    receptionist: 'استقبال',
-    accountant: 'محاسب',
-    staff: 'موظف',
-};
-
-const activeRoleLabel = computed<string>(() => roleLabels[primaryRole.value] ?? roleLabels.staff);
 
 const selectedPatientIds = ref<number[]>([]);
 const viewingPatient = ref<Patient | null>(null);
@@ -193,7 +164,7 @@ const editingPatient = ref<Patient | null>(null);
 const patientProfileError = ref<string | null>(null);
 const isPatientProfileLoading = ref(false);
 const isCreateSheetOpen = ref(false);
-const isQuickAddOpen = ref(true);
+const isQuickAddOpen = ref(false);
 const lastCreatedPatientId = ref<number | null>(null);
 const lastCreatedPatientName = ref<string | null>(null);
 
@@ -620,18 +591,18 @@ const closeEditPatient = (): void => {
 
 const patientGenderClass = (gender: string | null): string => {
     if (gender === 'male') {
-        return 'border-[var(--border-soft)] bg-[var(--accent-teal-soft)] text-[var(--accent-teal-strong)]';
+        return 'bg-[#EFF6FF] text-[#1D4ED8]';
     }
 
     if (gender === 'female') {
-        return 'border-[var(--border-soft)] bg-[var(--accent-violet-soft)] text-[var(--accent-violet-strong)]';
+        return 'bg-[#FDF2F8] text-[#9D174D]';
     }
 
     if (gender === 'other') {
-        return 'border-[var(--border-soft)] bg-[var(--accent-coral-soft)] text-[var(--accent-coral-strong)]';
+        return 'bg-[#F3F4F6] text-[#6B7280]';
     }
 
-    return 'border-[var(--border-soft)] bg-[var(--surface-secondary)] text-[var(--surface-contrast-soft)]';
+    return 'bg-[#F3F4F6] text-[#6B7280]';
 };
 
 const patientGenderLabel = (gender: string | null): string => {
@@ -802,29 +773,33 @@ const openCompletePatientFile = () => {
     }
 };
 
-const patientTotal = computed(() => patients.meta.total);
+
 </script>
 
 <template>
     <Head title="المرضى" />
 
-    <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6" dir="rtl">
+    <div class="container-modern space-y-6 py-6" dir="rtl">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-center gap-3">
-                <div>
-                    <h1 class="page-title">المرضى</h1>
-                    <p class="mt-1 text-sm text-muted-foreground">سجل المرضى والبيانات الديموغرافية.</p>
-                </div>
-                <span class="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground">
-                    {{ activeRoleLabel }}
-                </span>
+            <div>
+                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">المرضى</h1>
+                <p class="mt-1 text-sm text-slate-500">سجل المرضى والبيانات الديموغرافية</p>
             </div>
 
             <div class="flex items-center gap-2">
+                <Button
+                    v-if="can('patient.create')"
+                    variant="ghost"
+                    size="sm"
+                    class="h-9 rounded-lg px-3 text-xs"
+                    @click="isCreateSheetOpen = true"
+                >
+                    إضافة متقدمة
+                </Button>
                 <Link
                     v-if="can('patient.view')"
                     :href="PatientImportExportController.export()"
-                    class="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/40 px-4 py-2 text-sm font-medium transition-colors hover:bg-background/60 min-h-[44px]"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50 hover:text-slate-800 min-h-[40px]"
                 >
                     <Download class="size-4" />
                     تصدير
@@ -832,86 +807,74 @@ const patientTotal = computed(() => patients.meta.total);
                 <Link
                     v-if="can('patient.create')"
                     :href="PatientImportExportController.import()"
-                    class="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/40 px-4 py-2 text-sm font-medium transition-colors hover:bg-background/60 min-h-[44px]"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/80 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition-all duration-200 hover:bg-slate-50 hover:text-slate-800 min-h-[40px]"
                 >
                     <Upload class="size-4" />
                     استيراد
                 </Link>
                 <Button
                     v-if="can('patient.create')"
-                    variant="ghost"
+                    variant="default"
                     size="sm"
-                    class="h-10 rounded-lg px-3 text-xs"
+                    class="h-9 rounded-lg bg-[#0F9D7A] px-3 text-xs text-white hover:bg-[#0B7A5E] shadow-sm"
                     @click="isQuickAddOpen = !isQuickAddOpen"
                 >
-                    {{ isQuickAddOpen ? 'إخفاء السريع' : 'إضافة سريعة' }}
-                </Button>
-                <Button
-                    v-if="can('patient.create')"
-                    variant="clay"
-                    size="sm"
-                    class="h-10 rounded-lg px-3 text-xs"
-                    @click="isCreateSheetOpen = true"
-                >
                     <Plus class="size-3.5" />
-                    إضافة متقدمة
+                    إضافة سريعة
                 </Button>
             </div>
         </div>
 
-        <section v-if="can('patient.create') && isQuickAddOpen" class="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-semibold text-primary">إضافة سريعة - مريض جديد</h3>
-                <span class="text-xs text-muted-foreground">Enter = حفظ وإضافة التالي</span>
-            </div>
+        <div class="h-px w-full bg-slate-100/80"></div>
 
-            <div v-if="lastCreatedPatientId" class="mb-3 flex items-center gap-2 rounded-lg border border-success-300/50 bg-success-50 px-3 py-2">
-                <span class="text-xs text-success-700 dark:text-success-400">✅ تم إضافة: {{ lastCreatedPatientName }}</span>
-                <Button type="button" variant="ghost" size="sm" class="h-7 px-2 text-xs text-primary" @click="openCompletePatientFile">
+        <section v-if="can('patient.create') && isQuickAddOpen" class="rounded-xl border border-[#0F9D7A]/15 bg-[#E7F7F2]/20 p-4">
+            <div v-if="lastCreatedPatientId" class="mb-3 flex items-center gap-2 rounded-lg border border-[#22C55E]/20 bg-[#F0FDF4]/60 px-3 py-2">
+                <span class="text-xs font-medium text-[#166534]">✅ تم إضافة: {{ lastCreatedPatientName }}</span>
+                <Button type="button" variant="ghost" size="sm" class="h-6 px-2 text-xs text-[#0F9D7A]" @click="openCompletePatientFile">
                     إكمال الملف
                 </Button>
             </div>
 
             <div class="grid gap-3 md:grid-cols-5 md:items-end">
-                <div class="grid gap-1">
-                    <Label for="quick_first_name" class="text-xs">الاسم الأول *</Label>
+                <div class="grid gap-1.5">
+                    <Label for="quick_first_name" class="text-xs font-medium text-slate-600">الاسم الأول *</Label>
                     <Input
                         id="quick_first_name"
                         v-model="quickAddFirstName"
                         placeholder="محمد"
-                        class="pattern-field-clay h-9 text-sm"
+                        class="h-9 text-sm bg-white border-slate-200/80 rounded-lg"
                         @keydown="handleQuickAddKeyDown"
                     />
                     <p v-if="quickAddErrors.first_name" class="text-xs text-destructive">{{ quickAddErrors.first_name[0] }}</p>
                 </div>
-                <div class="grid gap-1">
-                    <Label for="quick_last_name" class="text-xs">اسم العائلة *</Label>
+                <div class="grid gap-1.5">
+                    <Label for="quick_last_name" class="text-xs font-medium text-slate-600">اسم العائلة *</Label>
                     <Input
                         id="quick_last_name"
                         v-model="quickAddLastName"
                         placeholder="أحمد"
-                        class="pattern-field-clay h-9 text-sm"
+                        class="h-9 text-sm bg-white border-slate-200/80 rounded-lg"
                         @keydown="handleQuickAddKeyDown"
                     />
                     <p v-if="quickAddErrors.last_name" class="text-xs text-destructive">{{ quickAddErrors.last_name[0] }}</p>
                 </div>
-                <div class="grid gap-1">
-                    <Label for="quick_phone" class="text-xs">الهاتف</Label>
+                <div class="grid gap-1.5">
+                    <Label for="quick_phone" class="text-xs font-medium text-slate-600">الهاتف</Label>
                     <Input
                         id="quick_phone"
                         v-model="quickAddPhone"
                         placeholder="0599123456"
-                        class="pattern-field-clay h-9 text-sm"
+                        class="h-9 text-sm bg-white border-slate-200/80 rounded-lg"
                         @keydown="handleQuickAddKeyDown"
                     />
                     <p v-if="quickAddErrors.phone" class="text-xs text-destructive">{{ quickAddErrors.phone[0] }}</p>
                 </div>
-                <div class="grid gap-1">
-                    <Label for="quick_gender" class="text-xs">الجنس</Label>
+                <div class="grid gap-1.5">
+                    <Label for="quick_gender" class="text-xs font-medium text-slate-600">الجنس</Label>
                     <select
                         id="quick_gender"
                         v-model="quickAddGender"
-                        class="pattern-field-clay h-9 px-2 py-1 text-sm"
+                        class="h-9 rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F9D7A]/15 focus:border-[#0F9D7A]"
                         @keydown="handleQuickAddKeyDown"
                     >
                         <option value="">اختر</option>
@@ -919,75 +882,54 @@ const patientTotal = computed(() => patients.meta.total);
                         <option value="female">أنثى</option>
                     </select>
                 </div>
-                <div class="grid gap-1">
-                    <Label for="quick_dob" class="text-xs">تاريخ الميلاد</Label>
+                <div class="grid gap-1.5">
+                    <Label for="quick_dob" class="text-xs font-medium text-slate-600">تاريخ الميلاد</Label>
                     <Input
                         id="quick_dob"
                         v-model="quickAddDateOfBirth"
                         type="date"
-                        class="pattern-field-clay h-9 text-sm"
+                        class="h-9 text-sm bg-white border-slate-200/80 rounded-lg"
                         @keydown="handleQuickAddKeyDown"
                     />
                 </div>
             </div>
 
-            <div class="mt-3 flex items-center gap-2">
-                <Button
-                    type="button"
-                    variant="clay"
-                    size="sm"
-                    class="h-9 px-4 text-xs"
-                    :disabled="quickAddProcessing || !quickAddFirstName || !quickAddLastName"
-                    @click="handleQuickAdd(true)"
-                >
-                    حفظ وإضافة آخر
-                </Button>
-                <Button
-                    type="button"
-                    variant="neumorphic"
-                    size="sm"
-                    class="h-9 px-4 text-xs"
-                    :disabled="quickAddProcessing || !quickAddFirstName || !quickAddLastName"
-                    @click="handleQuickAdd(false)"
-                >
-                    حفظ فقط
-                </Button>
-                <Button type="button" variant="ghost" size="sm" class="h-9 px-3 text-xs" @click="resetQuickAdd">مسح</Button>
-            </div>
-        </section>
-
-        <section class="rounded-xl border border-border/70 bg-card px-4 py-3">
-            <div class="flex flex-wrap items-center gap-4 md:gap-6">
+            <div class="mt-4 flex items-center justify-between">
+                <span class="text-xs text-slate-400">اضغط Enter للحفظ وإضافة آخر</span>
                 <div class="flex items-center gap-2">
-                    <Users class="size-4 text-muted-foreground" />
-                    <span class="text-sm text-muted-foreground">إجمالي السجلات</span>
-                    <span class="text-lg font-bold tabular-nums text-foreground">{{ patientTotal }}</span>
+                    <Button type="button" variant="ghost" size="sm" class="h-9 px-3 text-xs rounded-lg" @click="resetQuickAdd">مسح</Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        class="h-9 px-4 text-xs rounded-lg border-slate-200/80 text-slate-600 hover:bg-slate-50"
+                        :disabled="quickAddProcessing || !quickAddFirstName || !quickAddLastName"
+                        @click="handleQuickAdd(false)"
+                    >
+                        حفظ فقط
+                    </Button>
+                    <Button
+                        type="button"
+                        size="sm"
+                        class="h-9 px-4 text-xs rounded-lg bg-[#0F9D7A] text-white hover:bg-[#0B7A5E] shadow-sm"
+                        :disabled="quickAddProcessing || !quickAddFirstName || !quickAddLastName"
+                        @click="handleQuickAdd(true)"
+                    >
+                        حفظ وإضافة آخر
+                    </Button>
                 </div>
             </div>
         </section>
 
-        <div class="glass-panel-soft p-5">
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                <h3 class="pattern-typographic-title text-[0.76rem]">قائمة المرضى</h3>
-                <span class="text-xs text-muted-foreground">الإجمالي: {{ patients.meta.total }}</span>
-            </div>
-
-            <div class="space-y-3 rounded-2xl border border-border/70 bg-background/60 p-4">
-                <div class="grid gap-3 md:grid-cols-[repeat(2,minmax(0,1fr))] md:items-end">
-                    <div class="grid gap-2">
-                        <Label for="patients_search">بحث</Label>
-                        <FilterSearch
-                            id="patients_search"
-                            v-model="localSearch"
-                            placeholder="رقم الملف، الاسم، الهاتف، البريد"
-                        />
-                    </div>
-                    <div class="grid gap-2 md:max-w-44">
-                        <Label for="patients_per_page">صفوف لكل صفحة</Label>
+        <div class="card-float p-4">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="grid gap-1.5 md:max-w-40">
+                        <Label for="patients_per_page" class="text-xs font-medium text-slate-500">صفوف لكل صفحة</Label>
                         <select
                             id="patients_per_page"
                             v-model.number="localRowsPerPage"
-                            class="pattern-field-clay h-10 px-3 py-1.5"
+                            class="h-9 rounded-lg border border-slate-200/80 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F9D7A]/15 focus:border-[#0F9D7A]"
                         >
                             <option value="10">10</option>
                             <option value="15">15</option>
@@ -995,165 +937,203 @@ const patientTotal = computed(() => patients.meta.total);
                             <option value="50">50</option>
                         </select>
                     </div>
+                    <span class="text-xs font-medium text-slate-400 mt-5">الإجمالي: {{ patients.meta.total }}</span>
                 </div>
-
-                <FilterBar
-                    v-if="activeFilters.length > 0"
-                    :active-filters="activeFilters"
-                    @remove="handleRemoveFilter"
-                    @clear-all="resetLocalFilters"
-                />
+                <div class="grid gap-1.5 md:max-w-sm">
+                    <FilterSearch
+                        id="patients_search"
+                        v-model="localSearch"
+                        placeholder="رقم الملف، الاسم، الهاتف، البريد"
+                    />
+                </div>
             </div>
+
+            <FilterBar
+                v-if="activeFilters.length > 0"
+                :active-filters="activeFilters"
+                @remove="handleRemoveFilter"
+                @clear-all="resetLocalFilters"
+            />
 
             <div
                 v-if="can('patient.delete') && selectedPatientIds.length > 0"
-                class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
+                class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#EF4444]/15 bg-[#FEF2F2]/50 p-3"
             >
-                <Button type="button" variant="destructive" size="sm" @click="handleBulkDelete">
+                <Button type="button" variant="destructive" size="sm" class="rounded-lg" @click="handleBulkDelete">
                     حذف المحدد ({{ selectedPatientIds.length }})
                 </Button>
-                <Button type="button" variant="ghost" size="sm" @click="clearSelectedPatients">إلغاء التحديد</Button>
+                <Button type="button" variant="ghost" size="sm" class="rounded-lg" @click="clearSelectedPatients">إلغاء التحديد</Button>
             </div>
 
             <div class="ui-table-shell">
-                <table class="ui-table">
+                <table class="ui-table w-full">
                     <thead>
-                        <tr>
-                            <th v-if="can('patient.delete')" class="px-3 py-2">
+                        <tr class="bg-slate-50/40">
+                            <th v-if="can('patient.delete')" class="px-4 py-3 text-xs font-medium text-slate-500">
                                 <input
                                     type="checkbox"
-                                    class="size-4 rounded border-border"
+                                    class="size-4 rounded border-slate-200/80"
                                     :checked="areAllPatientsSelected"
                                     @change="toggleAllPatientsSelection"
                                 />
                             </th>
-                            <th class="px-3 py-2">
-                                <button type="button" class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground" @click="toggleSort('file_number')">
+                            <th class="px-4 py-3">
+                                <button type="button" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-slate-900" @click="toggleSort('file_number')">
                                     رقم الملف
-                                    <component :is="sortIconFor('file_number')" class="size-3.5" />
+                                    <component :is="sortIconFor('file_number')" class="size-3" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2">
-                                <button type="button" class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground" @click="toggleSort('full_name')">
+                            <th class="px-4 py-3">
+                                <button type="button" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-slate-900" @click="toggleSort('full_name')">
                                     الاسم
-                                    <component :is="sortIconFor('full_name')" class="size-3.5" />
+                                    <component :is="sortIconFor('full_name')" class="size-3" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2">
-                                <button type="button" class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground" @click="toggleSort('date_of_birth')">
+                            <th class="px-4 py-3">
+                                <button type="button" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-slate-900" @click="toggleSort('date_of_birth')">
                                     تاريخ الميلاد
-                                    <component :is="sortIconFor('date_of_birth')" class="size-3.5" />
+                                    <component :is="sortIconFor('date_of_birth')" class="size-3" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2">
-                                <button type="button" class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground" @click="toggleSort('gender')">
+                            <th class="px-4 py-3">
+                                <button type="button" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-slate-900" @click="toggleSort('gender')">
                                     الجنس
-                                    <component :is="sortIconFor('gender')" class="size-3.5" />
+                                    <component :is="sortIconFor('gender')" class="size-3" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2">
-                                <button type="button" class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground" @click="toggleSort('phone')">
+                            <th class="px-4 py-3">
+                                <button type="button" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-slate-900" @click="toggleSort('phone')">
                                     الهاتف
-                                    <component :is="sortIconFor('phone')" class="size-3.5" />
+                                    <component :is="sortIconFor('phone')" class="size-3" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2">
-                                <button type="button" class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground" @click="toggleSort('email')">
+                            <th class="px-4 py-3">
+                                <button type="button" class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 transition hover:text-slate-900" @click="toggleSort('email')">
                                     البريد
-                                    <component :is="sortIconFor('email')" class="size-3.5" />
+                                    <component :is="sortIconFor('email')" class="size-3" />
                                 </button>
                             </th>
-                            <th class="px-3 py-2 text-right">الإجراءات</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-slate-500">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="patient in visiblePatients" :key="patient.id" class="ui-table-row">
-                            <td v-if="can('patient.delete')" class="px-3 py-2" data-label="تحديد">
+                        <tr
+                            v-for="patient in visiblePatients"
+                            :key="patient.id"
+                            class="group transition-colors duration-150 hover:bg-slate-50/50"
+                            style="height: 52px; border-bottom: 0.5px solid #E8ECF1;"
+                        >
+                            <td v-if="can('patient.delete')" class="px-4 py-2" data-label="تحديد">
                                 <input
                                     v-model="selectedPatientIds"
                                     type="checkbox"
-                                    class="size-4 rounded border-border"
+                                    class="size-4 rounded border-slate-200/80"
                                     :value="patient.id"
                                 />
                             </td>
-                            <td class="px-3 py-2 font-medium" data-label="رقم الملف">
-                                <span class="font-mono text-[0.82rem] tracking-[0.03em]">{{ patient.file_number }}</span>
+                            <td class="px-4 py-2" data-label="رقم الملف">
+                                <span class="font-mono text-xs text-slate-400">{{ patient.file_number }}</span>
                             </td>
-                            <td class="px-3 py-2 text-[0.92rem] font-semibold tracking-tight" data-label="الاسم">
+                            <td class="px-4 py-2 text-sm font-medium text-[#0F9D7A]" data-label="الاسم">
                                 {{ patient.full_name }}
                             </td>
-                            <td class="px-3 py-2" data-label="تاريخ الميلاد">
-                                <span :class="patient.date_of_birth ? '' : 'text-muted-foreground'">
+                            <td class="px-4 py-2 text-sm" data-label="تاريخ الميلاد">
+                                <span :class="patient.date_of_birth ? 'text-slate-700' : 'text-slate-400'">
                                     {{ patient.date_of_birth ?? 'غير محدد' }}
                                 </span>
                             </td>
-                            <td class="px-3 py-2" data-label="الجنس">
+                            <td class="px-4 py-2" data-label="الجنس">
                                 <span
-                                    class="inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold capitalize"
+                                    class="inline-flex items-center rounded-[999px] px-2.5 py-0.5 text-xs font-medium"
                                     :class="patientGenderClass(patient.gender)"
                                 >
                                     {{ patientGenderLabel(patient.gender) }}
                                 </span>
                             </td>
-                            <td class="px-3 py-2 font-medium" data-label="الهاتف">
-                                <span :class="patient.phone ? '' : 'text-muted-foreground'">
+                            <td class="px-4 py-2 text-sm" data-label="الهاتف">
+                                <span :class="patient.phone ? 'text-slate-700' : 'text-slate-400'">
                                     {{ patient.phone ?? 'غير محدد' }}
                                 </span>
                             </td>
-                            <td class="px-3 py-2" data-label="البريد">
-                                <span class="block max-w-[18rem] break-all" :title="patient.email ?? 'غير محدد'" :class="patient.email ? 'font-medium' : 'text-muted-foreground'">
+                            <td class="px-4 py-2 text-sm" data-label="البريد">
+                                <span class="block max-w-[18rem] break-all" :title="patient.email ?? 'غير محدد'" :class="patient.email ? 'text-slate-700' : 'text-slate-400'">
                                     {{ patient.email ?? 'غير محدد' }}
                                 </span>
                             </td>
-                            <td class="table-cell-actions px-3 py-2 md:text-right" data-label="الإجراءات">
-                                <div class="flex flex-wrap justify-end gap-2">
-                                    <Link
-                                        :href="PatientController.show.url(patient.id)"
-                                        class="inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-colors h-10"
-                                        :class="can('patient.view') ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : 'bg-muted text-muted-foreground cursor-not-allowed'"
-                                    >
-                                        عرض
-                                    </Link>
-                                    <Button
-                                        v-if="can('patient.update')"
+                            <td class="px-4 py-2 md:text-right" data-label="الإجراءات">
+                                <!-- Desktop: icon buttons on hover -->
+                                <div class="hidden md:flex items-center justify-end gap-1">
+                                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                                        <Link
+                                            v-if="can('patient.view')"
+                                            :href="PatientController.show.url(patient.id)"
+                                            class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-100 text-slate-400 transition-all duration-150 hover:border-[#0F9D7A]/30 hover:text-[#0F9D7A] hover:bg-[#E7F7F2]/40"
+                                            :aria-label="`عرض ${patient.full_name}`"
+                                        >
+                                            <Eye class="size-3.5" />
+                                        </Link>
+                                        <button
+                                            v-if="can('patient.update')"
+                                            type="button"
+                                            class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-100 text-slate-400 transition-all duration-150 hover:border-[#0F9D7A]/30 hover:text-[#0F9D7A] hover:bg-[#E7F7F2]/40"
+                                            :aria-label="`تعديل ${patient.full_name}`"
+                                            @click="openEditPatient(patient)"
+                                        >
+                                            <Pencil class="size-3.5" />
+                                        </button>
+                                        <button
+                                            v-if="can('patient.delete')"
+                                            type="button"
+                                            class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-100 text-slate-400 transition-all duration-150 hover:border-[#EF4444]/30 hover:text-[#EF4444] hover:bg-[#FEF2F2]/40"
+                                            :aria-label="`حذف ${patient.full_name}`"
+                                            @click="handleDeletePatient(patient)"
+                                        >
+                                            <Trash2 class="size-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Mobile: single menu button -->
+                                <div class="flex md:hidden items-center justify-end">
+                                    <button
                                         type="button"
-                                        size="sm"
-                                        variant="clay"
-                                        class="h-10 px-3 text-xs"
-                                        @click="openEditPatient(patient)"
+                                        class="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-100 text-slate-400"
+                                        :aria-label="`إجراءات ${patient.full_name}`"
                                     >
-                                        تعديل
-                                    </Button>
-                                    <Button
-                                        v-if="can('patient.delete')"
-                                        type="button"
-                                        size="sm"
-                                        variant="destructive"
-                                        class="h-10 px-3 text-xs"
-                                        @click="handleDeletePatient(patient)"
-                                    >
-                                        حذف
-                                    </Button>
+                                        <MoreVertical class="size-3.5" />
+                                    </button>
                                 </div>
                             </td>
                         </tr>
-                        <tr v-if="visiblePatients.length === 0" class="table-empty-state">
-                            <td :colspan="can('patient.delete') ? 8 : 7" class="px-3 py-10 text-center text-muted-foreground">
-                                لا يوجد مرضى مطابقين.
+                        <tr v-if="visiblePatients.length === 0">
+                            <td :colspan="can('patient.delete') ? 8 : 7" class="px-4 py-20">
+                                <div class="flex flex-col items-center justify-center text-center">
+                                    <Users class="size-12 text-slate-200 mb-4" />
+                                    <h3 class="text-lg font-semibold text-slate-900 mb-1">لا يوجد مرضى</h3>
+                                    <p class="text-sm text-slate-400 mb-5">جرب تغيير كلمة البحث أو أضف مريضاً جديداً</p>
+                                    <Button
+                                        v-if="can('patient.create')"
+                                        variant="default"
+                                        size="sm"
+                                        class="rounded-lg bg-[#0F9D7A] text-white hover:bg-[#0B7A5E] shadow-sm"
+                                        @click="isQuickAddOpen = true"
+                                    >
+                                        إضافة سريعة
+                                    </Button>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
-            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2">
-                <p class="text-xs text-muted-foreground">
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-100/80 bg-slate-50/40 px-4 py-2.5">
+                <p class="text-xs text-slate-500">
                     عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من {{ patients.meta.total }} سجل
                 </p>
                 <div class="flex items-center gap-2">
-                    <Button type="button" variant="neumorphic" size="sm" class="h-10 px-3 text-xs" :disabled="localPage === 1" @click="goToPreviousPage">السابق</Button>
-                    <span class="text-xs font-semibold text-foreground/85">صفحة {{ localPage }} / {{ totalLocalPages }}</span>
-                    <Button type="button" variant="neumorphic" size="sm" class="h-10 px-3 text-xs" :disabled="localPage >= totalLocalPages" @click="goToNextPage">التالي</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-9 px-3 text-xs rounded-lg border-slate-200/80" :disabled="localPage === 1" @click="goToPreviousPage">السابق</Button>
+                    <span class="text-xs font-semibold text-slate-600">صفحة {{ localPage }} / {{ totalLocalPages }}</span>
+                    <Button type="button" variant="outline" size="sm" class="h-9 px-3 text-xs rounded-lg border-slate-200/80" :disabled="localPage >= totalLocalPages" @click="goToNextPage">التالي</Button>
                 </div>
             </div>
         </div>

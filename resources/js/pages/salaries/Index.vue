@@ -355,7 +355,7 @@ const deleteSalary = async (salary: Salary) => {
                         <textarea id="notes" name="notes" rows="2" class="pattern-field-clay" />
                     </div>
                     <Button :disabled="processing" variant="clay" class="w-full">
-                        <Plus class="mr-2 size-4" />إنشاء راتب
+                        <Plus class="me-2 size-4" />إنشاء راتب
                     </Button>
                 </Form>
             </section>
@@ -424,7 +424,7 @@ const deleteSalary = async (salary: Salary) => {
                                             <Button type="submit" variant="neumorphic" size="sm" class="h-8 px-3 text-xs" :disabled="processing">اعتماد</Button>
                                         </Form>
                                         <Form v-if="can('salaries.pay') && salary.status === 'approved'" :action="SalaryController.pay.url(salary.id)" method="post" v-slot="{ processing }" @success="() => toast.success('تم دفع الراتب بنجاح')" @error="() => toast.error('فشل في معالجة الدفع')">
-                                            <Button type="submit" variant="clay" size="sm" class="h-8 px-3 text-xs" :disabled="processing"><DollarSign class="mr-1 size-3" />دفع</Button>
+                                            <Button type="submit" variant="clay" size="sm" class="h-8 px-3 text-xs" :disabled="processing"><DollarSign class="me-1 size-3" />دفع</Button>
                                         </Form>
                                         <Button v-if="can('salaries.delete') && salary.status !== 'paid'" type="button" variant="ghost" size="sm" class="h-8 px-3 text-xs text-destructive" @click="deleteSalary(salary)">حذف</Button>
                                     </div>

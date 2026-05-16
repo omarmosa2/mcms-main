@@ -409,7 +409,7 @@ const handleBulkDelete = async () => {
                         />
                     </div>
                     <Button :disabled="processing" variant="clay" class="w-full">
-                        <Unlock class="ml-2 size-4" />
+                        <Unlock class="me-2 size-4" />
                         فتح الصندوق
                     </Button>
                 </Form>
@@ -449,7 +449,7 @@ const handleBulkDelete = async () => {
                         />
                     </div>
                     <Button :disabled="processing" variant="clay" class="w-full">
-                        <Lock class="ml-2 size-4" />
+                        <Lock class="ms-2 size-4" />
                         إغلاق الصندوق
                     </Button>
                 </Form>
@@ -655,7 +655,7 @@ const handleBulkDelete = async () => {
                         <InputError :message="errors.notes" />
                     </div>
                     <Button :disabled="processing" variant="clay" class="w-full">
-                        <Unlock class="ml-2 size-4" />
+                        <Unlock class="me-2 size-4" />
                         فتح الصندوق
                     </Button>
                 </Form>

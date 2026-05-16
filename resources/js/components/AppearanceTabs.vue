@@ -24,8 +24,8 @@ const tabs = [
                     : 'text-muted-foreground hover:text-foreground',
             ]"
         >
-            <component :is="Icon" class="-ml-1 h-4 w-4" />
-            <span class="ml-1.5 text-sm">{{ label }}</span>
+            <component :is="Icon" class="-ms-1 h-4 w-4" />
+            <span class="ms-1.5 text-sm">{{ label }}</span>
         </button>
     </div>
 </template>

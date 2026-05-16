@@ -1,0 +1,396 @@
+<?php
+
+namespace App\Http\Controllers\Appointments;
+
+use App\Actions\Appointments\CreateAppointmentAction;
+use App\Actions\Appointments\DeleteAppointmentAction;
+use App\Actions\Appointments\ListAppointmentsAction;
+use App\Actions\Appointments\ShowAppointmentAction;
+use App\Actions\Appointments\TransitionAppointmentStatusAction;
+use App\Actions\Appointments\UpdateAppointmentAction;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Appointments\StoreAppointmentRequest;
+use App\Http\Requests\Appointments\TransitionAppointmentStatusRequest;
+use App\Http\Requests\Appointments\UpdateAppointmentRequest;
+use App\Http\Resources\AppointmentResource;
+use App\Models\Appointment;
+use App\Services\Cache\CacheService;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\Response;
+
+class AppointmentController extends Controller
+{
+    public function __construct(
+        private ListAppointmentsAction $listAppointmentsAction,
+        private ShowAppointmentAction $showAppointmentAction,
+        private CreateAppointmentAction $createAppointmentAction,
+        private UpdateAppointmentAction $updateAppointmentAction,
+        private TransitionAppointmentStatusAction $transitionAppointmentStatusAction,
+        private DeleteAppointmentAction $deleteAppointmentAction,
+        private CacheService $cacheService,
+    ) {}
+
+    public function index(Request $request): AnonymousResourceCollection|InertiaResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+        $filters = $this->resolveIndexFilters($request);
+        $doctorScopeUserId = $this->resolveDoctorScopeUserId($request);
+
+        $appointments = $this->listAppointmentsAction->handle(
+            clinicId: $clinicId,
+            userId: (int) $request->user()->id,
+            perPage: $filters['per_page'],
+            status: $filters['status'],
+            search: $filters['search'],
+            sortBy: $filters['sort_by'],
+            sortDirection: $filters['sort_direction'],
+            doctorId: $doctorScopeUserId,
+        );
+
+        $appointmentsResource = AppointmentResource::collection($appointments);
+
+        if ($request->expectsJson()) {
+            return $appointmentsResource;
+        }
+
+        $patients = $this->cacheService->getPatientsDropdown($clinicId);
+
+        $doctors = $this->cacheService->getDoctorsDropdown($clinicId);
+
+        $todayAppointments = Appointment::query()
+            ->forClinic($clinicId)
+            ->withoutTrashed()
+            ->with(['patient:id,clinic_id,first_name,last_name', 'doctor:id,clinic_id,name'])
+            ->whereDate('scheduled_for', now()->toDateString())
+            ->orderBy('scheduled_for')
+            ->get();
+
+        return Inertia::render('appointments/Index', [
+            'appointments' => $appointmentsResource->response()->getData(true),
+            'patients' => $patients,
+            'doctors' => $doctors,
+            'status_options' => [
+                Appointment::STATUS_SCHEDULED,
+                Appointment::STATUS_CONFIRMED,
+                Appointment::STATUS_ARRIVED,
+                Appointment::STATUS_COMPLETED,
+                Appointment::STATUS_CANCELED,
+                Appointment::STATUS_NO_SHOW,
+            ],
+            'filters' => $filters,
+            'today_appointments' => AppointmentResource::collection($todayAppointments)->response()->getData(true)['data'],
+        ]);
+    }
+
+    public function store(StoreAppointmentRequest $request): JsonResponse|RedirectResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $appointment = $this->createAppointmentAction->handle(
+            clinicId: $clinicId,
+            userId: (int) $request->user()->id,
+            payload: $request->validated(),
+        );
+
+        if ($request->expectsJson()) {
+            return AppointmentResource::make($appointment)
+                ->response()
+                ->setStatusCode(Response::HTTP_CREATED);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Appointment created successfully.']);
+
+        return to_route('appointments.index');
+    }
+
+    public function show(Request $request, int $appointmentId): AppointmentResource
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $appointment = $this->showAppointmentAction->handle(
+            clinicId: $clinicId,
+            appointmentId: $appointmentId,
+            userId: (int) $request->user()->id,
+            doctorId: $this->resolveDoctorScopeUserId($request),
+        );
+
+        return AppointmentResource::make($appointment);
+    }
+
+    public function update(UpdateAppointmentRequest $request, int $appointmentId): AppointmentResource|RedirectResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $appointment = $this->updateAppointmentAction->handle(
+            clinicId: $clinicId,
+            appointmentId: $appointmentId,
+            userId: (int) $request->user()->id,
+            payload: $request->validated(),
+        );
+
+        if ($request->expectsJson()) {
+            return AppointmentResource::make($appointment);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Appointment updated successfully.']);
+
+        return to_route('appointments.index');
+    }
+
+    public function transitionStatus(
+        TransitionAppointmentStatusRequest $request,
+        int $appointmentId,
+    ): AppointmentResource|RedirectResponse {
+        $clinicId = $this->resolveClinicId($request);
+
+        $appointment = $this->transitionAppointmentStatusAction->handle(
+            clinicId: $clinicId,
+            appointmentId: $appointmentId,
+            userId: (int) $request->user()->id,
+            payload: $request->validated(),
+        );
+
+        if ($request->expectsJson()) {
+            return AppointmentResource::make($appointment);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Appointment status updated successfully.']);
+
+        return to_route('appointments.index');
+    }
+
+    public function destroy(Request $request, int $appointmentId): Response|RedirectResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $this->deleteAppointmentAction->handle(
+            clinicId: $clinicId,
+            appointmentId: $appointmentId,
+            userId: (int) $request->user()->id,
+        );
+
+        if ($request->expectsJson()) {
+            return response()->noContent();
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Appointment deleted successfully.']);
+
+        return to_route('appointments.index');
+    }
+
+    public function bulkDestroy(Request $request): JsonResponse|RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'distinct'],
+        ]);
+
+        $clinicId = $this->resolveClinicId($request);
+        $userId = (int) $request->user()->id;
+
+        $deletedIds = [];
+        $failedIds = [];
+
+        /** @var array<int> $ids */
+        $ids = array_map('intval', $validated['ids']);
+
+        DB::transaction(function () use ($ids, $clinicId, $userId, &$deletedIds, &$failedIds): void {
+            foreach (array_values(array_unique($ids)) as $appointmentId) {
+                try {
+                    $this->deleteAppointmentAction->handle(
+                        clinicId: $clinicId,
+                        appointmentId: $appointmentId,
+                        userId: $userId,
+                    );
+
+                    $deletedIds[] = $appointmentId;
+                } catch (ModelNotFoundException|ValidationException) {
+                    $failedIds[] = $appointmentId;
+                }
+            }
+        });
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'data' => [
+                    'deleted_ids' => $deletedIds,
+                    'failed_ids' => $failedIds,
+                    'deleted_count' => count($deletedIds),
+                    'failed_count' => count($failedIds),
+                ],
+            ], count($deletedIds) > 0 ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if (count($deletedIds) === 0) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'No selected appointments could be deleted.']);
+
+            return to_route('appointments.index');
+        }
+
+        if (count($failedIds) > 0) {
+            Inertia::flash('toast', [
+                'type' => 'warning',
+                'message' => sprintf('Deleted %d appointment(s). %d could not be deleted.', count($deletedIds), count($failedIds)),
+            ]);
+
+            return to_route('appointments.index');
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => sprintf('Deleted %d appointment(s) successfully.', count($deletedIds)),
+        ]);
+
+        return to_route('appointments.index');
+    }
+
+    private function resolveClinicId(Request $request): int
+    {
+        $clinicId = $request->user()?->clinic_id;
+
+        if ($clinicId === null) {
+            abort(Response::HTTP_FORBIDDEN, 'Clinic context is required.');
+        }
+
+        return (int) $clinicId;
+    }
+
+    private function resolveDoctorScopeUserId(Request $request): ?int
+    {
+        $user = $request->user();
+
+        if ($user !== null && $user->hasRole('doctor')) {
+            return (int) $user->id;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{
+     *     status: ?string,
+     *     search: ?string,
+     *     per_page: int,
+     *     sort_by: string,
+     *     sort_direction: string
+     * }
+     */
+    private function resolveIndexFilters(Request $request): array
+    {
+        $sessionKey = 'appointments.index.filters';
+
+        if ($request->boolean('reset')) {
+            $request->session()->forget($sessionKey);
+        }
+
+        /** @var array{
+         *     status?: ?string,
+         *     search?: ?string,
+         *     per_page?: int,
+         *     sort_by?: string,
+         *     sort_direction?: string
+         * }|null $savedFilters */
+        $savedFilters = $request->session()->get($sessionKey);
+
+        $statusInput = $request->exists('status')
+            ? $request->query('status')
+            : ($savedFilters['status'] ?? null);
+        $status = $this->normalizeStatus($statusInput, [
+            Appointment::STATUS_SCHEDULED,
+            Appointment::STATUS_CONFIRMED,
+            Appointment::STATUS_ARRIVED,
+            Appointment::STATUS_COMPLETED,
+            Appointment::STATUS_CANCELED,
+            Appointment::STATUS_NO_SHOW,
+        ]);
+
+        $searchInput = $request->exists('search')
+            ? $request->query('search')
+            : ($savedFilters['search'] ?? null);
+        $search = $this->normalizeNullableString($searchInput);
+
+        $perPageInput = $request->exists('per_page')
+            ? $request->query('per_page')
+            : ($savedFilters['per_page'] ?? 15);
+        $perPage = $this->normalizePerPage($perPageInput);
+
+        $sortByInput = $request->exists('sort_by')
+            ? $request->query('sort_by')
+            : ($savedFilters['sort_by'] ?? 'scheduled_for');
+        $sortBy = $this->normalizeSortBy($sortByInput);
+
+        $sortDirectionInput = $request->exists('sort_direction')
+            ? $request->query('sort_direction')
+            : ($savedFilters['sort_direction'] ?? 'desc');
+        $sortDirection = $this->normalizeSortDirection($sortDirectionInput);
+
+        $filters = [
+            'status' => $status,
+            'search' => $search,
+            'per_page' => $perPage,
+            'sort_by' => $sortBy,
+            'sort_direction' => $sortDirection,
+        ];
+
+        $request->session()->put($sessionKey, $filters);
+
+        return $filters;
+    }
+
+    /**
+     * @param  array<string>  $allowedStatuses
+     */
+    private function normalizeStatus(mixed $value, array $allowedStatuses): ?string
+    {
+        $status = $this->normalizeNullableString($value);
+
+        if ($status === null) {
+            return null;
+        }
+
+        return in_array($status, $allowedStatuses, true) ? $status : null;
+    }
+
+    private function normalizeNullableString(mixed $value): ?string
+    {
+        $normalized = trim((string) ($value ?? ''));
+
+        return $normalized !== '' ? $normalized : null;
+    }
+
+    private function normalizePerPage(mixed $value): int
+    {
+        $perPage = (int) $value;
+        $allowedPerPageValues = [10, 15, 25, 50];
+
+        return in_array($perPage, $allowedPerPageValues, true) ? $perPage : 15;
+    }
+
+    private function normalizeSortBy(mixed $value): string
+    {
+        $sortBy = trim((string) ($value ?? ''));
+        $allowedSortByValues = [
+            'appointment_number',
+            'scheduled_for',
+            'duration_minutes',
+            'status',
+        ];
+
+        return in_array($sortBy, $allowedSortByValues, true) ? $sortBy : 'scheduled_for';
+    }
+
+    private function normalizeSortDirection(mixed $value): string
+    {
+        $direction = trim((string) ($value ?? ''));
+
+        return in_array($direction, ['asc', 'desc'], true) ? $direction : 'desc';
+    }
+}

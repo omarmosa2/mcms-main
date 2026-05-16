@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Http\Requests\Pharmacy;
+
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StorePurchaseOrderRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        $user = $this->user();
+
+        return $user !== null
+            && $user->clinic_id !== null
+            && ($user->hasPermission('billing.generate') || $user->hasPermission('payment.record'));
+    }
+
+    /**
+     * @return array<string, ValidationRule|array<int, ValidationRule|string>|string>
+     */
+    public function rules(): array
+    {
+        $clinicId = $this->user()?->clinic_id;
+
+        return [
+            'supplier_id' => [
+                'required',
+                'integer',
+                Rule::exists('suppliers', 'id')->where(fn ($query) => $query->where('clinic_id', $clinicId)),
+            ],
+            'po_number' => ['nullable', 'string', 'max:50'],
+            'expected_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.pharmacy_drug_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('pharmacy_drugs', 'id')->where(fn ($query) => $query->where('clinic_id', $clinicId)),
+            ],
+            'items.*.medication_name' => ['required', 'string', 'max:255'],
+            'items.*.quantity_ordered' => ['required', 'integer', 'min:1'],
+            'items.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'items.*.notes' => ['nullable', 'string'],
+        ];
+    }
+}

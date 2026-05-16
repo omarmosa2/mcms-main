@@ -1,0 +1,488 @@
+openapi: 3.0.3
+info:
+  title: MCMS API
+  description: Medical Clinic Management System API
+  version: 1.0.0
+  contact:
+    email: support@mcms.local
+
+servers:
+  - url: /api
+    description: Local development server
+
+paths:
+  /billing/invoices:
+    get:
+      tags: [Billing]
+      summary: List all invoices
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: clinic_id
+          schema:
+            type: integer
+          description: Filter by clinic ID
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [draft, issued, partially_paid, paid]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Invoice'
+    post:
+      tags: [Billing]
+      summary: Create a new invoice
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceCreate'
+      responses:
+        '201':
+          description: Invoice created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+
+  /billing/invoices/{invoiceId}:
+    get:
+      tags: [Billing]
+      summary: Get invoice by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+    patch:
+      tags: [Billing]
+      summary: Update invoice
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceUpdate'
+      responses:
+        '200':
+          description: Invoice updated
+    delete:
+      tags: [Billing]
+      summary: Delete invoice
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Invoice deleted
+
+  /billing/invoices/{invoiceId}/issue:
+    patch:
+      tags: [Billing]
+      summary: Issue a draft invoice
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Invoice issued
+
+  /billing/invoices/{invoiceId}/payments:
+    post:
+      tags: [Billing]
+      summary: Record a payment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCreate'
+      responses:
+        '201':
+          description: Payment recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+
+  /billing/payments/{paymentId}/refund:
+    patch:
+      tags: [Billing]
+      summary: Refund a payment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: paymentId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Payment refunded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+
+  /patients:
+    get:
+      tags: [Patients]
+      summary: List all patients
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: clinic_id
+          schema:
+            type: integer
+        - in: query
+          name: search
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+    post:
+      tags: [Patients]
+      summary: Create a new patient
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientCreate'
+      responses:
+        '201':
+          description: Patient created
+
+  /appointments:
+    get:
+      tags: [Appointments]
+      summary: List all appointments
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: clinic_id
+          schema:
+            type: integer
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Successful response
+    post:
+      tags: [Appointments]
+      summary: Create a new appointment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreate'
+      responses:
+        '201':
+          description: Appointment created
+
+  /queue:
+    get:
+      tags: [Queue]
+      summary: Get queue entries
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: clinic_id
+          schema:
+            type: integer
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Successful response
+    post:
+      tags: [Queue]
+      summary: Add patient to queue
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patient_id]
+              properties:
+                patient_id:
+                  type: integer
+                queue_date:
+                  type: string
+                  format: date
+                priority:
+                  type: integer
+                  default: 0
+      responses:
+        '201':
+          description: Patient added to queue
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        clinic_id:
+          type: integer
+        patient_id:
+          type: integer
+        status:
+          type: string
+          enum: [draft, issued, partially_paid, paid]
+        subtotal_amount:
+          type: number
+          format: float
+        discount_amount:
+          type: number
+          format: float
+        tax_amount:
+          type: number
+          format: float
+        total_amount:
+          type: number
+          format: float
+        paid_amount:
+          type: number
+          format: float
+        balance_amount:
+          type: number
+          format: float
+        issued_at:
+          type: string
+          format: date-time
+        due_at:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    InvoiceCreate:
+      type: object
+      required: [patient_id]
+      properties:
+        patient_id:
+          type: integer
+        visit_id:
+          type: integer
+        clinic_id:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              quantity:
+                type: integer
+              unit_price:
+                type: number
+                format: float
+              total_price:
+                type: number
+                format: float
+
+    InvoiceUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        subtotal_amount:
+          type: number
+          format: float
+        discount_amount:
+          type: number
+          format: float
+        tax_amount:
+          type: number
+          format: float
+
+    PaymentCreate:
+      type: object
+      required: [amount, method]
+      properties:
+        amount:
+          type: number
+          format: float
+          minimum: 0.01
+        method:
+          type: string
+          enum: [cash, card, bank_transfer, insurance]
+        payment_reference:
+          type: string
+        paid_at:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        idempotency_key:
+          type: string
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        clinic_id:
+          type: integer
+        invoice_id:
+          type: integer
+        received_by:
+          type: integer
+        payment_reference:
+          type: string
+        method:
+          type: string
+        status:
+          type: string
+          enum: [recorded, refunded, voided]
+        amount:
+          type: number
+          format: float
+        refund_amount:
+          type: number
+          format: float
+        paid_at:
+          type: string
+          format: date-time
+        refunded_at:
+          type: string
+          format: date-time
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    PatientCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        national_id:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        date_of_birth:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [male, female]
+
+    AppointmentCreate:
+      type: object
+      required: [patient_id, doctor_id]
+      properties:
+        patient_id:
+          type: integer
+        doctor_id:
+          type: integer
+        clinic_id:
+          type: integer
+        appointment_date:
+          type: string
+          format: date
+        appointment_time:
+          type: string
+          format: time
+        duration_minutes:
+          type: integer
+          default: 30
+        notes:
+          type: string

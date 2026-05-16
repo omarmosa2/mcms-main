@@ -1,0 +1,876 @@
+openapi: 3.1.0
+info:
+  title: MCMS API
+  description: Medical Clinic Management System - REST API Documentation
+  version: 1.0.0
+  contact:
+    name: MCMS Support
+servers:
+  - url: /api
+    description: Default server
+
+paths:
+  /patients:
+    get:
+      tags: [Patients]
+      summary: List patients
+      operationId: patients.index
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: search
+          in: query
+          schema: {type: string}
+        - name: page
+          in: query
+          schema: {type: integer, default: 1}
+        - name: per_page
+          in: query
+          schema: {type: integer, default: 15}
+      responses:
+        '200':
+          description: Paginated list of patients
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: {$ref: '#/components/schemas/Patient'}
+                  meta: {$ref: '#/components/schemas/PaginationMeta'}
+    post:
+      tags: [Patients]
+      summary: Create patient
+      operationId: patients.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [file_number, first_name, last_name]
+              properties:
+                file_number: {type: string}
+                first_name: {type: string}
+                last_name: {type: string}
+                date_of_birth: {type: string, format: date}
+                gender: {type: string, enum: [male, female, other]}
+                phone: {type: string}
+                email: {type: string, format: email}
+      responses:
+        '201':
+          description: Patient created
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Patient'}
+
+  /patients/{patientId}:
+    get:
+      tags: [Patients]
+      summary: Show patient
+      operationId: patients.show
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema: {type: integer}
+      responses:
+        '200':
+          description: Patient details
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Patient'}
+    put:
+      tags: [Patients]
+      summary: Update patient
+      operationId: patients.update
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name: {type: string}
+                last_name: {type: string}
+                date_of_birth: {type: string, format: date}
+                gender: {type: string, enum: [male, female, other]}
+                phone: {type: string}
+                email: {type: string, format: email}
+      responses:
+        '200':
+          description: Patient updated
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Patient'}
+    delete:
+      tags: [Patients]
+      summary: Delete patient
+      operationId: patients.destroy
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: patientId
+          in: path
+          required: true
+          schema: {type: integer}
+      responses:
+        '200':
+          description: Patient deleted
+
+  /appointments:
+    get:
+      tags: [Appointments]
+      summary: List appointments
+      operationId: appointments.index
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: search
+          in: query
+          schema: {type: string}
+        - name: page
+          in: query
+          schema: {type: integer, default: 1}
+      responses:
+        '200':
+          description: Paginated list of appointments
+    post:
+      tags: [Appointments]
+      summary: Create appointment
+      operationId: appointments.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patient_id, doctor_id, scheduled_at]
+              properties:
+                patient_id: {type: integer}
+                doctor_id: {type: integer}
+                scheduled_at: {type: string, format: date-time}
+                notes: {type: string}
+      responses:
+        '201':
+          description: Appointment created
+
+  /queue:
+    get:
+      tags: [Queue]
+      summary: List queue entries
+      operationId: queue.index
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: status
+          in: query
+          schema: {type: string, enum: [waiting, called, in_service, completed, skipped, canceled]}
+        - name: page
+          in: query
+          schema: {type: integer, default: 1}
+      responses:
+        '200':
+          description: Paginated queue entries
+    post:
+      tags: [Queue]
+      summary: Enqueue patient
+      operationId: queue.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patient_id]
+              properties:
+                patient_id: {type: integer}
+                appointment_id: {type: integer}
+                assigned_doctor_id: {type: integer}
+                priority: {type: integer, default: 0}
+                queue_date: {type: string, format: date}
+                notes: {type: string}
+      responses:
+        '201':
+          description: Patient enqueued
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QueueEntry'}
+
+  /queue/call-next:
+    post:
+      tags: [Queue]
+      summary: Call next patient
+      operationId: queue.call-next
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Next patient called
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/QueueEntry'}
+
+  /queue/{queueEntryId}/status:
+    patch:
+      tags: [Queue]
+      summary: Update queue entry status
+      operationId: queue.update-status
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: queueEntryId
+          in: path
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {type: string, enum: [called, in_service, completed, skipped, canceled]}
+      responses:
+        '200':
+          description: Status updated
+
+  /visits:
+    get:
+      tags: [Visits]
+      summary: List visits
+      operationId: visits.index
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: status
+          in: query
+          schema: {type: string}
+        - name: page
+          in: query
+          schema: {type: integer, default: 1}
+      responses:
+        '200':
+          description: Paginated visits
+    post:
+      tags: [Visits]
+      summary: Start visit
+      operationId: visits.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patient_id]
+              properties:
+                patient_id: {type: integer}
+                queue_entry_id: {type: integer}
+                doctor_id: {type: integer}
+                complaint: {type: string}
+      responses:
+        '201':
+          description: Visit started
+
+  /billing/invoices:
+    get:
+      tags: [Billing]
+      summary: List invoices
+      operationId: billing.invoices.index
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: status
+          in: query
+          schema: {type: string, enum: [draft, issued, partially_paid, paid]}
+        - name: page
+          in: query
+          schema: {type: integer, default: 1}
+      responses:
+        '200':
+          description: Paginated invoices
+    post:
+      tags: [Billing]
+      summary: Create invoice
+      operationId: billing.invoices.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patient_id, items]
+              properties:
+                patient_id: {type: integer}
+                visit_id: {type: integer}
+                appointment_id: {type: integer}
+                due_at: {type: string, format: date}
+                notes: {type: string}
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [description, quantity, unit_price]
+                    properties:
+                      description: {type: string}
+                      quantity: {type: number, format: float}
+                      unit_price: {type: number, format: float}
+                      discount_amount: {type: number, format: float}
+                      tax_amount: {type: number, format: float}
+      responses:
+        '201':
+          description: Invoice created
+
+  /billing/invoices/{invoiceId}/payments:
+    post:
+      tags: [Billing]
+      summary: Record payment
+      operationId: billing.payments.store
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: invoiceId
+          in: path
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, method]
+              properties:
+                amount: {type: number, format: float}
+                method: {type: string, enum: [cash, card, bank_transfer, insurance, online]}
+                payment_reference: {type: string}
+                paid_at: {type: string, format: date-time}
+                notes: {type: string}
+                idempotency_key: {type: string, maxLength: 64}
+      responses:
+        '201':
+          description: Payment recorded
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Payment'}
+
+  /billing/payments/{paymentId}/refund:
+    patch:
+      tags: [Billing]
+      summary: Refund payment
+      operationId: billing.payments.refund
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: paymentId
+          in: path
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: {type: number, format: float}
+                notes: {type: string}
+                idempotency_key: {type: string, maxLength: 64}
+      responses:
+        '200':
+          description: Payment refunded
+
+  /departments:
+    get:
+      tags: [Departments]
+      summary: List departments
+      operationId: departments.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Paginated departments
+    post:
+      tags: [Departments]
+      summary: Create department
+      operationId: departments.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: {type: string}
+                description: {type: string}
+      responses:
+        '201':
+          description: Department created
+
+  /doctors:
+    get:
+      tags: [Doctors]
+      summary: List doctors
+      operationId: doctors.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Paginated doctors
+    post:
+      tags: [Doctors]
+      summary: Create doctor profile
+      operationId: doctors.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, specialization]
+              properties:
+                user_id: {type: integer}
+                specialization: {type: string}
+                license_number: {type: string}
+      responses:
+        '201':
+          description: Doctor profile created
+
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      operationId: users.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Paginated users
+    post:
+      tags: [Users]
+      summary: Create user
+      operationId: users.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: {type: string}
+                email: {type: string, format: email}
+                password: {type: string, minLength: 8}
+                role: {type: string}
+      responses:
+        '201':
+          description: User created
+
+  /roles:
+    get:
+      tags: [Roles]
+      summary: List roles
+      operationId: roles.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Paginated roles
+    post:
+      tags: [Roles]
+      summary: Create role
+      operationId: roles.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, permissions]
+              properties:
+                name: {type: string}
+                permissions:
+                  type: array
+                  items: {type: string}
+      responses:
+        '201':
+          description: Role created
+
+  /payment-plans:
+    get:
+      tags: [Financial]
+      summary: List payment plans
+      operationId: payment-plans.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Paginated payment plans
+    post:
+      tags: [Financial]
+      summary: Create payment plan
+      operationId: payment-plans.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, installment_count]
+              properties:
+                name: {type: string}
+                description: {type: string}
+                installment_count: {type: integer, minimum: 1}
+                frequency: {type: string, enum: [weekly, monthly, quarterly], default: monthly}
+                min_amount: {type: integer, default: 0}
+                is_active: {type: boolean, default: true}
+      responses:
+        '201':
+          description: Payment plan created
+
+  /installments/{installment}/pay:
+    post:
+      tags: [Financial]
+      summary: Pay installment
+      operationId: installments.pay
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: installment
+          in: path
+          required: true
+          schema: {type: integer}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Installment paid
+
+  /inventory/adjust-stock:
+    post:
+      tags: [Inventory]
+      summary: Adjust drug stock
+      operationId: inventory.adjust-stock
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [drug_id, adjustment_type, quantity]
+              properties:
+                drug_id: {type: integer}
+                adjustment_type: {type: string, enum: [add, remove]}
+                quantity: {type: integer, minimum: 1}
+                reason: {type: string}
+                notes: {type: string}
+      responses:
+        '200':
+          description: Stock adjusted
+
+  /inventory/batches:
+    get:
+      tags: [Inventory]
+      summary: List drug batches
+      operationId: inventory.batches.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Paginated drug batches
+    post:
+      tags: [Inventory]
+      summary: Create drug batch
+      operationId: inventory.batches.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [drug_id, batch_number, quantity, expiry_date]
+              properties:
+                drug_id: {type: integer}
+                batch_number: {type: string}
+                quantity: {type: integer}
+                expiry_date: {type: string, format: date}
+      responses:
+        '201':
+          description: Batch created
+
+  /diagnostics/lab-templates:
+    get:
+      tags: [Diagnostics]
+      summary: List lab test templates
+      operationId: diagnostics.lab-templates.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Paginated lab templates
+    post:
+      tags: [Diagnostics]
+      summary: Create lab test template
+      operationId: diagnostics.lab-templates.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, test_type]
+              properties:
+                name: {type: string}
+                test_type: {type: string}
+                description: {type: string}
+                price: {type: number, format: float}
+      responses:
+        '201':
+          description: Lab template created
+
+  /expenses:
+    get:
+      tags: [Expenses]
+      summary: List expenses
+      operationId: expenses.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Paginated expenses
+    post:
+      tags: [Expenses]
+      summary: Create expense
+      operationId: expenses.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, amount, category]
+              properties:
+                title: {type: string}
+                amount: {type: number, format: float}
+                category: {type: string}
+                notes: {type: string}
+      responses:
+        '201':
+          description: Expense created
+
+  /cashbox:
+    get:
+      tags: [Cashbox]
+      summary: Get current cashbox status
+      operationId: cashbox.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Cashbox status
+    post:
+      tags: [Cashbox]
+      summary: Open cashbox
+      operationId: cashbox.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [opening_amount]
+              properties:
+                opening_amount: {type: number, format: float}
+                notes: {type: string}
+      responses:
+        '201':
+          description: Cashbox opened
+
+  /salaries:
+    get:
+      tags: [Salaries]
+      summary: List salaries
+      operationId: salaries.index
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Paginated salaries
+    post:
+      tags: [Salaries]
+      summary: Create salary record
+      operationId: salaries.store
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, amount, period]
+              properties:
+                user_id: {type: integer}
+                amount: {type: number, format: float}
+                period: {type: string}
+                notes: {type: string}
+      responses:
+        '201':
+          description: Salary record created
+
+  /reports:
+    get:
+      tags: [Reports]
+      summary: Get reports
+      operationId: reports.index
+      security: [{bearerAuth: []}]
+      parameters:
+        - name: type
+          in: query
+          schema: {type: string}
+        - name: from
+          in: query
+          schema: {type: string, format: date}
+        - name: to
+          in: query
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Report data
+
+  /monitoring/health:
+    get:
+      tags: [Monitoring]
+      summary: Health check
+      operationId: monitoring.health
+      responses:
+        '200':
+          description: System health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: {type: string}
+                  timestamp: {type: string, format: date-time}
+
+  /monitoring/metrics:
+    get:
+      tags: [Monitoring]
+      summary: Prometheus metrics
+      operationId: monitoring.metrics
+      responses:
+        '200':
+          description: Prometheus metrics
+          content:
+            text/plain:
+              schema: {type: string}
+
+  /settings/security/policies:
+    get:
+      tags: [Settings]
+      summary: Get security policies
+      operationId: security-policies.show
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Security policies
+    put:
+      tags: [Settings]
+      summary: Update security policies
+      operationId: security-policies.update
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                max_login_attempts: {type: integer}
+                lockout_duration_minutes: {type: integer}
+                password_min_length: {type: integer}
+                require_uppercase: {type: boolean}
+                require_numbers: {type: boolean}
+                require_special_chars: {type: boolean}
+                session_timeout_minutes: {type: integer}
+                public_registration_enabled: {type: boolean}
+      responses:
+        '200':
+          description: Policies updated
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Patient:
+      type: object
+      properties:
+        id: {type: integer}
+        clinic_id: {type: integer}
+        file_number: {type: string}
+        first_name: {type: string}
+        last_name: {type: string}
+        date_of_birth: {type: string, format: date}
+        gender: {type: string, enum: [male, female, other]}
+        phone: {type: string}
+        email: {type: string, format: email}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+
+    QueueEntry:
+      type: object
+      properties:
+        id: {type: integer}
+        clinic_id: {type: integer}
+        patient_id: {type: integer}
+        queue_number: {type: integer}
+        queue_date: {type: string, format: date}
+        priority: {type: integer}
+        status: {type: string, enum: [waiting, called, in_service, completed, skipped, canceled]}
+        checked_in_at: {type: string, format: date-time}
+        called_at: {type: string, format: date-time}
+        started_at: {type: string, format: date-time}
+        completed_at: {type: string, format: date-time}
+
+    Payment:
+      type: object
+      properties:
+        id: {type: integer}
+        clinic_id: {type: integer}
+        invoice_id: {type: integer}
+        amount: {type: number, format: float}
+        refund_amount: {type: number, format: float}
+        method: {type: string, enum: [cash, card, bank_transfer, insurance, online]}
+        status: {type: string, enum: [recorded, refunded, voided]}
+        paid_at: {type: string, format: date-time}
+        payment_reference: {type: string}
+        notes: {type: string}
+        idempotency_key: {type: string}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page: {type: integer}
+        last_page: {type: integer}
+        per_page: {type: integer}
+        total: {type: integer}
+        from: {type: integer}
+        to: {type: integer}

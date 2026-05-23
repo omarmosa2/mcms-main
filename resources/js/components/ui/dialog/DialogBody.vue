@@ -9,8 +9,8 @@ const props = defineProps<{
 
 <template>
   <div
-    data-slot="dialog-header"
-    :class="cn('shrink-0 border-b border-border/60 px-6 pt-5 pb-4', props.class)"
+    data-slot="dialog-body"
+    :class="cn('max-h-[60vh] overflow-y-auto px-6 py-5', props.class)"
   >
     <slot />
   </div>

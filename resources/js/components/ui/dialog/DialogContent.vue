@@ -18,14 +18,29 @@ defineOptions({
   inheritAttrs: false,
 })
 
-const props = withDefaults(defineProps<DialogContentProps & { class?: HTMLAttributes["class"], showCloseButton?: boolean, describedBy?: string }>(), {
+const props = withDefaults(defineProps<DialogContentProps & { class?: HTMLAttributes["class"], showCloseButton?: boolean, describedBy?: string, size?: "sm" | "md" | "lg" | "2xl", closeOnOverlay?: boolean }>(), {
   showCloseButton: true,
+  size: "md",
+  closeOnOverlay: true,
 })
 const emits = defineEmits<DialogContentEmits>()
 
 const delegatedProps = reactiveOmit(props, "class")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
+
+const sizeClasses: Record<string, string> = {
+  sm: "sm:max-w-[420px]",
+  md: "sm:max-w-[520px]",
+  lg: "sm:max-w-[680px]",
+  "2xl": "sm:max-w-[800px]",
+}
+
+const handleInteractOutside = (event: Event) => {
+  if (!props.closeOnOverlay) {
+    event.preventDefault()
+  }
+}
 </script>
 
 <template>
@@ -37,22 +52,20 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       v-bind="{ ...$attrs, ...forwarded }"
       :class="
         cn(
-          'bg-card data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] start-[50%] z-50 w-full max-w-[calc(100%-2rem)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border/70 shadow-soft duration-200 flex flex-col',
+          'bg-card data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-[96%] data-[state=open]:zoom-in-[96%] fixed top-[50%] start-[50%] z-50 w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border/70 shadow-soft duration-150 flex flex-col overflow-hidden',
+          sizeClasses[size],
           props.class,
         )"
+      @interact-outside="handleInteractOutside"
     >
-      <div class="flex-1 overflow-y-auto">
-        <div class="p-6">
-          <slot />
-        </div>
-      </div>
+      <slot />
 
       <DialogClose
         v-if="showCloseButton"
         type="button"
         data-slot="dialog-close"
         aria-label="إغلاق"
-        class="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 inset-inline-end-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+        class="absolute top-4 inset-inline-end-4 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none [&_svg]:size-4"
       >
         <X />
         <span class="sr-only">إغلاق</span>

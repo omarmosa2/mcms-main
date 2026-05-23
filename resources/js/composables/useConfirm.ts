@@ -12,10 +12,10 @@ export function useConfirm() {
     const isOpen = ref(false);
     const isLoading = ref(false);
     const options = shallowRef<ConfirmOptions>({
-        title: 'Confirm Action',
-        description: 'Are you sure you want to proceed?',
-        confirmText: 'Confirm',
-        cancelText: 'Cancel',
+        title: 'تأكيد الإجراء',
+        description: 'هل أنت متأكد من المتابعة؟',
+        confirmText: 'تأكيد',
+        cancelText: 'إلغاء',
         variant: 'default',
     });
 
@@ -23,10 +23,10 @@ export function useConfirm() {
 
     const confirm = (opts: ConfirmOptions = {}): Promise<boolean> => {
         options.value = {
-            title: opts.title ?? 'Confirm Action',
-            description: opts.description ?? 'Are you sure you want to proceed?',
-            confirmText: opts.confirmText ?? 'Confirm',
-            cancelText: opts.cancelText ?? 'Cancel',
+            title: opts.title ?? 'تأكيد الإجراء',
+            description: opts.description ?? 'هل أنت متأكد من المتابعة؟',
+            confirmText: opts.confirmText ?? 'تأكيد',
+            cancelText: opts.cancelText ?? 'إلغاء',
             variant: opts.variant ?? 'default',
         };
         isOpen.value = true;

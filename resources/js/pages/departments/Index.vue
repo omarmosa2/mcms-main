@@ -12,6 +12,7 @@ import {
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
+import { AddDepartmentDialog } from '@/components/dialogs';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
@@ -30,13 +31,6 @@ import {
 } from '@/components/ui/filter';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
@@ -135,7 +129,7 @@ const toast = useToast();
 const page = usePage();
 const viewingDepartment = ref<Department | null>(null);
 const editingDepartment = ref<Department | null>(null);
-const isCreateSheetOpen = ref(false);
+const isCreateDialogOpen = ref(false);
 
 const roleNames = computed<string[]>(() => {
     return (
@@ -591,7 +585,7 @@ const deleteDepartment = async (department: Department) => {
                     variant="clay"
                     size="sm"
                     class="h-8 rounded-lg px-3 text-xs"
-                    @click="isCreateSheetOpen = true"
+                    @click="isCreateDialogOpen = true"
                 >
                     <Plus class="size-3.5" />
                     إنشاء قسم
@@ -985,85 +979,11 @@ const deleteDepartment = async (department: Department) => {
             </div>
         </div>
 
-        <Sheet
-            :open="isCreateSheetOpen"
-            @update:open="isCreateSheetOpen = $event"
-        >
-            <SheetContent side="left" class="w-full sm:max-w-lg">
-                <SheetHeader class="text-right">
-                    <SheetTitle>إنشاء قسم</SheetTitle>
-                    <SheetDescription>إضافة قسم جديد للعيادة.</SheetDescription>
-                </SheetHeader>
-
-                <Form
-                    v-if="can('department.create')"
-                    v-bind="DepartmentController.store.form()"
-                    class="mt-6 space-y-4"
-                    v-slot="{ errors, processing }"
-                >
-                    <div class="grid gap-2">
-                        <Label for="department_name">الاسم</Label>
-                        <Input
-                            id="department_name"
-                            name="name"
-                            required
-                            placeholder="قسم القلب"
-                            class="pattern-field-clay"
-                        />
-                        <InputError :message="errors.name" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="department_code">الرمز</Label>
-                        <Input
-                            id="department_code"
-                            name="code"
-                            placeholder="CARD"
-                            class="pattern-field-clay"
-                        />
-                        <InputError :message="errors.code" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="department_description">الوصف</Label>
-                        <textarea
-                            id="department_description"
-                            name="description"
-                            rows="3"
-                            class="pattern-field-clay"
-                            placeholder="ملاحظات ونطاق خدمات القسم"
-                        />
-                        <InputError :message="errors.description" />
-                    </div>
-
-                    <div
-                        class="flex items-center gap-2 rounded-xl border border-border/60 bg-background/50 px-3 py-2"
-                    >
-                        <input type="hidden" name="is_active" value="0" />
-                        <input
-                            id="department_is_active"
-                            name="is_active"
-                            type="checkbox"
-                            value="1"
-                            checked
-                            class="size-4 rounded border-border"
-                        />
-                        <Label for="department_is_active" class="text-sm">
-                            قسم نشط
-                        </Label>
-                    </div>
-                    <InputError :message="errors.is_active" />
-
-                    <Button
-                        :disabled="processing"
-                        variant="clay"
-                        class="w-full"
-                    >
-                        إنشاء قسم
-                    </Button>
-                </Form>
-            </SheetContent>
-        </Sheet>
+        <AddDepartmentDialog
+            :open="isCreateDialogOpen"
+            @update:open="(value) => (isCreateDialogOpen = value)"
+            @success="() => {}"
+        />
 
         <Dialog
             :open="viewingDepartment !== null"

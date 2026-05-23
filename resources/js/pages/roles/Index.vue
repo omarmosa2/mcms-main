@@ -179,7 +179,7 @@ const submitCreateForm = (event: Event) => {
                                 <p class="mb-1 text-xs font-semibold capitalize text-foreground/70">
                                     {{ group }}
                                 </p>
-                                <div v-for=\"perm in perms\" :key=\"perm.id\" class=\"ms-3 flex items-center gap-2\">
+                                <div v-for="perm in perms" :key="perm.id" class="ms-3 flex items-center gap-2">
                                     <input
                                         type="checkbox"
                                         v-model="newPermissions"

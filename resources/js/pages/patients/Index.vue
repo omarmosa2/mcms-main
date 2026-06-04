@@ -384,19 +384,19 @@ onBeforeUnmount(() => {
 <template>
     <Head title="المرضى" />
 
-    <div class="min-h-screen bg-[#F7F8FA] p-6" dir="rtl">
-        <div class="flex items-start justify-between mb-6">
+    <div class="container-modern space-y-8 py-5" dir="rtl">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <h1 class="text-xl font-medium text-[#1A1A1A]">المرضى</h1>
-                <p class="text-sm text-[#6B7280] mt-0.5">سجل المرضى والبيانات الديموغرافية</p>
+                <h1 class="page-title text-[2.35rem]">إدارة المرضى</h1>
+                <p class="page-subtitle mt-2 text-base">إدارة معلومات المرضى وسجلاتهم الطبية</p>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-3">
                 <Button
                     v-if="can('patient.create')"
                     variant="ghost"
-                    size="sm"
-                    class="h-9 px-4 rounded-lg text-[#6B7280] text-sm font-medium hover:bg-[#F9FAFB] hover:text-[#1A1A1A] active:scale-[0.98] transition-all duration-150"
+                    size="lg"
+                    class="h-12 rounded-2xl border border-[#DDE9F3] bg-white px-5 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_24px_-22px_rgb(15_42_71_/_0.34)] hover:bg-[#F7FBFE] hover:text-[#075985]"
                     @click="isCreateSheetOpen = true"
                 >
                     إضافة متقدمة
@@ -404,7 +404,7 @@ onBeforeUnmount(() => {
                 <Link
                     v-if="can('patient.view')"
                     :href="PatientImportExportController.export()"
-                    class="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] text-sm font-medium hover:bg-[#F9FAFB] hover:text-[#1A1A1A] hover:border-[#E5E7EB] transition-all duration-150"
+                    class="inline-flex h-12 items-center gap-2 rounded-2xl border border-[#DDE9F3] bg-white px-5 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_24px_-22px_rgb(15_42_71_/_0.34)] transition-all duration-200 hover:bg-[#F7FBFE] hover:text-[#075985]"
                 >
                     <Download class="size-4" />
                     تصدير
@@ -412,7 +412,7 @@ onBeforeUnmount(() => {
                 <Link
                     v-if="can('patient.create')"
                     :href="PatientImportExportController.import()"
-                    class="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] text-sm font-medium hover:bg-[#F9FAFB] hover:text-[#1A1A1A] hover:border-[#E5E7EB] transition-all duration-150"
+                    class="inline-flex h-12 items-center gap-2 rounded-2xl border border-[#DDE9F3] bg-white px-5 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_24px_-22px_rgb(15_42_71_/_0.34)] transition-all duration-200 hover:bg-[#F7FBFE] hover:text-[#075985]"
                 >
                     <Upload class="size-4" />
                     استيراد
@@ -420,8 +420,8 @@ onBeforeUnmount(() => {
                 <Button
                     v-if="can('patient.create')"
                     variant="default"
-                    size="sm"
-                    class="h-9 px-4 rounded-lg bg-[#0EA5E9] text-white text-sm font-medium hover:bg-[#0284C7] active:scale-[0.98] disabled:opacity-40 transition-all duration-150"
+                    size="lg"
+                    class="h-12 rounded-2xl bg-[#0EA5E9] px-6 text-sm font-bold text-white shadow-[0_18px_34px_-22px_rgb(14_165_233_/_0.9)] transition-all duration-200 hover:bg-[#0284C7] active:scale-[0.98] disabled:opacity-40"
                     @click="isQuickAddOpen = !isQuickAddOpen"
                 >
                     <Plus class="size-4" />
@@ -429,8 +429,6 @@ onBeforeUnmount(() => {
                 </Button>
             </div>
         </div>
-
-        <div class="border-b border-[#E5E7EB] mb-6"></div>
 
         <PatientQuickAddForm
             v-if="can('patient.create') && isQuickAddOpen"

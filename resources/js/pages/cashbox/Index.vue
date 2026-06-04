@@ -78,16 +78,18 @@ type PaginatedResponse<T> = {
 type CashboxSortField = 'box_date' | 'opening_balance' | 'closing_balance' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-const { today_box, daily_income, daily_expenses, current_balance, recent_boxes, filters } = defineProps<{
+const { today_box, daily_income, daily_expenses, current_balance, recent_boxes, filters } = withDefaults(defineProps<{
     today_box: Cashbox | null;
     daily_income: number;
     daily_expenses: number;
     current_balance: number;
     recent_boxes: PaginatedResponse<Cashbox>;
-    filters: {
+    filters?: {
         per_page: number;
     };
-}>();
+}>(), {
+    filters: () => ({ per_page: 15 }),
+});
 
 defineOptions({
     layout: {
@@ -672,11 +674,11 @@ const handleBulkDelete = async () => {
                 <div v-if="viewingBox" class="grid gap-4">
                     <dl class="grid gap-3 rounded-xl border border-border/70 bg-background/55 p-4 sm:grid-cols-2">
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">التاريخ</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">التاريخ</dt>
                             <dd class="text-sm">{{ viewingBox.box_date }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الحالة</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الحالة</dt>
                             <dd>
                                 <span :class="statusClass(viewingBox.status)" class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold capitalize">
                                     {{ statusLabel(viewingBox.status) }}
@@ -684,39 +686,39 @@ const handleBulkDelete = async () => {
                             </dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">رصيد الافتتاح</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">رصيد الافتتاح</dt>
                             <dd class="font-mono text-sm">{{ formatAmount(viewingBox.opening_balance) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الإيرادات</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الإيرادات</dt>
                             <dd class="font-mono text-sm text-success-600 dark:text-success-400">+{{ formatAmount(viewingBox.total_income) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">المصروفات</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">المصروفات</dt>
                             <dd class="font-mono text-sm text-destructive">-{{ formatAmount(viewingBox.total_expenses) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">رصيد الإغلاق</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">رصيد الإغلاق</dt>
                             <dd class="font-mono text-sm font-bold">{{ formatAmount(viewingBox.closing_balance) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">فتح بواسطة</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">فتح بواسطة</dt>
                             <dd class="text-sm">{{ viewingBox.opener?.name ?? '-' }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">وقت الفتح</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">وقت الفتح</dt>
                             <dd class="text-sm">{{ viewingBox.opened_at ?? '-' }}</dd>
                         </div>
                         <div v-if="viewingBox.closer" class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">إغلاق بواسطة</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">إغلاق بواسطة</dt>
                             <dd class="text-sm">{{ viewingBox.closer.name }}</dd>
                         </div>
                         <div v-if="viewingBox.closed_at" class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">وقت الإغلاق</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">وقت الإغلاق</dt>
                             <dd class="text-sm">{{ viewingBox.closed_at }}</dd>
                         </div>
                         <div v-if="viewingBox.notes" class="space-y-1 sm:col-span-2">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">ملاحظات</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">ملاحظات</dt>
                             <dd class="text-sm leading-6 text-muted-foreground">{{ viewingBox.notes }}</dd>
                         </div>
                     </dl>

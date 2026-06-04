@@ -171,7 +171,7 @@ const submitCreateForm = (event: Event) => {
                     </div>
 
                     <div class="grid gap-2 rounded-xl border border-border/60 bg-background/40 p-3">
-                        <Label class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                        <Label class="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                             Permissions
                         </Label>
                         <div class="max-h-48 space-y-2 overflow-y-auto">
@@ -331,7 +331,7 @@ const submitCreateForm = (event: Event) => {
                     <div class="rounded-xl border border-border/70 bg-background/55 p-4">
                         <div class="grid gap-3 sm:grid-cols-2">
                             <div class="space-y-1">
-                                <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
+                                <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
                                     Role Name
                                 </dt>
                                 <dd class="text-sm font-semibold">
@@ -339,7 +339,7 @@ const submitCreateForm = (event: Event) => {
                                 </dd>
                             </div>
                             <div class="space-y-1">
-                                <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
+                                <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
                                     Type
                                 </dt>
                                 <dd class="text-sm">
@@ -360,7 +360,7 @@ const submitCreateForm = (event: Event) => {
                                 </dd>
                             </div>
                             <div class="space-y-1 sm:col-span-2">
-                                <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
+                                <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
                                     Description
                                 </dt>
                                 <dd class="text-sm text-muted-foreground">
@@ -368,7 +368,7 @@ const submitCreateForm = (event: Event) => {
                                 </dd>
                             </div>
                             <div class="space-y-1">
-                                <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
+                                <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
                                     Permissions Count
                                 </dt>
                                 <dd class="text-sm font-medium">
@@ -376,7 +376,7 @@ const submitCreateForm = (event: Event) => {
                                 </dd>
                             </div>
                             <div class="space-y-1">
-                                <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">
+                                <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
                                     Users Assigned
                                 </dt>
                                 <dd class="text-sm font-medium">
@@ -435,7 +435,7 @@ const submitCreateForm = (event: Event) => {
                     </div>
 
                     <div class="grid gap-2 rounded-xl border border-border/60 bg-background/40 p-3">
-                        <Label class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                        <Label class="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                             Permissions
                         </Label>
                         <div class="max-h-48 space-y-2 overflow-y-auto">

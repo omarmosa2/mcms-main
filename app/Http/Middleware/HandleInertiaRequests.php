@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Services\Cache\CacheService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -50,16 +51,13 @@ class HandleInertiaRequests extends Middleware
             $user = $request->user();
             $clinicId = $user->clinic_id;
 
-            $roles = $user
-                ->roles()
-                ->where('roles.clinic_id', $clinicId)
-                ->pluck('roles.name')
-                ->values()
-                ->all();
+            $roles = $user->roleNamesForCurrentClinic()->all();
 
-            $permissions = $this->cacheService
-                ->getUserPermissions($user->id, (int) $clinicId)
-                ->all();
+            if ($clinicId !== null) {
+                $permissions = $this->cacheService
+                    ->getUserPermissions($user->id, (int) $clinicId)
+                    ->all();
+            }
 
             if (in_array('super_admin', $roles, true)) {
                 $permissions = ['*'];
@@ -83,7 +81,7 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() !== null ? $this->sharedUser($request->user()) : null,
                 'roles' => $roles,
                 'permissions' => $permissions,
             ],
@@ -114,6 +112,23 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sharedUser(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'clinic_id' => $user->clinic_id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'avatar' => $user->avatar ?? null,
+            'email_verified_at' => $user->email_verified_at,
+            'created_at' => $user->created_at,
+            'updated_at' => $user->updated_at,
         ];
     }
 }

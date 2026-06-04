@@ -203,7 +203,7 @@ const handleClose = () => {
                                 v-model="formData[field.name]"
                                 :placeholder="field.placeholder"
                                 rows="3"
-                                class="w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm focus:border-[#1D9E75] focus:outline-none focus:ring-1 focus:ring-[#1D9E75]/15"
+                                class="w-full rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-2 text-sm focus:border-[#0EA5E9] focus:outline-none focus:ring-1 focus:ring-[#0EA5E9]/15"
                                 :class="{ 'border-[#DC2626]': errors[field.name] }"
                             />
 
@@ -211,7 +211,7 @@ const handleClose = () => {
                                 v-else-if="field.type === 'select'"
                                 :id="field.name"
                                 v-model="formData[field.name]"
-                                class="h-10 w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm focus:border-[#1D9E75] focus:outline-none focus:ring-1 focus:ring-[#1D9E75]/15"
+                                class="h-10 w-full rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-2 text-sm focus:border-[#0EA5E9] focus:outline-none focus:ring-1 focus:ring-[#0EA5E9]/15"
                                 :class="{ 'border-[#DC2626]': errors[field.name] }"
                             >
                                 <option value="" disabled>اختر</option>
@@ -238,7 +238,7 @@ const handleClose = () => {
                     <template v-for="rowField in dynamicRows" :key="rowField.name">
                         <div class="flex flex-col gap-2 rounded-xl border border-border/60 bg-background/40 p-3">
                             <div class="flex items-center justify-between gap-2">
-                                <Label class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                                <Label class="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                                     {{ rowField.label }}
                                 </Label>
                                 <Button type="button" size="sm" variant="neumorphic" class="h-8 px-2 text-xs" @click="addDynamicRow(rowField.name)">

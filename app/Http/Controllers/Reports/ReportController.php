@@ -28,13 +28,13 @@ class ReportController extends Controller
 
     public function index(Request $request): InertiaResponse|JsonResponse
     {
-        $payload = $this->buildPayload($request);
-
         if ($request->expectsJson()) {
+            $payload = $this->buildPayload($request);
+
             return response()->json(['data' => $payload]);
         }
 
-        return Inertia::render('reports/Index', $payload);
+        return Inertia::render('reports/Index', $this->buildInertiaPayload($request));
     }
 
     public function exportExcel(Request $request): StreamedResponse
@@ -172,72 +172,149 @@ class ReportController extends Controller
      */
     private function buildPayload(Request $request): array
     {
-        $validated = $request->validate([
-            'from' => ['nullable', 'date'],
-            'to' => ['nullable', 'date', 'after_or_equal:from'],
-        ]);
+        $context = $this->resolveReportContext($request);
 
-        $clinicId = $this->resolveClinicId($request);
-        $user = $request->user();
-        $fromDate = isset($validated['from']) ? (string) $validated['from'] : null;
-        $toDate = isset($validated['to']) ? (string) $validated['to'] : null;
-        $canViewOperational = $user !== null && $user->hasPermission('reports.view');
-        $canViewFinancial = $user !== null && $user->hasPermission('reports.financial');
-
-        $operationalSummary = $canViewOperational
+        $operationalSummary = $context['canViewOperational']
             ? $this->getOperationalReportAction->handle(
-                clinicId: $clinicId,
-                userId: (int) $user->id,
-                fromDate: $fromDate,
-                toDate: $toDate,
+                clinicId: $context['clinicId'],
+                userId: $context['userId'],
+                fromDate: $context['fromDate'],
+                toDate: $context['toDate'],
             )
             : null;
 
-        $financialSummary = $canViewFinancial
+        $financialSummary = $context['canViewFinancial']
             ? $this->getFinancialReportAction->handle(
-                clinicId: $clinicId,
-                userId: (int) $user->id,
-                fromDate: $fromDate,
-                toDate: $toDate,
+                clinicId: $context['clinicId'],
+                userId: $context['userId'],
+                fromDate: $context['fromDate'],
+                toDate: $context['toDate'],
             )
             : null;
 
-        $doctorPerformance = $canViewOperational
+        $doctorPerformance = $context['canViewOperational']
             ? $this->getDoctorPerformanceReportAction->handle(
-                clinicId: $clinicId,
-                fromDate: $fromDate,
-                toDate: $toDate,
+                clinicId: $context['clinicId'],
+                fromDate: $context['fromDate'],
+                toDate: $context['toDate'],
             )
             : null;
 
-        $diagnosticsSummary = $canViewOperational
+        $diagnosticsSummary = $context['canViewOperational']
             ? $this->getClinicalDiagnosticsReportAction->handle(
-                clinicId: $clinicId,
-                fromDate: $fromDate,
-                toDate: $toDate,
+                clinicId: $context['clinicId'],
+                fromDate: $context['fromDate'],
+                toDate: $context['toDate'],
             )
             : null;
 
-        $financialStatements = $canViewFinancial
+        $financialStatements = $context['canViewFinancial']
             ? $this->getFinancialStatementsReportAction->handle(
-                clinicId: $clinicId,
-                fromDate: $fromDate,
-                toDate: $toDate,
+                clinicId: $context['clinicId'],
+                fromDate: $context['fromDate'],
+                toDate: $context['toDate'],
             )
             : null;
 
         return [
             'filters' => [
-                'from' => $fromDate,
-                'to' => $toDate,
+                'from' => $context['fromDate'],
+                'to' => $context['toDate'],
             ],
-            'can_view_operational' => $canViewOperational,
-            'can_view_financial' => $canViewFinancial,
+            'can_view_operational' => $context['canViewOperational'],
+            'can_view_financial' => $context['canViewFinancial'],
             'operational_summary' => $operationalSummary,
             'financial_summary' => $financialSummary,
             'doctor_performance' => $doctorPerformance,
             'diagnostics_summary' => $diagnosticsSummary,
             'financial_statements' => $financialStatements,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildInertiaPayload(Request $request): array
+    {
+        $context = $this->resolveReportContext($request);
+
+        return [
+            'filters' => [
+                'from' => $context['fromDate'],
+                'to' => $context['toDate'],
+            ],
+            'can_view_operational' => $context['canViewOperational'],
+            'can_view_financial' => $context['canViewFinancial'],
+            'operational_summary' => $context['canViewOperational']
+                ? Inertia::defer(fn (): array => $this->getOperationalReportAction->handle(
+                    clinicId: $context['clinicId'],
+                    userId: $context['userId'],
+                    fromDate: $context['fromDate'],
+                    toDate: $context['toDate'],
+                ), 'reports')
+                : null,
+            'financial_summary' => $context['canViewFinancial']
+                ? Inertia::defer(fn (): array => $this->getFinancialReportAction->handle(
+                    clinicId: $context['clinicId'],
+                    userId: $context['userId'],
+                    fromDate: $context['fromDate'],
+                    toDate: $context['toDate'],
+                ), 'reports')
+                : null,
+            'doctor_performance' => $context['canViewOperational']
+                ? Inertia::defer(fn (): array => $this->getDoctorPerformanceReportAction->handle(
+                    clinicId: $context['clinicId'],
+                    fromDate: $context['fromDate'],
+                    toDate: $context['toDate'],
+                ), 'reports')
+                : null,
+            'diagnostics_summary' => $context['canViewOperational']
+                ? Inertia::defer(fn (): array => $this->getClinicalDiagnosticsReportAction->handle(
+                    clinicId: $context['clinicId'],
+                    fromDate: $context['fromDate'],
+                    toDate: $context['toDate'],
+                ), 'reports')
+                : null,
+            'financial_statements' => $context['canViewFinancial']
+                ? Inertia::defer(fn (): array => $this->getFinancialStatementsReportAction->handle(
+                    clinicId: $context['clinicId'],
+                    fromDate: $context['fromDate'],
+                    toDate: $context['toDate'],
+                ), 'reports')
+                : null,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     clinicId: int,
+     *     userId: int,
+     *     fromDate: ?string,
+     *     toDate: ?string,
+     *     canViewOperational: bool,
+     *     canViewFinancial: bool
+     * }
+     */
+    private function resolveReportContext(Request $request): array
+    {
+        $validated = $request->validate([
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+        ]);
+
+        $user = $request->user();
+
+        if ($user === null) {
+            abort(Response::HTTP_FORBIDDEN, 'Authentication is required.');
+        }
+
+        return [
+            'clinicId' => $this->resolveClinicId($request),
+            'userId' => (int) $user->id,
+            'fromDate' => isset($validated['from']) ? (string) $validated['from'] : null,
+            'toDate' => isset($validated['to']) ? (string) $validated['to'] : null,
+            'canViewOperational' => $user->hasPermission('reports.view'),
+            'canViewFinancial' => $user->hasPermission('reports.financial'),
         ];
     }
 

@@ -100,4 +100,15 @@ class MonitoringTest extends TestCase
 
         $response->assertOk();
     }
+
+    public function test_metrics_can_require_a_monitoring_token(): void
+    {
+        config(['services.monitoring.metrics_token' => 'secret-token']);
+
+        $this->get(route('monitoring.metrics'))->assertForbidden();
+
+        $this->withHeader('X-Metrics-Token', 'secret-token')
+            ->get(route('monitoring.metrics'))
+            ->assertOk();
+    }
 }

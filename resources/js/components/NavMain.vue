@@ -43,26 +43,26 @@ const visibleSections = computed<NavSection[]>(() => {
 </script>
 
 <template>
-    <div class="flex flex-col">
+    <div class="flex flex-col gap-1">
         <template v-for="section in visibleSections" :key="section.key">
-            <SidebarGroup class="px-0.5">
+            <SidebarGroup class="px-0.5 py-0.5">
                 <SidebarGroupLabel
-                    class="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1 px-2.5 pt-2 pb-0.5 group-data-[collapsible=icon]:hidden"
+                    class="mb-1 px-3 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-normal text-[#6C7F95] group-data-[collapsible=icon]:hidden"
                 >
                     {{ section.label }}
                 </SidebarGroupLabel>
 
                 <SidebarGroupContent>
-                    <SidebarMenu class="gap-[2px]">
+                    <SidebarMenu class="gap-1">
                         <SidebarMenuItem v-for="item in section.items" :key="item.title">
                             <SidebarMenuButton
                                 as-child
                                 :is-active="isCurrentUrl(item.href, undefined, true)"
                                 :tooltip="item.title"
-                                class="h-9 rounded-lg px-2.5 text-[13px] font-normal transition-all duration-200 hover:bg-slate-50 hover:text-slate-800 data-[active=true]:bg-[#E7F7F2] data-[active=true]:text-[#0F6E56] data-[active=true]:font-medium data-[active=true]:shadow-[inset_3px_0_0_0_#0F9D7A]"
+                                class="h-11 rounded-[1.1rem] px-3 text-[14px] font-medium text-[#264762] transition-all duration-200 hover:bg-white/65 hover:text-[#075985] data-[active=true]:bg-[#BDE9FB] data-[active=true]:font-bold data-[active=true]:text-[#075985] data-[active=true]:shadow-[0_12px_22px_-18px_rgb(14_165_233_/_0.9)]"
                             >
                                 <Link :href="item.href">
-                                    <component :is="item.icon" class="size-[16px] text-current group-data-[state=collapsed]:mx-auto" />
+                                    <component :is="item.icon" class="size-8 rounded-full bg-[#D7F1FE] p-1.5 text-[#0EA5E9] group-data-[state=collapsed]:mx-auto" />
                                     <span>{{ item.title }}</span>
                                 </Link>
                             </SidebarMenuButton>
@@ -73,7 +73,7 @@ const visibleSections = computed<NavSection[]>(() => {
         </template>
 
         <div v-if="visibleSections.length === 0" class="px-3 py-4">
-            <div class="rounded-lg bg-sidebar-accent/40 p-3 text-xs text-sidebar-foreground/60 text-center">
+            <div class="rounded-2xl bg-white/65 p-3 text-center text-xs text-sidebar-foreground/70">
                 لا توجد وحدات متاحة
             </div>
         </div>

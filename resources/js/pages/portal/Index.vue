@@ -149,7 +149,7 @@ return null;
                 <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-info-500/10 text-info-600 dark:text-info-300">
                     <User class="size-8" />
                 </div>
-                <h1 class="text-2xl font-bold tracking-tight text-foreground">بوابة المريض</h1>
+                <h1 class="text-2xl font-bold tracking-normal text-foreground">بوابة المريض</h1>
                 <p class="mt-1 text-sm text-muted-foreground">إدارة مواعيدك ومعلوماتك الطبية</p>
             </div>
 
@@ -183,7 +183,7 @@ return null;
 
             <!-- Active Appointments -->
             <div class="mb-6">
-                <h3 class="mb-4 flex items-center gap-2 text-sm font-semibold tracking-tight">
+                <h3 class="mb-4 flex items-center gap-2 text-sm font-semibold tracking-normal">
                     <CalendarClock class="size-4 text-info-600 dark:text-info-300" />
                     المواعيد القادمة
                 </h3>
@@ -275,7 +275,7 @@ return null;
 
             <!-- Past Appointments -->
             <div v-if="pastAppointments.length > 0">
-                <h3 class="mb-4 flex items-center gap-2 text-sm font-semibold tracking-tight text-muted-foreground">
+                <h3 class="mb-4 flex items-center gap-2 text-sm font-semibold tracking-normal text-muted-foreground">
                     <Calendar class="size-4" />
                     المواعيد السابقة
                 </h3>

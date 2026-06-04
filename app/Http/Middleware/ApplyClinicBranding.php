@@ -4,8 +4,8 @@ namespace App\Http\Middleware;
 
 use App\Models\Clinic;
 use Closure;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -20,22 +20,25 @@ class ApplyClinicBranding
     {
         $locale = config('app.locale');
         $direction = str_starts_with((string) $locale, 'ar') ? 'rtl' : 'ltr';
-        $brandingTableExists = Schema::hasTable('branding_settings');
 
         $user = $request->user();
 
         if ($user !== null && $user->clinic_id !== null) {
-            $clinicQuery = Clinic::query();
+            try {
+                $clinic = Clinic::query()
+                    ->with('brandingSetting')
+                    ->find($user->clinic_id);
+                $branding = $clinic?->brandingSetting;
+            } catch (QueryException $e) {
+                if (! str_contains($e->getMessage(), 'branding_settings')) {
+                    throw $e;
+                }
 
-            if ($brandingTableExists) {
-                $clinicQuery->with('brandingSetting');
+                $clinic = Clinic::query()->find($user->clinic_id);
+                $branding = null;
             }
 
-            $clinic = $clinicQuery->find($user->clinic_id);
-
             if ($clinic !== null) {
-                $branding = $brandingTableExists ? $clinic->brandingSetting : null;
-
                 $locale = (string) ($branding?->locale_default ?: config('app.locale'));
                 $direction = str_starts_with($locale, 'ar') ? 'rtl' : 'ltr';
 

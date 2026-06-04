@@ -21,7 +21,7 @@ const globalHistory = typeof window !== 'undefined' ? window.history : null;
                 <Search class="size-10" />
             </div>
 
-            <h1 class="text-6xl font-bold tracking-tight text-foreground">404</h1>
+            <h1 class="text-6xl font-bold tracking-normal text-foreground">404</h1>
             <h2 class="mt-4 text-xl font-semibold">الصفحة غير موجودة</h2>
             <p class="mt-2 text-sm leading-6 text-muted-foreground">
                 {{ message ?? "الصفحة التي تبحث عنها غير موجودة أو تم نقلها." }}

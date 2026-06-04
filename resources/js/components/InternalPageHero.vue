@@ -26,7 +26,7 @@ withDefaults(
             <div>
                 <span class="hero-kicker">{{ kicker }}</span>
                 <h2
-                    class="mt-3 text-2xl leading-tight font-semibold tracking-tight sm:text-3xl"
+                    class="mt-3 text-2xl leading-tight font-semibold tracking-normal sm:text-3xl"
                 >
                     {{ title }}
                 </h2>
@@ -44,11 +44,11 @@ withDefaults(
                     class="metric-tile lift-hover"
                 >
                     <p
-                        class="text-[0.65rem] font-semibold tracking-[0.12em] text-muted-foreground uppercase"
+                        class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
                     >
                         {{ metric.label }}
                     </p>
-                    <p class="mt-2 text-2xl font-semibold tracking-tight">
+                    <p class="mt-2 text-2xl font-semibold tracking-normal">
                         {{ metric.value }}
                     </p>
                     <p

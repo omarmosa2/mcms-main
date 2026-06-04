@@ -403,27 +403,27 @@ return 'غير محدد';
                     <h3 class="mb-3 text-sm font-semibold">البيانات الشخصية</h3>
                     <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">رقم الملف</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">رقم الملف</dt>
                             <dd class="font-mono text-sm">{{ patient.file_number }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الاسم الكامل</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الاسم الكامل</dt>
                             <dd class="text-sm">{{ patient.full_name }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الجنس</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الجنس</dt>
                             <dd class="text-sm capitalize">{{ genderLabel }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">تاريخ الميلاد</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">تاريخ الميلاد</dt>
                             <dd class="text-sm">{{ formatShortDate(patient.date_of_birth) }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">العمر</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">العمر</dt>
                             <dd class="text-sm">{{ patient.age ? patient.age + ' سنة' : 'غير محدد' }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">رقم الهوية</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">رقم الهوية</dt>
                             <dd class="text-sm">{{ patient.national_id ?? 'غير محدد' }}</dd>
                         </div>
                     </dl>
@@ -433,11 +433,11 @@ return 'غير محدد';
                     <h3 class="mb-3 text-sm font-semibold">بيانات الاتصال</h3>
                     <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الهاتف</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الهاتف</dt>
                             <dd class="text-sm" :class="patient.phone ? '' : 'text-muted-foreground'">{{ patient.phone ?? 'غير محدد' }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">البريد الإلكتروني</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">البريد الإلكتروني</dt>
                             <dd class="text-sm" :class="patient.email ? '' : 'text-muted-foreground'">{{ patient.email ?? 'غير محدد' }}</dd>
                         </div>
                     </dl>
@@ -447,11 +447,11 @@ return 'غير محدد';
                     <h3 class="mb-3 text-sm font-semibold">جهة اتصال للطوارئ</h3>
                     <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الاسم</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الاسم</dt>
                             <dd class="text-sm" :class="patient.emergency_contact_name ? '' : 'text-muted-foreground'">{{ patient.emergency_contact_name ?? 'غير محدد' }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الهاتف</dt>
+                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الهاتف</dt>
                             <dd class="text-sm" :class="patient.emergency_contact_phone ? '' : 'text-muted-foreground'">{{ patient.emergency_contact_phone ?? 'غير محدد' }}</dd>
                         </div>
                     </dl>
@@ -545,19 +545,19 @@ return 'غير محدد';
                         </div>
                         <dl class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                             <div class="space-y-1">
-                                <dt class="text-[0.6rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">المبلغ</dt>
+                                <dt class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase">المبلغ</dt>
                                 <dd class="text-sm font-semibold">{{ invoice.total_amount }} ر.س</dd>
                             </div>
                             <div class="space-y-1">
-                                <dt class="text-[0.6rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">المدفوع</dt>
+                                <dt class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase">المدفوع</dt>
                                 <dd class="text-sm text-emerald-600">{{ invoice.paid_amount }} ر.س</dd>
                             </div>
                             <div class="space-y-1">
-                                <dt class="text-[0.6rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">المتبقي</dt>
+                                <dt class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase">المتبقي</dt>
                                 <dd class="text-sm" :class="parseFloat(invoice.balance_amount) > 0 ? 'text-red-600' : 'text-muted-foreground'">{{ invoice.balance_amount }} ر.س</dd>
                             </div>
                             <div class="space-y-1">
-                                <dt class="text-[0.6rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">الخصم</dt>
+                                <dt class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase">الخصم</dt>
                                 <dd class="text-sm text-muted-foreground">{{ invoice.discount_amount }} ر.س</dd>
                             </div>
                         </dl>

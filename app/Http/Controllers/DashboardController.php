@@ -21,10 +21,8 @@ class DashboardController extends Controller
             abort(403, 'Clinic context is required.');
         }
 
-        $stats = $this->cacheService->getDashboardStats($clinicId);
-
         return Inertia::render('Dashboard', [
-            'chartStats' => Inertia::defer(fn () => $stats),
+            'chartStats' => Inertia::defer(fn () => $this->cacheService->getDashboardStats($clinicId)),
         ]);
     }
 }

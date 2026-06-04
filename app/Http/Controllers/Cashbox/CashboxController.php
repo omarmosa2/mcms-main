@@ -47,11 +47,17 @@ class CashboxController extends Controller
             ? $todayBox->opening_balance + $dailyIncome - $dailyExpenses
             : 0;
 
+        $perPage = $this->normalizePerPage($request->query('per_page'));
+
         $recentBoxes = Cashbox::query()
             ->forClinic($clinicId)
             ->orderBy('box_date', 'desc')
             ->with(['opener:id,name', 'closer:id,name'])
-            ->paginate($request->integer('per_page', 15));
+            ->paginate($perPage);
+
+        $filters = [
+            'per_page' => $perPage,
+        ];
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -68,6 +74,7 @@ class CashboxController extends Controller
             'daily_expenses' => $dailyExpenses,
             'current_balance' => $currentBalance,
             'recent_boxes' => CashboxResource::collection($recentBoxes)->response()->getData(true),
+            'filters' => $filters,
         ]);
     }
 
@@ -205,6 +212,14 @@ class CashboxController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => "تم حذف $count صندوق بنجاح."]);
 
         return to_route('cashbox.index');
+    }
+
+    private function normalizePerPage(mixed $value): int
+    {
+        $perPage = (int) $value;
+        $allowedPerPageValues = [10, 15, 25, 50];
+
+        return in_array($perPage, $allowedPerPageValues, true) ? $perPage : 15;
     }
 
     private function resolveClinicId(Request $request): int

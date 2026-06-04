@@ -44,13 +44,17 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { useDirection } from '@/composables/useDirection';
 import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
 import type { NavItem, NavSection } from '@/types';
 
+type MainNavItem = NavItem & {
+    group: string;
+    permission?: string;
+    anyPermissions?: string[];
+};
+
 const { can } = usePermissions();
-const { isRtl } = useDirection();
 
 const roleItemOrder: Record<string, string[]> = {
     doctor: ['قائمة الانتظار', 'الزيارات', 'المواعيد', 'المرضى', 'الأقسام', 'الأطباء', 'جداول الدوام', 'لوحة التحكم'],
@@ -140,7 +144,7 @@ const sidebarSections = computed<NavSection[]>(() =>
         side="right"
         collapsible="icon"
         variant="sidebar"
-        class="w-[240px] bg-white border-inline-end border-slate-100/80"
+        class="border-inline-start border-[#CFE8F7]/80 bg-[#EAF7FE] shadow-sidebar"
     >
         <!-- Logo & Clinic Name -->
         <SidebarHeader class="px-4 pt-4 pb-3">
@@ -149,7 +153,7 @@ const sidebarSections = computed<NavSection[]>(() =>
                     <SidebarMenuButton
                         size="lg"
                         as-child
-                        class="h-10 rounded-lg px-2 hover:bg-slate-50 transition-colors duration-200"
+                        class="h-12 rounded-2xl px-2.5 transition-colors duration-200 hover:bg-white/70"
                     >
                         <Link :href="dashboard()">
                             <AppLogo />
@@ -160,12 +164,12 @@ const sidebarSections = computed<NavSection[]>(() =>
         </SidebarHeader>
 
         <!-- Main Navigation -->
-        <SidebarContent class="px-2.5 py-2 flex-1 overflow-y-auto">
+        <SidebarContent class="flex-1 overflow-y-auto px-3.5 py-2">
             <NavMain :sections="sidebarSections" />
         </SidebarContent>
 
         <!-- Footer: secondary links + user -->
-        <SidebarFooter class="border-t border-slate-100/80 px-3 pt-2.5 pb-3">
+        <SidebarFooter class="border-t border-[#CFE8F7]/70 px-3.5 pt-3 pb-3">
 
             <!-- Secondary nav links — hidden when sidebar is collapsed to icon-only -->
             <div class="mb-1.5 space-y-0.5 group-data-[collapsible=icon]:hidden">
@@ -173,13 +177,13 @@ const sidebarSections = computed<NavSection[]>(() =>
                     :href="'/settings/notifications'"
                     class="
                         flex items-center gap-2
-                        rounded-lg px-2.5 py-2
-                        text-[13px] text-slate-400
+                        rounded-xl px-2.5 py-2
+                        text-[13px] text-[#47677F]
                         transition-all duration-200
-                        hover:bg-slate-50 hover:text-slate-700
+                        hover:bg-white/65 hover:text-[#075985]
                     "
                 >
-                    <Bell class="size-4 shrink-0" />
+                    <Bell class="size-7 shrink-0 rounded-full bg-[#D7F1FE] p-1.5 text-[#0EA5E9]" />
                     <span>الإشعارات</span>
                 </Link>
 
@@ -187,13 +191,13 @@ const sidebarSections = computed<NavSection[]>(() =>
                     :href="'/trash'"
                     class="
                         flex items-center gap-2
-                        rounded-lg px-2.5 py-2
-                        text-[13px] text-slate-400
+                        rounded-xl px-2.5 py-2
+                        text-[13px] text-[#47677F]
                         transition-all duration-200
-                        hover:bg-slate-50 hover:text-slate-700
+                        hover:bg-white/65 hover:text-[#075985]
                     "
                 >
-                    <Trash2 class="size-4 shrink-0" />
+                    <Trash2 class="size-7 shrink-0 rounded-full bg-[#D7F1FE] p-1.5 text-[#0EA5E9]" />
                     <span>سلة المحذوفات</span>
                 </Link>
 
@@ -201,13 +205,13 @@ const sidebarSections = computed<NavSection[]>(() =>
                     :href="'/help'"
                     class="
                         flex items-center gap-2
-                        rounded-lg px-2.5 py-2
-                        text-[13px] text-slate-400
+                        rounded-xl px-2.5 py-2
+                        text-[13px] text-[#47677F]
                         transition-all duration-200
-                        hover:bg-slate-50 hover:text-slate-700
+                        hover:bg-white/65 hover:text-[#075985]
                     "
                 >
-                    <HelpCircle class="size-4 shrink-0" />
+                    <HelpCircle class="size-7 shrink-0 rounded-full bg-[#D7F1FE] p-1.5 text-[#0EA5E9]" />
                     <span>مركز المساعدة</span>
                 </Link>
             </div>

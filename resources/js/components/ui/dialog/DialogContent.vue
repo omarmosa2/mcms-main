@@ -52,7 +52,7 @@ const handleInteractOutside = (event: Event) => {
       v-bind="{ ...$attrs, ...forwarded }"
       :class="
         cn(
-          'bg-card data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-[96%] data-[state=open]:zoom-in-[96%] fixed top-[50%] start-[50%] z-50 w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border/70 shadow-soft duration-150 flex flex-col overflow-hidden',
+          'bg-card data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-[96%] data-[state=open]:zoom-in-[96%] fixed top-[50%] left-[50%] z-50 w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border/70 shadow-soft duration-150 flex flex-col overflow-hidden',
           sizeClasses[size],
           props.class,
         )"

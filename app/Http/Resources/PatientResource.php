@@ -193,14 +193,26 @@ class PatientResource extends JsonResource
 
     private function shouldExposeNationalId(Request $request): bool
     {
+        $cacheKey = 'patients.can_expose_national_id';
+
+        if ($request->attributes->has($cacheKey)) {
+            return (bool) $request->attributes->get($cacheKey);
+        }
+
         $user = $request->user();
 
         if ($user === null) {
+            $request->attributes->set($cacheKey, false);
+
             return false;
         }
 
-        return $user->hasPermission('patient.national_id.view')
+        $canExposeNationalId = $user->hasPermission('patient.national_id.view')
             || $user->hasPermission('patient.*');
+
+        $request->attributes->set($cacheKey, $canExposeNationalId);
+
+        return $canExposeNationalId;
     }
 
     private function maskedNationalId(): ?string

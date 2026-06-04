@@ -59,7 +59,7 @@ const trustPillars = [
                 <p class="text-sm font-semibold">{{ appName }}</p>
 
                 <p
-                    class="text-[0.68rem] font-semibold tracking-[0.13em] text-muted-foreground uppercase"
+                    class="text-[0.68rem] font-semibold tracking-normal text-muted-foreground uppercase"
                 >
                     بوابة الدخول
                 </p>
@@ -67,7 +67,7 @@ const trustPillars = [
         </Link>
 
         <div class="mb-7 space-y-2 text-center lg:mb-8">
-            <h1 class="text-2xl font-semibold tracking-tight">
+            <h1 class="text-2xl font-semibold tracking-normal">
                 {{ title }}
             </h1>
 

@@ -18,11 +18,11 @@ withDefaults(defineProps<Props>(), {
             :class="
                 tone === 'typographic'
                     ? variant === 'small'
-                        ? 'text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase'
-                        : 'text-2xl font-semibold tracking-tight text-foreground sm:text-3xl'
+                        ? 'text-xs font-semibold tracking-normal text-muted-foreground uppercase'
+                        : 'text-2xl font-semibold tracking-normal text-foreground sm:text-3xl'
                     : variant === 'small'
                       ? 'mb-0.5 text-base font-medium'
-                      : 'text-xl font-semibold tracking-tight'
+                      : 'text-xl font-semibold tracking-normal'
             "
         >
             {{ title }}

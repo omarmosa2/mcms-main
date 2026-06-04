@@ -13,6 +13,9 @@ use App\Models\Role;
 use App\Models\SecurityPolicy;
 use App\Models\User;
 use App\Models\Visit;
+use Closure;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -36,31 +39,23 @@ class CacheService
     {
         $key = "clinic:{$clinicId}:security_policy";
 
-        $policy = Cache::get($key);
+        $attributes = $this->rememberArray($key, self::SECURITY_POLICY_TTL, function () use ($clinicId): ?array {
+            try {
+                return SecurityPolicy::query()
+                    ->forClinic($clinicId)
+                    ->first()
+                    ?->getAttributes();
+            } catch (QueryException $e) {
+                if (str_contains($e->getMessage(), 'no such table: security_policies')) {
+                    return null;
+                }
 
-        if ($policy instanceof \__PHP_Incomplete_Class) {
-            Cache::forget($key);
-            $policy = null;
-        }
-
-        if ($policy !== null) {
-            return $policy;
-        }
-
-        try {
-            $policy = SecurityPolicy::query()
-                ->forClinic($clinicId)
-                ->first();
-        } catch (QueryException $e) {
-            if (str_contains($e->getMessage(), 'no such table: security_policies')) {
-                return null;
+                throw $e;
             }
-            throw $e;
-        }
+        });
 
-        if ($policy !== null) {
-            Cache::put($key, $policy, now()->addSeconds(self::SECURITY_POLICY_TTL));
-        }
+        /** @var SecurityPolicy|null $policy */
+        $policy = $this->hydrateModel(SecurityPolicy::class, $attributes);
 
         return $policy;
     }
@@ -74,30 +69,36 @@ class CacheService
     {
         $key = "clinic:{$clinicId}:user:{$userId}:permissions";
 
-        $permissions = Cache::get($key);
+        $cached = Cache::get($key);
 
-        if ($permissions instanceof \__PHP_Incomplete_Class || ($permissions instanceof Collection && $permissions->first() instanceof \__PHP_Incomplete_Class)) {
+        if ($this->isUnsafeCachedValue($cached)) {
             Cache::forget($key);
-            $permissions = null;
+            $cached = null;
         }
 
-        if ($permissions instanceof Collection) {
-            return $permissions;
+        if (is_array($cached)) {
+            return collect($cached)
+                ->filter(fn (mixed $permission): bool => is_string($permission) && $permission !== '')
+                ->values();
         }
 
-        if (is_array($permissions)) {
-            return collect($permissions);
+        $user = User::query()->find($userId);
+
+        if ($user === null) {
+            Cache::put($key, [], now()->addSeconds(self::USER_PERMISSIONS_TTL));
+
+            return collect();
         }
 
-        return Cache::remember($key, now()->addSeconds(self::USER_PERMISSIONS_TTL), function () use ($userId) {
-            $user = User::query()->find($userId);
+        $permissions = $user->permissions()
+            ->pluck('permissions.name')
+            ->filter(fn (mixed $permission): bool => is_string($permission) && $permission !== '')
+            ->values()
+            ->all();
 
-            if ($user === null) {
-                return collect();
-            }
+        Cache::put($key, $permissions, now()->addSeconds(self::USER_PERMISSIONS_TTL));
 
-            return $user->permissions()->pluck('permissions.name');
-        });
+        return collect($permissions);
     }
 
     public function invalidateUserPermissions(int $userId, int $clinicId): void
@@ -114,31 +115,20 @@ class CacheService
             });
     }
 
-    public function getClinicRoles(int $clinicId): Collection
+    public function getClinicRoles(int $clinicId): EloquentCollection
     {
         $key = "clinic:{$clinicId}:roles:list";
 
-        $roles = Cache::get($key);
-
-        if ($roles instanceof \__PHP_Incomplete_Class || ($roles instanceof Collection && $roles->first() instanceof \__PHP_Incomplete_Class)) {
-            Cache::forget($key);
-            $roles = null;
-        }
-
-        if ($roles instanceof Collection) {
-            return $roles;
-        }
-
-        if (is_array($roles)) {
-            return collect($roles);
-        }
-
-        return Cache::remember($key, now()->addSeconds(self::REFERENCE_DATA_TTL), function () use ($clinicId) {
+        $rows = $this->rememberList($key, self::REFERENCE_DATA_TTL, function () use ($clinicId): array {
             return Role::query()
                 ->forClinic($clinicId)
                 ->orderBy('name')
-                ->get();
+                ->get()
+                ->map(fn (Role $role): array => $role->getAttributes())
+                ->all();
         });
+
+        return Role::hydrate($rows);
     }
 
     public function invalidateClinicRoles(int $clinicId): void
@@ -147,32 +137,21 @@ class CacheService
         Cache::forget("clinic:{$clinicId}:roles:list");
     }
 
-    public function getClinicDepartments(int $clinicId): Collection
+    public function getClinicDepartments(int $clinicId): EloquentCollection
     {
         $key = "clinic:{$clinicId}:departments:list";
 
-        $departments = Cache::get($key);
-
-        if ($departments instanceof \__PHP_Incomplete_Class || ($departments instanceof Collection && $departments->first() instanceof \__PHP_Incomplete_Class)) {
-            Cache::forget($key);
-            $departments = null;
-        }
-
-        if ($departments instanceof Collection) {
-            return $departments;
-        }
-
-        if (is_array($departments)) {
-            return collect($departments);
-        }
-
-        return Cache::remember($key, now()->addSeconds(self::REFERENCE_DATA_TTL), function () use ($clinicId) {
+        $rows = $this->rememberList($key, self::REFERENCE_DATA_TTL, function () use ($clinicId): array {
             return Department::query()
                 ->forClinic($clinicId)
                 ->where('is_active', true)
                 ->orderBy('name')
-                ->get();
+                ->get()
+                ->map(fn (Department $department): array => $department->getAttributes())
+                ->all();
         });
+
+        return Department::hydrate($rows);
     }
 
     public function invalidateClinicDepartments(int $clinicId): void
@@ -181,31 +160,20 @@ class CacheService
         Cache::forget("clinic:{$clinicId}:departments:list");
     }
 
-    public function getClinicExpenseCategories(int $clinicId): Collection
+    public function getClinicExpenseCategories(int $clinicId): EloquentCollection
     {
         $key = "clinic:{$clinicId}:expense_categories:list";
 
-        $categories = Cache::get($key);
-
-        if ($categories instanceof \__PHP_Incomplete_Class || ($categories instanceof Collection && $categories->first() instanceof \__PHP_Incomplete_Class)) {
-            Cache::forget($key);
-            $categories = null;
-        }
-
-        if ($categories instanceof Collection) {
-            return $categories;
-        }
-
-        if (is_array($categories)) {
-            return collect($categories);
-        }
-
-        return Cache::remember($key, now()->addSeconds(self::REFERENCE_DATA_TTL), function () use ($clinicId) {
+        $rows = $this->rememberList($key, self::REFERENCE_DATA_TTL, function () use ($clinicId): array {
             return ExpenseCategory::query()
                 ->forClinic($clinicId)
                 ->orderBy('name')
-                ->get();
+                ->get()
+                ->map(fn (ExpenseCategory $category): array => $category->getAttributes())
+                ->all();
         });
+
+        return ExpenseCategory::hydrate($rows);
     }
 
     public function invalidateClinicExpenseCategories(int $clinicId): void
@@ -366,26 +334,21 @@ class CacheService
     {
         $key = "clinic:{$clinicId}:branding";
 
-        $branding = Cache::get($key);
-
-        if ($branding instanceof \__PHP_Incomplete_Class) {
-            Cache::forget($key);
-            $branding = null;
-        }
-
-        if ($branding instanceof BrandingSetting) {
-            return $branding;
-        }
-
-        return Cache::remember($key, now()->addSeconds(self::BRANDING_TTL), function () use ($clinicId) {
+        $attributes = $this->rememberArray($key, self::BRANDING_TTL, function () use ($clinicId): ?array {
             try {
                 return BrandingSetting::query()
                     ->forClinic($clinicId)
-                    ->first();
+                    ->first()
+                    ?->getAttributes();
             } catch (QueryException) {
                 return null;
             }
         });
+
+        /** @var BrandingSetting|null $branding */
+        $branding = $this->hydrateModel(BrandingSetting::class, $attributes);
+
+        return $branding;
     }
 
     public function invalidateBrandingSettings(int $clinicId): void
@@ -399,7 +362,7 @@ class CacheService
 
         $patients = Cache::get($key);
 
-        if ($patients instanceof \__PHP_Incomplete_Class) {
+        if ($this->isUnsafeCachedValue($patients)) {
             Cache::forget($key);
             $patients = null;
         }
@@ -431,7 +394,7 @@ class CacheService
 
         $doctors = Cache::get($key);
 
-        if ($doctors instanceof \__PHP_Incomplete_Class) {
+        if ($this->isUnsafeCachedValue($doctors)) {
             Cache::forget($key);
             $doctors = null;
         }
@@ -452,6 +415,11 @@ class CacheService
                 ->orderBy('name')
                 ->limit(200)
                 ->get()
+                ->map(fn (User $doctor): array => [
+                    'id' => $doctor->id,
+                    'name' => $doctor->name,
+                ])
+                ->values()
                 ->all();
         });
     }
@@ -463,7 +431,7 @@ class CacheService
 
         $appointments = Cache::get($key);
 
-        if ($appointments instanceof \__PHP_Incomplete_Class) {
+        if ($this->isUnsafeCachedValue($appointments)) {
             Cache::forget($key);
             $appointments = null;
         }
@@ -483,7 +451,13 @@ class CacheService
                 $query->where('doctor_id', $doctorId);
             }
 
-            return $query->get()->all();
+            return $query->get()
+                ->map(fn (Appointment $appointment): array => [
+                    'id' => $appointment->id,
+                    'appointment_number' => $appointment->appointment_number,
+                ])
+                ->values()
+                ->all();
         });
     }
 
@@ -494,7 +468,7 @@ class CacheService
 
         $queueEntries = Cache::get($key);
 
-        if ($queueEntries instanceof \__PHP_Incomplete_Class) {
+        if ($this->isUnsafeCachedValue($queueEntries)) {
             Cache::forget($key);
             $queueEntries = null;
         }
@@ -541,7 +515,7 @@ class CacheService
 
         $visits = Cache::get($key);
 
-        if ($visits instanceof \__PHP_Incomplete_Class) {
+        if ($this->isUnsafeCachedValue($visits)) {
             Cache::forget($key);
             $visits = null;
         }
@@ -557,6 +531,11 @@ class CacheService
                 ->orderByDesc('started_at')
                 ->limit(200)
                 ->get()
+                ->map(fn (Visit $visit): array => [
+                    'id' => $visit->id,
+                    'visit_number' => $visit->visit_number,
+                ])
+                ->values()
                 ->all();
         });
     }
@@ -568,5 +547,92 @@ class CacheService
         Cache::forget("clinic:{$clinicId}:dropdown:appointments");
         Cache::forget("clinic:{$clinicId}:dropdown:queue");
         Cache::forget("clinic:{$clinicId}:dropdown:visits");
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function rememberArray(string $key, int $ttlSeconds, Closure $callback): ?array
+    {
+        $cached = Cache::get($key);
+
+        if ($this->isUnsafeCachedValue($cached)) {
+            Cache::forget($key);
+            $cached = null;
+        }
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $value = $callback();
+
+        if ($value !== null) {
+            Cache::put($key, $value, now()->addSeconds($ttlSeconds));
+        }
+
+        return $value;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function rememberList(string $key, int $ttlSeconds, Closure $callback): array
+    {
+        $cached = Cache::get($key);
+
+        if ($this->isUnsafeCachedValue($cached)) {
+            Cache::forget($key);
+            $cached = null;
+        }
+
+        if (is_array($cached) && $this->isListOfArrays($cached)) {
+            return array_values($cached);
+        }
+
+        $value = $callback();
+
+        Cache::put($key, $value, now()->addSeconds($ttlSeconds));
+
+        return $value;
+    }
+
+    /**
+     * @param  class-string<Model>  $modelClass
+     * @param  array<string, mixed>|null  $attributes
+     */
+    private function hydrateModel(string $modelClass, ?array $attributes): ?Model
+    {
+        if ($attributes === null) {
+            return null;
+        }
+
+        $model = new $modelClass;
+        $model->forceFill($attributes);
+        $model->exists = true;
+
+        return $model;
+    }
+
+    private function isUnsafeCachedValue(mixed $value): bool
+    {
+        return $value instanceof \__PHP_Incomplete_Class
+            || $value instanceof Model
+            || $value instanceof Collection
+            || $value instanceof EloquentCollection;
+    }
+
+    /**
+     * @param  array<mixed>  $value
+     */
+    private function isListOfArrays(array $value): bool
+    {
+        foreach ($value as $item) {
+            if (! is_array($item)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

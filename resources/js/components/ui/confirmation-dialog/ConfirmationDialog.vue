@@ -27,8 +27,8 @@ const iconConfig = computed(() => {
         },
         create: {
             icon: Plus,
-            color: 'text-[#1D9E75]',
-            bgColor: 'bg-[#1D9E75]/10',
+            color: 'text-[#0EA5E9]',
+            bgColor: 'bg-[#0EA5E9]/10',
         },
         edit: {
             icon: Pencil,

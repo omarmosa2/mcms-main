@@ -35,6 +35,8 @@ class CacheStrategyTest extends TestCase
         $this->get('/dashboard');
 
         $this->assertTrue(Cache::has($cacheKey));
+        $this->assertIsArray(Cache::get($cacheKey));
+        $this->assertArrayHasKey('id', Cache::get($cacheKey));
     }
 
     public function test_security_policy_cache_is_invalidated_on_update(): void
@@ -86,6 +88,7 @@ class CacheStrategyTest extends TestCase
         $permissions = $user->getCachedPermissions();
 
         $this->assertTrue(Cache::has($cacheKey));
+        $this->assertIsArray(Cache::get($cacheKey));
         $this->assertTrue($permissions->contains('visit.view'));
     }
 
@@ -121,11 +124,10 @@ class CacheStrategyTest extends TestCase
 
         Cache::forget($cacheKey);
 
-        $roles = Role::query()
-            ->forClinic($clinic->id)
-            ->orderBy('name')
-            ->get();
+        $roles = app(CacheService::class)->getClinicRoles($clinic->id);
 
+        $this->assertTrue(Cache::has($cacheKey));
+        $this->assertIsArray(Cache::get($cacheKey));
         $this->assertGreaterThanOrEqual(2, $roles->count());
     }
 
@@ -154,12 +156,10 @@ class CacheStrategyTest extends TestCase
 
         Cache::forget($cacheKey);
 
-        $departments = Department::query()
-            ->forClinic($clinic->id)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $departments = app(CacheService::class)->getClinicDepartments($clinic->id);
 
+        $this->assertTrue(Cache::has($cacheKey));
+        $this->assertIsArray(Cache::get($cacheKey));
         $this->assertCount(2, $departments);
     }
 
@@ -188,11 +188,10 @@ class CacheStrategyTest extends TestCase
 
         Cache::forget($cacheKey);
 
-        $categories = ExpenseCategory::query()
-            ->forClinic($clinic->id)
-            ->orderBy('name')
-            ->get();
+        $categories = app(CacheService::class)->getClinicExpenseCategories($clinic->id);
 
+        $this->assertTrue(Cache::has($cacheKey));
+        $this->assertIsArray(Cache::get($cacheKey));
         $this->assertCount(2, $categories);
     }
 

@@ -59,7 +59,7 @@ const trustSignals = [
                     </div>
                     <div class="space-y-0.5">
                         <p class="text-sm font-semibold">MCMS</p>
-                        <p class="text-[0.65rem] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                        <p class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
                             منصة العمليات السريرية
                         </p>
                     </div>
@@ -96,7 +96,7 @@ const trustSignals = [
                 <section class="flex flex-col justify-center py-8 lg:py-12">
                     <span class="hero-kicker self-start">صُمم للسرعة والوضوح</span>
 
-                    <h1 class="mt-4 max-w-3xl text-3xl leading-tight font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+                    <h1 class="mt-4 max-w-3xl text-3xl leading-tight font-semibold tracking-normal sm:text-4xl lg:text-5xl">
                         منصة موحدة لإدارة
                         <span class="font-bold text-primary">العمليات السريرية</span>
                         للفرق التي تعمل بسرعة.
@@ -153,7 +153,7 @@ const trustSignals = [
                     </div>
 
                     <div class="rounded-xl border border-border/70 bg-card p-4">
-                        <p class="text-[0.67rem] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                        <p class="text-[0.67rem] font-semibold tracking-normal text-muted-foreground uppercase">
                             الثقة والحوكمة
                         </p>
                         <ul class="mt-3 space-y-2">

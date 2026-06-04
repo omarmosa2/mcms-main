@@ -50,7 +50,7 @@ const description = status === 503
                 <AlertTriangle class="size-10" />
             </div>
 
-            <h1 class="text-6xl font-bold tracking-tight text-foreground">
+            <h1 class="text-6xl font-bold tracking-normal text-foreground">
                 {{ status ?? 'خطأ' }}
             </h1>
             <h2 class="mt-4 text-xl font-semibold">{{ title }}</h2>

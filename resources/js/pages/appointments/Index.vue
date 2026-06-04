@@ -44,31 +44,19 @@ import {
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
+import AppointmentCreateSheet from './components/AppointmentCreateSheet.vue';
+import AppointmentDayView from './components/AppointmentDayView.vue';
+import AppointmentEditDialog from './components/AppointmentEditDialog.vue';
+import AppointmentQuickAddForm from './components/AppointmentQuickAddForm.vue';
+import AppointmentTable from './components/AppointmentTable.vue';
+import AppointmentTodaySummary from './components/AppointmentTodaySummary.vue';
+import AppointmentViewDialog from './components/AppointmentViewDialog.vue';
+import type { Appointment, AppointmentSortField, SortDirection } from './components/types';
 
 type Option = {
     id: number;
     name?: string;
     full_name?: string;
-};
-
-type Appointment = {
-    id: number;
-    patient_id: number;
-    doctor_id: number | null;
-    appointment_number: string;
-    scheduled_for: string;
-    duration_minutes: number;
-    status: string;
-    cancel_reason: string | null;
-    notes: string | null;
-    patient?: {
-        id?: number;
-        full_name?: string;
-    };
-    doctor?: {
-        id?: number;
-        name?: string;
-    };
 };
 
 type PaginationLink = {
@@ -98,14 +86,6 @@ type PaginatedResponse<T> = {
     links: PaginationNavigation;
     meta: PaginationMeta;
 };
-
-type AppointmentSortField =
-    | 'appointment_number'
-    | 'scheduled_for'
-    | 'duration_minutes'
-    | 'status';
-
-type SortDirection = 'asc' | 'desc';
 
 const { appointments, patients, doctors, status_options, filters, today_appointments } =
     defineProps<{
@@ -409,46 +389,6 @@ onBeforeUnmount(() => {
     }
 });
 
-const transitionStatuses = [
-    'confirmed',
-    'arrived',
-    'completed',
-    'canceled',
-    'no_show',
-];
-
-const appointmentStatusClass = (status: string): string => {
-    if (status === 'completed' || status === 'arrived') {
-        return 'border-[var(--border-soft)] bg-[var(--accent-mint-soft)] text-[var(--accent-mint-strong)]';
-    }
-
-    if (status === 'scheduled' || status === 'confirmed') {
-        return 'border-[var(--border-soft)] bg-[var(--accent-teal-soft)] text-[var(--accent-teal-strong)]';
-    }
-
-    if (status === 'canceled' || status === 'no_show') {
-        return 'border-[var(--border-soft)] bg-[var(--accent-coral-soft)] text-[var(--accent-coral-strong)]';
-    }
-
-    return 'border-[var(--border-soft)] bg-[var(--surface-secondary)] text-[var(--surface-contrast-soft)]';
-};
-
-const appointmentStatusDotClass = (status: string): string => {
-    if (status === 'completed' || status === 'arrived') {
-        return 'bg-[var(--accent-mint)]';
-    }
-
-    if (status === 'scheduled' || status === 'confirmed') {
-        return 'bg-[var(--accent-teal)]';
-    }
-
-    if (status === 'canceled' || status === 'no_show') {
-        return 'bg-[var(--accent-coral)]';
-    }
-
-    return 'bg-[var(--surface-contrast-soft)]';
-};
-
 const appointmentStatusLabel = (status: string): string => {
     const labels: Record<string, string> = {
         scheduled: 'مجدول',
@@ -518,19 +458,6 @@ const closeEditAppointment = (): void => {
     editingAppointment.value = null;
 };
 
-const toDatetimeLocalValue = (isoValue: string): string => {
-    const parsedDate = new Date(isoValue);
-
-    if (Number.isNaN(parsedDate.getTime())) {
-        return '';
-    }
-
-    const timezoneOffsetInMs = parsedDate.getTimezoneOffset() * 60_000;
-    const localDate = new Date(parsedDate.getTime() - timezoneOffsetInMs);
-
-    return localDate.toISOString().slice(0, 16);
-};
-
 const activeFilters = computed(() => {
     const f: { key: string; label: string; value: string | null }[] = [];
 
@@ -572,7 +499,7 @@ const defaultScheduledFor = computed(() => {
 });
 
 const resetQuickAdd = () => {
-    quickAddFormSuccess.value = false;
+    // quickAddFormSuccess ref was not declared in original code
 };
 
 const handleQuickAddSuccess = () => {
@@ -588,7 +515,7 @@ const handleQuickAddError = () => {
 const deleteAppointment = async (appointment: Appointment) => {
     const confirmed = await confirm({
         title: 'حذف الموعد',
-        description: `هل أنت متأكد من حذف موعد "${appointment.appointment_number}" للمريض "${appointment.patient?.full_name || appointment.patient?.first_name + ' ' + appointment.patient?.last_name}"؟ لا يمكن التراجع عن هذا الإجراء.`,
+        description: `هل أنت متأكد من حذف موعد "${appointment.appointment_number}" للمريض "${appointment.patient?.full_name ?? '-'}"؟ لا يمكن التراجع عن هذا الإجراء.`,
         confirmText: 'حذف',
         cancelText: 'إلغاء',
         variant: 'destructive',
@@ -601,6 +528,29 @@ const deleteAppointment = async (appointment: Appointment) => {
             },
             onError: () => {
                 toast.error('فشل حذف الموعد');
+            },
+        });
+    }
+};
+
+const handleBulkDelete = async () => {
+    const confirmed = await confirm({
+        title: 'حذف المواعيد',
+        description: `هل أنت متأكد من حذف ${selectedAppointmentIds.value.length} موعد؟ لا يمكن التراجع عن هذا الإجراء.`,
+        confirmText: 'حذف',
+        cancelText: 'إلغاء',
+        variant: 'destructive',
+    });
+
+    if (confirmed) {
+        router.delete(AppointmentController.bulkDestroy.url(), {
+            data: { ids: selectedAppointmentIds.value },
+            onSuccess: () => {
+                clearSelectedAppointments();
+                toast.success(`تم حذف ${selectedAppointmentIds.value.length} موعد بنجاح`);
+            },
+            onError: () => {
+                toast.error('فشل حذف المواعيد');
             },
         });
     }
@@ -637,12 +587,6 @@ const groupedByHour = computed(() => {
     return result;
 });
 
-const formatTime = (iso: string): string => {
-    const d = new Date(iso);
-
-    return d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: true });
-};
-
 const formatArabicDate = (iso: string): string => {
     const d = new Date(iso);
 
@@ -656,29 +600,6 @@ const todaySummary = computed(() => ({
     completed: todayAppointments.value.filter((a) => a.status === 'completed').length,
     canceled: todayAppointments.value.filter((a) => a.status === 'canceled' || a.status === 'no_show').length,
 }));
-
-const handleBulkDelete = async () => {
-    const confirmed = await confirm({
-        title: 'حذف المواعيد',
-        description: `هل أنت متأكد من حذف ${selectedAppointmentIds.value.length} موعد؟ لا يمكن التراجع عن هذا الإجراء.`,
-        confirmText: 'حذف',
-        cancelText: 'إلغاء',
-        variant: 'destructive',
-    });
-
-    if (confirmed) {
-        router.delete(AppointmentController.bulkDestroy.url(), {
-            data: { ids: selectedAppointmentIds.value },
-            onSuccess: () => {
-                clearSelectedAppointments();
-                toast.success(`تم حذف ${selectedAppointmentIds.value.length} موعد بنجاح`);
-            },
-            onError: () => {
-                toast.error('فشل حذف المواعيد');
-            },
-        });
-    }
-};
 </script>
 
 <template>
@@ -700,14 +621,14 @@ const handleBulkDelete = async () => {
 
             <div class="flex items-center gap-2">
                 <a
-                    :href="AppointmentExportController.export()"
+                    :href="AppointmentExportController.export.url()"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground min-h-[44px]"
                 >
                     <Download class="size-3.5" />
                     تصدير Excel
                 </a>
                 <a
-                    :href="AppointmentExportController.exportPdf()"
+                    :href="AppointmentExportController.exportPdf.url()"
                     class="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground min-h-[44px]"
                 >
                     <FileText class="size-3.5" />
@@ -746,7 +667,7 @@ const handleBulkDelete = async () => {
                 </Button>
                 <Button
                     v-if="can('appointment.create')"
-                    variant="clay"
+                    variant="default"
                     size="sm"
                     class="h-10 rounded-lg px-3 text-xs"
                     @click="isCreateSheetOpen = true"
@@ -757,814 +678,89 @@ const handleBulkDelete = async () => {
             </div>
         </div>
 
-        <section v-if="can('appointment.create') && isQuickAddOpen" class="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4">
-            <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-semibold text-primary">إضافة سريعة - موعد جديد</h3>
-                <span class="text-xs text-muted-foreground">Enter = حفظ وإضافة التالي</span>
-            </div>
+        <AppointmentQuickAddForm
+            v-if="can('appointment.create') && isQuickAddOpen"
+            :patients="patients"
+            :doctors="doctors"
+            @success="handleQuickAddSuccess"
+            @reset="resetQuickAdd"
+        />
 
-            <Form
-                v-bind="AppointmentController.store.form()"
-                class="grid gap-3 md:grid-cols-5 md:items-end"
-                v-slot="{ errors, processing }"
-                @success="handleQuickAddSuccess"
-                @error="handleQuickAddError"
-                reset-on-success
-            >
-                <div class="grid gap-1">
-                    <Label for="quick_patient" class="text-xs">المريض *</Label>
-                    <select
-                        id="quick_patient"
-                        name="patient_id"
-                        required
-                        class="pattern-field-clay h-9 px-2 py-1 text-sm"
-                    >
-                        <option value="">اختر مريضاً</option>
-                        <option v-for="p in patients" :key="p.id" :value="p.id">
-                            {{ p.full_name ?? p.name }}
-                        </option>
-                    </select>
-                    <p v-if="errors.patient_id" class="text-xs text-destructive">{{ errors.patient_id }}</p>
-                </div>
-                <div class="grid gap-1">
-                    <Label for="quick_doctor" class="text-xs">الطبيب</Label>
-                    <select
-                        id="quick_doctor"
-                        name="doctor_id"
-                        class="pattern-field-clay h-9 px-2 py-1 text-sm"
-                    >
-                        <option value="">اختر طبيباً</option>
-                        <option v-for="d in doctors" :key="d.id" :value="d.id">
-                            {{ d.name }}
-                        </option>
-                    </select>
-                    <p v-if="errors.doctor_id" class="text-xs text-destructive">{{ errors.doctor_id }}</p>
-                </div>
-                <div class="grid gap-1">
-                    <Label for="quick_datetime" class="text-xs">التاريخ والوقت *</Label>
-                    <Input
-                        id="quick_datetime"
-                        name="scheduled_for"
-                        type="datetime-local"
-                        required
-                        class="pattern-field-clay h-9 text-sm"
-                    />
-                    <p v-if="errors.scheduled_for" class="text-xs text-destructive">{{ errors.scheduled_for }}</p>
-                </div>
-                <div class="grid gap-1">
-                    <Label for="quick_duration" class="text-xs">المدة (دقيقة) *</Label>
-                    <Input
-                        id="quick_duration"
-                        name="duration_minutes"
-                        type="number"
-                        min="5"
-                        max="480"
-                        value="15"
-                        required
-                        class="pattern-field-clay h-9 text-sm"
-                    />
-                    <p v-if="errors.duration_minutes" class="text-xs text-destructive">{{ errors.duration_minutes }}</p>
-                </div>
-                <div class="flex gap-2">
-                    <Button
-                        type="submit"
-                        variant="clay"
-                        size="sm"
-                        class="h-9 px-4 text-xs"
-                        :disabled="processing"
-                    >
-                        {{ processing ? 'جاري الحفظ...' : 'حفظ' }}
-                    </Button>
-                    <Button type="button" variant="ghost" size="sm" class="h-9 px-3 text-xs" @click="resetQuickAdd">مسح</Button>
-                </div>
-            </Form>
-        </section>
+        <AppointmentTodaySummary
+            :today-summary="todaySummary"
+            :can-create-appointment="can('appointment.create')"
+        />
 
-        <section class="rounded-xl border border-border/70 bg-card px-4 py-3">
-            <div class="flex flex-wrap items-center gap-4 md:gap-6">
-                <div class="flex items-center gap-2">
-                    <Calendar class="size-4 text-muted-foreground" />
-                    <span class="text-sm text-muted-foreground">اليوم</span>
-                    <span class="text-lg font-bold tabular-nums text-foreground">{{ todaySummary.total }}</span>
-                </div>
-                <div class="hidden h-5 w-px bg-border/60 md:block" aria-hidden="true"></div>
-                <div class="flex items-center gap-2">
-                    <span class="size-2 rounded-full bg-[var(--accent-teal)]" aria-hidden="true"></span>
-                    <span class="text-sm text-muted-foreground">مجدول</span>
-                    <span class="text-lg font-bold tabular-nums text-[var(--accent-teal-strong)]">{{ todaySummary.scheduled }}</span>
-                </div>
-                <div class="hidden h-5 w-px bg-border/60 md:block" aria-hidden="true"></div>
-                <div class="flex items-center gap-2">
-                    <span class="size-2 rounded-full bg-[var(--accent-mint)]" aria-hidden="true"></span>
-                    <span class="text-sm text-muted-foreground">حاضر</span>
-                    <span class="text-lg font-bold tabular-nums text-[var(--accent-mint-strong)]">{{ todaySummary.arrived }}</span>
-                </div>
-                <div class="hidden h-5 w-px bg-border/60 md:block" aria-hidden="true"></div>
-                <div class="flex items-center gap-2">
-                    <span class="size-2 rounded-full bg-[var(--accent-mint)]" aria-hidden="true"></span>
-                    <span class="text-sm text-muted-foreground">مكتمل</span>
-                    <span class="text-lg font-bold tabular-nums text-[var(--accent-mint-strong)]">{{ todaySummary.completed }}</span>
-                </div>
-                <div v-if="todaySummary.canceled > 0" class="hidden h-5 w-px bg-border/60 md:block" aria-hidden="true"></div>
-                <div v-if="todaySummary.canceled > 0" class="flex items-center gap-2">
-                    <span class="size-2 rounded-full bg-[var(--accent-coral)]" aria-hidden="true"></span>
-                    <span class="text-sm text-muted-foreground">ملغي</span>
-                    <span class="text-lg font-bold tabular-nums text-[var(--accent-coral-strong)]">{{ todaySummary.canceled }}</span>
-                </div>
-            </div>
-        </section>
+        <AppointmentDayView
+            v-if="viewMode === 'day'"
+            :grouped-by-hour="groupedByHour"
+            :today-summary="todaySummary"
+            :can-edit-appointment="canEditAppointment"
+            :can-create-appointment="can('appointment.create')"
+            @view="openViewAppointment"
+            @edit="openEditAppointment"
+            @create="isCreateSheetOpen = true"
+        />
 
-        <div v-if="viewMode === 'day'" class="glass-panel-soft p-5">
-            <div v-if="groupedByHour.length === 0" class="py-16 text-center">
-                <CalendarDays class="mx-auto mb-4 size-12 text-muted-foreground/40" />
-                <p class="text-sm font-medium text-muted-foreground">لا توجد مواعيد اليوم</p>
-                <Button
-                    v-if="can('appointment.create')"
-                    variant="clay"
-                    size="sm"
-                    class="mt-4 min-h-[44px]"
-                    @click="isCreateSheetOpen = true"
-                >
-                    <Plus class="size-3.5" />
-                    إضافة موعد
-                </Button>
-            </div>
+        <AppointmentTable
+            v-if="viewMode === 'list'"
+            :appointments="appointments"
+            :local-search="localSearch"
+            :local-status="localStatus"
+            :local-rows-per-page="localRowsPerPage"
+            :local-page="localPage"
+            :total-local-pages="totalLocalPages"
+            :local-visible-from="localVisibleFrom"
+            :local-visible-to="localVisibleTo"
+            :total="appointments.meta.total"
+            :sortBy="localSortBy"
+            :sortDirection="localSortDirection"
+            :selected-ids="selectedAppointmentIds"
+            :deletable-appointment-ids="deletableAppointmentIds"
+            :are-all-selected="areAllDeletableAppointmentsSelected"
+            :active-filters="activeFilters"
+            :status-options="statusOptions"
+            :can-delete="can('appointment.delete')"
+            :can-edit="canEditAppointment"
+            :can-update-status="can('appointment.update') || can('appointment.arrival')"
+            :patients="patients"
+            :doctors="doctors"
+            @search="localSearch = $event"
+            @status="localStatus = $event"
+            @rows-per-page="localRowsPerPage = $event"
+            @page="localPage = $event"
+            @sort="toggleSort"
+            @remove-filter="handleRemoveFilter"
+            @clear-filters="resetLocalFilters"
+            @toggle-select-all="toggleAllAppointmentsSelection"
+            @update:selectedAppointmentIds="selectedAppointmentIds = $event"
+            @delete="deleteAppointment"
+            @edit="openEditAppointment"
+            @view="openViewAppointment"
+            @bulk-delete="handleBulkDelete"
+            @clear-selection="clearSelectedAppointments"
+            @success="() => reloadAppointments({ page: 1 })"
+            @error="handleQuickAddError"
+        />
 
-            <div v-else class="space-y-6">
-                <div
-                    v-for="group in groupedByHour"
-                    :key="group.hour"
-                >
-                    <div class="mb-2 flex items-center gap-2">
-                        <span class="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-bold tabular-nums text-muted-foreground">
-                            {{ group.hour }}
-                        </span>
-                        <span class="text-xs text-muted-foreground">
-                            {{ group.appointments.length }} {{ group.appointments.length === 1 ? 'موعد' : 'مواعيد' }}
-                        </span>
-                    </div>
+        <AppointmentCreateSheet
+            :open="isCreateSheetOpen"
+            :patients="patients"
+            :doctors="doctors"
+            @update:open="isCreateSheetOpen = $event"
+        />
 
-                    <div class="space-y-2">
-                        <div
-                            v-for="apt in group.appointments"
-                            :key="apt.id"
-                            class="flex flex-col gap-3 rounded-xl border border-border/60 bg-background/50 p-3 transition-colors hover:border-[var(--accent-mint-soft)] hover:bg-[var(--accent-mint-soft)]/30 sm:flex-row sm:items-center sm:justify-between"
-                        >
-                            <div class="flex items-center gap-3">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold tabular-nums text-muted-foreground">
-                                    {{ formatTime(apt.scheduled_for).split(' ')[0] }}
-                                </div>
-                                <div>
-                                    <p class="text-sm font-semibold">{{ apt.patient?.full_name ?? '-' }}</p>
-                                    <p class="text-xs text-muted-foreground">
-                                        {{ apt.doctor?.name ?? 'بدون طبيب' }}
-                                        <span class="mx-1">·</span>
-                                        {{ apt.duration_minutes }} دقيقة
-                                    </p>
-                                </div>
-                            </div>
+        <AppointmentViewDialog
+            :appointment="viewingAppointment"
+            @close="viewingAppointment = null"
+        />
 
-                            <div class="flex items-center gap-2">
-                                <span
-                                    class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium capitalize"
-                                    :class="appointmentStatusClass(apt.status)"
-                                >
-                                    <span
-                                        class="size-1.5 rounded-full"
-                                        :class="appointmentStatusDotClass(apt.status)"
-                                    ></span>
-                                    {{ appointmentStatusLabel(apt.status) }}
-                                </span>
-
-                                <div class="flex items-center gap-1">
-                                    <Button
-                                        type="button"
-                                        variant="neumorphic"
-                                        size="icon-sm"
-                                        class="h-9 w-9"
-                                        @click="openViewAppointment(apt)"
-                                        aria-label="عرض الموعد"
-                                    >
-                                        <Eye class="size-3.5" />
-                                    </Button>
-                                    <Button
-                                        v-if="canEditAppointment"
-                                        type="button"
-                                        variant="clay"
-                                        size="icon-sm"
-                                        class="h-9 w-9"
-                                        @click="openEditAppointment(apt)"
-                                        aria-label="تعديل الموعد"
-                                    >
-                                        <Pencil class="size-3.5" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="viewMode === 'list'" class="space-y-5">
-            <div class="glass-panel-soft p-5">
-                <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-                    <h3 class="pattern-typographic-title text-[0.76rem]">
-                        جميع المواعيد
-                    </h3>
-                    <span class="text-xs text-muted-foreground">
-                        الإجمالي: {{ appointments.meta.total }}
-                    </span>
-                </div>
-
-                <div class="space-y-3 rounded-2xl border border-border/70 bg-background/60 p-4">
-                    <div class="grid gap-3 md:grid-cols-[repeat(3,minmax(0,1fr))] md:items-end">
-                        <div class="grid gap-2 md:col-span-2">
-                            <Label for="appointments_search">بحث</Label>
-                            <FilterSearch
-                                id="appointments_search"
-                                v-model="localSearch"
-                                placeholder="رقم الموعد، المريض، الطبيب"
-                            />
-                        </div>
-
-                        <div class="grid gap-2">
-                            <Label for="appointments_status">الحالة</Label>
-                            <FilterSelect
-                                id="appointments_status"
-                                v-model="localStatus"
-                                :options="statusOptions"
-                                placeholder="جميع الحالات"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="grid gap-3 md:grid-cols-[repeat(2,minmax(0,1fr))] md:items-end">
-                        <div class="grid gap-2 md:max-w-44">
-                            <Label for="appointments_per_page">صفوف لكل صفحة</Label>
-                            <select
-                                id="appointments_per_page"
-                                v-model.number="localRowsPerPage"
-                                class="pattern-field-clay h-10 px-3 py-1.5"
-                            >
-                                <option value="10">10</option>
-                                <option value="15">15</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <FilterBar
-                        v-if="activeFilters.length > 0"
-                        :active-filters="activeFilters"
-                        @remove="handleRemoveFilter"
-                        @clear-all="resetLocalFilters"
-                    />
-                </div>
-
-                <div
-                    v-if="can('appointment.delete') && selectedAppointmentIds.length > 0"
-                    class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
-                >
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        class="min-h-[44px]"
-                        @click="handleBulkDelete"
-                    >
-                        حذف المحدد ({{ selectedAppointmentIds.length }})
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        class="min-h-[44px]"
-                        @click="clearSelectedAppointments"
-                    >
-                        إلغاء التحديد
-                    </Button>
-                </div>
-
-                <div class="ui-table-shell">
-                    <table class="ui-table md:min-w-[920px]">
-                        <thead>
-                            <tr>
-                                <th
-                                    v-if="can('appointment.delete')"
-                                    class="px-3 py-2"
-                                >
-                                    <input
-                                        type="checkbox"
-                                        class="size-4 rounded border-border"
-                                        :checked="areAllDeletableAppointmentsSelected"
-                                        @change="toggleAllAppointmentsSelection"
-                                    />
-                                </th>
-                                <th class="px-3 py-2">
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                        @click="toggleSort('appointment_number')"
-                                    >
-                                        رقم الموعد
-                                        <component :is="sortIconFor('appointment_number')" class="size-3.5" />
-                                    </button>
-                                </th>
-                                <th class="px-3 py-2">المريض</th>
-                                <th class="px-3 py-2">الطبيب</th>
-                                <th class="px-3 py-2">
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                        @click="toggleSort('scheduled_for')"
-                                    >
-                                        التاريخ
-                                        <component :is="sortIconFor('scheduled_for')" class="size-3.5" />
-                                    </button>
-                                </th>
-                                <th class="px-3 py-2">
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                        @click="toggleSort('duration_minutes')"
-                                    >
-                                        المدة
-                                        <component :is="sortIconFor('duration_minutes')" class="size-3.5" />
-                                    </button>
-                                </th>
-                                <th class="px-3 py-2">
-                                    <button
-                                        type="button"
-                                        class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                        @click="toggleSort('status')"
-                                    >
-                                        الحالة
-                                        <component :is="sortIconFor('status')" class="size-3.5" />
-                                    </button>
-                                </th>
-                                <th class="px-3 py-2 text-right">الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="appointment in visibleAppointments"
-                                :key="appointment.id"
-                                class="ui-table-row align-top"
-                            >
-                                <td
-                                    v-if="can('appointment.delete')"
-                                    class="px-3 py-2"
-                                    data-label="تحديد"
-                                >
-                                    <input
-                                        v-if="appointment.status === 'scheduled'"
-                                        v-model="selectedAppointmentIds"
-                                        type="checkbox"
-                                        class="size-4 rounded border-border"
-                                        :value="appointment.id"
-                                    />
-                                </td>
-                                <td class="px-3 py-2 font-medium" data-label="رقم الموعد">
-                                    {{ appointment.appointment_number }}
-                                </td>
-                                <td class="px-3 py-2" data-label="المريض">
-                                    {{ appointment.patient?.full_name ?? '-' }}
-                                </td>
-                                <td class="px-3 py-2" data-label="الطبيب">
-                                    {{ appointment.doctor?.name ?? '-' }}
-                                </td>
-                                <td class="px-3 py-2" data-label="التاريخ">
-                                    {{ new Date(appointment.scheduled_for).toLocaleString('ar-SA') }}
-                                </td>
-                                <td class="px-3 py-2" data-label="المدة">
-                                    {{ appointment.duration_minutes }} دقيقة
-                                </td>
-                                <td class="px-3 py-2" data-label="الحالة">
-                                    <span
-                                        class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium capitalize"
-                                        :class="appointmentStatusClass(appointment.status)"
-                                    >
-                                        <span
-                                            class="size-1.5 rounded-full"
-                                            :class="appointmentStatusDotClass(appointment.status)"
-                                        ></span>
-                                        {{ appointmentStatusLabel(appointment.status) }}
-                                    </span>
-                                </td>
-                                <td class="table-cell-actions px-3 py-2 md:text-right" data-label="الإجراءات">
-                                    <div class="flex flex-wrap justify-end gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="neumorphic"
-                                            size="sm"
-                                            class="h-10 px-3 text-xs"
-                                            @click="openViewAppointment(appointment)"
-                                        >
-                                            عرض
-                                        </Button>
-                                        <Button
-                                            v-if="canEditAppointment"
-                                            type="button"
-                                            variant="clay"
-                                            size="sm"
-                                            class="h-10 px-3 text-xs"
-                                            @click="openEditAppointment(appointment)"
-                                        >
-                                            تعديل
-                                        </Button>
-                                        <Form
-                                            v-if="can('appointment.update') || can('appointment.arrival')"
-                                            v-bind="AppointmentController.transitionStatus.form(appointment.id)"
-                                            class="flex items-center gap-2"
-                                            v-slot="{ processing }"
-                                            @success="() => {
-                                                toast.success('تم تحديث الحالة بنجاح');
-                                                closeEditAppointment();
-                                            }"
-                                            @error="() => {
-                                                toast.error('فشل تحديث الحالة');
-                                            }"
-                                        >
-                                            <select
-                                                name="status"
-                                                class="pattern-field-clay h-10 px-2 py-1 text-xs"
-                                            >
-                                                <option value="">تغيير الحالة</option>
-                                                <option
-                                                    v-for="status in transitionStatuses"
-                                                    :key="status"
-                                                    :value="status"
-                                                >
-                                                    {{ appointmentStatusLabel(status) }}
-                                                </option>
-                                            </select>
-                                            <Input
-                                                name="cancel_reason"
-                                                placeholder="سبب الإلغاء"
-                                                class="pattern-field-clay h-10 w-36 px-2 py-1 text-xs"
-                                            />
-                                            <Button
-                                                type="submit"
-                                                variant="clay"
-                                                size="sm"
-                                                class="h-10 px-2 text-xs"
-                                                :disabled="processing"
-                                            >
-                                                تطبيق
-                                            </Button>
-                                        </Form>
-                                        <Button
-                                            v-if="can('appointment.delete')"
-                                            type="button"
-                                            size="sm"
-                                            variant="destructive"
-                                            class="h-10 px-3 text-xs"
-                                            @click="deleteAppointment(appointment)"
-                                        >
-                                            حذف
-                                        </Button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr v-if="visibleAppointments.length === 0" class="table-empty-state">
-                                <td :colspan="can('appointment.delete') ? 8 : 7" class="px-3 py-10 text-center text-muted-foreground">
-                                    لا توجد مواعيد تطابق عوامل التصفية الحالية.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2">
-                    <p class="text-xs text-muted-foreground">
-                        عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من {{ appointments.meta.total }} سجل
-                    </p>
-                    <div class="flex items-center gap-2">
-                        <Button
-                            type="button"
-                            variant="neumorphic"
-                            size="sm"
-                            class="h-10 px-3 text-xs"
-                            :disabled="localPage === 1"
-                            @click="goToPreviousPage"
-                        >
-                            السابق
-                        </Button>
-                        <span class="text-xs font-semibold text-foreground/85">
-                            صفحة {{ localPage }} / {{ totalLocalPages }}
-                        </span>
-                        <Button
-                            type="button"
-                            variant="neumorphic"
-                            size="sm"
-                            class="h-10 px-3 text-xs"
-                            :disabled="localPage >= totalLocalPages"
-                            @click="goToNextPage"
-                        >
-                            التالي
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <Sheet :open="isCreateSheetOpen" @update:open="isCreateSheetOpen = $event">
-            <SheetContent side="left" class="w-full sm:max-w-lg">
-                <SheetHeader class="text-right">
-                    <SheetTitle>موعد جديد</SheetTitle>
-                    <SheetDescription>إضافة موعد جديد بسرعة.</SheetDescription>
-                </SheetHeader>
-
-                <Form
-                    v-bind="AppointmentController.store.form()"
-                    class="mt-6 space-y-4"
-                    v-slot="{ errors, processing }"
-                    @success="isCreateSheetOpen = false"
-                >
-                    <div class="grid gap-2">
-                        <Label for="appointment_number">
-                            رقم الموعد
-                            <span class="text-xs text-muted-foreground">(يُولّد تلقائياً إذا ترك فارغاً)</span>
-                        </Label>
-                        <Input
-                            id="appointment_number"
-                            name="appointment_number"
-                            placeholder="APT-20250421-0001"
-                            class="pattern-field-clay"
-                        />
-                        <InputError :message="errors.appointment_number" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="patient_id">المريض</Label>
-                        <select
-                            id="patient_id"
-                            name="patient_id"
-                            required
-                            class="pattern-field-clay h-10 px-3 py-1.5"
-                        >
-                            <option value="">اختر المريض</option>
-                            <option
-                                v-for="patient in patients"
-                                :key="patient.id"
-                                :value="patient.id"
-                            >
-                                {{ patient.full_name }}
-                            </option>
-                        </select>
-                        <InputError :message="errors.patient_id" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="doctor_id">الطبيب</Label>
-                        <select
-                            id="doctor_id"
-                            name="doctor_id"
-                            class="pattern-field-clay h-10 px-3 py-1.5"
-                        >
-                            <option value="">يُحدد لاحقاً</option>
-                            <option
-                                v-for="doctor in doctors"
-                                :key="doctor.id"
-                                :value="doctor.id"
-                            >
-                                {{ doctor.name }}
-                            </option>
-                        </select>
-                        <InputError :message="errors.doctor_id" />
-                    </div>
-
-                    <div class="grid gap-2 md:grid-cols-2">
-                        <div class="grid gap-2">
-                            <Label for="scheduled_for">موعد</Label>
-                            <Input
-                                id="scheduled_for"
-                                name="scheduled_for"
-                                type="datetime-local"
-                                required
-                                :value="defaultScheduledFor"
-                                class="pattern-field-clay"
-                            />
-                            <InputError :message="errors.scheduled_for" />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="duration_minutes">المدة (دقيقة)</Label>
-                            <Input
-                                id="duration_minutes"
-                                name="duration_minutes"
-                                type="number"
-                                min="5"
-                                required
-                                value="30"
-                                class="pattern-field-clay"
-                            />
-                            <InputError :message="errors.duration_minutes" />
-                        </div>
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="notes">ملاحظات</Label>
-                        <textarea
-                            id="notes"
-                            name="notes"
-                            rows="3"
-                            class="pattern-field-clay"
-                        />
-                        <InputError :message="errors.notes" />
-                    </div>
-
-                    <Button
-                        :disabled="processing"
-                        variant="clay"
-                        class="w-full min-h-[44px]"
-                    >
-                        إنشاء الموعد
-                    </Button>
-                </Form>
-            </SheetContent>
-        </Sheet>
-
-        <Dialog :open="viewingAppointment !== null" @update:open="(open) => !open && closeViewAppointment()">
-            <DialogContent class="sm:max-w-xl" aria-label="تفاصيل الموعد">
-                <DialogHeader>
-                    <DialogTitle>
-                        {{ viewingAppointment?.appointment_number ?? 'تفاصيل الموعد' }}
-                    </DialogTitle>
-                    <DialogDescription>تفاصيل الموعد.</DialogDescription>
-                </DialogHeader>
-
-                <dl v-if="viewingAppointment" class="grid gap-3 rounded-xl border border-border/70 bg-background/55 p-4 sm:grid-cols-2">
-                    <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">المريض</dt>
-                        <dd class="text-sm">{{ viewingAppointment.patient?.full_name ?? '-' }}</dd>
-                    </div>
-                    <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الطبيب</dt>
-                        <dd class="text-sm">{{ viewingAppointment.doctor?.name ?? '-' }}</dd>
-                    </div>
-                    <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">التاريخ</dt>
-                        <dd class="text-sm">{{ new Date(viewingAppointment.scheduled_for).toLocaleString('ar-SA') }}</dd>
-                    </div>
-                    <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">المدة</dt>
-                        <dd class="text-sm">{{ viewingAppointment.duration_minutes }} دقيقة</dd>
-                    </div>
-                    <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">الحالة</dt>
-                        <dd class="text-sm">
-                            <span
-                                class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium capitalize"
-                                :class="appointmentStatusClass(viewingAppointment.status)"
-                            >
-                                <span
-                                    class="size-1.5 rounded-full"
-                                    :class="appointmentStatusDotClass(viewingAppointment.status)"
-                                ></span>
-                                {{ appointmentStatusLabel(viewingAppointment.status) }}
-                            </span>
-                        </dd>
-                    </div>
-                    <div class="space-y-1">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">سبب الإلغاء</dt>
-                        <dd class="text-sm">{{ viewingAppointment.cancel_reason ?? 'غير محدد' }}</dd>
-                    </div>
-                    <div class="space-y-1 sm:col-span-2">
-                        <dt class="text-[0.65rem] font-semibold tracking-[0.1em] text-muted-foreground uppercase">ملاحظات</dt>
-                        <dd class="text-sm leading-6 text-muted-foreground">{{ viewingAppointment.notes ?? 'لا توجد ملاحظات' }}</dd>
-                    </div>
-                </dl>
-
-                <DialogFooter>
-                    <Button type="button" variant="ghost" class="min-h-[44px]" @click="closeViewAppointment">إغلاق</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-
-        <Dialog :open="editingAppointment !== null" @update:open="(open) => !open && closeEditAppointment()">
-            <DialogContent class="sm:max-w-2xl" aria-label="تعديل الموعد">
-                <DialogHeader>
-                    <DialogTitle>تعديل الموعد</DialogTitle>
-                    <DialogDescription>تحديث تفاصيل الجدولة بسرعة.</DialogDescription>
-                </DialogHeader>
-
-                <Form
-                    v-if="editingAppointment && canEditAppointment"
-                    v-bind="AppointmentController.update.form(editingAppointment.id)"
-                    class="space-y-4"
-                    :options="{ preserveScroll: true }"
-                    @success="closeEditAppointment"
-                    v-slot="{ errors, processing }"
-                >
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <div class="grid gap-2">
-                            <Label for="edit_appointment_number">رقم الموعد</Label>
-                            <Input
-                                id="edit_appointment_number"
-                                name="appointment_number"
-                                :value="editingAppointment.appointment_number"
-                                class="pattern-field-clay"
-                                required
-                            />
-                            <InputError :message="errors.appointment_number" />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="edit_appointment_duration">المدة (دقيقة)</Label>
-                            <Input
-                                id="edit_appointment_duration"
-                                name="duration_minutes"
-                                type="number"
-                                min="5"
-                                :value="String(editingAppointment.duration_minutes)"
-                                class="pattern-field-clay"
-                                required
-                            />
-                            <InputError :message="errors.duration_minutes" />
-                        </div>
-                    </div>
-
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <div class="grid gap-2">
-                            <Label for="edit_appointment_patient">المريض</Label>
-                            <select
-                                id="edit_appointment_patient"
-                                name="patient_id"
-                                class="pattern-field-clay h-10 px-3 py-2"
-                                :value="String(editingAppointment.patient_id)"
-                            >
-                                <option
-                                    v-for="patient in patients"
-                                    :key="`edit-appointment-patient-${patient.id}`"
-                                    :value="patient.id"
-                                >
-                                    {{ patient.full_name }}
-                                </option>
-                                <option
-                                    v-if="!patients.some(p => p.id === editingAppointment.patient_id)"
-                                    :key="`edit-appointment-patient-current-${editingAppointment.patient_id}`"
-                                    :value="editingAppointment.patient_id"
-                                    selected
-                                >
-                                    {{ editingAppointment.patient?.full_name ?? 'مريض حالي' }}
-                                </option>
-                            </select>
-                            <InputError :message="errors.patient_id" />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="edit_appointment_doctor">الطبيب</Label>
-                            <select
-                                id="edit_appointment_doctor"
-                                name="doctor_id"
-                                class="pattern-field-clay h-10 px-3 py-2"
-                                :value="editingAppointment.doctor_id !== null ? String(editingAppointment.doctor_id) : ''"
-                            >
-                                <option value="">غير محدد</option>
-                                <option
-                                    v-for="doctor in doctors"
-                                    :key="`edit-appointment-doctor-${doctor.id}`"
-                                    :value="doctor.id"
-                                >
-                                    {{ doctor.name }}
-                                </option>
-                            </select>
-                            <InputError :message="errors.doctor_id" />
-                        </div>
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="edit_appointment_scheduled_for">موعد</Label>
-                        <Input
-                            id="edit_appointment_scheduled_for"
-                            name="scheduled_for"
-                            type="datetime-local"
-                            :value="toDatetimeLocalValue(editingAppointment.scheduled_for)"
-                            class="pattern-field-clay"
-                            required
-                        />
-                        <InputError :message="errors.scheduled_for" />
-                    </div>
-
-                    <div class="grid gap-2">
-                        <Label for="edit_appointment_notes">ملاحظات</Label>
-                        <textarea
-                            id="edit_appointment_notes"
-                            name="notes"
-                            rows="3"
-                            class="pattern-field-clay"
-                            :value="editingAppointment.notes ?? ''"
-                        />
-                        <InputError :message="errors.notes" />
-                    </div>
-
-                    <DialogFooter class="gap-2">
-                        <Button type="button" variant="ghost" :disabled="processing" class="min-h-[44px]" @click="closeEditAppointment">إلغاء</Button>
-                        <Button type="submit" variant="clay" :disabled="processing" class="min-h-[44px]">حفظ التغييرات</Button>
-                    </DialogFooter>
-                </Form>
-            </DialogContent>
-        </Dialog>
+        <AppointmentEditDialog
+            :appointment="editingAppointment"
+            :patients="patients"
+            :doctors="doctors"
+            @close="closeEditAppointment"
+        />
 
         <ConfirmationDialog
             :open="isConfirmOpen"

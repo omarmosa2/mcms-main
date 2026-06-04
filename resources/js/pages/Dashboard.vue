@@ -34,6 +34,8 @@ type ChartStats = {
     appointments_by_status: Record<string, number>;
     revenue_by_month: Record<string, number>;
     visits_by_month: Record<string, number>;
+    total_patients: number;
+    today_new_patients: number;
     today_appointments: number;
     today_appointments_by_status: Record<string, number>;
     pending_queue: number;
@@ -49,7 +51,7 @@ type ChartStats = {
     }>;
     long_waiting_patients: Array<{
         id: number;
-        queue_number: string;
+        queue_number: number;
         patient_name: string;
         waiting_minutes: number;
     }>;
@@ -146,18 +148,18 @@ const urgentAlerts = computed(() => {
 const getStatusBadgeClass = (status: string) => {
     const statusMap: Record<string, string> = {
         scheduled: 'bg-[#EFF6FF] text-[#1D4ED8]',
-        confirmed: 'bg-[#E7F7F2] text-[#0F6E56]',
-        completed: 'bg-[#E7F7F2] text-[#0F6E56]',
+        confirmed: 'bg-[#EAF7FE] text-[#075985]',
+        completed: 'bg-[#EAF7FE] text-[#075985]',
         cancelled: 'bg-[#FEF3C7] text-[#B45309]',
         no_show: 'bg-[#FEF3C7] text-[#B45309]',
     };
 
-    return statusMap[status] ?? 'bg-slate-50 text-slate-500';
+    return statusMap[status] ?? 'bg-[#F4F9FD] text-[#6C7F95]';
 };
 
 const getStatusDotClass = (status: string): string => {
     if (status === 'confirmed' || status === 'completed') {
-return 'bg-[#0F9D7A]';
+return 'bg-[#0EA5E9]';
 }
 
     if (status === 'scheduled') {
@@ -187,13 +189,13 @@ const revenueChartLabels = computed(() => Object.keys(chartStats?.last_7_days_re
 const revenueChartDatasets = computed(() => [{
     label: 'الإيرادات',
     data: Object.values(chartStats?.last_7_days_revenue ?? {}),
-    backgroundColor: 'rgba(15, 157, 122, 0.06)',
-    borderColor: '#0F9D7A',
+    backgroundColor: 'rgba(14, 165, 233, 0.08)',
+    borderColor: '#0EA5E9',
     fill: true,
     borderWidth: 2,
     tension: 0.4,
     pointRadius: 2,
-    pointBackgroundColor: '#0F9D7A',
+    pointBackgroundColor: '#0EA5E9',
     pointBorderColor: '#FFFFFF',
     pointBorderWidth: 2,
 }]);
@@ -202,8 +204,8 @@ const patientsChartLabels = computed(() => Object.keys(chartStats?.last_7_days_p
 const patientsChartDatasets = computed(() => [{
     label: 'مرضى جدد',
     data: Object.values(chartStats?.last_7_days_patients ?? {}),
-    backgroundColor: '#0F9D7A',
-    borderColor: '#0F9D7A',
+    backgroundColor: '#0EA5E9',
+    borderColor: '#0EA5E9',
     borderWidth: 0,
     borderRadius: 4,
 }]);
@@ -212,7 +214,7 @@ const appointmentsByStatusLabels = computed(() => Object.keys(chartStats?.appoin
 const appointmentsByStatusDatasets = computed(() => [{
     label: 'المواعيد',
     data: Object.values(chartStats?.appointments_by_status ?? {}),
-    backgroundColor: ['#0F9D7A', '#3B82F6', '#F59E0B', '#EF4444'],
+    backgroundColor: ['#0EA5E9', '#8B5CF6', '#F59E0B', '#EF4444'],
     borderWidth: 0,
     borderRadius: 4,
 }]);
@@ -221,13 +223,13 @@ const visitsByMonthLabels = computed(() => Object.keys(chartStats?.visits_by_mon
 const visitsByMonthDatasets = computed(() => [{
     label: 'الزيارات',
     data: Object.values(chartStats?.visits_by_month ?? {}),
-    backgroundColor: 'rgba(15, 157, 122, 0.06)',
-    borderColor: '#0F9D7A',
+    backgroundColor: 'rgba(14, 165, 233, 0.08)',
+    borderColor: '#0EA5E9',
     fill: true,
     borderWidth: 2,
     tension: 0.4,
     pointRadius: 2,
-    pointBackgroundColor: '#0F9D7A',
+    pointBackgroundColor: '#0EA5E9',
     pointBorderColor: '#FFFFFF',
     pointBorderWidth: 2,
 }]);
@@ -240,7 +242,7 @@ const visitsByMonthDatasets = computed(() => [{
         <!-- Welcome header -->
         <section class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <h1 class="text-2xl font-semibold tracking-tight text-slate-900">
+                <h1 class="text-3xl font-bold tracking-normal text-[#111827] md:text-[2.2rem]">
                     مرحباً، {{ auth?.user?.name ?? 'مستخدم' }}
                 </h1>
                 <p class="mt-1 text-sm text-slate-500">
@@ -253,10 +255,10 @@ const visitsByMonthDatasets = computed(() => [{
                     v-for="action in quickActions"
                     :key="action.label"
                     :href="action.href"
-                    class="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-all duration-200"
+                    class="inline-flex items-center gap-1.5 rounded-2xl px-3.5 py-2 text-sm font-medium transition-all duration-200"
                     :class="action.primary
-                        ? 'bg-[#0F9D7A] text-white hover:bg-[#0B7A5E] shadow-sm'
-                        : 'border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800'"
+                        ? 'bg-[#0EA5E9] text-white shadow-[0_10px_24px_-16px_rgb(14_165_233_/_0.75)] hover:bg-[#0284C7]'
+                        : 'border border-[#DDE9F3] bg-white text-[#47677F] hover:bg-[#F7FBFE] hover:text-[#075985]'"
                 >
                     <component :is="action.icon" class="size-4" />
                     {{ action.label }}
@@ -288,7 +290,7 @@ const visitsByMonthDatasets = computed(() => [{
             <!-- Today's Appointments -->
             <div class="card-float card-hover">
                 <div class="flex items-center gap-3">
-                    <div class="icon-container bg-[#E7F7F2] text-[#0F9D7A]">
+                    <div class="icon-container bg-[#EAF7FE] text-[#0EA5E9]">
                         <CalendarClock class="size-5" />
                     </div>
                     <div>
@@ -351,7 +353,7 @@ const visitsByMonthDatasets = computed(() => [{
                         </div>
                         <Link
                             :href="AppointmentController.index()"
-                            class="text-xs font-medium text-[#0F9D7A] transition hover:underline"
+                            class="text-xs font-medium text-[#0284C7] transition hover:underline"
                             v-if="can('appointment.view')"
                         >
                             عرض الكل
@@ -362,10 +364,10 @@ const visitsByMonthDatasets = computed(() => [{
                         <div
                             v-for="apt in chartStats.upcoming_appointments.slice(0, 5)"
                             :key="apt.id"
-                            class="flex items-center justify-between rounded-xl border border-slate-100/60 bg-slate-50/40 p-3 transition-colors hover:bg-[#E7F7F2]/20"
+                            class="flex items-center justify-between rounded-xl border border-[#E2ECF6] bg-[#F7FAFD] p-3 transition-colors hover:bg-[#EAF7FE]"
                         >
                             <div class="flex items-center gap-3">
-                                <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-white border border-slate-100 text-xs font-semibold tabular-nums text-slate-700">
+                                <div class="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2ECF6] bg-white text-xs font-semibold tabular-nums text-[#47677F]">
                                     {{ apt.time }}
                                 </div>
                                 <div>
@@ -392,7 +394,7 @@ const visitsByMonthDatasets = computed(() => [{
                 <article v-if="chartStats?.last_7_days_revenue" class="card-float">
                     <div class="mb-5 flex items-center justify-between">
                         <h2 class="text-sm font-semibold text-slate-900">الإيرادات (آخر 7 أيام)</h2>
-                        <div class="flex items-center gap-1.5 text-[#0F9D7A]">
+                        <div class="flex items-center gap-1.5 text-[#0284C7]">
                             <TrendingUp class="size-4" />
                             <span class="text-xs font-semibold tabular-nums">{{ totalRevenue7Days.toLocaleString('ar-SA') }}</span>
                         </div>
@@ -412,18 +414,18 @@ const visitsByMonthDatasets = computed(() => [{
                         </div>
                         <Link
                             :href="QueueEntryController.index()"
-                            class="text-xs font-medium text-[#0F9D7A] transition hover:underline"
+                            class="text-xs font-medium text-[#0284C7] transition hover:underline"
                             v-if="can('queue.view')"
                         >
                             عرض القائمة
                         </Link>
                     </div>
                     <div class="space-y-2.5">
-                        <div class="flex items-center justify-between rounded-xl bg-slate-50/50 p-3.5">
+                        <div class="flex items-center justify-between rounded-xl bg-[#F7FAFD] p-3.5">
                             <span class="text-sm text-slate-600">مرضى في الانتظار</span>
                             <span class="text-xl font-bold text-slate-900 tabular-nums">{{ chartStats?.pending_queue ?? 0 }}</span>
                         </div>
-                        <div class="flex items-center justify-between rounded-xl bg-slate-50/50 p-3.5">
+                        <div class="flex items-center justify-between rounded-xl bg-[#F7FAFD] p-3.5">
                             <span class="text-sm text-slate-600">انتظار أكثر من 30 دقيقة</span>
                             <span class="text-xl font-bold text-slate-900 tabular-nums">{{ chartStats?.long_waiting_patients?.length ?? 0 }}</span>
                         </div>
@@ -446,9 +448,9 @@ const visitsByMonthDatasets = computed(() => [{
                     v-for="module in visibleModuleCards"
                     :key="module.title"
                     :href="module.href"
-                    class="group flex items-start gap-3.5 rounded-xl border border-slate-100/80 bg-white p-4 transition-all duration-200 hover:border-[#0F9D7A]/20 hover:shadow-card-hover hover:-translate-y-0.5"
+                    class="group flex items-start gap-3.5 rounded-2xl border border-[#E2ECF6] bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#BFE3F5] hover:shadow-card-hover"
                 >
-                    <div class="icon-container-sm bg-[#E7F7F2] text-[#0F9D7A] transition-all duration-200 group-hover:bg-[#0F9D7A] group-hover:text-white shrink-0">
+                    <div class="icon-container-sm shrink-0 bg-[#EAF7FE] text-[#0EA5E9] transition-all duration-200 group-hover:bg-[#0EA5E9] group-hover:text-white">
                         <component :is="module.icon" class="size-4" />
                     </div>
                     <div>

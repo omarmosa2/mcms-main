@@ -188,7 +188,7 @@ const handleClose = () => {
                             <select
                                 id="edit_gender"
                                 v-model="formData.gender"
-                                class="h-10 w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm focus:border-[#1D9E75] focus:outline-none focus:ring-1 focus:ring-[#1D9E75]/15"
+                                class="h-10 w-full rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-2 text-sm focus:border-[#0EA5E9] focus:outline-none focus:ring-1 focus:ring-[#0EA5E9]/15"
                             >
                                 <option value="">اختر</option>
                                 <option value="male">ذكر</option>
@@ -208,7 +208,7 @@ const handleClose = () => {
                             id="edit_notes"
                             v-model="formData.notes"
                             rows="3"
-                            class="w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm focus:border-[#1D9E75] focus:outline-none focus:ring-1 focus:ring-[#1D9E75]/15"
+                            class="w-full rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-2 text-sm focus:border-[#0EA5E9] focus:outline-none focus:ring-1 focus:ring-[#0EA5E9]/15"
                         />
                     </div>
                 </div>

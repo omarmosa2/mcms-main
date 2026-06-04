@@ -17,10 +17,10 @@ return name;
 </script>
 
 <template>
-    <div class="flex aspect-square size-9 items-center justify-center rounded-lg bg-[#1D9E75] text-white">
+    <div class="flex aspect-square size-10 items-center justify-center rounded-full bg-[#0EA5E9] text-white shadow-[0_12px_24px_-16px_rgb(14_165_233_/_0.85)]">
         <AppLogoIcon class="size-[18px] fill-current text-white" />
     </div>
     <div class="me-3 grid flex-1 text-start leading-tight group-data-[collapsible=icon]:hidden">
-        <span class="truncate text-sm text-[#1A1A1A]">{{ appName }}</span>
+        <span class="truncate text-sm font-bold text-[#0F172A]">{{ appName }}</span>
     </div>
 </template>

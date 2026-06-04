@@ -24,11 +24,9 @@ class ListPatientsAction extends BaseAction
             ->forClinic($clinicId)
             ->withoutTrashed()
             ->with([
-                'chronicConditions',
-                'allergies',
-                'medications',
-                'visits.doctor',
-                'attachments',
+                'chronicConditions:id,clinic_id,patient_id,condition',
+                'allergies:id,clinic_id,patient_id,allergy',
+                'medications:id,clinic_id,patient_id,medication',
             ]);
 
         if ($search !== null) {

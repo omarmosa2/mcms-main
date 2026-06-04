@@ -38,19 +38,26 @@ class GenerateNumberAction extends BaseAction
             return trim($providedNumber);
         }
 
-        $numberRange = NumberRange::getForEntity($clinicId, $entityType);
+        return DB::transaction(function () use ($clinicId, $entityType): string {
+            $numberRange = NumberRange::query()
+                ->where('clinic_id', $clinicId)
+                ->where('entity_type', $entityType)
+                ->where('is_active', true)
+                ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()->toDateString()))
+                ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>=', now()->toDateString()))
+                ->lockForUpdate()
+                ->first();
 
-        if (! $numberRange) {
-            return $this->generateFallbackNumber($entityType);
-        }
+            if ($numberRange === null) {
+                return $this->generateFallbackNumber($entityType);
+            }
 
-        return DB::transaction(fn () => $this->generateFromRange($numberRange));
+            return $this->generateFromRange($numberRange);
+        });
     }
 
     private function generateFromRange(NumberRange $numberRange): string
     {
-        $numberRange->lockForUpdate()->find($numberRange->id);
-
         $sequence = $numberRange->generateSequence();
         $numberRange->save();
 

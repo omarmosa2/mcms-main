@@ -496,14 +496,14 @@ return [];
                 </div>
 
                 <div class="mt-4 rounded-xl border border-border/60 bg-background/40 p-3">
-                    <p class="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    <p class="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                         الأعمدة المطلوبة
                     </p>
                     <p class="mt-1 text-xs text-muted-foreground">
                         <code class="rounded bg-muted px-1 py-0.5">first_name</code>,
                         <code class="rounded bg-muted px-1 py-0.5">last_name</code>
                     </p>
-                    <p class="mt-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    <p class="mt-2 text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                         أعمدة اختيارية
                     </p>
                     <p class="mt-1 text-xs text-muted-foreground">

@@ -38,7 +38,7 @@ const handleRemove = (key: string) => {
       v-if="hasFilters"
       class="flex flex-wrap items-center gap-2 animate-in slide-in-from-top-2 fade-in duration-200"
     >
-      <div class="flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[0.68rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+      <div class="flex items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[0.68rem] font-semibold tracking-normal text-muted-foreground uppercase">
         <SlidersHorizontal class="size-3.5" />
         Filters
       </div>

@@ -30,7 +30,7 @@ defineOptions({
         />
         <div class="metric-tile">
             <p
-                class="text-xs font-semibold tracking-[0.11em] text-muted-foreground uppercase"
+                class="text-xs font-semibold tracking-normal text-muted-foreground uppercase"
             >
                 Workspace theme
             </p>

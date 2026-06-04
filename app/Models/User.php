@@ -28,6 +28,16 @@ class User extends Authenticatable
     use HasClinic, HasFactory, Notifiable, SoftDeletes, TwoFactorAuthenticatable;
 
     /**
+     * @var array<int, Collection<int, string>>
+     */
+    private array $roleNamesByClinic = [];
+
+    /**
+     * @var array<int, Collection<int, string>>
+     */
+    private array $permissionNamesByClinic = [];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -171,10 +181,7 @@ class User extends Authenticatable
             return false;
         }
 
-        return $this->roles()
-            ->where('roles.clinic_id', $this->clinic_id)
-            ->where('roles.name', $roleName)
-            ->exists();
+        return $this->roleNamesForCurrentClinic()->contains($roleName);
     }
 
     public function assignRole(Role $role, ?int $assignedBy = null): void
@@ -189,6 +196,9 @@ class User extends Authenticatable
                 'assigned_by' => $assignedBy,
             ],
         ]);
+
+        unset($this->roleNamesByClinic[(int) $this->clinic_id]);
+        $this->invalidatePermissionCache();
     }
 
     public function hasPermission(string $permission): bool
@@ -197,7 +207,7 @@ class User extends Authenticatable
             return false;
         }
 
-        if ($this->hasRole('super_admin')) {
+        if ($this->roleNamesForCurrentClinic()->contains('super_admin')) {
             return true;
         }
 
@@ -218,33 +228,70 @@ class User extends Authenticatable
             return collect();
         }
 
-        $key = "clinic:{$this->clinic_id}:user:{$this->id}:permissions";
+        $clinicId = (int) $this->clinic_id;
+
+        if (array_key_exists($clinicId, $this->permissionNamesByClinic)) {
+            return $this->permissionNamesByClinic[$clinicId];
+        }
+
+        $key = "clinic:{$clinicId}:user:{$this->id}:permissions";
 
         $cached = Cache::get($key);
 
-        if ($cached !== null && is_array($cached)) {
-            return collect($cached);
+        if ($cached instanceof \__PHP_Incomplete_Class || $cached instanceof Collection) {
+            Cache::forget($key);
+            $cached = null;
+        }
+
+        if (is_array($cached)) {
+            $this->permissionNamesByClinic[$clinicId] = collect($cached)
+                ->filter(fn (mixed $permission): bool => is_string($permission) && $permission !== '')
+                ->values();
+
+            return $this->permissionNamesByClinic[$clinicId];
         }
 
         $permissions = $this->permissions()->pluck('permissions.name')->toArray();
 
         Cache::put($key, $permissions, now()->addSeconds(900));
 
-        return collect($permissions);
+        $this->permissionNamesByClinic[$clinicId] = collect($permissions);
+
+        return $this->permissionNamesByClinic[$clinicId];
     }
 
     public function invalidatePermissionCache(): void
     {
         if ($this->clinic_id !== null) {
             Cache::forget("clinic:{$this->clinic_id}:user:{$this->id}:permissions");
+            unset($this->permissionNamesByClinic[(int) $this->clinic_id]);
         }
     }
 
     public function isClinicSecurityManager(): bool
     {
-        return $this->hasRole('super_admin')
-            || $this->hasRole('admin')
-            || $this->hasRole('clinic_admin');
+        return $this->roleNamesForCurrentClinic()
+            ->intersect(['super_admin', 'admin', 'clinic_admin'])
+            ->isNotEmpty();
+    }
+
+    public function roleNamesForCurrentClinic(): Collection
+    {
+        if ($this->clinic_id === null) {
+            return collect();
+        }
+
+        $clinicId = (int) $this->clinic_id;
+
+        if (! array_key_exists($clinicId, $this->roleNamesByClinic)) {
+            $this->roleNamesByClinic[$clinicId] = $this->roles()
+                ->where('roles.clinic_id', $clinicId)
+                ->pluck('roles.name')
+                ->filter(fn (mixed $role): bool => is_string($role) && $role !== '')
+                ->values();
+        }
+
+        return $this->roleNamesByClinic[$clinicId];
     }
 
     private function permissionMatches(string $grantedPermission, string $requestedPermission): bool

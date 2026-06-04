@@ -6,7 +6,6 @@ use App\Services\Cache\CacheService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnforceSecurityPolicy
@@ -27,10 +26,6 @@ class EnforceSecurityPolicy
         $user = $request->user();
 
         if ($user === null || $user->clinic_id === null) {
-            return $next($request);
-        }
-
-        if (! Schema::hasTable('security_policies')) {
             return $next($request);
         }
 

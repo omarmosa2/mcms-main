@@ -8,12 +8,28 @@ use App\Models\Invoice;
 use App\Models\Patient;
 use App\Models\QueueEntry;
 use App\Models\Visit;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 
 class MetricsController extends Controller
 {
-    public function index(): Response
+    private const METRICS_CACHE_TTL_SECONDS = 15;
+
+    public function index(Request $request): Response
+    {
+        $this->authorizeMetricsRequest($request);
+
+        $payload = Cache::remember(
+            'monitoring:metrics:prometheus',
+            now()->addSeconds(self::METRICS_CACHE_TTL_SECONDS),
+            fn (): string => $this->buildMetricsPayload(),
+        );
+
+        return response($payload, 200, ['Content-Type' => 'text/plain; version=0.0.4']);
+    }
+
+    private function buildMetricsPayload(): string
     {
         $metrics = [];
 
@@ -33,7 +49,24 @@ class MetricsController extends Controller
             'environment' => config('app.env'),
         ]);
 
-        return response(implode("\n", $metrics)."\n", 200, ['Content-Type' => 'text/plain; version=0.0.4']);
+        return implode("\n", $metrics)."\n";
+    }
+
+    private function authorizeMetricsRequest(Request $request): void
+    {
+        $token = config('services.monitoring.metrics_token');
+
+        if (! is_string($token) || $token === '') {
+            return;
+        }
+
+        $providedToken = $request->bearerToken()
+            ?: $request->header('X-Metrics-Token')
+            ?: $request->query('token');
+
+        if (! is_string($providedToken) || ! hash_equals($token, $providedToken)) {
+            abort(403, 'Invalid monitoring token.');
+        }
     }
 
     private function gauge(string $name, float|int $value, string $help): string

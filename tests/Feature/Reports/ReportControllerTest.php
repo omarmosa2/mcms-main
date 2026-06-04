@@ -30,8 +30,12 @@ class ReportControllerTest extends TestCase
             ->component('reports/Index')
             ->where('can_view_operational', true)
             ->where('can_view_financial', false)
-            ->has('operational_summary')
-            ->where('financial_summary', null));
+            ->missing('operational_summary')
+            ->where('financial_summary', null)
+            ->loadDeferredProps('reports', fn (Assert $page) => $page
+                ->has('operational_summary')
+                ->has('doctor_performance')
+                ->has('diagnostics_summary')));
     }
 
     public function test_accountant_can_view_financial_report_page(): void
@@ -88,10 +92,14 @@ class ReportControllerTest extends TestCase
             ->component('reports/Index')
             ->where('can_view_operational', false)
             ->where('can_view_financial', true)
-            ->where('financial_summary.invoices.total_amount', 300)
-            ->where('financial_summary.payments.gross_collections', 250)
-            ->where('financial_summary.payments.refund_amount', 50)
-            ->where('financial_summary.payments.net_collections', 200));
+            ->where('operational_summary', null)
+            ->missing('financial_summary')
+            ->loadDeferredProps('reports', fn (Assert $page) => $page
+                ->where('financial_summary.invoices.total_amount', 300)
+                ->where('financial_summary.payments.gross_collections', 250)
+                ->where('financial_summary.payments.refund_amount', 50)
+                ->where('financial_summary.payments.net_collections', 200)
+                ->has('financial_statements')));
 
         $this->assertDatabaseHas('audit_logs', [
             'clinic_id' => $clinic->id,

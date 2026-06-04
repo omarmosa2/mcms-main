@@ -47,8 +47,8 @@ const modelValue = useVModel(props, "modelValue", emits, {
     :aria-invalid="invalid"
     data-slot="input"
     :class="cn(
-      'file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground h-9 w-full min-w-0 rounded-md border border-border/80 bg-background/70 px-3 py-1 text-base shadow-[0_1px_0_hsl(0_0%_100%_/_0.5)] transition-[color,box-shadow,border-color,background-color] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/40',
-      'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+      'file:text-foreground placeholder:text-[#8CA0B5] selection:bg-primary selection:text-primary-foreground h-9 w-full min-w-0 rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-1 text-base text-[#111827] shadow-[inset_0_1px_0_rgb(255_255_255_/_0.9),0_1px_2px_rgb(15_42_71_/_0.05)] transition-[color,box-shadow,border-color,background-color] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:border-input dark:bg-input/40 dark:text-foreground',
+      'focus-visible:border-ring focus-visible:ring-ring/20 focus-visible:ring-[3px]',
       'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
       props.class,
     )"

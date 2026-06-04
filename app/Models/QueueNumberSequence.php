@@ -4,13 +4,11 @@ namespace App\Models;
 
 use App\Domain\Shared\Models\BaseModel;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 class QueueNumberSequence extends BaseModel
 {
-    use SoftDeletes;
-
     protected $table = 'queue_number_seq';
 
     protected $fillable = [
@@ -34,11 +32,18 @@ class QueueNumberSequence extends BaseModel
 
     public function incrementAndGet(): int
     {
-        return DB::transaction(function () {
-            $this->lockForUpdate()->find($this->id);
-            $this->increment('current_value');
+        return DB::transaction(function (): int {
+            $sequence = static::query()
+                ->whereKey($this->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            return (int) $this->current_value;
+            $sequence->current_value = (int) $sequence->current_value + 1;
+            $sequence->save();
+
+            $this->setRawAttributes($sequence->getAttributes(), true);
+
+            return (int) $sequence->current_value;
         });
     }
 
@@ -47,55 +52,53 @@ class QueueNumberSequence extends BaseModel
         $normalizedDate = is_string($queueDate) && strlen($queueDate) > 10 ? substr($queueDate, 0, 10) : $queueDate;
 
         return DB::transaction(function () use ($clinicId, $normalizedDate): int {
-            $maxQueueNumber = (int) DB::table('queue_entries')
-                ->where('clinic_id', $clinicId)
+            $sequence = static::query()
+                ->forClinic($clinicId)
                 ->whereDate('queue_date', $normalizedDate)
-                ->max('queue_number');
+                ->lockForUpdate()
+                ->first();
 
-            $driver = DB::getDriverName();
-
-            if ($driver === 'sqlite') {
-                return static::getNextValueSqlite($clinicId, $normalizedDate, $maxQueueNumber);
+            if ($sequence === null) {
+                $sequence = static::createSequenceForDate($clinicId, $normalizedDate);
             }
 
-            return static::getNextValueMysql($clinicId, $normalizedDate, $maxQueueNumber);
+            $sequence->current_value = (int) $sequence->current_value + 1;
+            $sequence->save();
+
+            return (int) $sequence->current_value;
         });
     }
 
-    private static function getNextValueSqlite(int $clinicId, string $normalizedDate, int $maxQueueNumber): int
+    private static function createSequenceForDate(int $clinicId, string $normalizedDate): self
     {
-        DB::table('queue_number_seq')
-            ->updateOrInsert(
-                ['clinic_id' => $clinicId, 'queue_date' => $normalizedDate],
-                ['current_value' => DB::raw("COALESCE((SELECT current_value FROM queue_number_seq WHERE clinic_id = {$clinicId} AND queue_date = '{$normalizedDate}'), {$maxQueueNumber}) + 1"), 'updated_at' => now()],
-            );
+        $maxQueueNumber = static::existingMaxQueueNumber($clinicId, $normalizedDate);
 
-        $value = (int) DB::table('queue_number_seq')
-            ->where('clinic_id', $clinicId)
-            ->where('queue_date', $normalizedDate)
-            ->value('current_value');
-
-        return $value;
-    }
-
-    private static function getNextValueMysql(int $clinicId, string $normalizedDate, int $maxQueueNumber): int
-    {
-        $sequence = static::query()
-            ->forClinic($clinicId)
-            ->where('queue_date', $normalizedDate)
-            ->lockForUpdate()
-            ->first();
-
-        if ($sequence === null) {
-            $sequence = static::query()->create([
+        try {
+            return static::query()->create([
                 'clinic_id' => $clinicId,
                 'queue_date' => $normalizedDate,
                 'current_value' => $maxQueueNumber,
             ]);
+        } catch (QueryException $e) {
+            $sequence = static::query()
+                ->forClinic($clinicId)
+                ->whereDate('queue_date', $normalizedDate)
+                ->lockForUpdate()
+                ->first();
+
+            if ($sequence === null) {
+                throw $e;
+            }
+
+            return $sequence;
         }
+    }
 
-        $sequence->increment('current_value');
-
-        return (int) $sequence->current_value;
+    private static function existingMaxQueueNumber(int $clinicId, string $normalizedDate): int
+    {
+        return (int) DB::table('queue_entries')
+            ->where('clinic_id', $clinicId)
+            ->whereDate('queue_date', $normalizedDate)
+            ->max('queue_number');
     }
 }

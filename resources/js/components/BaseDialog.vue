@@ -86,7 +86,7 @@ const handleConfirm = () => {
                     </DialogDescription>
                 </div>
                 <DialogClose
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#6B7280] transition-colors hover:bg-[#F9FAFB] hover:text-[#374151] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1D9E75]/50"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[#6B7280] transition-colors hover:bg-[#EAF7FE] hover:text-[#075985] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9]/35"
                     aria-label="إغلاق"
                 >
                     <X class="h-4 w-4" />

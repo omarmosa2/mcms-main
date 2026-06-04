@@ -7,6 +7,7 @@ use App\Actions\BaseAction;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\ClinicWorkingHoursService;
 use App\Services\DoctorScheduleService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,7 @@ class UpdateAppointmentAction extends BaseAction
     public function __construct(
         private LogAuditAction $logAuditAction,
         private DoctorScheduleService $doctorScheduleService,
+        private ClinicWorkingHoursService $clinicWorkingHoursService,
     ) {}
 
     /**
@@ -51,6 +53,13 @@ class UpdateAppointmentAction extends BaseAction
                     'duration_minutes' => $payload['duration_minutes'] ?? $appointment->duration_minutes,
                     'patient_id' => $payload['patient_id'] ?? $appointment->patient_id,
                     'doctor_id' => $payload['doctor_id'] ?? $appointment->doctor_id,
+                ],
+            );
+            $this->checkClinicWorkingHours(
+                $clinicId,
+                [
+                    'scheduled_for' => $payload['scheduled_for'] ?? $appointment->scheduled_for,
+                    'duration_minutes' => $payload['duration_minutes'] ?? $appointment->duration_minutes,
                 ],
             );
             $this->checkDoctorSchedule(
@@ -156,6 +165,24 @@ class UpdateAppointmentAction extends BaseAction
             'pgsql' => '(scheduled_for + (duration_minutes || \' minutes\')::interval) > ?',
             default => 'DATE_ADD(scheduled_for, INTERVAL duration_minutes MINUTE) > ?',
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function checkClinicWorkingHours(int $clinicId, array $payload): void
+    {
+        $isAvailable = $this->clinicWorkingHoursService->isAppointmentWithinWorkingHours(
+            $clinicId,
+            $payload['scheduled_for'],
+            (int) ($payload['duration_minutes'] ?? 30),
+        );
+
+        if (! $isAvailable) {
+            throw ValidationException::withMessages([
+                'scheduled_for' => 'الوقت المختار خارج دوام العيادة.',
+            ]);
+        }
     }
 
     /**

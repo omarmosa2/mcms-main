@@ -10,34 +10,37 @@ defineProps<{
 </script>
 
 <template>
-    <section class="grid gap-3 md:grid-cols-4">
-        <article class="rounded-xl border border-border/70 bg-card p-4">
+    <section class="grid gap-4 md:grid-cols-4">
+        <article class="rounded-[1.2rem] border border-[#E2ECF6] bg-white/95 p-5 shadow-card">
             <div class="flex items-center justify-between">
-                <p class="section-label">إجمالي الأقسام</p>
-                <Building2 class="size-4 text-muted-foreground" />
+                <p class="text-sm font-bold text-[#6C7F95]">إجمالي العيادات</p>
+                <Building2 class="size-5 text-[#0EA5E9]" />
             </div>
-            <p class="card-value text-2xl">{{ totalDepartments }}</p>
+            <p class="mt-4 text-3xl font-black text-[#111827]">{{ totalDepartments }}</p>
         </article>
-        <article class="rounded-xl border border-border/70 bg-card p-4">
+
+        <article class="rounded-[1.2rem] border border-[#E2ECF6] bg-white/95 p-5 shadow-card">
             <div class="flex items-center justify-between">
-                <p class="section-label">نشط</p>
-                <CheckCircle2 class="size-4 text-success-500" />
+                <p class="text-sm font-bold text-[#6C7F95]">عيادات نشطة</p>
+                <CheckCircle2 class="size-5 text-[#1D4ED8]" />
             </div>
-            <p class="card-value text-2xl text-success-600 dark:text-success-400">{{ activeCount }}</p>
+            <p class="mt-4 text-3xl font-black text-[#1D4ED8]">{{ activeCount }}</p>
         </article>
-        <article class="rounded-xl border border-border/70 bg-card p-4">
+
+        <article class="rounded-[1.2rem] border border-[#E2ECF6] bg-white/95 p-5 shadow-card">
             <div class="flex items-center justify-between">
-                <p class="section-label">غير نشط</p>
-                <XCircle class="size-4 text-destructive" />
+                <p class="text-sm font-bold text-[#6C7F95]">غير نشطة</p>
+                <XCircle class="size-5 text-[#EF4444]" />
             </div>
-            <p class="card-value text-2xl text-destructive">{{ inactiveCount }}</p>
+            <p class="mt-4 text-3xl font-black text-[#EF4444]">{{ inactiveCount }}</p>
         </article>
-        <article class="rounded-xl border border-border/70 bg-card p-4">
+
+        <article class="rounded-[1.2rem] border border-[#E2ECF6] bg-white/95 p-5 shadow-card">
             <div class="flex items-center justify-between">
-                <p class="section-label">الأطباء</p>
-                <Users class="size-4 text-info-500" />
+                <p class="text-sm font-bold text-[#6C7F95]">الأطباء</p>
+                <Users class="size-5 text-[#0EA5E9]" />
             </div>
-            <p class="card-value text-2xl text-info-600 dark:text-info-400">{{ totalDoctors }}</p>
+            <p class="mt-4 text-3xl font-black text-[#0284C7]">{{ totalDoctors }}</p>
         </article>
     </section>
 </template>

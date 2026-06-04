@@ -4,11 +4,13 @@ import AppointmentController from '@/actions/App/Http/Controllers/Appointments/A
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Option } from './types';
+import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
+import type { ClinicWorkingHour, Option } from './types';
 
 defineProps<{
     patients: Option[];
     doctors: Option[];
+    clinicWorkingHours: ClinicWorkingHour[];
 }>();
 
 const emit = defineEmits<{
@@ -20,7 +22,7 @@ const emit = defineEmits<{
 
 <template>
     <section class="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4">
-        <div class="flex items-center justify-between mb-3">
+        <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-semibold text-primary">إضافة سريعة - موعد جديد</h3>
             <span class="text-xs text-muted-foreground">Enter = حفظ وإضافة التالي</span>
         </div>
@@ -29,9 +31,9 @@ const emit = defineEmits<{
             v-bind="AppointmentController.store.form()"
             class="grid gap-3 md:grid-cols-5 md:items-end"
             v-slot="{ errors, processing }"
+            reset-on-success
             @success="emit('success')"
             @error="emit('error')"
-            reset-on-success
         >
             <div class="grid gap-1">
                 <Label for="quick_patient" class="text-xs">المريض *</Label>
@@ -48,6 +50,7 @@ const emit = defineEmits<{
                 </select>
                 <p v-if="errors.patient_id" class="text-xs text-destructive">{{ errors.patient_id }}</p>
             </div>
+
             <div class="grid gap-1">
                 <Label for="quick_doctor" class="text-xs">الطبيب</Label>
                 <select
@@ -62,17 +65,15 @@ const emit = defineEmits<{
                 </select>
                 <p v-if="errors.doctor_id" class="text-xs text-destructive">{{ errors.doctor_id }}</p>
             </div>
+
             <div class="grid gap-1">
-                <Label for="quick_datetime" class="text-xs">التاريخ والوقت *</Label>
-                <Input
-                    id="quick_datetime"
-                    name="scheduled_for"
-                    type="datetime-local"
-                    required
-                    class="pattern-field-clay h-9 text-sm"
+                <AppointmentWorkingHoursInput
+                    :working-hours="clinicWorkingHours"
+                    label="التاريخ والوقت *"
                 />
                 <p v-if="errors.scheduled_for" class="text-xs text-destructive">{{ errors.scheduled_for }}</p>
             </div>
+
             <div class="grid gap-1">
                 <Label for="quick_duration" class="text-xs">المدة (دقيقة) *</Label>
                 <Input
@@ -87,6 +88,7 @@ const emit = defineEmits<{
                 />
                 <p v-if="errors.duration_minutes" class="text-xs text-destructive">{{ errors.duration_minutes }}</p>
             </div>
+
             <div class="flex gap-2">
                 <Button
                     type="submit"
@@ -97,7 +99,15 @@ const emit = defineEmits<{
                 >
                     {{ processing ? 'جاري الحفظ...' : 'حفظ' }}
                 </Button>
-                <Button type="button" variant="ghost" size="sm" class="h-9 px-3 text-xs" @click="emit('reset')">مسح</Button>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    class="h-9 px-3 text-xs"
+                    @click="emit('reset')"
+                >
+                    مسح
+                </Button>
             </div>
         </Form>
     </section>

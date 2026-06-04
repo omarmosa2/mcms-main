@@ -15,6 +15,7 @@ use App\Http\Requests\Appointments\UpdateAppointmentRequest;
 use App\Http\Resources\AppointmentResource;
 use App\Models\Appointment;
 use App\Services\Cache\CacheService;
+use App\Services\ClinicWorkingHoursService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -36,6 +37,7 @@ class AppointmentController extends Controller
         private TransitionAppointmentStatusAction $transitionAppointmentStatusAction,
         private DeleteAppointmentAction $deleteAppointmentAction,
         private CacheService $cacheService,
+        private ClinicWorkingHoursService $clinicWorkingHoursService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection|InertiaResponse
@@ -86,6 +88,7 @@ class AppointmentController extends Controller
                 Appointment::STATUS_NO_SHOW,
             ],
             'filters' => $filters,
+            'clinic_working_hours' => $this->clinicWorkingHoursService->getForClinic($clinicId),
             'today_appointments' => AppointmentResource::collection($todayAppointments)->response()->getData(true)['data'],
         ]);
     }

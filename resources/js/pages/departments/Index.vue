@@ -3,13 +3,12 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { Plus } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
-import { AddDepartmentDialog } from '@/components/dialogs';
 import { Button } from '@/components/ui/button';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
-import DepartmentEditDialog from './components/DepartmentEditDialog.vue';
+import ClinicFormModal from './components/ClinicFormModal.vue';
 import DepartmentStatsCards from './components/DepartmentStatsCards.vue';
 import DepartmentTable from './components/DepartmentTable.vue';
 import DepartmentViewDialog from './components/DepartmentViewDialog.vue';
@@ -36,7 +35,7 @@ defineOptions({
     layout: {
         breadcrumbs: [
             {
-                title: 'الأقسام',
+                title: 'العيادات',
                 href: DepartmentController.index(),
             },
         ],
@@ -53,9 +52,11 @@ const {
 } = useConfirm();
 const toast = useToast();
 const page = usePage();
+
 const viewingDepartment = ref<Department | null>(null);
 const editingDepartment = ref<Department | null>(null);
 const isCreateDialogOpen = ref(false);
+const selectedDepartmentIds = ref<number[]>([]);
 
 const roleNames = computed<string[]>(() => {
     return (
@@ -73,9 +74,7 @@ const primaryRole = computed<string>(() => {
         'accountant',
     ];
 
-    return (
-        rolePriority.find((role) => roleNames.value.includes(role)) ?? 'staff'
-    );
+    return rolePriority.find((role) => roleNames.value.includes(role)) ?? 'staff';
 });
 
 const roleLabels: Record<string, string> = {
@@ -121,10 +120,7 @@ const allowedSortFields: DepartmentSortField[] = [
 const resolveInitialSortBy = (): DepartmentSortField => {
     const sortBy = filters.sort_by;
 
-    if (
-        sortBy !== null &&
-        allowedSortFields.includes(sortBy as DepartmentSortField)
-    ) {
+    if (sortBy !== null && allowedSortFields.includes(sortBy as DepartmentSortField)) {
         return sortBy;
     }
 
@@ -137,26 +133,16 @@ const localSortDirection = ref<SortDirection>(
 );
 
 const visibleDepartments = computed<Department[]>(() => departments.data);
-const totalLocalPages = computed<number>(() => {
-    return Math.max(1, departments.meta.last_page);
-});
-const localVisibleFrom = computed<number>(() => {
-    return departments.meta.from ?? 0;
-});
-const localVisibleTo = computed<number>(() => {
-    return departments.meta.to ?? 0;
-});
+const totalLocalPages = computed<number>(() => Math.max(1, departments.meta.last_page));
+const localVisibleFrom = computed<number>(() => departments.meta.from ?? 0);
+const localVisibleTo = computed<number>(() => departments.meta.to ?? 0);
 
 const activeDepartmentsOnPage = computed<number>(
-    () =>
-        visibleDepartments.value.filter((department) => department.is_active)
-            .length,
+    () => visibleDepartments.value.filter((department) => department.is_active).length,
 );
 
 const inactiveDepartmentsOnPage = computed<number>(
-    () =>
-        visibleDepartments.value.filter((department) => !department.is_active)
-            .length,
+    () => visibleDepartments.value.filter((department) => !department.is_active).length,
 );
 
 const totalDoctors = computed<number>(() =>
@@ -166,10 +152,23 @@ const totalDoctors = computed<number>(() =>
     ),
 );
 
+const selectableDepartmentIds = computed<number[]>(() =>
+    visibleDepartments.value.map((department) => department.id),
+);
+
+const areAllDepartmentsSelected = computed<boolean>(() => {
+    if (selectableDepartmentIds.value.length === 0) {
+        return false;
+    }
+
+    return selectableDepartmentIds.value.every((departmentId) =>
+        selectedDepartmentIds.value.includes(departmentId),
+    );
+});
+
 const defaultRowsPerPage = 15;
 const isSyncingFromServer = ref(false);
-let departmentFiltersDebounceTimeout: ReturnType<typeof setTimeout> | null =
-    null;
+let departmentFiltersDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const buildIndexQuery = (
     overrides: Partial<{
@@ -180,14 +179,7 @@ const buildIndexQuery = (
         sort_by: DepartmentSortField;
         sort_direction: SortDirection;
     }> = {},
-): {
-    search?: string;
-    is_active?: '1' | '0';
-    per_page: number;
-    page: number;
-    sort_by: DepartmentSortField;
-    sort_direction: SortDirection;
-} => {
+) => {
     const activeFilter = overrides.is_active ?? localIsActive.value;
     const isActiveQuery =
         activeFilter === 'active'
@@ -223,16 +215,12 @@ const reloadDepartments = (
 
     const executeReload = (): void => {
         router.cancelAll();
-        router.get(
-            DepartmentController.index.url(),
-            buildIndexQuery(overrides),
-            {
-                only: ['departments', 'filters'],
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-            },
-        );
+        router.get(DepartmentController.index.url(), buildIndexQuery(overrides), {
+            only: ['departments', 'filters'],
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
     };
 
     if (debounce) {
@@ -250,8 +238,7 @@ const reloadDepartments = (
 
 const toggleSort = (field: DepartmentSortField): void => {
     if (localSortBy.value === field) {
-        localSortDirection.value =
-            localSortDirection.value === 'asc' ? 'desc' : 'asc';
+        localSortDirection.value = localSortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
         localSortBy.value = field;
         localSortDirection.value = 'asc';
@@ -311,8 +298,7 @@ watch(
         localIsActive.value = resolveInitialActiveFilter();
         localRowsPerPage.value = filters.per_page;
         localSortBy.value = resolveInitialSortBy();
-        localSortDirection.value =
-            filters.sort_direction === 'asc' ? 'asc' : 'desc';
+        localSortDirection.value = filters.sort_direction === 'asc' ? 'asc' : 'desc';
         localPage.value = departments.meta.current_page;
         isSyncingFromServer.value = false;
     },
@@ -355,29 +341,6 @@ watch(
     },
 );
 
-onBeforeUnmount(() => {
-    if (departmentFiltersDebounceTimeout !== null) {
-        clearTimeout(departmentFiltersDebounceTimeout);
-        departmentFiltersDebounceTimeout = null;
-    }
-});
-
-const selectedDepartmentIds = ref<number[]>([]);
-
-const selectableDepartmentIds = computed<number[]>(() =>
-    visibleDepartments.value.map((department) => department.id),
-);
-
-const areAllDepartmentsSelected = computed<boolean>(() => {
-    if (selectableDepartmentIds.value.length === 0) {
-        return false;
-    }
-
-    return selectableDepartmentIds.value.every((departmentId) =>
-        selectedDepartmentIds.value.includes(departmentId),
-    );
-});
-
 watch(
     () => selectableDepartmentIds.value,
     (ids) => {
@@ -386,6 +349,13 @@ watch(
         );
     },
 );
+
+onBeforeUnmount(() => {
+    if (departmentFiltersDebounceTimeout !== null) {
+        clearTimeout(departmentFiltersDebounceTimeout);
+        departmentFiltersDebounceTimeout = null;
+    }
+});
 
 const toggleAllDepartmentsSelection = (event: Event): void => {
     const target = event.target as HTMLInputElement;
@@ -409,8 +379,8 @@ const openEditDepartment = (department: Department): void => {
 
 const deleteDepartment = async (department: Department) => {
     const confirmed = await confirm({
-        title: 'حذف القسم',
-        description: `هل أنت متأكد من حذف القسم "${department.name}"؟ لا يمكن التراجع عن هذا الإجراء.`,
+        title: 'حذف العيادة',
+        description: `هل أنت متأكد من حذف العيادة "${department.name}"؟ لا يمكن التراجع عن هذا الإجراء.`,
         confirmText: 'حذف',
         cancelText: 'إلغاء',
         variant: 'destructive',
@@ -419,10 +389,10 @@ const deleteDepartment = async (department: Department) => {
     if (confirmed) {
         router.delete(DepartmentController.destroy(department.id), {
             onSuccess: () => {
-                toast.success('تم حذف القسم بنجاح');
+                toast.success('تم حذف العيادة بنجاح');
             },
             onError: () => {
-                toast.error('فشل حذف القسم');
+                toast.error('فشل حذف العيادة');
             },
         });
     }
@@ -430,22 +400,18 @@ const deleteDepartment = async (department: Department) => {
 </script>
 
 <template>
-    <Head title="الأقسام" />
+    <Head title="العيادات" />
 
-    <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6" dir="rtl">
-        <div
-            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-        >
-            <div class="flex items-center gap-3">
+    <div class="container-modern space-y-8 py-5" dir="rtl">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div class="flex items-center gap-4">
                 <div>
-                    <h1 class="page-title">الأقسام</h1>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        إدارة أقسام العيادة وهيكلها التنظيمي.
+                    <h1 class="page-title text-[2.35rem]">إدارة العيادات</h1>
+                    <p class="page-subtitle mt-2 text-base">
+                        إدارة بيانات العيادات وأيام وساعات الدوام المتاحة للحجز
                     </p>
                 </div>
-                <span
-                    class="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground"
-                >
+                <span class="inline-flex items-center rounded-full border border-[#DDE9F3] bg-white px-3 py-1 text-xs font-semibold text-[#6C7F95]">
                     {{ activeRoleLabel }}
                 </span>
             </div>
@@ -453,13 +419,13 @@ const deleteDepartment = async (department: Department) => {
             <div class="flex items-center gap-2">
                 <Button
                     v-if="can('department.create')"
-                    variant="clay"
-                    size="sm"
-                    class="h-8 rounded-lg px-3 text-xs"
+                    variant="default"
+                    size="lg"
+                    class="h-12 rounded-2xl bg-[#0EA5E9] px-6 text-sm font-bold text-white shadow-[0_18px_34px_-22px_rgb(14_165_233_/_0.9)] hover:bg-[#0284C7]"
                     @click="isCreateDialogOpen = true"
                 >
-                    <Plus class="size-3.5" />
-                    إنشاء قسم
+                    <Plus class="size-4" />
+                    إضافة عيادة جديدة
                 </Button>
             </div>
         </div>
@@ -498,10 +464,10 @@ const deleteDepartment = async (department: Department) => {
             @delete="deleteDepartment"
         />
 
-        <AddDepartmentDialog
+        <ClinicFormModal
             :open="isCreateDialogOpen"
             @update:open="(value) => (isCreateDialogOpen = value)"
-            @success="() => {}"
+            @saved="() => {}"
         />
 
         <DepartmentViewDialog
@@ -510,10 +476,11 @@ const deleteDepartment = async (department: Department) => {
             @update:open="(val) => { if (!val) viewingDepartment = null }"
         />
 
-        <DepartmentEditDialog
+        <ClinicFormModal
             :open="editingDepartment !== null"
             :department="editingDepartment"
             @update:open="(val) => { if (!val) editingDepartment = null }"
+            @saved="editingDepartment = null"
         />
 
         <ConfirmationDialog

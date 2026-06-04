@@ -48,7 +48,6 @@ const { can } = usePermissions();
 const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 const toast = useToast();
 
-const selectedPatientIds = ref<number[]>([]);
 const viewingPatient = ref<Patient | null>(null);
 const editingPatient = ref<Patient | null>(null);
 const deletingPatient = ref<Patient | null>(null);
@@ -92,20 +91,6 @@ let patientFiltersDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 const totalLocalPages = computed<number>(() => Math.max(1, patients.meta.last_page));
 const localVisibleFrom = computed<number>(() => patients.meta.from ?? 0);
 const localVisibleTo = computed<number>(() => patients.meta.to ?? 0);
-
-const selectablePatientIds = computed<number[]>(() =>
-    patients.data.map((patient) => patient.id),
-);
-
-const areAllPatientsSelected = computed<boolean>(() => {
-    if (selectablePatientIds.value.length === 0) {
-        return false;
-    }
-
-    return selectablePatientIds.value.every((patientId) =>
-        selectedPatientIds.value.includes(patientId),
-    );
-});
 
 const activeFilters = computed<ActiveFilter[]>(() => {
     const f: ActiveFilter[] = [];
@@ -255,32 +240,6 @@ const handleDeletePatient = async (patient: Patient) => {
     }
 };
 
-const handleBulkDelete = async () => {
-    const count = selectedPatientIds.value.length;
-
-    const confirmed = await confirm({
-        title: 'حذف المرضى',
-        description: `هل أنت متأكد من حذف ${count} مريض؟ لا يمكن التراجع عن هذا الإجراء.`,
-        confirmText: 'حذف',
-        cancelText: 'إلغاء',
-        variant: 'destructive',
-    });
-
-    if (confirmed) {
-        const idsToDelete = [...selectedPatientIds.value];
-        router.delete(PatientController.bulkDestroy.url(), {
-            data: { ids: idsToDelete },
-            onSuccess: () => {
-                selectedPatientIds.value = [];
-                toast.success(`تم حذف ${idsToDelete.length} مريض بنجاح`);
-            },
-            onError: () => {
-                toast.error('فشل حذف المرضى');
-            },
-        });
-    }
-};
-
 const openEditPatient = (patient: Patient) => {
     editingPatient.value = patient;
 };
@@ -364,15 +323,6 @@ watch(
     },
 );
 
-watch(
-    () => selectablePatientIds.value,
-    (ids) => {
-        selectedPatientIds.value = selectedPatientIds.value.filter((id) =>
-            ids.includes(id),
-        );
-    },
-);
-
 onBeforeUnmount(() => {
     if (patientFiltersDebounceTimeout !== null) {
         clearTimeout(patientFiltersDebounceTimeout);
@@ -448,8 +398,6 @@ onBeforeUnmount(() => {
             :total-records="patients.meta.total"
             :sort-by="localSortBy"
             :sort-direction="localSortDirection"
-            :selected-ids="selectedPatientIds"
-            :are-all-selected="areAllPatientsSelected"
             :active-filters="activeFilters"
             @update:search="localSearch = $event"
             @update:rows-per-page="localRowsPerPage = $event"
@@ -458,12 +406,8 @@ onBeforeUnmount(() => {
             @sort="toggleSort"
             @remove-filter="handleRemoveFilter"
             @clear-filters="resetLocalFilters"
-            @toggle-select-all="(checked) => selectedPatientIds = checked ? [...selectablePatientIds] : []"
-            @update:selected-ids="selectedPatientIds = $event"
             @delete="handleDeletePatient"
             @edit="openEditPatient"
-            @bulk-delete="handleBulkDelete"
-            @clear-selection="selectedPatientIds = []"
             @toggle-quick-add="isQuickAddOpen = !isQuickAddOpen"
         />
 

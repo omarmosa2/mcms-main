@@ -83,7 +83,7 @@ const mainNavItems = computed<MainNavItem[]>(() => {
         [
             { title: 'لوحة التحكم', href: dashboard(), icon: LayoutGrid, group: 'main' },
             { title: 'المرضى', href: PatientController.index(), icon: Users, group: 'clinical', permission: 'patient.view' },
-            { title: 'الأقسام', href: DepartmentController.index(), icon: Building2, group: 'clinical', permission: 'department.view' },
+            { title: 'العيادات', href: DepartmentController.index(), icon: Building2, group: 'clinical', permission: 'department.view' },
             { title: 'الأطباء', href: DoctorProfileController.index(), icon: UserRound, group: 'clinical', permission: 'doctor_profile.view' },
             { title: 'جداول الدوام', href: '/doctor-schedules', icon: CalendarDays, group: 'clinical', permission: 'doctor_schedule.view' },
             { title: 'المواعيد', href: AppointmentController.index(), icon: CalendarClock, group: 'clinical', permission: 'appointment.view' },

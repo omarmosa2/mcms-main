@@ -4,6 +4,22 @@ export type Option = {
     full_name?: string;
 };
 
+export type ClinicWorkingDay =
+    | 'saturday'
+    | 'sunday'
+    | 'monday'
+    | 'tuesday'
+    | 'wednesday'
+    | 'thursday'
+    | 'friday';
+
+export type ClinicWorkingHour = {
+    day_of_week: ClinicWorkingDay;
+    is_active: boolean;
+    start_time: string | null;
+    end_time: string | null;
+};
+
 export type Appointment = {
     id: number;
     patient_id: number;

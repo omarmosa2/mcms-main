@@ -5,11 +5,15 @@ namespace App\Actions\Departments;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\Department;
+use App\Services\ClinicWorkingHoursService;
 use Illuminate\Support\Facades\DB;
 
 class CreateDepartmentAction extends BaseAction
 {
-    public function __construct(private LogAuditAction $logAuditAction) {}
+    public function __construct(
+        private LogAuditAction $logAuditAction,
+        private ClinicWorkingHoursService $clinicWorkingHoursService,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -17,12 +21,19 @@ class CreateDepartmentAction extends BaseAction
     public function handle(int $clinicId, int $userId, array $payload): Department
     {
         return DB::transaction(function () use ($clinicId, $userId, $payload): Department {
+            $workingHours = $payload['working_hours'] ?? null;
+            unset($payload['working_hours']);
+
             $department = Department::query()->create([
                 ...$this->normalizePayload($payload),
                 'clinic_id' => $clinicId,
                 'created_by' => $userId,
                 'updated_by' => $userId,
             ]);
+
+            if (is_array($workingHours)) {
+                $this->clinicWorkingHoursService->replaceForClinic($clinicId, $workingHours);
+            }
 
             $this->logAuditAction->handle(
                 clinicId: $clinicId,
@@ -38,6 +49,7 @@ class CreateDepartmentAction extends BaseAction
             );
 
             return $department->loadCount('doctorProfiles')->load([
+                'clinic.workingHours',
                 'creator:id,clinic_id,name',
                 'updater:id,clinic_id,name',
             ]);

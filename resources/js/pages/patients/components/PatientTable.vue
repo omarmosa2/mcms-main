@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Filter, MoreVertical, Pencil, Trash2, Users } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
-import { computed } from 'vue';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch } from '@/components/ui/filter';
@@ -19,8 +18,6 @@ const props = defineProps<{
     totalRecords: number;
     sortBy: PatientSortField;
     sortDirection: SortDirection;
-    selectedIds: number[];
-    areAllSelected: boolean;
     activeFilters: ActiveFilter[];
 }>();
 
@@ -32,12 +29,8 @@ const emit = defineEmits<{
     'sort': [field: PatientSortField];
     'remove-filter': [key: string];
     'clear-filters': [];
-    'toggle-select-all': [checked: boolean];
-    'update:selectedIds': [ids: number[]];
     'delete': [patient: Patient];
     'edit': [patient: Patient];
-    'bulk-delete': [];
-    'clear-selection': [];
     'toggle-quick-add': [];
 }>();
 
@@ -73,22 +66,6 @@ const patientGenderLabel = (gender: string | null): string => {
     return labels[gender ?? ''] ?? 'غير محدد';
 };
 
-const selectablePatientIds = computed<number[]>(() =>
-    props.patients.map((patient) => patient.id),
-);
-
-const handleToggleAll = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    emit('toggle-select-all', target.checked);
-};
-
-const handleRowCheckbox = (patientId: number) => {
-    const newSelectedIds = props.selectedIds.includes(patientId)
-        ? props.selectedIds.filter((id) => id !== patientId)
-        : [...props.selectedIds, patientId];
-    emit('update:selectedIds', newSelectedIds);
-};
-
 const handleRemoveFilter = (key: string) => {
     emit('remove-filter', key);
 };
@@ -119,6 +96,24 @@ const handleSearch = (value: string) => {
 
 const handleRowsPerPage = (value: number) => {
     emit('update:rowsPerPage', value);
+};
+
+const formatDate = (value: string | null): string => {
+    if (!value) {
+        return '-';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return '-';
+    }
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 };
 </script>
 
@@ -155,90 +150,62 @@ const handleRowsPerPage = (value: number) => {
                 @clear-all="handleClearFilters"
             />
         </section>
-
-        <div
-            v-if="can('patient.delete') && selectedIds.length > 0"
-            class="flex items-center gap-3 rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-4 shadow-card"
-        >
-            <div class="flex-1">
-                <p class="text-sm font-semibold text-[#DC2626]">{{ selectedIds.length }} مريض محدد</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    class="h-9 rounded-xl px-4 text-xs"
-                    @click="emit('bulk-delete')"
-                >
-                    حذف
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    class="h-9 rounded-xl px-4 text-xs text-[#6B7280] hover:bg-white"
-                    @click="emit('clear-selection')"
-                >
-                    إلغاء
-                </Button>
-            </div>
-        </div>
-
         <section class="overflow-hidden rounded-[1.35rem] border border-[#DDE8F3] bg-white/95 shadow-card-float">
             <div class="w-full overflow-x-auto">
-                <table class="min-w-full border-separate border-spacing-0">
+                <table class="w-full table-fixed border-separate border-spacing-0">
+                    <colgroup>
+                        <col class="w-[4%]" />
+                        <col class="w-[34%]" />
+                        <col class="w-[10%]" />
+                        <col class="w-[8%]" />
+                        <col class="w-[8%]" />
+                        <col class="w-[15%]" />
+                        <col class="w-[12%]" />
+                        <col class="w-[8%]" />
+                    </colgroup>
                     <thead>
                         <tr class="h-16 bg-[#F3F8FC]">
-                            <th v-if="can('patient.delete')" class="w-12 px-5 text-right">
-                                <input
-                                    type="checkbox"
-                                    class="size-4 cursor-pointer rounded border-[#CAD8E7] text-[#0EA5E9]"
-                                    :checked="areAllSelected"
-                                    @change="handleToggleAll"
-                                />
-                            </th>
-                            <th class="w-12 px-4 py-3 text-right text-sm font-bold text-[#111827]">#</th>
+                            <th class="w-10 px-3 py-3 text-right text-sm font-bold text-[#111827]">#</th>
                             <th
-                                class="min-w-64 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="w-[22rem] cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
                                 @click="handleSort('full_name')"
                             >
                                 الاسم الكامل للمريض
                                 <span class="ms-1 text-[#A8B8C8]">↕</span>
                             </th>
                             <th
-                                class="min-w-32 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="w-28 cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
                                 @click="handleSort('file_number')"
                             >
                                 رقم المريض
                                 <span class="ms-1 text-[#A8B8C8]">↕</span>
                             </th>
                             <th
-                                class="min-w-28 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="w-24 cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
                                 @click="handleSort('gender')"
                             >
                                 الجنس
                                 <span class="ms-1 text-[#A8B8C8]">↕</span>
                             </th>
-                            <th class="min-w-24 px-5 py-3 text-right text-sm font-bold text-[#111827]">
+                            <th class="w-20 px-3 py-3 text-right text-sm font-bold text-[#111827]">
                                 العمر
                                 <span class="ms-1 text-[#A8B8C8]">↕</span>
                             </th>
                             <th
-                                class="min-w-40 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="w-36 cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
                                 @click="handleSort('phone')"
                             >
                                 رقم الهاتف
                                 <span class="ms-1 text-[#A8B8C8]">↕</span>
                             </th>
                             <th
-                                class="min-w-36 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="w-32 cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
                                 @click="handleSort('created_at')"
                             >
                                 تاريخ الإضافة
                                 <span class="ms-1 text-[#A8B8C8]">↕</span>
                             </th>
-                            <th class="min-w-32 px-5 py-3 text-right text-sm font-bold text-[#111827]">الإجراءات</th>
+                            <th class="w-24 px-3 py-3 text-right text-sm font-bold text-[#111827]">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -247,47 +214,39 @@ const handleRowsPerPage = (value: number) => {
                             :key="patient.id"
                             class="group h-20 border-b border-[#E8EEF6] transition-all duration-150 last:border-b-0 hover:bg-[#F8FCFF]"
                         >
-                            <td v-if="can('patient.delete')" class="px-5 py-4" data-label="تحديد">
-                                <input
-                                    type="checkbox"
-                                    class="size-4 cursor-pointer rounded border-[#CAD8E7] text-[#0EA5E9]"
-                                    :checked="selectedIds.includes(patient.id)"
-                                    @change="handleRowCheckbox(patient.id)"
-                                />
-                            </td>
-                            <td class="px-4 py-4 text-sm font-bold text-[#111827]" data-label="#">
+                            <td class="px-3 py-4 text-sm font-bold text-[#111827]" data-label="#">
                                 {{ visibleFrom + index }}
                             </td>
-                            <td class="px-5 py-4" data-label="الاسم الكامل للمريض">
-                                <div class="flex items-center gap-3">
+                            <td class="px-3 py-4" data-label="الاسم الكامل للمريض">
+                                <div class="flex min-w-0 items-center gap-3">
                                     <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0EA5E9] text-sm font-bold text-white shadow-[0_12px_24px_-18px_rgb(14_165_233_/_0.95)]">
                                         {{ patient.full_name?.charAt(0) ?? '?' }}
                                     </span>
-                                    <span class="text-sm font-semibold text-[#111827]">{{ patient.full_name }}</span>
+                                    <span class="truncate text-sm font-semibold text-[#111827]">{{ patient.full_name }}</span>
                                 </div>
                             </td>
-                            <td class="px-5 py-4 text-sm font-semibold text-[#111827]" data-label="رقم المريض">
+                            <td class="whitespace-nowrap px-3 py-4 text-sm font-semibold text-[#111827]" data-label="رقم المريض">
                                 {{ patient.file_number || '-' }}
                             </td>
-                            <td class="px-5 py-4" data-label="الجنس">
+                            <td class="px-3 py-4" data-label="الجنس">
                                 <span
-                                    class="inline-flex min-w-14 items-center justify-center rounded-full px-3 py-1.5 text-xs font-bold"
+                                    class="inline-flex min-w-12 items-center justify-center rounded-full px-2.5 py-1.5 text-xs font-bold"
                                     :class="patientGenderClass(patient.gender)"
                                 >
                                     {{ patientGenderLabel(patient.gender) }}
                                 </span>
                             </td>
-                            <td class="px-5 py-4 text-sm text-[#111827]" data-label="العمر">
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-[#111827]" data-label="العمر">
                                 {{ patient.age !== null ? `${patient.age} سنة` : '-' }}
                             </td>
-                            <td class="px-5 py-4 text-sm text-[#6C7F95]" data-label="رقم الهاتف">
+                            <td class="truncate px-3 py-4 text-sm text-[#6C7F95]" data-label="رقم الهاتف">
                                 {{ patient.phone ?? 'غير محدد' }}
                             </td>
-                            <td class="px-5 py-4 text-sm text-[#111827]" data-label="تاريخ الإضافة">
-                                {{ patient.created_at ?? '-' }}
+                            <td class="whitespace-nowrap px-3 py-4 text-sm text-[#111827]" data-label="تاريخ الإضافة">
+                                {{ formatDate(patient.created_at) }}
                             </td>
-                            <td class="px-5 py-4 md:text-right" data-label="الإجراءات">
-                                <div class="hidden items-center justify-end gap-3 md:flex">
+                            <td class="px-3 py-4 md:text-right" data-label="الإجراءات">
+                                <div class="hidden items-center justify-end gap-2 md:flex">
                                     <button
                                         v-if="can('patient.delete')"
                                         type="button"
@@ -331,7 +290,7 @@ const handleRowsPerPage = (value: number) => {
                         </tr>
 
                         <tr v-if="patients.length === 0">
-                            <td :colspan="can('patient.delete') ? 9 : 8" class="px-5">
+                            <td colspan="8" class="px-5">
                                 <div class="py-20 text-center">
                                     <div class="mb-4 flex justify-center">
                                         <Users class="size-16 text-[#C6D5E4]" />
@@ -392,9 +351,9 @@ const handleRowsPerPage = (value: number) => {
                     </button>
                 </div>
 
-                <span class="text-sm font-semibold text-[#111827]">صفحة {{ currentPage }} من {{ totalPages }}</span>
+                <span class="truncate text-sm font-semibold text-[#111827]">صفحة {{ currentPage }} من {{ totalPages }}</span>
 
-                <div class="flex items-center gap-3">
+                <div class="flex min-w-0 items-center gap-3">
                     <select
                         :value="rowsPerPage"
                         class="h-11 rounded-2xl border border-[#DDE9F3] bg-white px-4 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition-colors focus:border-[#0EA5E9] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/10"
@@ -405,7 +364,7 @@ const handleRowsPerPage = (value: number) => {
                         <option value="25">25</option>
                         <option value="50">50</option>
                     </select>
-                    <span class="text-sm font-semibold text-[#111827]">عدد الصفوف لكل صفحة</span>
+                    <span class="truncate text-sm font-semibold text-[#111827]">عدد الصفوف لكل صفحة</span>
                 </div>
             </div>
 

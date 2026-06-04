@@ -5,6 +5,7 @@ namespace Tests\Feature\Appointments;
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\ClinicWorkingHour;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -88,6 +89,62 @@ class AppointmentControllerTest extends TestCase
             'action' => 'appointments.create',
             'auditable_id' => $appointment->id,
         ]);
+    }
+
+    public function test_store_rejects_appointment_on_inactive_clinic_day(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        $this->setClinicWorkingHours($clinic, [
+            'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+
+        $response = $this->postJson(route('appointments.store'), [
+            'patient_id' => $patient->id,
+            'scheduled_for' => '2026-06-06T10:00:00+00:00',
+            'duration_minutes' => 30,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['scheduled_for']);
+    }
+
+    public function test_store_rejects_appointment_outside_clinic_working_hours(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        $this->setClinicWorkingHours($clinic, [
+            'saturday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+
+        $response = $this->postJson(route('appointments.store'), [
+            'patient_id' => $patient->id,
+            'scheduled_for' => '2026-06-06T18:00:00+00:00',
+            'duration_minutes' => 30,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['scheduled_for']);
+    }
+
+    public function test_store_allows_appointment_inside_clinic_working_hours(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        $this->setClinicWorkingHours($clinic, [
+            'saturday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+
+        $response = $this->postJson(route('appointments.store'), [
+            'patient_id' => $patient->id,
+            'scheduled_for' => '2026-06-06T10:00:00+00:00',
+            'duration_minutes' => 30,
+        ]);
+
+        $response->assertCreated();
     }
 
     public function test_index_applies_search_filter(): void
@@ -477,5 +534,21 @@ class AppointmentControllerTest extends TestCase
         $this->actingAs($user);
 
         return $user;
+    }
+
+    /**
+     * @param  array<string, array{start_time: string, end_time: string}>  $activeDays
+     */
+    private function setClinicWorkingHours(Clinic $clinic, array $activeDays): void
+    {
+        foreach (ClinicWorkingHour::DAYS as $day) {
+            ClinicWorkingHour::query()->create([
+                'clinic_id' => $clinic->id,
+                'day_of_week' => $day,
+                'is_active' => array_key_exists($day, $activeDays),
+                'start_time' => $activeDays[$day]['start_time'] ?? null,
+                'end_time' => $activeDays[$day]['end_time'] ?? null,
+            ]);
+        }
     }
 }

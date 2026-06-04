@@ -8,6 +8,7 @@ use App\Actions\GenerateNumberAction;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\ClinicWorkingHoursService;
 use App\Services\DoctorScheduleService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ class CreateAppointmentAction extends BaseAction
         private LogAuditAction $logAuditAction,
         private GenerateNumberAction $generateNumberAction,
         private DoctorScheduleService $doctorScheduleService,
+        private ClinicWorkingHoursService $clinicWorkingHoursService,
     ) {}
 
     /**
@@ -29,6 +31,7 @@ class CreateAppointmentAction extends BaseAction
         $this->ensurePatientBelongsToClinic($clinicId, (int) $payload['patient_id']);
         $this->ensureDoctorBelongsToClinicIfProvided($clinicId, $payload['doctor_id'] ?? null);
         $this->checkAppointmentConflicts($clinicId, $payload);
+        $this->checkClinicWorkingHours($clinicId, $payload);
         $this->checkDoctorSchedule($clinicId, $payload);
 
         $appointmentNumber = $this->generateNumberAction->handle(
@@ -126,6 +129,24 @@ class CreateAppointmentAction extends BaseAction
             'pgsql' => '(scheduled_for + (duration_minutes || \' minutes\')::interval) > ?',
             default => 'DATE_ADD(scheduled_for, INTERVAL duration_minutes MINUTE) > ?',
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function checkClinicWorkingHours(int $clinicId, array $payload): void
+    {
+        $isAvailable = $this->clinicWorkingHoursService->isAppointmentWithinWorkingHours(
+            $clinicId,
+            $payload['scheduled_for'],
+            (int) ($payload['duration_minutes'] ?? 30),
+        );
+
+        if (! $isAvailable) {
+            throw ValidationException::withMessages([
+                'scheduled_for' => 'الوقت المختار خارج دوام العيادة.',
+            ]);
+        }
     }
 
     /**

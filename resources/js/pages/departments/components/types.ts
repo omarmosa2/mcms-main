@@ -6,6 +6,7 @@ export type Department = {
     description: string | null;
     is_active: boolean;
     doctor_profiles_count: number;
+    working_hours?: ClinicWorkingHour[];
     created_by: number | null;
     updated_by: number | null;
     creator?: {
@@ -18,6 +19,22 @@ export type Department = {
     } | null;
     created_at: string | null;
     updated_at: string | null;
+};
+
+export type ClinicWorkingDay =
+    | 'saturday'
+    | 'sunday'
+    | 'monday'
+    | 'tuesday'
+    | 'wednesday'
+    | 'thursday'
+    | 'friday';
+
+export type ClinicWorkingHour = {
+    day_of_week: ClinicWorkingDay;
+    is_active: boolean;
+    start_time: string | null;
+    end_time: string | null;
 };
 
 export type PaginationLink = {

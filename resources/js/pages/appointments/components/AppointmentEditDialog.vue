@@ -8,12 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { toDatetimeLocalValue } from './appointmentHelpers';
-import type { Appointment, Option } from './types';
+import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
+import type { Appointment, ClinicWorkingHour, Option } from './types';
 
 const props = defineProps<{
     appointment: Appointment | null;
     patients: Option[];
     doctors: Option[];
+    clinicWorkingHours: ClinicWorkingHour[];
 }>();
 
 const emit = defineEmits<{
@@ -35,8 +37,8 @@ const emit = defineEmits<{
                     v-bind="AppointmentController.update.form(props.appointment.id)"
                     class="space-y-4"
                     :options="{ preserveScroll: true }"
-                    @success="emit('close')"
                     v-slot="{ errors, processing }"
+                    @success="emit('close')"
                 >
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div class="grid gap-2">
@@ -114,14 +116,10 @@ const emit = defineEmits<{
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="edit_appointment_scheduled_for">موعد</Label>
-                        <Input
-                            id="edit_appointment_scheduled_for"
-                            name="scheduled_for"
-                            type="datetime-local"
-                            :value="toDatetimeLocalValue(props.appointment.scheduled_for)"
-                            class="pattern-field-clay"
-                            required
+                        <AppointmentWorkingHoursInput
+                            :working-hours="clinicWorkingHours"
+                            :default-value="toDatetimeLocalValue(props.appointment.scheduled_for)"
+                            label="موعد"
                         />
                         <InputError :message="errors.scheduled_for" />
                     </div>

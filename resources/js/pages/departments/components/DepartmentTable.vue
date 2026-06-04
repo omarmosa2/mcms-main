@@ -1,19 +1,20 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import {
-    ArrowDown,
-    ArrowUp,
-    ArrowUpDown,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    Clock,
+    Eye,
+    Filter,
+    Pencil,
+    Trash2,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
 import { Button } from '@/components/ui/button';
-import {
-    FilterBar,
-    FilterSearch,
-    FilterSelect,
-} from '@/components/ui/filter';
-import { Label } from '@/components/ui/label';
+import { FilterBar, FilterSearch, FilterSelect } from '@/components/ui/filter';
 import type { ActiveFilter, Department, DepartmentSortField, SortDirection } from './types';
 
 const search = defineModel<string>('search', { default: '' });
@@ -40,7 +41,6 @@ const emit = defineEmits<{
     'previous-page': [];
     'next-page': [];
     'reset-filters': [];
-    'remove-filter': [key: string];
     'toggle-all-selection': [event: Event];
     'clear-selection': [];
     view: [department: Department];
@@ -50,8 +50,8 @@ const emit = defineEmits<{
 
 const statusOptions = computed(() => [
     { label: 'الكل', value: 'all' },
-    { label: 'نشط', value: 'active' },
-    { label: 'غير نشط', value: 'inactive' },
+    { label: 'نشطة', value: 'active' },
+    { label: 'غير نشطة', value: 'inactive' },
 ]);
 
 const activeFilters = computed(() => {
@@ -62,379 +62,323 @@ const activeFilters = computed(() => {
     }
 
     if (activeFilter.value !== 'all') {
-        filters.push({ key: 'is_active', label: 'الحالة', value: activeFilter.value === 'active' ? 'نشط' : 'غير نشط' });
+        filters.push({
+            key: 'is_active',
+            label: 'الحالة',
+            value: activeFilter.value === 'active' ? 'نشطة' : 'غير نشطة',
+        });
     }
 
     return filters;
 });
 
-const sortIconFor = (field: DepartmentSortField) => {
-    if (props.sortBy !== field) {
-        return ArrowUpDown;
-    }
-
-    return props.sortDirection === 'asc' ? ArrowUp : ArrowDown;
-};
-
-const departmentStatusClass = (isActive: boolean): string => {
-    if (isActive) {
-        return 'border-success-300/70 bg-success-50 text-success-800 dark:border-success-500/35 dark:bg-success-500/15 dark:text-success-100';
-    }
-
-    return 'border-destructive/70 bg-destructive/10 text-destructive dark:border-destructive/35 dark:bg-destructive/15 dark:text-destructive-foreground';
-};
-
-const departmentStatusDotClass = (isActive: boolean): string => {
-    return isActive ? 'bg-success-500' : 'bg-destructive';
-};
-
 const handleRemoveFilter = (key: string) => {
     if (key === 'search') {
         search.value = '';
-    } else if (key === 'is_active') {
+    }
+
+    if (key === 'is_active') {
         activeFilter.value = 'all';
     }
+};
+
+const activeHoursCount = (department: Department): number => {
+    return department.working_hours?.filter((row) => row.is_active).length ?? 0;
+};
+
+const statusClass = (isActive: boolean): string => {
+    return isActive
+        ? 'bg-[#DBEAFE] text-[#1D4ED8]'
+        : 'bg-[#F4F7FA] text-[#6B7280]';
+};
+
+const sortMark = (field: DepartmentSortField): string => {
+    if (props.sortBy !== field) {
+        return '↕';
+    }
+
+    return props.sortDirection === 'asc' ? '↑' : '↓';
 };
 </script>
 
 <template>
-    <div class="glass-panel-soft p-5">
-        <div
-            class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3"
-        >
-            <h3 class="pattern-typographic-title text-[0.76rem]">
-                قائمة الأقسام
-            </h3>
-            <span class="text-xs text-muted-foreground">
-                الإجمالي: {{ totalDepartments }}
-            </span>
-        </div>
+    <div class="space-y-8">
+        <section class="rounded-[1.45rem] border border-[#E2ECF6] bg-white/95 p-6 shadow-card-float">
+            <div class="grid gap-4 lg:grid-cols-[1fr_18rem_9rem]">
+                <FilterSearch
+                    v-model="search"
+                    placeholder="البحث في بيانات العيادات..."
+                />
 
-        <div class="space-y-3 rounded-2xl border border-border/70 bg-background/60 p-4">
-            <div class="grid gap-3 md:grid-cols-[repeat(3,minmax(0,1fr))] md:items-end">
-                <div class="grid gap-2 md:col-span-2">
-                    <Label for="departments_search">بحث</Label>
-                    <FilterSearch
-                        id="departments_search"
-                        v-model="search"
-                        placeholder="الاسم، الرمز، أو الوصف"
-                    />
-                </div>
-                <div class="grid gap-2">
-                    <Label for="departments_status">الحالة</Label>
-                    <FilterSelect
-                        id="departments_status"
-                        v-model="activeFilter"
-                        :options="statusOptions"
-                        placeholder="الكل"
-                    />
-                </div>
+                <FilterSelect
+                    v-model="activeFilter"
+                    :options="statusOptions"
+                    placeholder="الحالة"
+                />
+
+                <button
+                    type="button"
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#E8EEF6] bg-white px-5 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_24px_-24px_rgb(15_42_71_/_0.35)] transition-all duration-200 hover:bg-[#F7FBFE] hover:text-[#075985]"
+                    @click="emit('reset-filters')"
+                >
+                    <Filter class="size-4" />
+                    تصفية
+                </button>
             </div>
-            <div class="grid gap-3 md:grid-cols-[repeat(2,minmax(0,1fr))] md:items-end">
-                <div class="grid gap-2 md:max-w-44">
-                    <Label for="departments_per_page">صفوف لكل صفحة</Label>
+
+            <FilterBar
+                v-if="activeFilters.length > 0"
+                class="mt-4"
+                :active-filters="activeFilters"
+                @remove="handleRemoveFilter"
+                @clear-all="emit('reset-filters')"
+            />
+        </section>
+
+        <Form
+            v-if="canDelete && selectedIds.length > 0"
+            v-bind="DepartmentController.bulkDestroy.form()"
+            class="flex items-center gap-3 rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-4 shadow-card"
+            v-slot="{ processing }"
+        >
+            <input
+                v-for="departmentId in selectedIds"
+                :key="`selected-clinic-${departmentId}`"
+                type="hidden"
+                name="ids[]"
+                :value="departmentId"
+            />
+
+            <p class="flex-1 text-sm font-semibold text-[#DC2626]">
+                {{ selectedIds.length }} عيادة محددة
+            </p>
+            <Button
+                type="submit"
+                variant="destructive"
+                size="sm"
+                class="h-9 rounded-xl px-4 text-xs"
+                :disabled="processing"
+            >
+                حذف
+            </Button>
+            <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                class="h-9 rounded-xl px-4 text-xs text-[#6B7280] hover:bg-white"
+                @click="emit('clear-selection')"
+            >
+                إلغاء
+            </Button>
+        </Form>
+
+        <section class="overflow-hidden rounded-[1.35rem] border border-[#DDE8F3] bg-white/95 shadow-card-float">
+            <div class="w-full overflow-x-auto">
+                <table class="min-w-full border-separate border-spacing-0">
+                    <thead>
+                        <tr class="h-16 bg-[#F3F8FC]">
+                            <th v-if="canDelete" class="w-12 px-5 text-right">
+                                <input
+                                    type="checkbox"
+                                    class="size-4 cursor-pointer rounded border-[#CAD8E7] text-[#0EA5E9]"
+                                    :checked="areAllSelected"
+                                    @change="emit('toggle-all-selection', $event)"
+                                />
+                            </th>
+                            <th class="w-12 px-4 py-3 text-right text-sm font-bold text-[#111827]">#</th>
+                            <th
+                                class="min-w-64 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                @click="emit('toggle-sort', 'name')"
+                            >
+                                اسم العيادة <span class="ms-1 text-[#A8B8C8]">{{ sortMark('name') }}</span>
+                            </th>
+                            <th
+                                class="min-w-32 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                @click="emit('toggle-sort', 'code')"
+                            >
+                                الرمز <span class="ms-1 text-[#A8B8C8]">{{ sortMark('code') }}</span>
+                            </th>
+                            <th class="min-w-64 px-5 py-3 text-right text-sm font-bold text-[#111827]">الوصف</th>
+                            <th
+                                class="min-w-28 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                @click="emit('toggle-sort', 'doctor_profiles_count')"
+                            >
+                                الأطباء <span class="ms-1 text-[#A8B8C8]">{{ sortMark('doctor_profiles_count') }}</span>
+                            </th>
+                            <th class="min-w-36 px-5 py-3 text-right text-sm font-bold text-[#111827]">أيام الدوام</th>
+                            <th
+                                class="min-w-28 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                @click="emit('toggle-sort', 'is_active')"
+                            >
+                                الحالة <span class="ms-1 text-[#A8B8C8]">{{ sortMark('is_active') }}</span>
+                            </th>
+                            <th
+                                class="min-w-36 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                @click="emit('toggle-sort', 'created_at')"
+                            >
+                                تاريخ الإضافة <span class="ms-1 text-[#A8B8C8]">{{ sortMark('created_at') }}</span>
+                            </th>
+                            <th class="min-w-32 px-5 py-3 text-right text-sm font-bold text-[#111827]">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="(department, index) in departments"
+                            :key="department.id"
+                            class="group h-20 border-b border-[#E8EEF6] transition-all duration-150 last:border-b-0 hover:bg-[#F8FCFF]"
+                        >
+                            <td v-if="canDelete" class="px-5 py-4">
+                                <input
+                                    v-model="selectedIds"
+                                    type="checkbox"
+                                    class="size-4 cursor-pointer rounded border-[#CAD8E7] text-[#0EA5E9]"
+                                    :value="department.id"
+                                />
+                            </td>
+                            <td class="px-4 py-4 text-sm font-bold text-[#111827]">
+                                {{ visibleFrom + index }}
+                            </td>
+                            <td class="px-5 py-4">
+                                <div class="flex items-center gap-3">
+                                    <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0EA5E9] text-sm font-bold text-white shadow-[0_12px_24px_-18px_rgb(14_165_233_/_0.95)]">
+                                        {{ department.name.charAt(0) }}
+                                    </span>
+                                    <span class="text-sm font-semibold text-[#111827]">{{ department.name }}</span>
+                                </div>
+                            </td>
+                            <td class="px-5 py-4 text-sm font-semibold text-[#111827]">
+                                {{ department.code ?? '-' }}
+                            </td>
+                            <td class="max-w-xs px-5 py-4 text-sm text-[#6C7F95]">
+                                <span class="line-clamp-2">{{ department.description ?? '-' }}</span>
+                            </td>
+                            <td class="px-5 py-4">
+                                <span class="inline-flex min-w-10 items-center justify-center rounded-full bg-[#F4F7FA] px-3 py-1.5 text-xs font-bold text-[#111827]">
+                                    {{ department.doctor_profiles_count }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-4">
+                                <span class="inline-flex items-center gap-2 rounded-full bg-[#EAF7FE] px-3 py-1.5 text-xs font-bold text-[#0284C7]">
+                                    <Clock class="size-3.5" />
+                                    {{ activeHoursCount(department) }} أيام
+                                </span>
+                            </td>
+                            <td class="px-5 py-4">
+                                <span
+                                    class="inline-flex min-w-20 items-center justify-center rounded-full px-3 py-1.5 text-xs font-bold"
+                                    :class="statusClass(department.is_active)"
+                                >
+                                    {{ department.is_active ? 'نشطة' : 'غير نشطة' }}
+                                </span>
+                            </td>
+                            <td class="px-5 py-4 text-sm text-[#111827]">
+                                {{
+                                    department.created_at !== null
+                                        ? new Date(department.created_at).toLocaleDateString('ar-EG')
+                                        : '-'
+                                }}
+                            </td>
+                            <td class="px-5 py-4 md:text-right">
+                                <div class="flex items-center justify-end gap-3">
+                                    <button
+                                        v-if="canDelete"
+                                        type="button"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-[#FF3B30] transition-all duration-150 hover:bg-[#FEF2F2] active:scale-[0.95]"
+                                        title="حذف"
+                                        @click="emit('delete', department)"
+                                    >
+                                        <Trash2 class="size-4" />
+                                    </button>
+                                    <button
+                                        v-if="canUpdate"
+                                        type="button"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-[#2563EB] transition-all duration-150 hover:bg-[#EFF6FF] active:scale-[0.95]"
+                                        title="تعديل"
+                                        @click="emit('edit', department)"
+                                    >
+                                        <Pencil class="size-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-[#0EA5E9] transition-all duration-150 hover:bg-[#EAF7FE] active:scale-[0.95]"
+                                        title="عرض"
+                                        @click="emit('view', department)"
+                                    >
+                                        <Eye class="size-4" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr v-if="departments.length === 0">
+                            <td :colspan="canDelete ? 10 : 9" class="px-5">
+                                <div class="py-20 text-center">
+                                    <h3 class="mb-2 text-base font-bold text-[#111827]">لا توجد عيادات</h3>
+                                    <p class="text-sm text-[#6C7F95]">غيّر التصفية أو أضف عيادة جديدة للبدء.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="flex flex-col gap-4 px-2 md:flex-row md:items-center md:justify-between">
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        :disabled="page === 1"
+                        @click="emit('previous-page')"
+                    >
+                        <ChevronsRight class="size-4" />
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        :disabled="page === 1"
+                        @click="emit('previous-page')"
+                    >
+                        <ChevronRight class="size-4" />
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        :disabled="page >= totalPages"
+                        @click="emit('next-page')"
+                    >
+                        <ChevronLeft class="size-4" />
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        :disabled="page >= totalPages"
+                        @click="emit('next-page')"
+                    >
+                        <ChevronsLeft class="size-4" />
+                    </button>
+                </div>
+
+                <span class="text-sm font-semibold text-[#111827]">صفحة {{ page }} من {{ totalPages }}</span>
+
+                <div class="flex items-center gap-3">
                     <select
-                        id="departments_per_page"
                         v-model.number="rowsPerPage"
-                        class="pattern-field-clay h-9 px-3 py-1.5"
+                        class="h-11 rounded-2xl border border-[#DDE9F3] bg-white px-4 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] focus:border-[#0EA5E9] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/10"
                     >
                         <option value="10">10</option>
                         <option value="15">15</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
                     </select>
+                    <span class="text-sm font-semibold text-[#111827]">عدد الصفوف لكل صفحة</span>
                 </div>
             </div>
-            <FilterBar
-                v-if="activeFilters.length > 0"
-                :active-filters="activeFilters"
-                @remove="handleRemoveFilter"
-                @clear-all="emit('reset-filters')"
-            />
-        </div>
 
-        <Form
-            v-if="canDelete && selectedIds.length > 0"
-            v-bind="DepartmentController.bulkDestroy.form()"
-            class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
-            v-slot="{ processing }"
-        >
-            <input
-                v-for="departmentId in selectedIds"
-                :key="`selected-department-${departmentId}`"
-                type="hidden"
-                name="ids[]"
-                :value="departmentId"
-            />
-
-            <Button
-                type="submit"
-                variant="destructive"
-                size="sm"
-                :disabled="processing"
-            >
-                حذف المحدد ({{ selectedIds.length }})
-            </Button>
-            <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                @click="emit('clear-selection')"
-            >
-                إلغاء التحديد
-            </Button>
-        </Form>
-
-        <div class="ui-table-shell">
-            <table class="ui-table md:min-w-[940px]">
-                <thead>
-                    <tr>
-                        <th
-                            v-if="canDelete"
-                            class="px-3 py-2"
-                        >
-                            <input
-                                type="checkbox"
-                                class="size-4 rounded border-border"
-                                :checked="areAllSelected"
-                                @change="emit('toggle-all-selection', $event)"
-                            />
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'name')"
-                            >
-                                الاسم
-                                <component
-                                    :is="sortIconFor('name')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'code')"
-                            >
-                                الرمز
-                                <component
-                                    :is="sortIconFor('code')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">الوصف</th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'doctor_profiles_count')"
-                            >
-                                الأطباء
-                                <component
-                                    :is="sortIconFor('doctor_profiles_count')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'is_active')"
-                            >
-                                الحالة
-                                <component
-                                    :is="sortIconFor('is_active')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'created_at')"
-                            >
-                                تاريخ الإنشاء
-                                <component
-                                    :is="sortIconFor('created_at')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2 text-start">الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="department in departments"
-                        :key="department.id"
-                        class="ui-table-row align-top"
-                    >
-                        <td
-                            v-if="canDelete"
-                            class="px-3 py-2"
-                            data-label="تحديد"
-                        >
-                            <input
-                                v-model="selectedIds"
-                                type="checkbox"
-                                class="size-4 rounded border-border"
-                                :value="department.id"
-                            />
-                        </td>
-                        <td
-                            class="px-3 py-2 font-medium"
-                            data-label="الاسم"
-                        >
-                            {{ department.name }}
-                        </td>
-                        <td class="px-3 py-2" data-label="الرمز">
-                            {{ department.code ?? '-' }}
-                        </td>
-                        <td
-                            class="max-w-xs px-3 py-2"
-                            data-label="الوصف"
-                        >
-                            <span
-                                class="line-clamp-2 text-sm text-muted-foreground"
-                            >
-                                {{ department.description ?? '-' }}
-                            </span>
-                        </td>
-                        <td class="px-3 py-2" data-label="الأطباء">
-                            <span
-                                class="inline-flex rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-xs font-medium"
-                            >
-                                {{ department.doctor_profiles_count }}
-                            </span>
-                        </td>
-                        <td class="px-3 py-2" data-label="الحالة">
-                            <span
-                                class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium"
-                                :class="
-                                    departmentStatusClass(
-                                        department.is_active,
-                                    )
-                                "
-                            >
-                                <span
-                                    class="h-1.5 w-1.5 rounded-full"
-                                    :class="
-                                        departmentStatusDotClass(
-                                            department.is_active,
-                                        )
-                                    "
-                                ></span>
-                                {{
-                                    department.is_active
-                                        ? 'نشط'
-                                        : 'غير نشط'
-                                }}
-                            </span>
-                        </td>
-                        <td
-                            class="px-3 py-2"
-                            data-label="تاريخ الإنشاء"
-                        >
-                            {{
-                                department.created_at !== null
-                                    ? new Date(
-                                          department.created_at,
-                                      ).toLocaleDateString('ar-EG')
-                                    : '-'
-                            }}
-                        </td>
-                        <td
-                            class="table-cell-actions px-3 py-2 md:text-start"
-                            data-label="الإجراءات"
-                        >
-                            <div
-                                class="flex flex-wrap justify-end gap-2"
-                            >
-                                <Button
-                                    type="button"
-                                    variant="neumorphic"
-                                    size="sm"
-                                    class="h-8 px-3 text-xs"
-                                    @click="emit('view', department)"
-                                >
-                                    عرض
-                                </Button>
-                                <Button
-                                    v-if="canUpdate"
-                                    type="button"
-                                    variant="clay"
-                                    size="sm"
-                                    class="h-8 px-3 text-xs"
-                                    @click="emit('edit', department)"
-                                >
-                                    تعديل
-                                </Button>
-                                <Button
-                                    v-if="canDelete"
-                                    type="button"
-                                    size="sm"
-                                    variant="destructive"
-                                    class="h-8 px-3 text-xs"
-                                    @click="emit('delete', department)"
-                                >
-                                    حذف
-                                </Button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr
-                        v-if="departments.length === 0"
-                        class="table-empty-state"
-                    >
-                        <td
-                            :colspan="canDelete ? 8 : 7"
-                            class="px-3 py-10 text-center text-muted-foreground"
-                        >
-                            لا توجد أقسام مطابقة.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div
-            class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2"
-        >
-            <p class="text-xs text-muted-foreground">
-                عرض {{ visibleFrom }}-{{ visibleTo }} من
-                {{ totalDepartments }} سجل
+            <p class="text-sm font-medium text-[#6C7F95]">
+                عرض {{ visibleFrom }} إلى {{ visibleTo }} من {{ totalDepartments }} عيادة
             </p>
-            <div class="flex items-center gap-2">
-                <Button
-                    type="button"
-                    variant="neumorphic"
-                    size="sm"
-                    class="h-8 px-3 text-xs"
-                    :disabled="page === 1"
-                    @click="emit('previous-page')"
-                >
-                    السابق
-                </Button>
-                <span class="text-xs font-semibold text-foreground/85">
-                    صفحة {{ page }} / {{ totalPages }}
-                </span>
-                <Button
-                    type="button"
-                    variant="neumorphic"
-                    size="sm"
-                    class="h-8 px-3 text-xs"
-                    :disabled="page >= totalPages"
-                    @click="emit('next-page')"
-                >
-                    التالي
-                </Button>
-            </div>
         </div>
     </div>
 </template>

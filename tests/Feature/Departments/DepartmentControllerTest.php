@@ -4,6 +4,7 @@ namespace Tests\Feature\Departments;
 
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Clinic;
+use App\Models\ClinicWorkingHour;
 use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\User;
@@ -73,6 +74,134 @@ class DepartmentControllerTest extends TestCase
             'user_id' => $user->id,
             'action' => 'departments.create',
             'auditable_id' => $departmentId,
+        ]);
+    }
+
+    public function test_store_saves_clinic_working_hours(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $response = $this->postJson(route('departments.store'), [
+            'name' => 'Dental Clinic',
+            'code' => 'dent',
+            'is_active' => true,
+            'working_hours' => $this->workingHoursPayload([
+                'saturday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+                'sunday' => ['start_time' => '10:00', 'end_time' => '16:00'],
+            ]),
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.working_hours.0.day_of_week', 'saturday');
+
+        $this->assertDatabaseHas('clinic_working_hours', [
+            'clinic_id' => $clinic->id,
+            'day_of_week' => 'saturday',
+            'is_active' => true,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+        ]);
+
+        $this->assertDatabaseHas('clinic_working_hours', [
+            'clinic_id' => $clinic->id,
+            'day_of_week' => 'friday',
+            'is_active' => false,
+            'start_time' => null,
+            'end_time' => null,
+        ]);
+    }
+
+    public function test_update_replaces_clinic_working_hours(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
+
+        ClinicWorkingHour::query()->create([
+            'clinic_id' => $clinic->id,
+            'day_of_week' => 'saturday',
+            'is_active' => true,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+        ]);
+
+        $response = $this->putJson(route('departments.update', ['departmentId' => $department->id]), [
+            'name' => $department->name,
+            'working_hours' => $this->workingHoursPayload([
+                'monday' => ['start_time' => '08:30', 'end_time' => '14:30'],
+            ]),
+        ]);
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('clinic_working_hours', [
+            'clinic_id' => $clinic->id,
+            'day_of_week' => 'saturday',
+            'is_active' => false,
+            'start_time' => null,
+            'end_time' => null,
+        ]);
+
+        $this->assertDatabaseHas('clinic_working_hours', [
+            'clinic_id' => $clinic->id,
+            'day_of_week' => 'monday',
+            'is_active' => true,
+            'start_time' => '08:30',
+            'end_time' => '14:30',
+        ]);
+    }
+
+    public function test_store_rejects_invalid_working_hours(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $response = $this->postJson(route('departments.store'), [
+            'name' => 'Invalid Clinic',
+            'working_hours' => [
+                [
+                    'day_of_week' => 'saturday',
+                    'is_active' => true,
+                    'start_time' => '17:00',
+                    'end_time' => '09:00',
+                ],
+            ],
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['working_hours.0.end_time']);
+    }
+
+    public function test_api_update_clinic_replaces_working_hours(): void
+    {
+        $clinic = Clinic::factory()->create([
+            'name' => 'Old Clinic Name',
+        ]);
+        $this->authenticateForClinic($clinic);
+
+        $response = $this->putJson(route('api.clinics.update', ['clinicId' => $clinic->id]), [
+            'name' => 'Updated Clinic Name',
+            'working_hours' => $this->workingHoursPayload([
+                'tuesday' => ['start_time' => '11:00', 'end_time' => '18:00'],
+            ]),
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.name', 'Updated Clinic Name');
+        $response->assertJsonPath('data.working_hours.3.day_of_week', 'tuesday');
+
+        $this->assertDatabaseHas('clinics', [
+            'id' => $clinic->id,
+            'name' => 'Updated Clinic Name',
+        ]);
+
+        $this->assertDatabaseHas('clinic_working_hours', [
+            'clinic_id' => $clinic->id,
+            'day_of_week' => 'tuesday',
+            'is_active' => true,
+            'start_time' => '11:00',
+            'end_time' => '18:00',
         ]);
     }
 
@@ -282,5 +411,21 @@ class DepartmentControllerTest extends TestCase
         $this->actingAs($user);
 
         return $user;
+    }
+
+    /**
+     * @param  array<string, array{start_time: string, end_time: string}>  $activeDays
+     * @return array<int, array{day_of_week: string, is_active: bool, start_time: ?string, end_time: ?string}>
+     */
+    private function workingHoursPayload(array $activeDays): array
+    {
+        return collect(ClinicWorkingHour::DAYS)
+            ->map(fn (string $day): array => [
+                'day_of_week' => $day,
+                'is_active' => array_key_exists($day, $activeDays),
+                'start_time' => $activeDays[$day]['start_time'] ?? null,
+                'end_time' => $activeDays[$day]['end_time'] ?? null,
+            ])
+            ->all();
     }
 }

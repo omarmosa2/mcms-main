@@ -51,7 +51,7 @@ import AppointmentQuickAddForm from './components/AppointmentQuickAddForm.vue';
 import AppointmentTable from './components/AppointmentTable.vue';
 import AppointmentTodaySummary from './components/AppointmentTodaySummary.vue';
 import AppointmentViewDialog from './components/AppointmentViewDialog.vue';
-import type { Appointment, AppointmentSortField, SortDirection } from './components/types';
+import type { Appointment, AppointmentSortField, ClinicWorkingHour, SortDirection } from './components/types';
 
 type Option = {
     id: number;
@@ -87,12 +87,13 @@ type PaginatedResponse<T> = {
     meta: PaginationMeta;
 };
 
-const { appointments, patients, doctors, status_options, filters, today_appointments } =
+const { appointments, patients, doctors, status_options, filters, clinic_working_hours, today_appointments } =
     defineProps<{
         appointments: PaginatedResponse<Appointment>;
         patients: Option[];
         doctors: Option[];
         status_options: string[];
+        clinic_working_hours: ClinicWorkingHour[];
         filters: {
             status: string | null;
             search: string | null;
@@ -682,6 +683,7 @@ const todaySummary = computed(() => ({
             v-if="can('appointment.create') && isQuickAddOpen"
             :patients="patients"
             :doctors="doctors"
+            :clinic-working-hours="clinic_working_hours"
             @success="handleQuickAddSuccess"
             @reset="resetQuickAdd"
         />
@@ -747,6 +749,7 @@ const todaySummary = computed(() => ({
             :open="isCreateSheetOpen"
             :patients="patients"
             :doctors="doctors"
+            :clinic-working-hours="clinic_working_hours"
             @update:open="isCreateSheetOpen = $event"
         />
 
@@ -759,6 +762,7 @@ const todaySummary = computed(() => ({
             :appointment="editingAppointment"
             :patients="patients"
             :doctors="doctors"
+            :clinic-working-hours="clinic_working_hours"
             @close="closeEditAppointment"
         />
 

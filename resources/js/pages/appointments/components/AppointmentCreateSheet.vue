@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { Option } from './types';
+import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
+import type { ClinicWorkingHour, Option } from './types';
 
-const props = defineProps<{
+defineProps<{
     open: boolean;
     patients: Option[];
     doctors: Option[];
+    clinicWorkingHours: ClinicWorkingHour[];
 }>();
 
 const emit = defineEmits<{
@@ -34,8 +36,8 @@ const defaultScheduledFor = computed(() => {
 
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
-        <DialogContent class="max-w-[520px] p-0 overflow-hidden">
-            <DialogHeader class="p-6 pb-4 border-b border-border/60">
+        <DialogContent class="max-w-[520px] overflow-hidden p-0">
+            <DialogHeader class="border-b border-border/60 p-6 pb-4">
                 <DialogTitle>موعد جديد</DialogTitle>
                 <DialogDescription>إضافة موعد جديد بسرعة.</DialogDescription>
             </DialogHeader>
@@ -43,7 +45,7 @@ const defaultScheduledFor = computed(() => {
             <Form
                 id="appointment-create-form"
                 v-bind="AppointmentController.store.form()"
-                class="px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto"
+                class="max-h-[60vh] space-y-4 overflow-y-auto px-6 py-4"
                 v-slot="{ errors, processing }"
                 @success="emit('update:open', false)"
             >
@@ -70,11 +72,7 @@ const defaultScheduledFor = computed(() => {
                         class="pattern-field-clay h-10 px-3 py-1.5"
                     >
                         <option value="">اختر المريض</option>
-                        <option
-                            v-for="patient in props.patients"
-                            :key="patient.id"
-                            :value="patient.id"
-                        >
+                        <option v-for="patient in patients" :key="patient.id" :value="patient.id">
                             {{ patient.full_name }}
                         </option>
                     </select>
@@ -89,11 +87,7 @@ const defaultScheduledFor = computed(() => {
                         class="pattern-field-clay h-10 px-3 py-1.5"
                     >
                         <option value="">يُحدد لاحقاً</option>
-                        <option
-                            v-for="doctor in props.doctors"
-                            :key="doctor.id"
-                            :value="doctor.id"
-                        >
+                        <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">
                             {{ doctor.name }}
                         </option>
                     </select>
@@ -101,15 +95,11 @@ const defaultScheduledFor = computed(() => {
                 </div>
 
                 <div class="grid gap-2 md:grid-cols-2">
-                    <div class="grid gap-2">
-                        <Label for="scheduled_for">موعد</Label>
-                        <Input
-                            id="scheduled_for"
-                            name="scheduled_for"
-                            type="datetime-local"
-                            required
-                            :value="defaultScheduledFor"
-                            class="pattern-field-clay"
+                    <div>
+                        <AppointmentWorkingHoursInput
+                            :working-hours="clinicWorkingHours"
+                            :default-value="defaultScheduledFor"
+                            label="موعد"
                         />
                         <InputError :message="errors.scheduled_for" />
                     </div>
@@ -130,17 +120,12 @@ const defaultScheduledFor = computed(() => {
 
                 <div class="grid gap-2">
                     <Label for="notes">ملاحظات</Label>
-                    <textarea
-                        id="notes"
-                        name="notes"
-                        rows="3"
-                        class="pattern-field-clay"
-                    />
+                    <textarea id="notes" name="notes" rows="3" class="pattern-field-clay" />
                     <InputError :message="errors.notes" />
                 </div>
-
             </Form>
-            <DialogFooter class="p-6 pt-4 border-t border-border/60">
+
+            <DialogFooter class="border-t border-border/60 p-6 pt-4">
                 <Button type="button" variant="outline" @click="emit('update:open', false)">إلغاء</Button>
                 <Button form="appointment-create-form" type="submit" variant="default">إنشاء الموعد</Button>
             </DialogFooter>

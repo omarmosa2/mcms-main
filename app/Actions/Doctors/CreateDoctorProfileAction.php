@@ -4,8 +4,10 @@ namespace App\Actions\Doctors;
 
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
+use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Department;
 use App\Models\DoctorProfile;
+use App\Models\DoctorSchedule;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class CreateDoctorProfileAction extends BaseAction
 {
-    public function __construct(private LogAuditAction $logAuditAction) {}
+    public function __construct(
+        private LogAuditAction $logAuditAction,
+        private AssignUserRoleAction $assignUserRoleAction,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -21,35 +26,28 @@ class CreateDoctorProfileAction extends BaseAction
     public function handle(int $clinicId, int $userId, array $payload, ?int $doctorScopeUserId = null): DoctorProfile
     {
         return DB::transaction(function () use ($clinicId, $userId, $payload, $doctorScopeUserId): DoctorProfile {
-            $doctorUserId = (int) $payload['user_id'];
-            $this->ensureDoctorScopeCanManageUser($doctorScopeUserId, $doctorUserId);
-            $this->ensureDoctorBelongsToClinic($clinicId, $doctorUserId);
+            $doctorUser = $this->resolveDoctorUser($clinicId, $userId, $payload);
+            $this->ensureDoctorScopeCanManageUser($doctorScopeUserId, (int) $doctorUser->id);
             $this->ensureDepartmentBelongsToClinicIfProvided($clinicId, $payload['department_id'] ?? null);
 
             $doctorProfile = DoctorProfile::query()->create([
-                ...$this->normalizePayload($payload),
+                ...$this->normalizeProfilePayload($payload, (int) $doctorUser->id),
                 'clinic_id' => $clinicId,
             ]);
+
+            $this->syncWorkingHours($clinicId, (int) $doctorUser->id, $payload['working_hours'] ?? []);
 
             $this->logAuditAction->handle(
                 clinicId: $clinicId,
                 userId: $userId,
                 action: 'doctor_profiles.create',
                 auditable: $doctorProfile,
-                newValues: $doctorProfile->only([
-                    'user_id',
-                    'department_id',
-                    'license_number',
-                    'specialty',
-                    'consultation_duration_minutes',
-                    'status',
-                    'work_schedule',
-                    'bio',
-                ]),
+                newValues: $doctorProfile->only($this->auditedProfileFields()),
             );
 
             return $doctorProfile->load([
-                'user:id,clinic_id,name,email',
+                'user:id,clinic_id,name,email,is_active',
+                'user.doctorSchedules:id,clinic_id,doctor_id,day_of_week,start_time,end_time,is_available',
                 'department:id,clinic_id,name,code,is_active',
             ]);
         });
@@ -57,24 +55,81 @@ class CreateDoctorProfileAction extends BaseAction
 
     /**
      * @param  array<string, mixed>  $payload
+     */
+    private function resolveDoctorUser(int $clinicId, int $actingUserId, array $payload): User
+    {
+        if (! empty($payload['user_id'])) {
+            $doctorUserId = (int) $payload['user_id'];
+            $this->ensureDoctorBelongsToClinic($clinicId, $doctorUserId);
+
+            return User::query()->where('clinic_id', $clinicId)->findOrFail($doctorUserId);
+        }
+
+        $doctorUser = User::query()->create([
+            'clinic_id' => $clinicId,
+            'name' => trim((string) $payload['name']),
+            'email' => mb_strtolower(trim((string) $payload['username'])),
+            'password' => (string) $payload['password'],
+            'email_verified_at' => now(),
+            'is_active' => true,
+        ]);
+
+        $this->assignUserRoleAction->handle($doctorUser, 'doctor', $actingUserId);
+
+        return $doctorUser;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
-    private function normalizePayload(array $payload): array
+    private function normalizeProfilePayload(array $payload, int $doctorUserId): array
     {
         $licenseNumber = trim((string) ($payload['license_number'] ?? ''));
-        $specialty = trim((string) ($payload['specialty'] ?? ''));
+        $phone = trim((string) ($payload['phone'] ?? ''));
         $bio = trim((string) ($payload['bio'] ?? ''));
 
         return [
-            'user_id' => (int) $payload['user_id'],
+            'user_id' => $doctorUserId,
             'department_id' => $this->normalizeNullableInteger($payload['department_id'] ?? null),
+            'gender' => (string) $payload['gender'],
+            'phone' => $phone !== '' ? $phone : null,
             'license_number' => $licenseNumber !== '' ? mb_strtoupper($licenseNumber) : null,
-            'specialty' => $specialty,
+            'specialty' => trim((string) $payload['specialty']),
             'consultation_duration_minutes' => (int) ($payload['consultation_duration_minutes'] ?? 30),
             'status' => (string) ($payload['status'] ?? DoctorProfile::STATUS_ACTIVE),
-            'work_schedule' => $this->normalizeWorkSchedule($payload['work_schedule'] ?? null),
+            'compensation_type' => (string) $payload['compensation_type'],
+            'compensation_value' => (float) $payload['compensation_value'],
+            'work_schedule' => null,
             'bio' => $bio !== '' ? $bio : null,
         ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $workingHours
+     */
+    private function syncWorkingHours(int $clinicId, int $doctorUserId, array $workingHours): void
+    {
+        DoctorSchedule::query()
+            ->withTrashed()
+            ->where('clinic_id', $clinicId)
+            ->where('doctor_id', $doctorUserId)
+            ->forceDelete();
+
+        foreach ($workingHours as $day) {
+            if (! filter_var($day['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                continue;
+            }
+
+            DoctorSchedule::query()->create([
+                'clinic_id' => $clinicId,
+                'doctor_id' => $doctorUserId,
+                'day_of_week' => (int) $day['day_of_week'],
+                'start_time' => (string) $day['start_time'],
+                'end_time' => (string) $day['end_time'],
+                'is_available' => true,
+            ]);
+        }
     }
 
     private function normalizeNullableInteger(mixed $value): ?int
@@ -84,30 +139,6 @@ class CreateDoctorProfileAction extends BaseAction
         }
 
         return (int) $value;
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function normalizeWorkSchedule(mixed $value): ?array
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        if (is_array($value)) {
-            return $value === [] ? null : $value;
-        }
-
-        if (is_string($value)) {
-            $decoded = json_decode($value, true);
-
-            if (is_array($decoded)) {
-                return $decoded === [] ? null : $decoded;
-            }
-        }
-
-        return null;
     }
 
     private function ensureDoctorScopeCanManageUser(?int $doctorScopeUserId, int $doctorUserId): void
@@ -155,8 +186,28 @@ class CreateDoctorProfileAction extends BaseAction
 
         if (! $departmentExists) {
             throw ValidationException::withMessages([
-                'department_id' => 'The selected department is not available for this clinic.',
+                'department_id' => 'The selected clinic is not available.',
             ]);
         }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function auditedProfileFields(): array
+    {
+        return [
+            'user_id',
+            'department_id',
+            'gender',
+            'phone',
+            'license_number',
+            'specialty',
+            'consultation_duration_minutes',
+            'status',
+            'compensation_type',
+            'compensation_value',
+            'bio',
+        ];
     }
 }

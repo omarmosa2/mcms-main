@@ -1,523 +1,135 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
-import { computed } from 'vue';
-import DoctorProfileController from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
+import { Edit, Eye, Trash2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
-import {
-    FilterBar,
-    FilterSearch,
-    FilterSelect,
-} from '@/components/ui/filter';
-import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/composables/usePermissions';
+import type { DoctorProfile, PaginatedResponse } from './types';
 
-type DoctorProfileStatus = 'active' | 'on_leave' | 'inactive';
-
-type DoctorOption = {
-    id: number;
-    name: string;
-    email: string | null;
-};
-
-type DepartmentOption = {
-    id: number;
-    name: string;
-    code: string | null;
-    is_active: boolean;
-};
-
-type DoctorProfile = {
-    id: number;
-    clinic_id: number;
-    user_id: number;
-    department_id: number | null;
-    license_number: string | null;
-    specialty: string;
-    consultation_duration_minutes: number;
-    status: DoctorProfileStatus;
-    work_schedule: Record<string, unknown> | null;
-    bio: string | null;
-    user?: DoctorOption | null;
-    department?: DepartmentOption | null;
-    created_at: string | null;
-    updated_at: string | null;
-};
-
-type PaginationMeta = {
-    current_page: number;
-    last_page: number;
-    from: number | null;
-    to: number | null;
-    total: number;
-    links: { url: string | null; label: string; active: boolean }[];
-};
-
-type PaginatedResponse<T> = {
-    data: T[];
-    links: { first: string | null; last: string | null; prev: string | null; next: string | null };
-    meta: PaginationMeta;
-};
-
-type DoctorProfileSortField = 'specialty' | 'license_number' | 'consultation_duration_minutes' | 'status' | 'created_at';
-type SortDirection = 'asc' | 'desc';
-type StatusFilter = 'all' | DoctorProfileStatus;
-
-const props = defineProps<{
+defineProps<{
     doctorProfiles: PaginatedResponse<DoctorProfile>;
-    visibleProfiles: DoctorProfile[];
-    localSearch: string;
-    localStatus: StatusFilter;
-    localDepartmentId: number | null;
-    localRowsPerPage: number;
-    localPage: number;
-    localSortBy: DoctorProfileSortField;
-    localSortDirection: SortDirection;
-    totalLocalPages: number;
-    localVisibleFrom: number;
-    localVisibleTo: number;
-    selectedProfileIds: number[];
-    areAllProfilesSelected: boolean;
-    canDeleteProfile: boolean;
-    activeFilters: { key: string; label: string; value: string | null }[];
-    statusOptions: { label: string; value: string }[];
-    departmentOptions: { label: string; value: number }[];
 }>();
 
 const emit = defineEmits<{
-    'update:localSearch': [value: string];
-    'update:localStatus': [value: StatusFilter];
-    'update:localDepartmentId': [value: number | null];
-    'update:localRowsPerPage': [value: number];
-    'update:selectedProfileIds': [value: number[]];
-    'toggle-sort': [field: DoctorProfileSortField];
-    'previous-page': [];
-    'next-page': [];
-    'reset-filters': [];
-    'remove-filter': [key: string];
-    'toggle-all-selection': [event: Event];
-    'view-profile': [profile: DoctorProfile];
-    'edit-profile': [profile: DoctorProfile];
-    'delete-profile': [profile: DoctorProfile];
+    view: [profile: DoctorProfile];
+    edit: [profile: DoctorProfile];
+    delete: [profile: DoctorProfile];
 }>();
 
 const { can } = usePermissions();
 
-const statusLabels: Record<DoctorProfileStatus, string> = {
-    active: 'نشط',
-    on_leave: 'في إجازة',
-    inactive: 'غير نشط',
-};
-
-const formatStatus = (status: DoctorProfileStatus): string => {
-    return statusLabels[status] ?? status.replace('_', ' ');
-};
-
-const statusClass = (status: DoctorProfileStatus): string => {
-    if (status === 'active') {
-        return 'border-success-300/70 bg-success-50 text-success-800 dark:border-success-500/35 dark:bg-success-500/15 dark:text-success-100';
+const genderLabel = (profile: DoctorProfile): string => {
+    if (profile.gender === 'female') {
+        return 'أنثى';
     }
 
-    if (status === 'on_leave') {
-        return 'border-warning-300/70 bg-warning-50 text-warning-800 dark:border-warning-500/35 dark:bg-warning-500/15 dark:text-warning-100';
+    if (profile.gender === 'male') {
+        return 'ذكر';
     }
 
-    return 'border-destructive/70 bg-destructive/10 text-destructive dark:border-destructive/35 dark:bg-destructive/15 dark:text-destructive-foreground';
+    return '-';
 };
 
-const statusDotClass = (status: DoctorProfileStatus): string => {
-    if (status === 'active') {
-        return 'bg-success-500';
+const compensationTypeLabel = (profile: DoctorProfile): string => {
+    if (profile.compensation_type === 'weekly') {
+        return 'أجر أسبوعي';
     }
 
-    if (status === 'on_leave') {
-        return 'bg-warning-500';
+    if (profile.compensation_type === 'monthly') {
+        return 'أجر شهري';
     }
 
-    return 'bg-destructive';
+    return profile.compensation_type === 'percentage' ? 'نسبة مئوية' : '-';
 };
 
-const doctorLabel = (profile: DoctorProfile): string => {
-    return profile.user?.name ?? `Doctor #${profile.user_id}`;
-};
-
-const departmentLabel = (profile: DoctorProfile): string => {
-    if (profile.department === null || profile.department === undefined) {
-        return 'غير معين';
+const compensationValueLabel = (profile: DoctorProfile): string => {
+    if (profile.compensation_value === null || profile.compensation_value === undefined) {
+        return '-';
     }
 
-    return profile.department.code !== null
-        ? `${profile.department.name} (${profile.department.code})`
-        : profile.department.name;
-};
+    const value = Number(profile.compensation_value);
 
-const sortIconFor = (field: DoctorProfileSortField) => {
-    if (props.localSortBy !== field) {
-        return ArrowUpDown;
+    if (profile.compensation_type === 'percentage') {
+        return `${value}%`;
     }
 
-    return props.localSortDirection === 'asc' ? ArrowUp : ArrowDown;
+    return value.toLocaleString('ar-SY', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+    });
 };
 </script>
 
 <template>
-    <section
-        :class="[
-            'glass-panel-soft p-5',
-            canDeleteProfile ? 'xl:col-span-3' : 'xl:col-span-3',
-        ]"
-    >
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-            <h3 class="pattern-typographic-title text-[0.76rem]">
-                ملفات الأطباء
-            </h3>
-            <span class="text-xs text-muted-foreground">
-                الإجمالي: {{ doctorProfiles.meta.total }}
-            </span>
-        </div>
-
-        <div class="space-y-3 rounded-2xl border border-border/70 bg-background/60 p-4">
-            <div class="grid gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))] md:items-end">
-                <div class="grid gap-2 md:col-span-2">
-                    <Label for="doctor_profiles_search">بحث</Label>
-                    <FilterSearch
-                        id="doctor_profiles_search"
-                        :model-value="localSearch"
-                        @update:model-value="emit('update:localSearch', $event)"
-                        placeholder="طبيب، تخصص، ترخيص، أو قسم"
-                    />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="doctor_profiles_status">الحالة</Label>
-                    <FilterSelect
-                        id="doctor_profiles_status"
-                        :model-value="localStatus"
-                        @update:model-value="emit('update:localStatus', $event)"
-                        :options="statusOptions"
-                        placeholder="الكل"
-                    />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="doctor_profiles_department">القسم</Label>
-                    <FilterSelect
-                        id="doctor_profiles_department"
-                        :model-value="localDepartmentId"
-                        @update:model-value="emit('update:localDepartmentId', $event)"
-                        :options="departmentOptions"
-                        placeholder="الكل"
-                    />
-                </div>
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-[repeat(2,minmax(0,1fr))] md:items-end">
-                <div class="grid gap-2">
-                    <Label for="doctor_profiles_per_page">صفوف</Label>
-                    <select
-                        id="doctor_profiles_per_page"
-                        :value="localRowsPerPage"
-                        @change="emit('update:localRowsPerPage', Number(($event.target as HTMLSelectElement).value))"
-                        class="pattern-field-clay h-9 px-3 py-1.5"
-                    >
-                        <option :value="10">10</option>
-                        <option :value="15">15</option>
-                        <option :value="25">25</option>
-                        <option :value="50">50</option>
-                    </select>
-                </div>
-            </div>
-
-            <FilterBar
-                v-if="activeFilters.length > 0"
-                :active-filters="activeFilters"
-                @remove="emit('remove-filter', $event)"
-                @clear-all="emit('reset-filters')"
-            />
-        </div>
-
-        <Form
-            v-if="canDeleteProfile && selectedProfileIds.length > 0"
-            v-bind="DoctorProfileController.bulkDestroy.form()"
-            class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
-            v-slot="{ processing }"
-            @success="emit('update:selectedProfileIds', [])"
-        >
-            <input
-                v-for="profileId in selectedProfileIds"
-                :key="`selected-doctor-profile-${profileId}`"
-                type="hidden"
-                name="ids[]"
-                :value="profileId"
-            />
-
-            <Button
-                type="submit"
-                variant="destructive"
-                size="sm"
-                class="h-8 px-3 text-xs"
-                :disabled="processing"
-            >
-                حذف المحدد ({{ selectedProfileIds.length }})
-            </Button>
-
-            <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                class="h-8 px-3 text-xs"
-                :disabled="processing"
-                @click="emit('update:selectedProfileIds', [])"
-            >
-                إلغاء التحديد
-            </Button>
-        </Form>
-
-        <div class="overflow-x-auto rounded-2xl border border-border/70">
-            <table class="ui-table min-w-full text-sm">
-                <thead class="ui-table-head">
-                    <tr>
-                        <th
-                            v-if="canDeleteProfile"
-                            class="w-10 px-3 py-2"
-                        >
-                            <input
-                                type="checkbox"
-                                class="size-4 rounded border-border"
-                                :checked="areAllProfilesSelected"
-                                @change="emit('toggle-all-selection', $event)"
-                            />
-                        </th>
-                        <th class="px-3 py-2">الطبيب</th>
-                        <th class="px-3 py-2">القسم</th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'specialty')"
-                            >
-                                التخصص
-                                <component
-                                    :is="sortIconFor('specialty')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'license_number')"
-                            >
-                                الترخيص
-                                <component
-                                    :is="sortIconFor('license_number')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'consultation_duration_minutes')"
-                            >
-                                المدة
-                                <component
-                                    :is="sortIconFor('consultation_duration_minutes')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'status')"
-                            >
-                                الحالة
-                                <component
-                                    :is="sortIconFor('status')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('toggle-sort', 'created_at')"
-                            >
-                                تاريخ الإنشاء
-                                <component
-                                    :is="sortIconFor('created_at')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2 text-start">الإجراءات</th>
+    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="min-w-full table-fixed text-right text-sm" dir="rtl">
+                <thead>
+                    <tr class="border-b border-slate-200 bg-slate-50 text-slate-900">
+                        <th class="w-[19%] px-5 py-4 font-bold">الاسم</th>
+                        <th class="w-[9%] px-4 py-4 font-bold">الجنس</th>
+                        <th class="w-[15%] px-4 py-4 font-bold">الاختصاص</th>
+                        <th class="w-[14%] px-4 py-4 font-bold">العيادة</th>
+                        <th class="w-[12%] px-4 py-4 font-bold">نوع الأجر</th>
+                        <th class="w-[11%] px-4 py-4 font-bold">قيمة الأجر</th>
+                        <th class="w-[11%] px-4 py-4 font-bold">حالة الحساب</th>
+                        <th class="w-[9%] px-4 py-4 font-bold">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
-                        v-for="profile in visibleProfiles"
+                        v-for="profile in doctorProfiles.data"
                         :key="profile.id"
-                        class="ui-table-row align-top"
+                        class="border-b border-slate-100 text-slate-900 last:border-b-0 hover:bg-sky-50/35"
                     >
-                        <td
-                            v-if="canDeleteProfile"
-                            class="px-3 py-2"
-                        >
-                            <input
-                                type="checkbox"
-                                class="size-4 rounded border-border"
-                                :value="profile.id"
-                                :checked="selectedProfileIds.includes(profile.id)"
-                                @change="
-                                    ($event) => {
-                                        const target = $event.target as HTMLInputElement;
-                                        if (target.checked) {
-                                            emit('update:selectedProfileIds', [...selectedProfileIds, profile.id]);
-                                        } else {
-                                            emit('update:selectedProfileIds', selectedProfileIds.filter(id => id !== profile.id));
-                                    }
-                                }"
-                            />
-                        </td>
-
-                        <td class="px-3 py-2 font-medium">
-                            <div class="leading-5">
-                                <p class="text-sm font-semibold">
-                                    {{ doctorLabel(profile) }}
-                                </p>
-                                <p class="text-xs text-muted-foreground">
-                                    {{ profile.user?.email ?? '-' }}
-                                </p>
+                        <td class="px-5 py-4">
+                            <div class="flex items-center gap-3">
+                                <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-sky-500 text-sm font-bold text-white">
+                                    {{ (profile.user?.name ?? 'ط').slice(0, 1) }}
+                                </span>
+                                <div class="min-w-0">
+                                    <p class="truncate font-semibold">{{ profile.user?.name ?? '-' }}</p>
+                                    <p class="truncate text-xs text-slate-500">{{ profile.user?.email ?? '-' }}</p>
+                                </div>
                             </div>
                         </td>
-
-                        <td class="px-3 py-2">
-                            <span class="text-sm">
-                                {{ departmentLabel(profile) }}
+                        <td class="px-4 py-4">
+                            <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800">
+                                {{ genderLabel(profile) }}
                             </span>
                         </td>
-
-                        <td class="px-3 py-2">
-                            {{ profile.specialty }}
-                        </td>
-
-                        <td class="px-3 py-2">
-                            {{ profile.license_number ?? '-' }}
-                        </td>
-
-                        <td class="px-3 py-2">
-                            {{ profile.consultation_duration_minutes }} دقيقة
-                        </td>
-
-                        <td class="px-3 py-2">
+                        <td class="px-4 py-4">{{ profile.specialty }}</td>
+                        <td class="px-4 py-4 text-slate-700">{{ profile.department?.name ?? '-' }}</td>
+                        <td class="px-4 py-4">{{ compensationTypeLabel(profile) }}</td>
+                        <td class="px-4 py-4">{{ compensationValueLabel(profile) }}</td>
+                        <td class="px-4 py-4">
                             <span
-                                class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium capitalize"
-                                :class="statusClass(profile.status)"
+                                class="inline-flex rounded-full px-3 py-1 text-xs font-bold"
+                                :class="profile.user?.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'"
                             >
-                                <span
-                                    class="w-1.5 h-1.5 rounded-full"
-                                    :class="statusDotClass(profile.status)"
-                                ></span>
-                                {{ formatStatus(profile.status) }}
+                                {{ profile.user?.is_active ? 'نشط' : 'غير نشط' }}
                             </span>
                         </td>
-
-                        <td class="px-3 py-2">
-                            {{
-                                profile.created_at !== null
-                                    ? new Date(profile.created_at).toLocaleDateString('ar-SA')
-                                    : '-'
-                            }}
-                        </td>
-
-                        <td class="table-cell-actions px-3 py-2 md:text-start">
-                            <div class="flex flex-wrap justify-end gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    class="h-8 px-3 text-xs"
-                                    @click="emit('view-profile', profile)"
-                                >
-                                    عرض
+                        <td class="px-4 py-4">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <Button type="button" variant="ghost" size="icon" class="size-8 text-sky-500" title="عرض" @click="emit('view', profile)">
+                                    <Eye class="size-4" />
                                 </Button>
-
-                                <Button
-                                    v-if="can('doctor_profile.update')"
-                                    type="button"
-                                    variant="default"
-                                    size="sm"
-                                    class="h-8 px-3 text-xs"
-                                    @click="emit('edit-profile', profile)"
-                                >
-                                    تعديل
+                                <Button v-if="can('doctor_profile.update')" type="button" variant="ghost" size="icon" class="size-8 text-blue-600" title="تعديل" @click="emit('edit', profile)">
+                                    <Edit class="size-4" />
                                 </Button>
-
-                                <Button
-                                    v-if="can('doctor_profile.delete')"
-                                    type="button"
-                                    size="sm"
-                                    variant="destructive"
-                                    class="h-8 px-3 text-xs"
-                                    @click="emit('delete-profile', profile)"
-                                >
-                                    حذف
+                                <Button v-if="can('doctor_profile.delete')" type="button" variant="ghost" size="icon" class="size-8 text-red-500" title="حذف" @click="emit('delete', profile)">
+                                    <Trash2 class="size-4" />
                                 </Button>
                             </div>
                         </td>
                     </tr>
 
-                    <tr
-                        v-if="visibleProfiles.length === 0"
-                        class="table-empty-state"
-                    >
-                        <td
-                            :colspan="canDeleteProfile ? 9 : 8"
-                            class="px-3 py-10 text-center text-muted-foreground"
-                        >
-                            لا توجد ملفات أطباء مطابقة.
+                    <tr v-if="doctorProfiles.data.length === 0">
+                        <td colspan="8" class="px-5 py-12 text-center text-slate-500">
+                            لا يوجد أطباء مسجلون حالياً.
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-
-        <div
-            class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2"
-        >
-            <p class="text-xs text-muted-foreground">
-                عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من {{ doctorProfiles.meta.total }} سجل
-            </p>
-            <div class="flex items-center gap-2">
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    class="h-8 px-3 text-xs"
-                    :disabled="localPage === 1"
-                    @click="emit('previous-page')"
-                >
-                    السابق
-                </Button>
-                <span class="text-xs font-semibold text-foreground/85">
-                    صفحة {{ localPage }} / {{ totalLocalPages }}
-                </span>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    class="h-8 px-3 text-xs"
-                    :disabled="localPage >= totalLocalPages"
-                    @click="emit('next-page')"
-                >
-                    التالي
-                </Button>
-            </div>
-        </div>
-    </section>
+    </div>
 </template>

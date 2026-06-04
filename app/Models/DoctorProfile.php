@@ -19,10 +19,21 @@ class DoctorProfile extends BaseModel
 
     public const STATUS_INACTIVE = 'inactive';
 
+    public const GENDER_MALE = 'male';
+
+    public const GENDER_FEMALE = 'female';
+
+    public const COMPENSATION_PERCENTAGE = 'percentage';
+
+    public const COMPENSATION_WEEKLY = 'weekly';
+
+    public const COMPENSATION_MONTHLY = 'monthly';
+
     protected function casts(): array
     {
         return [
             'consultation_duration_minutes' => 'integer',
+            'compensation_value' => 'decimal:2',
             'work_schedule' => 'array',
         ];
     }

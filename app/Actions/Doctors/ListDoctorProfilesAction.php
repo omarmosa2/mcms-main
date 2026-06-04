@@ -27,7 +27,8 @@ class ListDoctorProfilesAction extends BaseAction
             ->forClinic($clinicId)
             ->withoutTrashed()
             ->with([
-                'user:id,clinic_id,name,email',
+                'user:id,clinic_id,name,email,is_active',
+                'user.doctorSchedules:id,clinic_id,doctor_id,day_of_week,start_time,end_time,is_available',
                 'department:id,clinic_id,name,code,is_active',
             ])
             ->orderByDesc('created_at');

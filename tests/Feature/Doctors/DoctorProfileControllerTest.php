@@ -7,6 +7,7 @@ use App\Models\Clinic;
 use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\User;
+use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -55,15 +56,26 @@ class DoctorProfileControllerTest extends TestCase
         ]);
 
         $payload = [
-            'user_id' => $doctor->id,
+            'name' => 'Dr New Account',
+            'username' => 'doctor-new@example.com',
+            'password' => 'password-123',
             'department_id' => $department->id,
+            'gender' => DoctorProfile::GENDER_MALE,
+            'phone' => '+963999000111',
             'license_number' => 'lic-2026-100',
             'specialty' => 'Cardiology',
             'consultation_duration_minutes' => 25,
             'status' => DoctorProfile::STATUS_ACTIVE,
-            'work_schedule' => [
-                'sunday' => ['09:00-13:00'],
-                'monday' => ['10:00-14:00'],
+            'compensation_type' => DoctorProfile::COMPENSATION_PERCENTAGE,
+            'compensation_value' => 40,
+            'working_hours' => [
+                ['day_of_week' => 6, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 0, 'is_active' => true, 'start_time' => '09:00', 'end_time' => '13:00'],
+                ['day_of_week' => 1, 'is_active' => true, 'start_time' => '10:00', 'end_time' => '14:00'],
+                ['day_of_week' => 2, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 3, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 4, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 5, 'is_active' => false, 'start_time' => null, 'end_time' => null],
             ],
             'bio' => 'Senior cardiology consultant.',
         ];
@@ -71,20 +83,38 @@ class DoctorProfileControllerTest extends TestCase
         $response = $this->postJson(route('doctors.store'), $payload);
 
         $response->assertCreated();
-        $response->assertJsonPath('data.user_id', $doctor->id);
         $response->assertJsonPath('data.department_id', $department->id);
         $response->assertJsonPath('data.license_number', 'LIC-2026-100');
         $response->assertJsonPath('data.specialty', 'Cardiology');
 
         $doctorProfileId = (int) $response->json('data.id');
+        $doctorUserId = (int) $response->json('data.user_id');
 
         $this->assertDatabaseHas('doctor_profiles', [
             'id' => $doctorProfileId,
             'clinic_id' => $clinic->id,
-            'user_id' => $doctor->id,
+            'user_id' => $doctorUserId,
             'department_id' => $department->id,
+            'gender' => DoctorProfile::GENDER_MALE,
+            'phone' => '+963999000111',
             'license_number' => 'LIC-2026-100',
             'specialty' => 'Cardiology',
+            'compensation_type' => DoctorProfile::COMPENSATION_PERCENTAGE,
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $doctorUserId,
+            'clinic_id' => $clinic->id,
+            'email' => 'doctor-new@example.com',
+            'is_active' => true,
+        ]);
+
+        $this->assertDatabaseCount('doctor_schedules', 2);
+        $this->assertDatabaseHas('doctor_schedules', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctorUserId,
+            'day_of_week' => 0,
+            'is_available' => true,
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
@@ -106,9 +136,21 @@ class DoctorProfileControllerTest extends TestCase
 
         $response = $this->postJson(route('doctors.store'), [
             'user_id' => $nonDoctorUser->id,
+            'gender' => DoctorProfile::GENDER_MALE,
             'specialty' => 'Family Medicine',
             'consultation_duration_minutes' => 30,
             'status' => DoctorProfile::STATUS_ACTIVE,
+            'compensation_type' => DoctorProfile::COMPENSATION_WEEKLY,
+            'compensation_value' => 500,
+            'working_hours' => [
+                ['day_of_week' => 6, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 0, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 1, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 2, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 3, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 4, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 5, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+            ],
         ]);
 
         $response->assertStatus(422);
@@ -280,11 +322,27 @@ class DoctorProfileControllerTest extends TestCase
 
         $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
             'user_id' => $replacementDoctor->id,
+            'name' => 'Updated Doctor Name',
+            'username' => 'updated-doctor@example.com',
+            'password' => '',
             'department_id' => $department->id,
+            'gender' => DoctorProfile::GENDER_FEMALE,
+            'phone' => '+963944222333',
             'specialty' => 'Updated Specialty',
             'consultation_duration_minutes' => 40,
             'status' => DoctorProfile::STATUS_ON_LEAVE,
             'license_number' => 'upd-777',
+            'compensation_type' => DoctorProfile::COMPENSATION_MONTHLY,
+            'compensation_value' => 2500,
+            'working_hours' => [
+                ['day_of_week' => 6, 'is_active' => true, 'start_time' => '09:00', 'end_time' => '17:00'],
+                ['day_of_week' => 0, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 1, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 2, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 3, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 4, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 5, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+            ],
             'bio' => 'Updated bio',
         ]);
 
@@ -300,9 +358,25 @@ class DoctorProfileControllerTest extends TestCase
             'clinic_id' => $clinic->id,
             'user_id' => $replacementDoctor->id,
             'department_id' => $department->id,
+            'gender' => DoctorProfile::GENDER_FEMALE,
+            'phone' => '+963944222333',
             'specialty' => 'Updated Specialty',
             'status' => DoctorProfile::STATUS_ON_LEAVE,
             'license_number' => 'UPD-777',
+            'compensation_type' => DoctorProfile::COMPENSATION_MONTHLY,
+        ]);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $replacementDoctor->id,
+            'name' => 'Updated Doctor Name',
+            'email' => 'updated-doctor@example.com',
+        ]);
+
+        $this->assertDatabaseHas('doctor_schedules', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $replacementDoctor->id,
+            'day_of_week' => 6,
+            'is_available' => true,
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
@@ -333,6 +407,43 @@ class DoctorProfileControllerTest extends TestCase
             'clinic_id' => $clinic->id,
             'user_id' => $user->id,
             'action' => 'doctor_profiles.delete',
+            'auditable_id' => $profile->id,
+        ]);
+    }
+
+    public function test_destroy_archives_doctor_with_visit_history(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $user = $this->authenticateForClinic($clinic);
+
+        $doctor = $this->createDoctorUser($clinic);
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'status' => DoctorProfile::STATUS_ACTIVE,
+        ]);
+
+        Visit::factory()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+        ]);
+
+        $response = $this->deleteJson(route('doctors.destroy', ['doctorProfileId' => $profile->id]));
+
+        $response->assertNoContent();
+        $this->assertNotSoftDeleted($profile);
+        $this->assertDatabaseHas('doctor_profiles', [
+            'id' => $profile->id,
+            'status' => DoctorProfile::STATUS_INACTIVE,
+        ]);
+        $this->assertDatabaseHas('users', [
+            'id' => $doctor->id,
+            'is_active' => false,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'clinic_id' => $clinic->id,
+            'user_id' => $user->id,
+            'action' => 'doctor_profiles.archive',
             'auditable_id' => $profile->id,
         ]);
     }

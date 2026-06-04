@@ -4,8 +4,10 @@ namespace App\Actions\Doctors;
 
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
+use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Department;
 use App\Models\DoctorProfile;
+use App\Models\DoctorSchedule;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 class UpdateDoctorProfileAction extends BaseAction
 {
-    public function __construct(private LogAuditAction $logAuditAction) {}
+    public function __construct(
+        private LogAuditAction $logAuditAction,
+        private AssignUserRoleAction $assignUserRoleAction,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -40,7 +45,7 @@ class UpdateDoctorProfileAction extends BaseAction
 
             $doctorProfile = $query->findOrFail($doctorProfileId);
 
-            if (array_key_exists('user_id', $payload)) {
+            if (array_key_exists('user_id', $payload) && ! empty($payload['user_id'])) {
                 $doctorUserId = (int) $payload['user_id'];
                 $this->ensureDoctorScopeCanManageUser($doctorScopeUserId, $doctorUserId);
                 $this->ensureDoctorBelongsToClinic($clinicId, $doctorUserId);
@@ -50,19 +55,26 @@ class UpdateDoctorProfileAction extends BaseAction
                 $this->ensureDepartmentBelongsToClinicIfProvided($clinicId, $payload['department_id']);
             }
 
-            $oldValues = $doctorProfile->only([
-                'user_id',
-                'department_id',
-                'license_number',
-                'specialty',
-                'consultation_duration_minutes',
-                'status',
-                'work_schedule',
-                'bio',
-            ]);
+            $oldValues = $doctorProfile->only($this->auditedProfileFields());
+            $oldUserId = (int) $doctorProfile->user_id;
 
-            $doctorProfile->fill($this->normalizePayload($payload));
+            $doctorProfile->fill($this->normalizeProfilePayload($payload));
             $doctorProfile->save();
+
+            $doctorUser = User::query()
+                ->where('clinic_id', $clinicId)
+                ->findOrFail((int) $doctorProfile->user_id);
+
+            $this->updateDoctorUser($doctorUser, $payload);
+            $this->assignUserRoleAction->handle($doctorUser, 'doctor', $userId);
+
+            if (array_key_exists('working_hours', $payload)) {
+                $this->syncWorkingHours($clinicId, (int) $doctorProfile->user_id, $payload['working_hours']);
+
+                if ($oldUserId !== (int) $doctorProfile->user_id) {
+                    $this->syncWorkingHours($clinicId, $oldUserId, []);
+                }
+            }
 
             $this->logAuditAction->handle(
                 clinicId: $clinicId,
@@ -70,20 +82,12 @@ class UpdateDoctorProfileAction extends BaseAction
                 action: 'doctor_profiles.update',
                 auditable: $doctorProfile,
                 oldValues: $oldValues,
-                newValues: $doctorProfile->only([
-                    'user_id',
-                    'department_id',
-                    'license_number',
-                    'specialty',
-                    'consultation_duration_minutes',
-                    'status',
-                    'work_schedule',
-                    'bio',
-                ]),
+                newValues: $doctorProfile->only($this->auditedProfileFields()),
             );
 
             return $doctorProfile->load([
-                'user:id,clinic_id,name,email',
+                'user:id,clinic_id,name,email,is_active',
+                'user.doctorSchedules:id,clinic_id,doctor_id,day_of_week,start_time,end_time,is_available',
                 'department:id,clinic_id,name,code,is_active',
             ]);
         });
@@ -93,16 +97,25 @@ class UpdateDoctorProfileAction extends BaseAction
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
-    private function normalizePayload(array $payload): array
+    private function normalizeProfilePayload(array $payload): array
     {
         $normalized = [];
 
-        if (array_key_exists('user_id', $payload)) {
+        if (array_key_exists('user_id', $payload) && ! empty($payload['user_id'])) {
             $normalized['user_id'] = (int) $payload['user_id'];
         }
 
         if (array_key_exists('department_id', $payload)) {
             $normalized['department_id'] = $this->normalizeNullableInteger($payload['department_id']);
+        }
+
+        if (array_key_exists('gender', $payload)) {
+            $normalized['gender'] = (string) $payload['gender'];
+        }
+
+        if (array_key_exists('phone', $payload)) {
+            $phone = trim((string) ($payload['phone'] ?? ''));
+            $normalized['phone'] = $phone !== '' ? $phone : null;
         }
 
         if (array_key_exists('license_number', $payload)) {
@@ -115,15 +128,19 @@ class UpdateDoctorProfileAction extends BaseAction
         }
 
         if (array_key_exists('consultation_duration_minutes', $payload)) {
-            $normalized['consultation_duration_minutes'] = (int) $payload['consultation_duration_minutes'];
+            $normalized['consultation_duration_minutes'] = (int) ($payload['consultation_duration_minutes'] ?? 30);
         }
 
         if (array_key_exists('status', $payload)) {
-            $normalized['status'] = (string) $payload['status'];
+            $normalized['status'] = (string) ($payload['status'] ?? DoctorProfile::STATUS_ACTIVE);
         }
 
-        if (array_key_exists('work_schedule', $payload)) {
-            $normalized['work_schedule'] = $this->normalizeWorkSchedule($payload['work_schedule']);
+        if (array_key_exists('compensation_type', $payload)) {
+            $normalized['compensation_type'] = (string) $payload['compensation_type'];
+        }
+
+        if (array_key_exists('compensation_value', $payload)) {
+            $normalized['compensation_value'] = (float) $payload['compensation_value'];
         }
 
         if (array_key_exists('bio', $payload)) {
@@ -134,6 +151,61 @@ class UpdateDoctorProfileAction extends BaseAction
         return $normalized;
     }
 
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function updateDoctorUser(User $doctorUser, array $payload): void
+    {
+        $updates = [];
+
+        if (array_key_exists('name', $payload)) {
+            $updates['name'] = trim((string) $payload['name']);
+        }
+
+        if (array_key_exists('username', $payload)) {
+            $updates['email'] = mb_strtolower(trim((string) $payload['username']));
+        }
+
+        if (! empty($payload['password'])) {
+            $updates['password'] = (string) $payload['password'];
+        }
+
+        if (array_key_exists('is_active', $payload)) {
+            $updates['is_active'] = (bool) $payload['is_active'];
+        }
+
+        if ($updates !== []) {
+            $doctorUser->forceFill($updates)->save();
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $workingHours
+     */
+    private function syncWorkingHours(int $clinicId, int $doctorUserId, array $workingHours): void
+    {
+        DoctorSchedule::query()
+            ->withTrashed()
+            ->where('clinic_id', $clinicId)
+            ->where('doctor_id', $doctorUserId)
+            ->forceDelete();
+
+        foreach ($workingHours as $day) {
+            if (! filter_var($day['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                continue;
+            }
+
+            DoctorSchedule::query()->create([
+                'clinic_id' => $clinicId,
+                'doctor_id' => $doctorUserId,
+                'day_of_week' => (int) $day['day_of_week'],
+                'start_time' => (string) $day['start_time'],
+                'end_time' => (string) $day['end_time'],
+                'is_available' => true,
+            ]);
+        }
+    }
+
     private function normalizeNullableInteger(mixed $value): ?int
     {
         if ($value === null || $value === '') {
@@ -141,30 +213,6 @@ class UpdateDoctorProfileAction extends BaseAction
         }
 
         return (int) $value;
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function normalizeWorkSchedule(mixed $value): ?array
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        if (is_array($value)) {
-            return $value === [] ? null : $value;
-        }
-
-        if (is_string($value)) {
-            $decoded = json_decode($value, true);
-
-            if (is_array($decoded)) {
-                return $decoded === [] ? null : $decoded;
-            }
-        }
-
-        return null;
     }
 
     private function ensureDoctorScopeCanManageUser(?int $doctorScopeUserId, int $doctorUserId): void
@@ -212,8 +260,28 @@ class UpdateDoctorProfileAction extends BaseAction
 
         if (! $departmentExists) {
             throw ValidationException::withMessages([
-                'department_id' => 'The selected department is not available for this clinic.',
+                'department_id' => 'The selected clinic is not available.',
             ]);
         }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function auditedProfileFields(): array
+    {
+        return [
+            'user_id',
+            'department_id',
+            'gender',
+            'phone',
+            'license_number',
+            'specialty',
+            'consultation_duration_minutes',
+            'status',
+            'compensation_type',
+            'compensation_value',
+            'bio',
+        ];
     }
 }

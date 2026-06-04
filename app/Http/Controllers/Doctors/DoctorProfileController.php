@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Doctors\StoreDoctorProfileRequest;
 use App\Http\Requests\Doctors\UpdateDoctorProfileRequest;
 use App\Http\Resources\DoctorProfileResource;
+use App\Models\Clinic;
 use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\User;
@@ -61,6 +62,7 @@ class DoctorProfileController extends Controller
 
         return Inertia::render('doctors/Index', [
             'doctor_profiles' => $doctorProfilesResource->response()->getData(true),
+            'clinic' => $this->resolveClinicOption($clinicId),
             'doctors' => $this->resolveDoctorOptions($clinicId, $doctorScopeUserId),
             'departments' => $this->resolveDepartmentOptions($clinicId),
             'status_options' => $this->statusOptions(),
@@ -411,6 +413,21 @@ class DoctorProfileController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array{id: int, name: string|null}
+     */
+    private function resolveClinicOption(int $clinicId): array
+    {
+        $clinic = Clinic::query()
+            ->select(['id', 'name'])
+            ->findOrFail($clinicId);
+
+        return [
+            'id' => (int) $clinic->id,
+            'name' => $clinic->name,
+        ];
     }
 
     /**

@@ -20,7 +20,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-#[Fillable(['clinic_id', 'name', 'email', 'password'])]
+#[Fillable(['clinic_id', 'name', 'email', 'password', 'is_active'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -48,6 +48,7 @@ class User extends Authenticatable
             'clinic_id' => 'integer',
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',
             'notification_preferences' => 'array',
         ];
@@ -91,6 +92,11 @@ class User extends Authenticatable
     public function doctorProfile(): HasOne
     {
         return $this->hasOne(DoctorProfile::class);
+    }
+
+    public function doctorSchedules(): HasMany
+    {
+        return $this->hasMany(DoctorSchedule::class, 'doctor_id');
     }
 
     public function issuedInvoices(): HasMany

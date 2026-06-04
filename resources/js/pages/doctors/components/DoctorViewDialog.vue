@@ -1,166 +1,116 @@
 <script setup lang="ts">
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import type { DoctorProfile } from './types';
 
-type DoctorProfileStatus = 'active' | 'on_leave' | 'inactive';
-
-type DoctorOption = {
-    id: number;
-    name: string;
-    email: string | null;
-};
-
-type DepartmentOption = {
-    id: number;
-    name: string;
-    code: string | null;
-    is_active: boolean;
-};
-
-type DoctorProfile = {
-    id: number;
-    clinic_id: number;
-    user_id: number;
-    department_id: number | null;
-    license_number: string | null;
-    specialty: string;
-    consultation_duration_minutes: number;
-    status: DoctorProfileStatus;
-    work_schedule: Record<string, unknown> | null;
-    bio: string | null;
-    user?: DoctorOption | null;
-    department?: DepartmentOption | null;
-    created_at: string | null;
-    updated_at: string | null;
-};
-
-const props = defineProps<{
+defineProps<{
     profile: DoctorProfile | null;
 }>();
 
 const emit = defineEmits<{ close: [] }>();
 
-const statusLabels: Record<DoctorProfileStatus, string> = {
-    active: 'نشط',
-    on_leave: 'في إجازة',
-    inactive: 'غير نشط',
+const days: Record<number, string> = {
+    6: 'السبت',
+    0: 'الأحد',
+    1: 'الإثنين',
+    2: 'الثلاثاء',
+    3: 'الأربعاء',
+    4: 'الخميس',
+    5: 'الجمعة',
 };
 
-const formatStatus = (status: DoctorProfileStatus): string => {
-    return statusLabels[status] ?? status.replace('_', ' ');
-};
-
-const doctorLabel = (profile: DoctorProfile): string => {
-    return profile.user?.name ?? `Doctor #${profile.user_id}`;
-};
-
-const departmentLabel = (profile: DoctorProfile): string => {
-    if (profile.department === null || profile.department === undefined) {
-        return 'غير معين';
+const genderLabel = (profile: DoctorProfile): string => {
+    if (profile.gender === 'female') {
+        return 'أنثى';
     }
 
-    return profile.department.code !== null
-        ? `${profile.department.name} (${profile.department.code})`
-        : profile.department.name;
-};
-
-const stringifyWorkSchedule = (workSchedule: Record<string, unknown> | null): string => {
-    if (workSchedule === null) {
-        return '';
+    if (profile.gender === 'male') {
+        return 'ذكر';
     }
 
-    return JSON.stringify(workSchedule, null, 2);
+    return '-';
+};
+
+const compensationTypeLabel = (profile: DoctorProfile): string => {
+    if (profile.compensation_type === 'weekly') {
+        return 'أجر أسبوعي';
+    }
+
+    if (profile.compensation_type === 'monthly') {
+        return 'أجر شهري';
+    }
+
+    return profile.compensation_type === 'percentage' ? 'نسبة مئوية' : '-';
 };
 </script>
 
 <template>
-    <Dialog :open="profile !== null" @update:open="(open) => !open && emit('close')">
-        <DialogContent class="sm:max-w-2xl">
-            <DialogHeader>
-                <DialogTitle>
-                    {{ profile ? doctorLabel(profile) : 'تفاصيل ملف الطبيب' }}
+    <Dialog
+        :open="profile !== null"
+        @update:open="(open) => !open && emit('close')"
+    >
+        <DialogContent class="max-w-3xl rounded-xl bg-white" dir="rtl">
+            <DialogHeader class="text-right">
+                <DialogTitle class="text-2xl font-bold text-slate-900">
+                    {{ profile?.user?.name ?? 'تفاصيل الطبيب' }}
                 </DialogTitle>
-                <DialogDescription>
-                    تفاصيل الملف، رابط القسم، وجدول العمل.
-                </DialogDescription>
             </DialogHeader>
 
-            <dl
-                v-if="profile"
-                class="grid gap-3 rounded-xl border border-border/70 bg-background/55 p-4 sm:grid-cols-2"
-            >
-                <div class="space-y-1">
-                    <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
-                        التخصص
-                    </dt>
-                    <dd class="text-sm">
-                        {{ profile.specialty }}
-                    </dd>
+            <div v-if="profile" class="space-y-4">
+                <div class="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-3">
+                    <div>
+                        <p class="text-xs text-slate-500">الجنس</p>
+                        <p class="font-semibold">{{ genderLabel(profile) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">الاختصاص</p>
+                        <p class="font-semibold">{{ profile.specialty }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">العيادة</p>
+                        <p class="font-semibold">{{ profile.department?.name ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">رقم الهاتف</p>
+                        <p class="font-semibold">{{ profile.phone ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">اسم المستخدم</p>
+                        <p class="font-semibold">{{ profile.user?.email ?? '-' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">حالة الحساب</p>
+                        <p class="font-semibold">{{ profile.user?.is_active ? 'نشط' : 'غير نشط' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">نوع الأجر</p>
+                        <p class="font-semibold">{{ compensationTypeLabel(profile) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">قيمة الأجر</p>
+                        <p class="font-semibold">{{ profile.compensation_value ?? '-' }}</p>
+                    </div>
                 </div>
 
-                <div class="space-y-1">
-                    <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
-                        الحالة
-                    </dt>
-                    <dd class="text-sm capitalize">
-                        {{ formatStatus(profile.status) }}
-                    </dd>
+                <div class="rounded-lg border border-slate-200 bg-white p-4">
+                    <h3 class="mb-3 text-sm font-bold text-slate-900">دوام الطبيب</h3>
+                    <div class="grid gap-2 md:grid-cols-2">
+                        <div
+                            v-for="day in profile.working_hours"
+                            :key="day.day_of_week"
+                            class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
+                        >
+                            <span class="font-semibold">{{ days[day.day_of_week] }}</span>
+                            <span class="text-sm text-slate-600">
+                                {{ day.is_active ? `${day.start_time?.slice(0, 5)} - ${day.end_time?.slice(0, 5)}` : 'لا يوجد دوام' }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="space-y-1">
-                    <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
-                        القسم
-                    </dt>
-                    <dd class="text-sm">
-                        {{ departmentLabel(profile) }}
-                    </dd>
-                </div>
-
-                <div class="space-y-1">
-                    <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
-                        مدة الاستشارة
-                    </dt>
-                    <dd class="text-sm">
-                        {{ profile.consultation_duration_minutes }} دقيقة
-                    </dd>
-                </div>
-
-                <div class="space-y-1 sm:col-span-2">
-                    <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
-                        رقم الترخيص
-                    </dt>
-                    <dd class="text-sm">
-                        {{ profile.license_number ?? '-' }}
-                    </dd>
-                </div>
-
-                <div class="space-y-1 sm:col-span-2">
-                    <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
-                        جدول العمل
-                    </dt>
-                    <dd class="rounded-lg border border-border/60 bg-background/60 p-3">
-                        <pre class="overflow-x-auto text-xs text-muted-foreground">{{ stringifyWorkSchedule(profile.work_schedule) || '-' }}</pre>
-                    </dd>
-                </div>
-
-                <div class="space-y-1 sm:col-span-2">
-                    <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">
-                        السيرة الذاتية
-                    </dt>
-                    <dd class="text-sm leading-6 text-muted-foreground">
-                        {{ profile.bio ?? 'لا توجد سيرة ذاتية' }}
-                    </dd>
-                </div>
-            </dl>
+            </div>
 
             <DialogFooter>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    @click="emit('close')"
-                >
-                    إغلاق
-                </Button>
+                <Button type="button" variant="outline" @click="emit('close')">إغلاق</Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>

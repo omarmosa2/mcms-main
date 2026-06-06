@@ -21,66 +21,69 @@ vi.mock('lucide-vue-next', () => ({
     },
 }));
 
-const mountModal = () => mount(ClinicFormModal, {
-    props: {
-        open: true,
-        department: null,
-    },
-    global: {
-        stubs: {
-            Button: {
-                props: ['type'],
-                template: '<button :type="type ?? \'button\'"><slot /></button>',
-            },
-            ClinicWorkingHoursSelector: {
-                template: '<div data-testid="working-hours-selector" />',
-            },
-            Dialog: {
-                emits: ['update:open'],
-                props: ['open'],
-                template: `
+const mountModal = () =>
+    mount(ClinicFormModal, {
+        props: {
+            open: true,
+            department: null,
+        },
+        global: {
+            stubs: {
+                Button: {
+                    props: ['type'],
+                    template:
+                        '<button :type="type ?? \'button\'"><slot /></button>',
+                },
+                ClinicWorkingHoursSelector: {
+                    template: '<div data-testid="working-hours-selector" />',
+                },
+                Dialog: {
+                    emits: ['update:open'],
+                    props: ['open'],
+                    template: `
                     <div data-testid="dialog">
                         <button type="button" data-testid="dialog-close" @click="$emit('update:open', false)">close</button>
                         <slot />
                     </div>
                 `,
-            },
-            DialogContent: {
-                emits: ['escapeKeyDown', 'interactOutside'],
-                template: `
+                },
+                DialogContent: {
+                    emits: ['escapeKeyDown', 'interactOutside'],
+                    template: `
                     <div data-testid="dialog-content">
-                        <button type="button" data-testid="outside-close" @click="$emit('interactOutside', new Event('interactOutside'))">outside</button>
-                        <button type="button" data-testid="escape-close" @click="$emit('escapeKeyDown', new Event('escapeKeyDown'))">escape</button>
+                        <button type="button" data-testid="outside-close" @click="$emit('interactOutside', {})">outside</button>
+                        <button type="button" data-testid="escape-close" @click="$emit('escapeKeyDown', {})">escape</button>
                         <slot />
                     </div>
                 `,
-            },
-            DialogDescription: {
-                template: '<p><slot /></p>',
-            },
-            DialogFooter: {
-                template: '<footer><slot /></footer>',
-            },
-            DialogHeader: {
-                template: '<header><slot /></header>',
-            },
-            DialogTitle: {
-                template: '<h2><slot /></h2>',
-            },
-            Input: {
-                emits: ['update:modelValue'],
-                props: ['modelValue'],
-                template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
-            },
-            InputError: {
-                template: '<p />',
-            },
-            Label: {
-                template: '<label><slot /></label>',
+                },
+                DialogDescription: {
+                    template: '<p><slot /></p>',
+                },
+                DialogFooter: {
+                    template: '<footer><slot /></footer>',
+                },
+                DialogHeader: {
+                    template: '<header><slot /></header>',
+                },
+                DialogTitle: {
+                    template: '<h2><slot /></h2>',
+                },
+                Input: {
+                    emits: ['update:modelValue'],
+                    props: ['modelValue'],
+                    template:
+                        '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+                },
+                InputError: {
+                    template: '<p />',
+                },
+                Label: {
+                    template: '<label><slot /></label>',
+                },
             },
         },
-    },
-});
+    });
 
 describe('ClinicFormModal', () => {
     it('closes when the dialog requests a close', async () => {

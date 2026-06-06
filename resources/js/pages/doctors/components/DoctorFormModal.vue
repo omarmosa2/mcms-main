@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import { KeyRound, Save, UserPlus, X } from 'lucide-vue-next';
-import { computed, watch } from 'vue';
-import { store, update } from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
+import { computed, ref, watch } from 'vue';
+import {
+    store,
+    update,
+} from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,7 +19,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import DoctorWorkingHoursSelector from './DoctorWorkingHoursSelector.vue';
-import type { ClinicOption, CompensationType, DepartmentOption, DoctorGender, DoctorProfile, WorkingHour } from './types';
+import type {
+    ClinicOption,
+    ClinicWorkingHour,
+    CompensationType,
+    DepartmentOption,
+    DoctorGender,
+    DoctorProfile,
+    WorkingHour,
+} from './types';
 
 const props = defineProps<{
     open: boolean;
@@ -29,6 +40,16 @@ const emit = defineEmits<{
     'update:open': [value: boolean];
     saved: [];
 }>();
+
+const clinicDayToDoctorDay: Record<ClinicWorkingHour['day_of_week'], number> = {
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6,
+};
 
 type DoctorForm = {
     name: string;
@@ -46,41 +67,88 @@ type DoctorForm = {
     working_hours: WorkingHour[];
 };
 
-const defaultWorkingHours = (): WorkingHour[] => [
-    { day_of_week: 6, is_active: false, start_time: null, end_time: null },
-    { day_of_week: 0, is_active: false, start_time: null, end_time: null },
-    { day_of_week: 1, is_active: false, start_time: null, end_time: null },
-    { day_of_week: 2, is_active: false, start_time: null, end_time: null },
-    { day_of_week: 3, is_active: false, start_time: null, end_time: null },
-    { day_of_week: 4, is_active: false, start_time: null, end_time: null },
-    { day_of_week: 5, is_active: false, start_time: null, end_time: null },
-];
-
 const normalizeTime = (value: string | null): string | null => {
     return value === null ? null : value.slice(0, 5);
 };
 
-const workingHoursForProfile = (profile: DoctorProfile | null): WorkingHour[] => {
-    const defaults = defaultWorkingHours();
-
-    if (profile === null || profile.working_hours.length === 0) {
-        return defaults;
+const departmentForId = (
+    departmentId: number | '' | null | undefined,
+): DepartmentOption | null => {
+    if (
+        departmentId === null ||
+        departmentId === undefined ||
+        departmentId === ''
+    ) {
+        return null;
     }
 
-    return defaults.map((day) => {
-        const current = profile.working_hours.find((item) => item.day_of_week === day.day_of_week);
+    return (
+        props.departments.find(
+            (department) => department.id === Number(departmentId),
+        ) ?? null
+    );
+};
 
-        if (current === undefined) {
-            return day;
-        }
+const isWithinClinicHours = (
+    doctorStartTime: string | null,
+    doctorEndTime: string | null,
+    clinicStartTime: string | null,
+    clinicEndTime: string | null,
+): boolean => {
+    if (
+        doctorStartTime === null ||
+        doctorEndTime === null ||
+        clinicStartTime === null ||
+        clinicEndTime === null
+    ) {
+        return false;
+    }
 
-        return {
-            day_of_week: day.day_of_week,
-            is_active: current.is_active,
-            start_time: normalizeTime(current.start_time),
-            end_time: normalizeTime(current.end_time),
-        };
-    });
+    return (
+        doctorStartTime >= clinicStartTime &&
+        doctorEndTime <= clinicEndTime &&
+        doctorEndTime > doctorStartTime
+    );
+};
+
+const workingHoursForDepartment = (
+    department: DepartmentOption | null,
+    profile: DoctorProfile | null = null,
+): WorkingHour[] => {
+    if (department === null) {
+        return [];
+    }
+
+    return department.working_hours
+        .filter(
+            (day) =>
+                day.is_active &&
+                day.start_time !== null &&
+                day.end_time !== null,
+        )
+        .map((clinicDay) => {
+            const dayOfWeek = clinicDayToDoctorDay[clinicDay.day_of_week];
+            const current = profile?.working_hours.find(
+                (item) => item.day_of_week === dayOfWeek,
+            );
+            const currentStartTime = normalizeTime(current?.start_time ?? null);
+            const currentEndTime = normalizeTime(current?.end_time ?? null);
+            const canUseCurrentHours =
+                current?.is_active === true &&
+                isWithinClinicHours(
+                    currentStartTime,
+                    currentEndTime,
+                    normalizeTime(clinicDay.start_time),
+                    normalizeTime(clinicDay.end_time),
+                );
+
+            return {
+                day_of_week: dayOfWeek,
+                is_active: canUseCurrentHours,
+                start_time: canUseCurrentHours ? currentStartTime : null,
+                end_time: canUseCurrentHours ? currentEndTime : null,
+            };
+        });
 };
 
 const defaultsFor = (profile: DoctorProfile | null): DoctorForm => ({
@@ -94,16 +162,25 @@ const defaultsFor = (profile: DoctorProfile | null): DoctorForm => ({
     status: profile?.status ?? 'active',
     is_active: profile?.user?.is_active ?? true,
     compensation_type: profile?.compensation_type ?? 'percentage',
-    compensation_value: profile?.compensation_value !== null && profile?.compensation_value !== undefined
-        ? String(Number(profile.compensation_value))
-        : '',
+    compensation_value:
+        profile?.compensation_value !== null &&
+        profile?.compensation_value !== undefined
+            ? String(Number(profile.compensation_value))
+            : '',
     consultation_duration_minutes: profile?.consultation_duration_minutes ?? 30,
-    working_hours: workingHoursForProfile(profile),
+    working_hours: workingHoursForDepartment(
+        departmentForId(profile?.department_id),
+        profile,
+    ),
 });
 
 const form = useForm<DoctorForm>(defaultsFor(props.profile));
+const isHydratingForm = ref(false);
 
 const isEditing = computed(() => props.profile !== null);
+const selectedDepartment = computed<DepartmentOption | null>(() =>
+    departmentForId(form.department_id),
+);
 const compensationLabel = computed(() => {
     if (form.compensation_type === 'percentage') {
         return 'نسبة الطبيب (%)';
@@ -119,12 +196,28 @@ const compensationLabel = computed(() => {
 watch(
     () => [props.open, props.profile?.id],
     () => {
-        if (! props.open) {
+        if (!props.open) {
             return;
         }
 
+        isHydratingForm.value = true;
         form.defaults(defaultsFor(props.profile));
         form.reset();
+        form.clearErrors();
+        isHydratingForm.value = false;
+    },
+);
+
+watch(
+    () => form.department_id,
+    () => {
+        if (!props.open || isHydratingForm.value) {
+            return;
+        }
+
+        form.working_hours = workingHoursForDepartment(
+            selectedDepartment.value,
+        );
         form.clearErrors();
     },
 );
@@ -159,17 +252,20 @@ const submit = (): void => {
 </script>
 
 <template>
-    <Dialog
-        :open="open"
-        @update:open="emit('update:open', $event)"
-    >
-        <DialogContent class="max-h-[92vh] max-w-4xl overflow-hidden rounded-xl bg-white p-0" dir="rtl">
-            <DialogHeader class="border-b border-slate-100 px-6 py-5 text-right">
+    <Dialog :open="open" @update:open="emit('update:open', $event)">
+        <DialogContent
+            class="max-h-[92vh] max-w-4xl overflow-hidden rounded-xl bg-white p-0"
+            dir="rtl"
+        >
+            <DialogHeader
+                class="border-b border-slate-100 px-6 py-5 text-right"
+            >
                 <DialogTitle class="text-2xl font-bold text-slate-900">
                     {{ isEditing ? 'تعديل بيانات الطبيب' : 'إضافة طبيب جديد' }}
                 </DialogTitle>
                 <DialogDescription class="text-slate-500">
-                    إدارة بيانات الطبيب والحساب والدوام ونظام الأجر من نموذج واحد.
+                    إدارة بيانات الطبيب والحساب والدوام ونظام الأجر من نموذج
+                    واحد.
                 </DialogDescription>
             </DialogHeader>
 
@@ -178,17 +274,27 @@ const submit = (): void => {
                 @submit.prevent="submit"
             >
                 <section class="space-y-3">
-                    <h3 class="text-sm font-bold text-slate-900">البيانات الأساسية</h3>
+                    <h3 class="text-sm font-bold text-slate-900">
+                        البيانات الأساسية
+                    </h3>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="grid gap-2">
                             <Label for="doctor_name">الاسم الكامل</Label>
-                            <Input id="doctor_name" v-model="form.name" class="h-11 rounded-lg" />
+                            <Input
+                                id="doctor_name"
+                                v-model="form.name"
+                                class="h-11 rounded-lg"
+                            />
                             <InputError :message="form.errors.name" />
                         </div>
 
                         <div class="grid gap-2">
                             <Label for="doctor_gender">الجنس</Label>
-                            <select id="doctor_gender" v-model="form.gender" class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm">
+                            <select
+                                id="doctor_gender"
+                                v-model="form.gender"
+                                class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm"
+                            >
                                 <option value="male">ذكر</option>
                                 <option value="female">أنثى</option>
                             </select>
@@ -197,20 +303,36 @@ const submit = (): void => {
 
                         <div class="grid gap-2">
                             <Label for="doctor_specialty">الاختصاص</Label>
-                            <Input id="doctor_specialty" v-model="form.specialty" class="h-11 rounded-lg" />
+                            <Input
+                                id="doctor_specialty"
+                                v-model="form.specialty"
+                                class="h-11 rounded-lg"
+                            />
                             <InputError :message="form.errors.specialty" />
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="doctor_phone">رقم الهاتف (اختياري)</Label>
-                            <Input id="doctor_phone" v-model="form.phone" class="h-11 rounded-lg" />
+                            <Label for="doctor_phone"
+                                >رقم الهاتف (اختياري)</Label
+                            >
+                            <Input
+                                id="doctor_phone"
+                                v-model="form.phone"
+                                class="h-11 rounded-lg"
+                            />
                             <InputError :message="form.errors.phone" />
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="doctor_department">العيادة التابعة للطبيب</Label>
-                            <select id="doctor_department" v-model="form.department_id" class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm">
-                                <option value="">بدون عيادة داخلية</option>
+                            <Label for="doctor_department"
+                                >العيادة التابعة للطبيب</Label
+                            >
+                            <select
+                                id="doctor_department"
+                                v-model="form.department_id"
+                                class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm"
+                            >
+                                <option value="">يرجى اختيار العيادة</option>
                                 <option
                                     v-for="department in departments"
                                     :key="department.id"
@@ -224,7 +346,12 @@ const submit = (): void => {
 
                         <div class="grid gap-2">
                             <Label for="doctor_clinic">العيادة الرئيسية</Label>
-                            <Input id="doctor_clinic" :model-value="clinic.name ?? '-'" readonly class="h-11 rounded-lg bg-slate-100" />
+                            <Input
+                                id="doctor_clinic"
+                                :model-value="clinic.name ?? '-'"
+                                readonly
+                                class="h-11 rounded-lg bg-slate-100"
+                            />
                         </div>
                     </div>
                 </section>
@@ -232,17 +359,31 @@ const submit = (): void => {
                 <DoctorWorkingHoursSelector
                     v-model="form.working_hours"
                     :errors="form.errors"
+                    :clinic-working-hours="
+                        selectedDepartment?.working_hours ?? []
+                    "
+                    :has-selected-department="selectedDepartment !== null"
                 />
 
-                <section class="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+                <section
+                    class="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+                >
                     <div class="flex items-center gap-2">
                         <KeyRound class="size-4 text-sky-500" />
-                        <h3 class="text-sm font-bold text-slate-900">بيانات الحساب</h3>
+                        <h3 class="text-sm font-bold text-slate-900">
+                            بيانات الحساب
+                        </h3>
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="grid gap-2">
                             <Label for="doctor_username">اسم المستخدم</Label>
-                            <Input id="doctor_username" v-model="form.username" type="email" class="h-11 rounded-lg" placeholder="doctor@example.com" />
+                            <Input
+                                id="doctor_username"
+                                v-model="form.username"
+                                type="email"
+                                class="h-11 rounded-lg"
+                                placeholder="doctor@example.com"
+                            />
                             <InputError :message="form.errors.username" />
                         </div>
 
@@ -253,7 +394,9 @@ const submit = (): void => {
                                 v-model="form.password"
                                 type="password"
                                 class="h-11 rounded-lg"
-                                :placeholder="isEditing ? 'اتركها فارغة بدون تغيير' : ''"
+                                :placeholder="
+                                    isEditing ? 'اتركها فارغة بدون تغيير' : ''
+                                "
                             />
                             <InputError :message="form.errors.password" />
                         </div>
@@ -263,43 +406,88 @@ const submit = (): void => {
                             class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:col-span-2"
                         >
                             <span>
-                                <span class="block text-sm font-semibold text-slate-900">حالة الحساب</span>
-                                <span class="block text-xs text-slate-500">{{ form.is_active ? 'نشط' : 'غير نشط' }}</span>
+                                <span
+                                    class="block text-sm font-semibold text-slate-900"
+                                    >حالة الحساب</span
+                                >
+                                <span class="block text-xs text-slate-500">{{
+                                    form.is_active ? 'نشط' : 'غير نشط'
+                                }}</span>
                             </span>
-                            <input v-model="form.is_active" type="checkbox" class="size-5 accent-sky-500" />
+                            <input
+                                v-model="form.is_active"
+                                type="checkbox"
+                                class="size-5 accent-sky-500"
+                            />
                         </label>
                     </div>
                 </section>
 
-                <section class="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-                    <h3 class="text-sm font-bold text-slate-900">نظام أجر الطبيب</h3>
+                <section
+                    class="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+                >
+                    <h3 class="text-sm font-bold text-slate-900">
+                        نظام أجر الطبيب
+                    </h3>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="grid gap-2">
-                            <Label for="doctor_compensation_type">نوع أجر الطبيب</Label>
-                            <select id="doctor_compensation_type" v-model="form.compensation_type" class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm">
+                            <Label for="doctor_compensation_type"
+                                >نوع أجر الطبيب</Label
+                            >
+                            <select
+                                id="doctor_compensation_type"
+                                v-model="form.compensation_type"
+                                class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm"
+                            >
                                 <option value="percentage">نسبة مئوية</option>
                                 <option value="weekly">أجر أسبوعي</option>
                                 <option value="monthly">أجر شهري</option>
                             </select>
-                            <InputError :message="form.errors.compensation_type" />
+                            <InputError
+                                :message="form.errors.compensation_type"
+                            />
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="doctor_compensation_value">{{ compensationLabel }}</Label>
-                            <Input id="doctor_compensation_value" v-model="form.compensation_value" type="number" min="0" step="0.01" class="h-11 rounded-lg" />
-                            <InputError :message="form.errors.compensation_value" />
+                            <Label for="doctor_compensation_value">{{
+                                compensationLabel
+                            }}</Label>
+                            <Input
+                                id="doctor_compensation_value"
+                                v-model="form.compensation_value"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                class="h-11 rounded-lg"
+                            />
+                            <InputError
+                                :message="form.errors.compensation_value"
+                            />
                         </div>
                     </div>
                 </section>
             </form>
 
             <DialogFooter class="border-t border-slate-100 px-6 py-4">
-                <Button type="button" variant="outline" :disabled="form.processing" @click="close">
+                <Button
+                    type="button"
+                    variant="outline"
+                    :disabled="form.processing"
+                    @click="close"
+                >
                     <X class="size-4" />
                     إلغاء
                 </Button>
-                <Button type="button" class="bg-sky-500 text-white hover:bg-sky-600" :disabled="form.processing" @click="submit">
-                    <component :is="isEditing ? Save : UserPlus" class="size-4" />
+                <Button
+                    type="button"
+                    class="bg-sky-500 text-white hover:bg-sky-600"
+                    :disabled="form.processing"
+                    @click="submit"
+                >
+                    <component
+                        :is="isEditing ? Save : UserPlus"
+                        class="size-4"
+                    />
                     {{ isEditing ? 'حفظ التغييرات' : 'إضافة طبيب جديد' }}
                 </Button>
             </DialogFooter>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Doctors;
 
+use App\Models\ClinicWorkingHour;
 use App\Models\DoctorProfile;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -72,7 +73,7 @@ class StoreDoctorProfileRequest extends FormRequest
                 ]),
             ],
             'compensation_value' => ['required', 'numeric', 'min:0'],
-            'working_hours' => ['required', 'array', 'size:7'],
+            'working_hours' => ['present', 'array'],
             'working_hours.*.day_of_week' => ['required', 'integer', 'between:0,6', 'distinct'],
             'working_hours.*.is_active' => ['required', 'boolean'],
             'working_hours.*.start_time' => ['nullable', 'date_format:H:i'],
@@ -105,13 +106,29 @@ class StoreDoctorProfileRequest extends FormRequest
 
     private function validateWorkingHours(Validator $validator): void
     {
+        $clinicWorkingHours = $this->activeClinicWorkingHoursByDoctorDay();
+        $hasClinicWorkingHours = $this->hasClinicWorkingHoursConfigured();
+
         foreach ($this->input('working_hours', []) as $index => $day) {
             $isActive = filter_var($day['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $startTime = $day['start_time'] ?? null;
             $endTime = $day['end_time'] ?? null;
+            $dayOfWeek = isset($day['day_of_week']) && is_numeric($day['day_of_week'])
+                ? (int) $day['day_of_week']
+                : null;
 
             if (! $isActive) {
+                if ($startTime !== null || $endTime !== null) {
+                    $validator->errors()->add("working_hours.{$index}.start_time", 'الأيام غير المفعلة لا تقبل أوقات دوام.');
+                }
+
                 continue;
+            }
+
+            $clinicWorkingHour = $dayOfWeek !== null ? ($clinicWorkingHours[$dayOfWeek] ?? null) : null;
+
+            if ($hasClinicWorkingHours && $clinicWorkingHour === null) {
+                $validator->errors()->add("working_hours.{$index}.day_of_week", 'هذا اليوم خارج دوام العيادة.');
             }
 
             if ($startTime === null || $startTime === '') {
@@ -125,6 +142,75 @@ class StoreDoctorProfileRequest extends FormRequest
             if ($startTime !== null && $endTime !== null && $endTime <= $startTime) {
                 $validator->errors()->add("working_hours.{$index}.end_time", 'وقت نهاية الدوام يجب أن يكون بعد وقت البداية.');
             }
+
+            if (
+                $clinicWorkingHour !== null &&
+                $startTime !== null &&
+                $endTime !== null &&
+                ($startTime < $clinicWorkingHour['start_time'] || $endTime > $clinicWorkingHour['end_time'])
+            ) {
+                $validator->errors()->add(
+                    "working_hours.{$index}.start_time",
+                    "دوام الطبيب يجب أن يكون ضمن دوام العيادة من {$clinicWorkingHour['start_time']} إلى {$clinicWorkingHour['end_time']}.",
+                );
+            }
         }
+    }
+
+    /**
+     * @return array<int, array{start_time: string, end_time: string}>
+     */
+    private function activeClinicWorkingHoursByDoctorDay(): array
+    {
+        $clinicId = $this->user()?->clinic_id;
+
+        if ($clinicId === null) {
+            return [];
+        }
+
+        return ClinicWorkingHour::query()
+            ->where('clinic_id', $clinicId)
+            ->where('is_active', true)
+            ->whereNotNull('start_time')
+            ->whereNotNull('end_time')
+            ->get()
+            ->mapWithKeys(fn (ClinicWorkingHour $workingHour): array => [
+                $this->clinicDayToDoctorDay((string) $workingHour->day_of_week) => [
+                    'start_time' => $this->formatTime($workingHour->start_time),
+                    'end_time' => $this->formatTime($workingHour->end_time),
+                ],
+            ])
+            ->all();
+    }
+
+    private function hasClinicWorkingHoursConfigured(): bool
+    {
+        $clinicId = $this->user()?->clinic_id;
+
+        if ($clinicId === null) {
+            return false;
+        }
+
+        return ClinicWorkingHour::query()
+            ->where('clinic_id', $clinicId)
+            ->exists();
+    }
+
+    private function clinicDayToDoctorDay(string $day): int
+    {
+        return match ($day) {
+            'sunday' => 0,
+            'monday' => 1,
+            'tuesday' => 2,
+            'wednesday' => 3,
+            'thursday' => 4,
+            'friday' => 5,
+            default => 6,
+        };
+    }
+
+    private function formatTime(mixed $time): string
+    {
+        return substr((string) $time, 0, 5);
     }
 }

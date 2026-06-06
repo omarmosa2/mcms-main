@@ -14,6 +14,7 @@ export type DepartmentOption = {
     name: string;
     code: string | null;
     is_active: boolean;
+    working_hours: ClinicWorkingHour[];
 };
 
 export type ClinicOption = {
@@ -23,6 +24,20 @@ export type ClinicOption = {
 
 export type WorkingHour = {
     day_of_week: number;
+    is_active: boolean;
+    start_time: string | null;
+    end_time: string | null;
+};
+
+export type ClinicWorkingHour = {
+    day_of_week:
+        | 'saturday'
+        | 'sunday'
+        | 'monday'
+        | 'tuesday'
+        | 'wednesday'
+        | 'thursday'
+        | 'friday';
     is_active: boolean;
     start_time: string | null;
     end_time: string | null;
@@ -61,6 +76,11 @@ export type PaginationMeta = {
 
 export type PaginatedResponse<T> = {
     data: T[];
-    links: { first: string | null; last: string | null; prev: string | null; next: string | null };
+    links: {
+        first: string | null;
+        last: string | null;
+        prev: string | null;
+        next: string | null;
+    };
     meta: PaginationMeta;
 };

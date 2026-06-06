@@ -4,11 +4,13 @@ namespace Tests\Feature\Doctors;
 
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Clinic;
+use App\Models\ClinicWorkingHour;
 use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\User;
 use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class DoctorProfileControllerTest extends TestCase
@@ -41,6 +43,31 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', $doctorProfile->id);
+    }
+
+    public function test_index_passes_clinic_working_hours_with_department_options(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        Department::factory()->create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Cardiology',
+        ]);
+
+        $this->setClinicWorkingHours($clinic, [
+            'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+
+        $response = $this->get(route('doctors.index'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('doctors/Index')
+            ->where('departments.0.working_hours.1.day_of_week', 'sunday')
+            ->where('departments.0.working_hours.1.is_active', true)
+            ->where('departments.0.working_hours.1.start_time', '09:00')
+            ->where('departments.0.working_hours.1.end_time', '17:00')
+        );
     }
 
     public function test_store_creates_doctor_profile_with_audit_log(): void
@@ -122,6 +149,40 @@ class DoctorProfileControllerTest extends TestCase
             'user_id' => $user->id,
             'action' => 'doctor_profiles.create',
             'auditable_id' => $doctorProfileId,
+        ]);
+    }
+
+    public function test_store_rejects_doctor_hours_outside_clinic_working_hours(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
+
+        $this->setClinicWorkingHours($clinic, [
+            'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+            'thursday' => ['start_time' => '11:00', 'end_time' => '15:00'],
+        ]);
+
+        $response = $this->postJson(route('doctors.store'), [
+            'name' => 'Dr Outside Hours',
+            'username' => 'doctor-outside-hours@example.com',
+            'password' => 'password-123',
+            'department_id' => $department->id,
+            'gender' => DoctorProfile::GENDER_MALE,
+            'specialty' => 'Cardiology',
+            'status' => DoctorProfile::STATUS_ACTIVE,
+            'compensation_type' => DoctorProfile::COMPENSATION_PERCENTAGE,
+            'compensation_value' => 40,
+            'working_hours' => [
+                ['day_of_week' => 0, 'is_active' => true, 'start_time' => '08:00', 'end_time' => '18:00'],
+                ['day_of_week' => 2, 'is_active' => true, 'start_time' => '10:00', 'end_time' => '12:00'],
+            ],
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors([
+            'working_hours.0.start_time',
+            'working_hours.1.day_of_week',
         ]);
     }
 
@@ -387,6 +448,34 @@ class DoctorProfileControllerTest extends TestCase
         ]);
     }
 
+    public function test_update_rejects_doctor_hours_outside_clinic_working_hours(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $doctor = $this->createDoctorUser($clinic);
+        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'department_id' => $department->id,
+        ]);
+
+        $this->setClinicWorkingHours($clinic, [
+            'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+
+        $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'department_id' => $department->id,
+            'working_hours' => [
+                ['day_of_week' => 0, 'is_active' => true, 'start_time' => '07:00', 'end_time' => '13:00'],
+            ],
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['working_hours.0.start_time']);
+    }
+
     public function test_destroy_deletes_doctor_profile_and_writes_audit_log(): void
     {
         $clinic = Clinic::factory()->create();
@@ -500,5 +589,23 @@ class DoctorProfileControllerTest extends TestCase
         app(AssignUserRoleAction::class)->handle($doctor, 'doctor');
 
         return $doctor;
+    }
+
+    /**
+     * @param  array<string, array{start_time: string, end_time: string}>  $activeDays
+     */
+    private function setClinicWorkingHours(Clinic $clinic, array $activeDays): void
+    {
+        foreach (ClinicWorkingHour::DAYS as $day) {
+            $hours = $activeDays[$day] ?? null;
+
+            ClinicWorkingHour::query()->create([
+                'clinic_id' => $clinic->id,
+                'day_of_week' => $day,
+                'is_active' => $hours !== null,
+                'start_time' => $hours['start_time'] ?? null,
+                'end_time' => $hours['end_time'] ?? null,
+            ]);
+        }
     }
 }

@@ -15,6 +15,7 @@ use App\Models\Clinic;
 use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\User;
+use App\Services\ClinicWorkingHoursService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -34,6 +35,7 @@ class DoctorProfileController extends Controller
         private CreateDoctorProfileAction $createDoctorProfileAction,
         private UpdateDoctorProfileAction $updateDoctorProfileAction,
         private DeleteDoctorProfileAction $deleteDoctorProfileAction,
+        private ClinicWorkingHoursService $clinicWorkingHoursService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection|InertiaResponse
@@ -431,10 +433,12 @@ class DoctorProfileController extends Controller
     }
 
     /**
-     * @return array<int, array{id: int, name: string, code: string|null, is_active: bool}>
+     * @return array<int, array{id: int, name: string, code: string|null, is_active: bool, working_hours: array<int, array{day_of_week: string, is_active: bool, start_time: ?string, end_time: ?string}>}>
      */
     private function resolveDepartmentOptions(int $clinicId): array
     {
+        $workingHours = $this->clinicWorkingHoursService->getForClinic($clinicId);
+
         return Department::query()
             ->forClinic($clinicId)
             ->select(['id', 'name', 'code', 'is_active'])
@@ -446,6 +450,7 @@ class DoctorProfileController extends Controller
                 'name' => $department->name,
                 'code' => $department->code,
                 'is_active' => (bool) $department->is_active,
+                'working_hours' => $workingHours,
             ])
             ->values()
             ->all();

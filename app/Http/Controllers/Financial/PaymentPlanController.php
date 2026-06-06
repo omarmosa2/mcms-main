@@ -10,8 +10,6 @@ use App\Models\Installment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class PaymentPlanController extends Controller
 {
@@ -21,8 +19,12 @@ class PaymentPlanController extends Controller
         private ApplyPaymentPlanAction $applyPaymentPlanAction,
     ) {}
 
-    public function index(Request $request): Response|JsonResponse
+    public function index(Request $request): RedirectResponse|JsonResponse
     {
+        if (! $request->expectsJson()) {
+            return redirect()->route('financial.index');
+        }
+
         $user = $request->user();
         $clinicId = (int) $user->clinic_id;
 
@@ -37,13 +39,7 @@ class PaymentPlanController extends Controller
             search: $search,
         );
 
-        if ($request->expectsJson()) {
-            return response()->json(['data' => $plans]);
-        }
-
-        return Inertia::render('financial/PaymentPlans/Index', [
-            'plans' => $plans,
-        ]);
+        return response()->json(['data' => $plans]);
     }
 
     public function store(Request $request): JsonResponse|RedirectResponse
@@ -73,7 +69,7 @@ class PaymentPlanController extends Controller
             return response()->json(['data' => $plan], 201);
         }
 
-        return redirect()->route('payment-plans.index')->with('toast', ['message' => 'Payment plan created.', 'type' => 'success']);
+        return redirect()->route('financial.index')->with('toast', ['message' => 'Payment plan created.', 'type' => 'success']);
     }
 
     public function apply(Request $request, int $planId): JsonResponse|RedirectResponse
@@ -100,6 +96,10 @@ class PaymentPlanController extends Controller
 
     public function installments(Request $request): JsonResponse|RedirectResponse
     {
+        if (! $request->expectsJson()) {
+            return redirect()->route('financial.index');
+        }
+
         $user = $request->user();
         $clinicId = (int) $user->clinic_id;
 
@@ -116,12 +116,6 @@ class PaymentPlanController extends Controller
 
         $installments = $query->paginate((int) $request->get('per_page', 15));
 
-        if ($request->expectsJson()) {
-            return response()->json(['data' => $installments]);
-        }
-
-        return Inertia::render('financial/Installments/Index', [
-            'installments' => $installments,
-        ]);
+        return response()->json(['data' => $installments]);
     }
 }

@@ -64,12 +64,43 @@ class VisitControllerTest extends TestCase
             'status' => QueueEntry::STATUS_IN_SERVICE,
         ]);
 
+        $appointment->refresh();
+        $this->assertSame(Appointment::STATUS_COMPLETED, $appointment->status);
+        $this->assertNotNull($appointment->completed_at);
+
         $this->assertDatabaseHas('audit_logs', [
             'clinic_id' => $clinic->id,
             'user_id' => $user->id,
             'action' => 'visits.start',
             'auditable_id' => $visitId,
         ]);
+    }
+
+    public function test_store_rejects_starting_duplicate_visit_for_same_appointment(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'clinic_admin');
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        $appointment = Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'status' => Appointment::STATUS_ARRIVED,
+        ]);
+
+        Visit::factory()->create([
+            'clinic_id' => $clinic->id,
+            'appointment_id' => $appointment->id,
+            'patient_id' => $patient->id,
+            'status' => Visit::STATUS_STARTED,
+        ]);
+
+        $response = $this->postJson(route('visits.store'), [
+            'appointment_id' => $appointment->id,
+            'patient_id' => $patient->id,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['appointment_id']);
     }
 
     public function test_index_applies_search_filter(): void

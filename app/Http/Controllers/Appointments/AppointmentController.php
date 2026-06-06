@@ -14,6 +14,7 @@ use App\Http\Requests\Appointments\TransitionAppointmentStatusRequest;
 use App\Http\Requests\Appointments\UpdateAppointmentRequest;
 use App\Http\Resources\AppointmentResource;
 use App\Models\Appointment;
+use App\Models\Department;
 use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -54,7 +55,10 @@ class AppointmentController extends Controller
             search: $filters['search'],
             sortBy: $filters['sort_by'],
             sortDirection: $filters['sort_direction'],
-            doctorId: $doctorScopeUserId,
+            doctorId: $doctorScopeUserId ?? $filters['doctor_id'],
+            departmentId: $filters['department_id'],
+            dateFrom: $filters['date_from'],
+            dateTo: $filters['date_to'],
         );
 
         $appointmentsResource = AppointmentResource::collection($appointments);
@@ -66,11 +70,24 @@ class AppointmentController extends Controller
         $patients = $this->cacheService->getPatientsDropdown($clinicId);
 
         $doctors = $this->cacheService->getDoctorsDropdown($clinicId);
+        $departments = $this->cacheService
+            ->getClinicDepartments($clinicId)
+            ->map(fn (Department $department): array => [
+                'id' => $department->id,
+                'name' => $department->name,
+            ])
+            ->values()
+            ->all();
 
         $todayAppointments = Appointment::query()
             ->forClinic($clinicId)
             ->withoutTrashed()
-            ->with(['patient:id,clinic_id,first_name,last_name', 'doctor:id,clinic_id,name'])
+            ->with([
+                'patient:id,clinic_id,first_name,last_name,file_number,phone,date_of_birth',
+                'doctor:id,clinic_id,name',
+                'doctor.doctorProfile:id,clinic_id,user_id,department_id,specialty,status',
+                'doctor.doctorProfile.department:id,clinic_id,name',
+            ])
             ->whereDate('scheduled_for', now()->toDateString())
             ->orderBy('scheduled_for')
             ->get();
@@ -79,6 +96,7 @@ class AppointmentController extends Controller
             'appointments' => $appointmentsResource->response()->getData(true),
             'patients' => $patients,
             'doctors' => $doctors,
+            'departments' => $departments,
             'status_options' => [
                 Appointment::STATUS_SCHEDULED,
                 Appointment::STATUS_CONFIRMED,
@@ -281,6 +299,10 @@ class AppointmentController extends Controller
      * @return array{
      *     status: ?string,
      *     search: ?string,
+     *     doctor_id: ?int,
+     *     department_id: ?int,
+     *     date_from: ?string,
+     *     date_to: ?string,
      *     per_page: int,
      *     sort_by: string,
      *     sort_direction: string
@@ -297,6 +319,10 @@ class AppointmentController extends Controller
         /** @var array{
          *     status?: ?string,
          *     search?: ?string,
+         *     doctor_id?: ?int,
+         *     department_id?: ?int,
+         *     date_from?: ?string,
+         *     date_to?: ?string,
          *     per_page?: int,
          *     sort_by?: string,
          *     sort_direction?: string
@@ -320,6 +346,26 @@ class AppointmentController extends Controller
             : ($savedFilters['search'] ?? null);
         $search = $this->normalizeNullableString($searchInput);
 
+        $doctorIdInput = $request->exists('doctor_id')
+            ? $request->query('doctor_id')
+            : ($savedFilters['doctor_id'] ?? null);
+        $doctorId = $this->normalizeNullableInteger($doctorIdInput);
+
+        $departmentIdInput = $request->exists('department_id')
+            ? $request->query('department_id')
+            : ($savedFilters['department_id'] ?? null);
+        $departmentId = $this->normalizeNullableInteger($departmentIdInput);
+
+        $dateFromInput = $request->exists('date_from')
+            ? $request->query('date_from')
+            : ($savedFilters['date_from'] ?? null);
+        $dateFrom = $this->normalizeNullableDate($dateFromInput);
+
+        $dateToInput = $request->exists('date_to')
+            ? $request->query('date_to')
+            : ($savedFilters['date_to'] ?? null);
+        $dateTo = $this->normalizeNullableDate($dateToInput);
+
         $perPageInput = $request->exists('per_page')
             ? $request->query('per_page')
             : ($savedFilters['per_page'] ?? 15);
@@ -338,6 +384,10 @@ class AppointmentController extends Controller
         $filters = [
             'status' => $status,
             'search' => $search,
+            'doctor_id' => $doctorId,
+            'department_id' => $departmentId,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
             'per_page' => $perPage,
             'sort_by' => $sortBy,
             'sort_direction' => $sortDirection,
@@ -367,6 +417,28 @@ class AppointmentController extends Controller
         $normalized = trim((string) ($value ?? ''));
 
         return $normalized !== '' ? $normalized : null;
+    }
+
+    private function normalizeNullableInteger(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $integerValue = (int) $value;
+
+        return $integerValue > 0 ? $integerValue : null;
+    }
+
+    private function normalizeNullableDate(mixed $value): ?string
+    {
+        $date = $this->normalizeNullableString($value);
+
+        if ($date === null) {
+            return null;
+        }
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? $date : null;
     }
 
     private function normalizePerPage(mixed $value): int

@@ -7,6 +7,7 @@ use App\Actions\BaseAction;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
 use App\Services\DoctorScheduleService;
 use Illuminate\Support\Carbon;
@@ -19,6 +20,7 @@ class UpdateAppointmentAction extends BaseAction
         private LogAuditAction $logAuditAction,
         private DoctorScheduleService $doctorScheduleService,
         private ClinicWorkingHoursService $clinicWorkingHoursService,
+        private CacheService $cacheService,
     ) {}
 
     /**
@@ -101,6 +103,9 @@ class UpdateAppointmentAction extends BaseAction
                 'status',
             ]),
         );
+
+        $this->cacheService->invalidateDashboardStats($clinicId);
+        $this->cacheService->invalidateDropdowns($clinicId);
 
         return $appointment->fresh();
     }

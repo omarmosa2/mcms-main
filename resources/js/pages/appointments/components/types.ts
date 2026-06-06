@@ -2,6 +2,21 @@ export type Option = {
     id: number;
     name?: string;
     full_name?: string;
+    file_number?: string | null;
+    phone?: string | null;
+    date_of_birth?: string | null;
+    age?: number | null;
+    department_id?: number | null;
+    specialty?: string | null;
+    department?: {
+        id: number;
+        name: string;
+    } | null;
+};
+
+export type DepartmentOption = {
+    id: number;
+    name: string;
 };
 
 export type ClinicWorkingDay =
@@ -32,11 +47,22 @@ export type Appointment = {
     notes: string | null;
     patient?: {
         id?: number;
+        first_name?: string;
+        last_name?: string;
         full_name?: string;
+        file_number?: string | null;
+        phone?: string | null;
+        date_of_birth?: string | null;
+        age?: number | null;
     };
     doctor?: {
         id?: number;
         name?: string;
+        specialty?: string | null;
+        department?: {
+            id: number;
+            name: string;
+        } | null;
     };
 };
 

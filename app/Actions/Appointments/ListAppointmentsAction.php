@@ -22,11 +22,19 @@ class ListAppointmentsAction extends BaseAction
         string $sortBy = 'scheduled_for',
         string $sortDirection = 'desc',
         ?int $doctorId = null,
+        ?int $departmentId = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
     ): LengthAwarePaginator {
         $query = Appointment::query()
             ->forClinic($clinicId)
             ->withoutTrashed()
-            ->with(['patient:id,clinic_id,first_name,last_name', 'doctor:id,clinic_id,name'])
+            ->with([
+                'patient:id,clinic_id,first_name,last_name,file_number,phone,date_of_birth',
+                'doctor:id,clinic_id,name',
+                'doctor.doctorProfile:id,clinic_id,user_id,department_id,specialty,status',
+                'doctor.doctorProfile.department:id,clinic_id,name',
+            ])
             ->orderByDesc('scheduled_for');
 
         $user = User::find($userId);
@@ -40,6 +48,20 @@ class ListAppointmentsAction extends BaseAction
             $query->where('status', $status);
         }
 
+        if ($departmentId !== null) {
+            $query->whereHas('doctor.doctorProfile', function (Builder $doctorProfileQuery) use ($departmentId): void {
+                $doctorProfileQuery->where('department_id', $departmentId);
+            });
+        }
+
+        if ($dateFrom !== null) {
+            $query->whereDate('scheduled_for', '>=', $dateFrom);
+        }
+
+        if ($dateTo !== null) {
+            $query->whereDate('scheduled_for', '<=', $dateTo);
+        }
+
         if ($search !== null) {
             $searchTerm = '%'.trim($search).'%';
 
@@ -49,7 +71,8 @@ class ListAppointmentsAction extends BaseAction
                     ->orWhereHas('patient', function (Builder $patientQuery) use ($searchTerm): void {
                         $patientQuery
                             ->where('first_name', 'like', $searchTerm)
-                            ->orWhere('last_name', 'like', $searchTerm);
+                            ->orWhere('last_name', 'like', $searchTerm)
+                            ->orWhere('file_number', 'like', $searchTerm);
                     })
                     ->orWhereHas('doctor', function (Builder $doctorQuery) use ($searchTerm): void {
                         $doctorQuery->where('name', 'like', $searchTerm);
@@ -71,7 +94,10 @@ class ListAppointmentsAction extends BaseAction
                 'search' => $search,
                 'sort_by' => $sortBy,
                 'sort_direction' => $sortDirection,
-                'doctor_scope_user_id' => $doctorId,
+                'doctor_filter_id' => $doctorId,
+                'department_filter_id' => $departmentId,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
                 'returned' => $appointments->count(),
             ],
         );

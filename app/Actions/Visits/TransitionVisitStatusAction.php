@@ -7,6 +7,7 @@ use App\Actions\BaseAction;
 use App\Models\Appointment;
 use App\Models\QueueEntry;
 use App\Models\Visit;
+use App\Services\Cache\CacheService;
 use Illuminate\Validation\ValidationException;
 
 class TransitionVisitStatusAction extends BaseAction
@@ -20,7 +21,10 @@ class TransitionVisitStatusAction extends BaseAction
         Visit::STATUS_COMPLETED => [],
     ];
 
-    public function __construct(private LogAuditAction $logAuditAction) {}
+    public function __construct(
+        private LogAuditAction $logAuditAction,
+        private CacheService $cacheService,
+    ) {}
 
     public function handle(int $clinicId, int $visitId, int $userId, string $newStatus, ?int $actingDoctorId = null): Visit
     {
@@ -77,6 +81,9 @@ class TransitionVisitStatusAction extends BaseAction
                 'to_status' => $newStatus,
             ],
         );
+
+        $this->cacheService->invalidateDashboardStats($clinicId);
+        $this->cacheService->invalidateDropdowns($clinicId);
 
         return $visit->fresh();
     }

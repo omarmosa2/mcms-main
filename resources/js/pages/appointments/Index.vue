@@ -16,6 +16,7 @@ import {
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import AppointmentExportController from '@/actions/App/Http/Controllers/Appointments/AppointmentExportController';
+import VisitController from '@/actions/App/Http/Controllers/Visits/VisitController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
@@ -27,11 +28,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import {
-    FilterBar,
-    FilterSearch,
-    FilterSelect,
-} from '@/components/ui/filter';
+import { FilterBar, FilterSearch, FilterSelect } from '@/components/ui/filter';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -51,13 +48,14 @@ import AppointmentQuickAddForm from './components/AppointmentQuickAddForm.vue';
 import AppointmentTable from './components/AppointmentTable.vue';
 import AppointmentTodaySummary from './components/AppointmentTodaySummary.vue';
 import AppointmentViewDialog from './components/AppointmentViewDialog.vue';
-import type { Appointment, AppointmentSortField, ClinicWorkingHour, SortDirection } from './components/types';
-
-type Option = {
-    id: number;
-    name?: string;
-    full_name?: string;
-};
+import type {
+    Appointment,
+    AppointmentSortField,
+    ClinicWorkingHour,
+    DepartmentOption,
+    Option,
+    SortDirection,
+} from './components/types';
 
 type PaginationLink = {
     url: string | null;
@@ -87,22 +85,35 @@ type PaginatedResponse<T> = {
     meta: PaginationMeta;
 };
 
-const { appointments, patients, doctors, status_options, filters, clinic_working_hours, today_appointments } =
-    defineProps<{
-        appointments: PaginatedResponse<Appointment>;
-        patients: Option[];
-        doctors: Option[];
-        status_options: string[];
-        clinic_working_hours: ClinicWorkingHour[];
-        filters: {
-            status: string | null;
-            search: string | null;
-            per_page: number;
-            sort_by: AppointmentSortField | null;
-            sort_direction: SortDirection | null;
-        };
-        today_appointments?: Appointment[];
-    }>();
+const {
+    appointments,
+    patients,
+    doctors,
+    departments,
+    status_options,
+    filters,
+    clinic_working_hours,
+    today_appointments,
+} = defineProps<{
+    appointments: PaginatedResponse<Appointment>;
+    patients: Option[];
+    doctors: Option[];
+    departments: DepartmentOption[];
+    status_options: string[];
+    clinic_working_hours: ClinicWorkingHour[];
+    filters: {
+        status: string | null;
+        search: string | null;
+        doctor_id: number | null;
+        department_id: number | null;
+        date_from: string | null;
+        date_to: string | null;
+        per_page: number;
+        sort_by: AppointmentSortField | null;
+        sort_direction: SortDirection | null;
+    };
+    today_appointments?: Appointment[];
+}>();
 
 defineOptions({
     layout: {
@@ -116,15 +127,20 @@ defineOptions({
 });
 
 const { can } = usePermissions();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const {
+    isOpen: isConfirmOpen,
+    options: confirmOptions,
+    confirm,
+    handleConfirm: handleConfirmDelete,
+    handleCancel: handleConfirmCancel,
+} = useConfirm();
 const toast = useToast();
 const page = usePage();
 
 const roleNames = computed<string[]>(() => {
     return (
-        ((page.props.auth as { roles?: string[] } | undefined)?.roles ?? [])
-            .filter((value): value is string => typeof value === 'string')
-    );
+        (page.props.auth as { roles?: string[] } | undefined)?.roles ?? []
+    ).filter((value): value is string => typeof value === 'string');
 });
 
 const primaryRole = computed<string>(() => {
@@ -137,7 +153,9 @@ const primaryRole = computed<string>(() => {
         'accountant',
     ];
 
-    return rolePriority.find((role) => roleNames.value.includes(role)) ?? 'staff';
+    return (
+        rolePriority.find((role) => roleNames.value.includes(role)) ?? 'staff'
+    );
 });
 
 const roleLabels: Record<string, string> = {
@@ -150,7 +168,9 @@ const roleLabels: Record<string, string> = {
     staff: 'موظف',
 };
 
-const activeRoleLabel = computed<string>(() => roleLabels[primaryRole.value] ?? roleLabels.staff);
+const activeRoleLabel = computed<string>(
+    () => roleLabels[primaryRole.value] ?? roleLabels.staff,
+);
 
 const viewingAppointment = ref<Appointment | null>(null);
 const editingAppointment = ref<Appointment | null>(null);
@@ -158,6 +178,14 @@ const isCreateSheetOpen = ref(false);
 const isQuickAddOpen = ref(true);
 const localSearch = ref<string>(filters.search ?? '');
 const localStatus = ref<string>(filters.status ?? '');
+const localDoctorId = ref<string>(
+    filters.doctor_id !== null ? String(filters.doctor_id) : '',
+);
+const localDepartmentId = ref<string>(
+    filters.department_id !== null ? String(filters.department_id) : '',
+);
+const localDateFrom = ref<string>(filters.date_from ?? '');
+const localDateTo = ref<string>(filters.date_to ?? '');
 const localRowsPerPage = ref<number>(filters.per_page);
 const localPage = ref<number>(appointments.meta.current_page);
 const allowedSortFields: AppointmentSortField[] = [
@@ -194,12 +222,17 @@ const localVisibleTo = computed<number>(() => {
 });
 const defaultRowsPerPage = 15;
 const isSyncingFromServer = ref(false);
-let appointmentFiltersDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+let appointmentFiltersDebounceTimeout: ReturnType<typeof setTimeout> | null =
+    null;
 
 const buildIndexQuery = (
     overrides: Partial<{
         status: string;
         search: string;
+        doctor_id: string;
+        department_id: string;
+        date_from: string;
+        date_to: string;
         per_page: number;
         page: number;
         sort_by: AppointmentSortField;
@@ -208,6 +241,10 @@ const buildIndexQuery = (
 ): {
     status?: string;
     search?: string;
+    doctor_id?: string;
+    department_id?: string;
+    date_from?: string;
+    date_to?: string;
     per_page: number;
     page: number;
     sort_by: AppointmentSortField;
@@ -216,6 +253,10 @@ const buildIndexQuery = (
     const query: {
         status?: string;
         search?: string;
+        doctor_id?: string;
+        department_id?: string;
+        date_from?: string;
+        date_to?: string;
         per_page: number;
         page: number;
         sort_by: AppointmentSortField;
@@ -223,6 +264,10 @@ const buildIndexQuery = (
     } = {
         status: localStatus.value.trim(),
         search: localSearch.value.trim(),
+        doctor_id: localDoctorId.value.trim(),
+        department_id: localDepartmentId.value.trim(),
+        date_from: localDateFrom.value.trim(),
+        date_to: localDateTo.value.trim(),
         per_page: localRowsPerPage.value,
         page: localPage.value,
         sort_by: localSortBy.value,
@@ -237,6 +282,10 @@ const reloadAppointments = (
     overrides: Partial<{
         status: string;
         search: string;
+        doctor_id: string;
+        department_id: string;
+        date_from: string;
+        date_to: string;
         per_page: number;
         page: number;
         sort_by: AppointmentSortField;
@@ -250,12 +299,16 @@ const reloadAppointments = (
 
     const executeReload = (): void => {
         router.cancelAll();
-        router.get(AppointmentController.index.url(), buildIndexQuery(overrides), {
-            only: ['appointments', 'filters'],
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        });
+        router.get(
+            AppointmentController.index.url(),
+            buildIndexQuery(overrides),
+            {
+                only: ['appointments', 'filters'],
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
     };
 
     if (debounce) {
@@ -281,7 +334,8 @@ const sortIconFor = (field: AppointmentSortField) => {
 
 const toggleSort = (field: AppointmentSortField): void => {
     if (localSortBy.value === field) {
-        localSortDirection.value = localSortDirection.value === 'asc' ? 'desc' : 'asc';
+        localSortDirection.value =
+            localSortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
         localSortBy.value = field;
         localSortDirection.value = 'asc';
@@ -292,6 +346,10 @@ const resetLocalFilters = (): void => {
     isSyncingFromServer.value = true;
     localSearch.value = '';
     localStatus.value = '';
+    localDoctorId.value = '';
+    localDepartmentId.value = '';
+    localDateFrom.value = '';
+    localDateTo.value = '';
     localRowsPerPage.value = defaultRowsPerPage;
     localSortBy.value = 'scheduled_for';
     localSortDirection.value = 'desc';
@@ -300,6 +358,10 @@ const resetLocalFilters = (): void => {
     reloadAppointments({
         status: '',
         search: '',
+        doctor_id: '',
+        department_id: '',
+        date_from: '',
+        date_to: '',
         per_page: defaultRowsPerPage,
         page: 1,
         sort_by: 'scheduled_for',
@@ -329,6 +391,10 @@ watch(
     () => [
         filters.search,
         filters.status,
+        filters.doctor_id,
+        filters.department_id,
+        filters.date_from,
+        filters.date_to,
         filters.per_page,
         filters.sort_by,
         filters.sort_direction,
@@ -338,9 +404,16 @@ watch(
         isSyncingFromServer.value = true;
         localSearch.value = filters.search ?? '';
         localStatus.value = filters.status ?? '';
+        localDoctorId.value =
+            filters.doctor_id !== null ? String(filters.doctor_id) : '';
+        localDepartmentId.value =
+            filters.department_id !== null ? String(filters.department_id) : '';
+        localDateFrom.value = filters.date_from ?? '';
+        localDateTo.value = filters.date_to ?? '';
         localRowsPerPage.value = filters.per_page;
         localSortBy.value = resolveInitialSortBy();
-        localSortDirection.value = filters.sort_direction === 'asc' ? 'asc' : 'desc';
+        localSortDirection.value =
+            filters.sort_direction === 'asc' ? 'asc' : 'desc';
         localPage.value = appointments.meta.current_page;
         isSyncingFromServer.value = false;
     },
@@ -360,6 +433,37 @@ watch(
     () => {
         localPage.value = 1;
         reloadAppointments({ page: 1, status: localStatus.value.trim() });
+    },
+);
+
+watch(
+    () => localDoctorId.value,
+    () => {
+        localPage.value = 1;
+        reloadAppointments({ page: 1, doctor_id: localDoctorId.value.trim() });
+    },
+);
+
+watch(
+    () => localDepartmentId.value,
+    () => {
+        localPage.value = 1;
+        reloadAppointments({
+            page: 1,
+            department_id: localDepartmentId.value.trim(),
+        });
+    },
+);
+
+watch(
+    () => [localDateFrom.value, localDateTo.value],
+    () => {
+        localPage.value = 1;
+        reloadAppointments({
+            page: 1,
+            date_from: localDateFrom.value.trim(),
+            date_to: localDateTo.value.trim(),
+        });
     },
 );
 
@@ -395,7 +499,7 @@ const appointmentStatusLabel = (status: string): string => {
         scheduled: 'مجدول',
         confirmed: 'مؤكد',
         arrived: 'حاضر',
-        completed: 'مكتمل',
+        completed: 'تم تحويله إلى زيارة',
         canceled: 'ملغي',
         no_show: 'لم يحضر',
     };
@@ -459,15 +563,86 @@ const closeEditAppointment = (): void => {
     editingAppointment.value = null;
 };
 
+const convertAppointmentToVisit = (appointment: Appointment): void => {
+    router.visit(
+        VisitController.index.url({
+            query: {
+                appointment_id: appointment.id,
+                patient_id: appointment.patient_id,
+                doctor_id: appointment.doctor_id ?? undefined,
+            },
+        }),
+    );
+};
+
+const selectedDoctorName = computed<string | null>(() => {
+    const doctorId = Number(localDoctorId.value);
+
+    if (!Number.isFinite(doctorId) || doctorId <= 0) {
+        return null;
+    }
+
+    return doctors.find((doctor) => doctor.id === doctorId)?.name ?? null;
+});
+
+const selectedDepartmentName = computed<string | null>(() => {
+    const departmentId = Number(localDepartmentId.value);
+
+    if (!Number.isFinite(departmentId) || departmentId <= 0) {
+        return null;
+    }
+
+    return (
+        departments.find((department) => department.id === departmentId)
+            ?.name ?? null
+    );
+});
+
 const activeFilters = computed(() => {
     const f: { key: string; label: string; value: string | null }[] = [];
 
     if (localSearch.value.trim()) {
-        f.push({ key: 'search', label: 'بحث', value: localSearch.value.trim() });
+        f.push({
+            key: 'search',
+            label: 'بحث',
+            value: localSearch.value.trim(),
+        });
     }
 
     if (localStatus.value) {
         f.push({ key: 'status', label: 'الحالة', value: localStatus.value });
+    }
+
+    if (localDoctorId.value) {
+        f.push({
+            key: 'doctor_id',
+            label: 'الطبيب',
+            value: selectedDoctorName.value ?? localDoctorId.value,
+        });
+    }
+
+    if (localDepartmentId.value) {
+        f.push({
+            key: 'department_id',
+            label: 'العيادة',
+            value: selectedDepartmentName.value ?? localDepartmentId.value,
+        });
+    }
+
+    if (localDateFrom.value) {
+        f.push({
+            key: 'date_from',
+            label: 'من تاريخ',
+            value: localDateFrom.value,
+        });
+    }
+
+    if (localDateTo.value) {
+        f.push({
+            key: 'date_to',
+            label: 'إلى تاريخ',
+            value: localDateTo.value,
+        });
     }
 
     return f;
@@ -476,14 +651,46 @@ const activeFilters = computed(() => {
 const statusOptions = computed(() => {
     const opts = [{ label: 'الكل', value: '' }];
 
-    return [...opts, ...status_options.map((s: string) => ({ label: appointmentStatusLabel(s), value: s }))];
+    return [
+        ...opts,
+        ...status_options.map((s: string) => ({
+            label: appointmentStatusLabel(s),
+            value: s,
+        })),
+    ];
 });
+
+const doctorOptions = computed(() => [
+    { label: 'كل الأطباء', value: '' },
+    ...doctors.map((doctor) => ({
+        label: doctor.department?.name
+            ? `${doctor.name} - ${doctor.department.name}`
+            : (doctor.name ?? `#${doctor.id}`),
+        value: String(doctor.id),
+    })),
+]);
+
+const departmentOptions = computed(() => [
+    { label: 'كل العيادات', value: '' },
+    ...departments.map((department) => ({
+        label: department.name,
+        value: String(department.id),
+    })),
+]);
 
 const handleRemoveFilter = (key: string) => {
     if (key === 'search') {
         localSearch.value = '';
     } else if (key === 'status') {
         localStatus.value = '';
+    } else if (key === 'doctor_id') {
+        localDoctorId.value = '';
+    } else if (key === 'department_id') {
+        localDepartmentId.value = '';
+    } else if (key === 'date_from') {
+        localDateFrom.value = '';
+    } else if (key === 'date_to') {
+        localDateTo.value = '';
     }
 };
 
@@ -548,7 +755,9 @@ const handleBulkDelete = async () => {
             data: { ids: selectedAppointmentIds.value },
             onSuccess: () => {
                 clearSelectedAppointments();
-                toast.success(`تم حذف ${selectedAppointmentIds.value.length} موعد بنجاح`);
+                toast.success(
+                    `تم حذف ${selectedAppointmentIds.value.length} موعد بنجاح`,
+                );
             },
             onError: () => {
                 toast.error('فشل حذف المواعيد');
@@ -564,7 +773,11 @@ const today = new Date();
 const todayAppointments = computed<Appointment[]>(() => {
     return (today_appointments ?? [])
         .slice()
-        .sort((a, b) => new Date(a.scheduled_for).getTime() - new Date(b.scheduled_for).getTime());
+        .sort(
+            (a, b) =>
+                new Date(a.scheduled_for).getTime() -
+                new Date(b.scheduled_for).getTime(),
+        );
 });
 
 const groupedByHour = computed(() => {
@@ -591,15 +804,25 @@ const groupedByHour = computed(() => {
 const formatArabicDate = (iso: string): string => {
     const d = new Date(iso);
 
-    return d.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    return d.toLocaleDateString('ar-SA', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
 };
 
 const todaySummary = computed(() => ({
     total: todayAppointments.value.length,
-    scheduled: todayAppointments.value.filter((a) => a.status === 'scheduled').length,
-    arrived: todayAppointments.value.filter((a) => a.status === 'arrived').length,
-    completed: todayAppointments.value.filter((a) => a.status === 'completed').length,
-    canceled: todayAppointments.value.filter((a) => a.status === 'canceled' || a.status === 'no_show').length,
+    scheduled: todayAppointments.value.filter((a) => a.status === 'scheduled')
+        .length,
+    arrived: todayAppointments.value.filter((a) => a.status === 'arrived')
+        .length,
+    completed: todayAppointments.value.filter((a) => a.status === 'completed')
+        .length,
+    canceled: todayAppointments.value.filter(
+        (a) => a.status === 'canceled' || a.status === 'no_show',
+    ).length,
 }));
 </script>
 
@@ -607,7 +830,9 @@ const todaySummary = computed(() => ({
     <Head title="المواعيد" />
 
     <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6" dir="rtl">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
             <div class="flex items-center gap-3">
                 <div>
                     <h1 class="page-title">المواعيد</h1>
@@ -615,7 +840,9 @@ const todaySummary = computed(() => ({
                         {{ formatArabicDate(today.toISOString()) }}
                     </p>
                 </div>
-                <span class="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground">
+                <span
+                    class="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground"
+                >
                     {{ activeRoleLabel }}
                 </span>
             </div>
@@ -623,24 +850,30 @@ const todaySummary = computed(() => ({
             <div class="flex items-center gap-2">
                 <a
                     :href="AppointmentExportController.export.url()"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground min-h-[44px]"
+                    class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
                 >
                     <Download class="size-3.5" />
                     تصدير Excel
                 </a>
                 <a
                     :href="AppointmentExportController.exportPdf.url()"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground min-h-[44px]"
+                    class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
                 >
                     <FileText class="size-3.5" />
                     تصدير PDF
                 </a>
 
-                <div class="inline-flex rounded-lg border border-border/60 bg-background/60 p-0.5">
+                <div
+                    class="inline-flex rounded-lg border border-border/60 bg-background/60 p-0.5"
+                >
                     <button
                         type="button"
-                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all min-h-[44px]"
-                        :class="viewMode === 'day' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                        class="inline-flex min-h-[44px] items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all"
+                        :class="
+                            viewMode === 'day'
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
                         @click="viewMode = 'day'"
                     >
                         <CalendarDays class="size-3.5" />
@@ -648,8 +881,12 @@ const todaySummary = computed(() => ({
                     </button>
                     <button
                         type="button"
-                        class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all min-h-[44px]"
-                        :class="viewMode === 'list' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                        class="inline-flex min-h-[44px] items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all"
+                        :class="
+                            viewMode === 'list'
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
                         @click="viewMode = 'list'"
                     >
                         <Table2 class="size-3.5" />
@@ -683,6 +920,7 @@ const todaySummary = computed(() => ({
             v-if="can('appointment.create') && isQuickAddOpen"
             :patients="patients"
             :doctors="doctors"
+            :departments="departments"
             :clinic-working-hours="clinic_working_hours"
             @success="handleQuickAddSuccess"
             @reset="resetQuickAdd"
@@ -709,6 +947,10 @@ const todaySummary = computed(() => ({
             :appointments="appointments"
             :local-search="localSearch"
             :local-status="localStatus"
+            :local-doctor-id="localDoctorId"
+            :local-department-id="localDepartmentId"
+            :local-date-from="localDateFrom"
+            :local-date-to="localDateTo"
             :local-rows-per-page="localRowsPerPage"
             :local-page="localPage"
             :total-local-pages="totalLocalPages"
@@ -717,18 +959,29 @@ const todaySummary = computed(() => ({
             :total="appointments.meta.total"
             :sortBy="localSortBy"
             :sortDirection="localSortDirection"
-            :selected-ids="selectedAppointmentIds"
+            :selected-appointment-ids="selectedAppointmentIds"
             :deletable-appointment-ids="deletableAppointmentIds"
-            :are-all-selected="areAllDeletableAppointmentsSelected"
+            :are-all-deletable-appointments-selected="
+                areAllDeletableAppointmentsSelected
+            "
             :active-filters="activeFilters"
             :status-options="statusOptions"
-            :can-delete="can('appointment.delete')"
-            :can-edit="canEditAppointment"
-            :can-update-status="can('appointment.update') || can('appointment.arrival')"
+            :doctor-options="doctorOptions"
+            :department-options="departmentOptions"
+            :can-delete-appointment="can('appointment.delete')"
+            :can-edit-appointment="canEditAppointment"
+            :can-update-status="
+                can('appointment.update') || can('appointment.arrival')
+            "
+            :can-start-visit="can('visit.start')"
             :patients="patients"
             :doctors="doctors"
             @search="localSearch = $event"
             @status="localStatus = $event"
+            @doctor="localDoctorId = $event"
+            @department="localDepartmentId = $event"
+            @date-from="localDateFrom = $event"
+            @date-to="localDateTo = $event"
             @rows-per-page="localRowsPerPage = $event"
             @page="localPage = $event"
             @sort="toggleSort"
@@ -739,16 +992,18 @@ const todaySummary = computed(() => ({
             @delete="deleteAppointment"
             @edit="openEditAppointment"
             @view="openViewAppointment"
+            @convert-to-visit="convertAppointmentToVisit"
             @bulk-delete="handleBulkDelete"
             @clear-selection="clearSelectedAppointments"
-            @success="() => reloadAppointments({ page: 1 })"
-            @error="handleQuickAddError"
+            @status-transition-success="() => reloadAppointments({ page: 1 })"
+            @status-transition-error="handleQuickAddError"
         />
 
         <AppointmentCreateSheet
             :open="isCreateSheetOpen"
             :patients="patients"
             :doctors="doctors"
+            :departments="departments"
             :clinic-working-hours="clinic_working_hours"
             @update:open="isCreateSheetOpen = $event"
         />
@@ -762,6 +1017,7 @@ const todaySummary = computed(() => ({
             :appointment="editingAppointment"
             :patients="patients"
             :doctors="doctors"
+            :departments="departments"
             :clinic-working-hours="clinic_working_hours"
             @close="closeEditAppointment"
         />

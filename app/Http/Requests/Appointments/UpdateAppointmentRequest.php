@@ -69,7 +69,7 @@ class UpdateAppointmentRequest extends FormRequest
                     ->where(fn ($query) => $query->where('clinic_id', $clinicId)),
             ],
             'scheduled_for' => ['sometimes', 'required', 'date', 'after_or_equal:now'],
-            'duration_minutes' => ['sometimes', 'required', 'integer', 'min:5', 'max:480'],
+            'duration_minutes' => ['sometimes', 'required', 'integer', Rule::in([15, 30, 45, 60])],
             'notes' => ['sometimes', 'nullable', 'string'],
         ];
     }

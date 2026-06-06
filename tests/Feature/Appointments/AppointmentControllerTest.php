@@ -6,6 +6,8 @@ use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\ClinicWorkingHour;
+use App\Models\Department;
+use App\Models\DoctorProfile;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -170,6 +172,84 @@ class AppointmentControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', $matchingAppointment->id);
+    }
+
+    public function test_index_filters_by_patient_file_number_doctor_department_and_date_range(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $user = $this->authenticateForClinic($clinic);
+
+        $department = Department::factory()->create([
+            'clinic_id' => $clinic->id,
+            'name' => 'عيادة الأسنان',
+            'is_active' => true,
+        ]);
+        $otherDepartment = Department::factory()->create([
+            'clinic_id' => $clinic->id,
+            'is_active' => true,
+        ]);
+
+        $doctor = User::factory()->create(['clinic_id' => $clinic->id]);
+        $otherDoctor = User::factory()->create(['clinic_id' => $clinic->id]);
+        app(AssignUserRoleAction::class)->handle($doctor, 'doctor', $user->id);
+        app(AssignUserRoleAction::class)->handle($otherDoctor, 'doctor', $user->id);
+
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'department_id' => $department->id,
+            'status' => DoctorProfile::STATUS_ACTIVE,
+        ]);
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $otherDoctor->id,
+            'department_id' => $otherDepartment->id,
+            'status' => DoctorProfile::STATUS_ACTIVE,
+        ]);
+
+        $patient = Patient::factory()->create([
+            'clinic_id' => $clinic->id,
+            'file_number' => 'P-FILE-123',
+        ]);
+        $otherPatient = Patient::factory()->create([
+            'clinic_id' => $clinic->id,
+            'file_number' => 'P-FILE-999',
+        ]);
+
+        $matchingAppointment = Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'scheduled_for' => '2026-06-15 10:00:00',
+        ]);
+
+        Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $otherPatient->id,
+            'doctor_id' => $otherDoctor->id,
+            'scheduled_for' => '2026-06-15 10:00:00',
+        ]);
+
+        Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'scheduled_for' => '2026-07-15 10:00:00',
+        ]);
+
+        $response = $this->getJson(route('appointments.index', [
+            'search' => 'P-FILE-123',
+            'doctor_id' => $doctor->id,
+            'department_id' => $department->id,
+            'date_from' => '2026-06-01',
+            'date_to' => '2026-06-30',
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $matchingAppointment->id);
+        $response->assertJsonPath('data.0.patient.file_number', 'P-FILE-123');
+        $response->assertJsonPath('data.0.doctor.department.name', 'عيادة الأسنان');
     }
 
     public function test_index_clears_search_filter_when_empty_search_is_passed(): void

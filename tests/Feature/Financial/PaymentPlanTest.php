@@ -51,6 +51,19 @@ class PaymentPlanTest extends TestCase
         $response->assertJsonCount(3, 'data.data');
     }
 
+    public function test_html_financial_subpages_redirect_to_single_financial_page(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $user = User::factory()->for($clinic)->create();
+        $this->actingAs($user);
+
+        $this->get(route('payment-plans.index'))
+            ->assertRedirect(route('financial.index'));
+
+        $this->get(route('installments.index'))
+            ->assertRedirect(route('financial.index'));
+    }
+
     public function test_can_apply_payment_plan_to_invoice(): void
     {
         $clinic = Clinic::factory()->create();

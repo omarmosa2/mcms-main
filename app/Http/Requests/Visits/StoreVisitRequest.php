@@ -39,6 +39,7 @@ class StoreVisitRequest extends FormRequest
                 Rule::exists('appointments', 'id')->where(
                     fn ($query) => $query->where('clinic_id', $clinicId),
                 ),
+                Rule::unique('visits', 'appointment_id'),
             ],
             'patient_id' => [
                 'required',

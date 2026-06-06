@@ -15,10 +15,17 @@ import { computed } from 'vue';
 import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
 import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch, FilterSelect } from '@/components/ui/filter';
-import type { ActiveFilter, Department, DepartmentSortField, SortDirection } from './types';
+import type {
+    ActiveFilter,
+    Department,
+    DepartmentSortField,
+    SortDirection,
+} from './types';
 
 const search = defineModel<string>('search', { default: '' });
-const activeFilter = defineModel<ActiveFilter>('activeFilter', { default: 'all' });
+const activeFilter = defineModel<ActiveFilter>('activeFilter', {
+    default: 'all',
+});
 const rowsPerPage = defineModel<number>('rowsPerPage', { default: 15 });
 const selectedIds = defineModel<number[]>('selectedIds', { default: () => [] });
 
@@ -58,7 +65,11 @@ const activeFilters = computed(() => {
     const filters: { key: string; label: string; value: string | null }[] = [];
 
     if (search.value.trim()) {
-        filters.push({ key: 'search', label: 'بحث', value: search.value.trim() });
+        filters.push({
+            key: 'search',
+            label: 'بحث',
+            value: search.value.trim(),
+        });
     }
 
     if (activeFilter.value !== 'all') {
@@ -103,7 +114,9 @@ const sortMark = (field: DepartmentSortField): string => {
 
 <template>
     <div class="space-y-8">
-        <section class="rounded-[1.45rem] border border-[#E2ECF6] bg-white/95 p-6 shadow-card-float">
+        <section
+            class="rounded-[1.45rem] border border-[#E2ECF6] bg-white/95 p-6 shadow-card-float"
+        >
             <div class="grid gap-4 lg:grid-cols-[1fr_18rem_9rem]">
                 <FilterSearch
                     v-model="search"
@@ -172,53 +185,88 @@ const sortMark = (field: DepartmentSortField): string => {
             </Button>
         </Form>
 
-        <section class="overflow-hidden rounded-[1.35rem] border border-[#DDE8F3] bg-white/95 shadow-card-float">
-            <div class="w-full overflow-x-auto">
-                <table class="min-w-full border-separate border-spacing-0">
+        <section
+            class="overflow-hidden rounded-[1.35rem] border border-[#DDE8F3] bg-white/95 shadow-card-float"
+        >
+            <div class="w-full overflow-hidden">
+                <table
+                    class="w-full table-fixed border-separate border-spacing-0 [&_td]:align-middle [&_th]:align-middle"
+                >
+                    <colgroup>
+                        <col class="w-[5%]" />
+                        <col class="w-[24%]" />
+                        <col class="w-[12%]" />
+                        <col class="w-[11%]" />
+                        <col class="w-[13%]" />
+                        <col class="w-[12%]" />
+                        <col class="w-[13%]" />
+                        <col class="w-[10%]" />
+                    </colgroup>
                     <thead>
                         <tr class="h-16 bg-[#F3F8FC]">
-                            <th v-if="canDelete" class="w-12 px-5 text-right">
-                                <input
-                                    type="checkbox"
-                                    class="size-4 cursor-pointer rounded border-[#CAD8E7] text-[#0EA5E9]"
-                                    :checked="areAllSelected"
-                                    @change="emit('toggle-all-selection', $event)"
-                                />
-                            </th>
-                            <th class="w-12 px-4 py-3 text-right text-sm font-bold text-[#111827]">#</th>
                             <th
-                                class="min-w-64 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="px-2 py-3 text-center text-sm font-bold text-[#111827]"
+                            >
+                                #
+                            </th>
+                            <th
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
                                 @click="emit('toggle-sort', 'name')"
                             >
-                                اسم العيادة <span class="ms-1 text-[#A8B8C8]">{{ sortMark('name') }}</span>
+                                اسم العيادة
+                                <span class="ms-1 text-[#A8B8C8]">{{
+                                    sortMark('name')
+                                }}</span>
                             </th>
                             <th
-                                class="min-w-32 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
                                 @click="emit('toggle-sort', 'code')"
                             >
-                                الرمز <span class="ms-1 text-[#A8B8C8]">{{ sortMark('code') }}</span>
+                                الرمز
+                                <span class="ms-1 text-[#A8B8C8]">{{
+                                    sortMark('code')
+                                }}</span>
                             </th>
-                            <th class="min-w-64 px-5 py-3 text-right text-sm font-bold text-[#111827]">الوصف</th>
+                            <!-- <th class="min-w-64 px-5 py-3 text-right text-sm font-bold text-[#111827]">الوصف</th> -->
                             <th
-                                class="min-w-28 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
-                                @click="emit('toggle-sort', 'doctor_profiles_count')"
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
+                                @click="
+                                    emit('toggle-sort', 'doctor_profiles_count')
+                                "
                             >
-                                الأطباء <span class="ms-1 text-[#A8B8C8]">{{ sortMark('doctor_profiles_count') }}</span>
+                                الأطباء
+                                <span class="ms-1 text-[#A8B8C8]">{{
+                                    sortMark('doctor_profiles_count')
+                                }}</span>
                             </th>
-                            <th class="min-w-36 px-5 py-3 text-right text-sm font-bold text-[#111827]">أيام الدوام</th>
                             <th
-                                class="min-w-28 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="px-3 py-3 text-center text-sm font-bold text-[#111827]"
+                            >
+                                أيام الدوام
+                            </th>
+                            <th
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
                                 @click="emit('toggle-sort', 'is_active')"
                             >
-                                الحالة <span class="ms-1 text-[#A8B8C8]">{{ sortMark('is_active') }}</span>
+                                الحالة
+                                <span class="ms-1 text-[#A8B8C8]">{{
+                                    sortMark('is_active')
+                                }}</span>
                             </th>
                             <th
-                                class="min-w-36 cursor-pointer select-none px-5 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
                                 @click="emit('toggle-sort', 'created_at')"
                             >
-                                تاريخ الإضافة <span class="ms-1 text-[#A8B8C8]">{{ sortMark('created_at') }}</span>
+                                تاريخ الإضافة
+                                <span class="ms-1 text-[#A8B8C8]">{{
+                                    sortMark('created_at')
+                                }}</span>
                             </th>
-                            <th class="min-w-32 px-5 py-3 text-right text-sm font-bold text-[#111827]">الإجراءات</th>
+                            <th
+                                class="px-3 py-3 text-center text-sm font-bold text-[#111827]"
+                            >
+                                الإجراءات
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -227,59 +275,76 @@ const sortMark = (field: DepartmentSortField): string => {
                             :key="department.id"
                             class="group h-20 border-b border-[#E8EEF6] transition-all duration-150 last:border-b-0 hover:bg-[#F8FCFF]"
                         >
-                            <td v-if="canDelete" class="px-5 py-4">
-                                <input
-                                    v-model="selectedIds"
-                                    type="checkbox"
-                                    class="size-4 cursor-pointer rounded border-[#CAD8E7] text-[#0EA5E9]"
-                                    :value="department.id"
-                                />
-                            </td>
-                            <td class="px-4 py-4 text-sm font-bold text-[#111827]">
+                            <td
+                                class="px-2 py-4 text-center text-sm font-bold text-[#111827]"
+                            >
                                 {{ visibleFrom + index }}
                             </td>
-                            <td class="px-5 py-4">
-                                <div class="flex items-center gap-3">
-                                    <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0EA5E9] text-sm font-bold text-white shadow-[0_12px_24px_-18px_rgb(14_165_233_/_0.95)]">
+                            <td class="px-3 py-4 text-center">
+                                <div
+                                    class="flex items-center justify-center gap-3"
+                                >
+                                    <span
+                                        class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0EA5E9] text-sm font-bold text-white shadow-[0_12px_24px_-18px_rgb(14_165_233_/_0.95)]"
+                                    >
                                         {{ department.name.charAt(0) }}
                                     </span>
-                                    <span class="text-sm font-semibold text-[#111827]">{{ department.name }}</span>
+                                    <span
+                                        class="min-w-0 truncate text-sm font-semibold text-[#111827]"
+                                        >{{ department.name }}</span
+                                    >
                                 </div>
                             </td>
-                            <td class="px-5 py-4 text-sm font-semibold text-[#111827]">
+                            <td
+                                class="px-3 py-4 text-center text-sm font-semibold text-[#111827]"
+                            >
                                 {{ department.code ?? '-' }}
                             </td>
-                            <td class="max-w-xs px-5 py-4 text-sm text-[#6C7F95]">
+                            <!-- <td class="max-w-xs px-5 py-4 text-sm text-[#6C7F95]">
                                 <span class="line-clamp-2">{{ department.description ?? '-' }}</span>
-                            </td>
-                            <td class="px-5 py-4">
-                                <span class="inline-flex min-w-10 items-center justify-center rounded-full bg-[#F4F7FA] px-3 py-1.5 text-xs font-bold text-[#111827]">
+                            </td> -->
+                            <td class="px-3 py-4 text-center">
+                                <span
+                                    class="inline-flex min-w-10 items-center justify-center rounded-full bg-[#F4F7FA] px-3 py-1.5 text-xs font-bold text-[#111827]"
+                                >
                                     {{ department.doctor_profiles_count }}
                                 </span>
                             </td>
-                            <td class="px-5 py-4">
-                                <span class="inline-flex items-center gap-2 rounded-full bg-[#EAF7FE] px-3 py-1.5 text-xs font-bold text-[#0284C7]">
+                            <td class="px-3 py-4 text-center">
+                                <span
+                                    class="inline-flex items-center justify-center gap-2 rounded-full bg-[#EAF7FE] px-3 py-1.5 text-xs font-bold text-[#0284C7]"
+                                >
                                     <Clock class="size-3.5" />
                                     {{ activeHoursCount(department) }} أيام
                                 </span>
                             </td>
-                            <td class="px-5 py-4">
+                            <td class="px-3 py-4 text-center">
                                 <span
                                     class="inline-flex min-w-20 items-center justify-center rounded-full px-3 py-1.5 text-xs font-bold"
                                     :class="statusClass(department.is_active)"
                                 >
-                                    {{ department.is_active ? 'نشطة' : 'غير نشطة' }}
+                                    {{
+                                        department.is_active
+                                            ? 'نشطة'
+                                            : 'غير نشطة'
+                                    }}
                                 </span>
                             </td>
-                            <td class="px-5 py-4 text-sm text-[#111827]">
+                            <td
+                                class="px-3 py-4 text-center text-sm text-[#111827]"
+                            >
                                 {{
                                     department.created_at !== null
-                                        ? new Date(department.created_at).toLocaleDateString('ar-EG')
+                                        ? new Date(
+                                              department.created_at,
+                                          ).toLocaleDateString('ar-EG')
                                         : '-'
                                 }}
                             </td>
-                            <td class="px-5 py-4 md:text-right">
-                                <div class="flex items-center justify-end gap-3">
+                            <td class="px-3 py-4 text-center">
+                                <div
+                                    class="flex items-center justify-center gap-2"
+                                >
                                     <button
                                         v-if="canDelete"
                                         type="button"
@@ -311,10 +376,16 @@ const sortMark = (field: DepartmentSortField): string => {
                         </tr>
 
                         <tr v-if="departments.length === 0">
-                            <td :colspan="canDelete ? 10 : 9" class="px-5">
+                            <td colspan="8" class="px-5">
                                 <div class="py-20 text-center">
-                                    <h3 class="mb-2 text-base font-bold text-[#111827]">لا توجد عيادات</h3>
-                                    <p class="text-sm text-[#6C7F95]">غيّر التصفية أو أضف عيادة جديدة للبدء.</p>
+                                    <h3
+                                        class="mb-2 text-base font-bold text-[#111827]"
+                                    >
+                                        لا توجد عيادات
+                                    </h3>
+                                    <p class="text-sm text-[#6C7F95]">
+                                        غيّر التصفية أو أضف عيادة جديدة للبدء.
+                                    </p>
                                 </div>
                             </td>
                         </tr>
@@ -323,7 +394,9 @@ const sortMark = (field: DepartmentSortField): string => {
             </div>
         </section>
 
-        <div class="flex flex-col gap-4 px-2 md:flex-row md:items-center md:justify-between">
+        <div
+            class="flex flex-col gap-4 px-2 md:flex-row md:items-center md:justify-between"
+        >
             <div class="flex flex-wrap items-center gap-4">
                 <div class="flex items-center gap-2">
                     <button
@@ -360,24 +433,29 @@ const sortMark = (field: DepartmentSortField): string => {
                     </button>
                 </div>
 
-                <span class="text-sm font-semibold text-[#111827]">صفحة {{ page }} من {{ totalPages }}</span>
+                <span class="text-sm font-semibold text-[#111827]"
+                    >صفحة {{ page }} من {{ totalPages }}</span
+                >
 
                 <div class="flex items-center gap-3">
                     <select
                         v-model.number="rowsPerPage"
-                        class="h-11 rounded-2xl border border-[#DDE9F3] bg-white px-4 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] focus:border-[#0EA5E9] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/10"
+                        class="h-11 rounded-2xl border border-[#DDE9F3] bg-white px-4 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 focus:outline-none"
                     >
                         <option value="10">10</option>
                         <option value="15">15</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
                     </select>
-                    <span class="text-sm font-semibold text-[#111827]">عدد الصفوف لكل صفحة</span>
+                    <span class="text-sm font-semibold text-[#111827]"
+                        >عدد الصفوف لكل صفحة</span
+                    >
                 </div>
             </div>
 
             <p class="text-sm font-medium text-[#6C7F95]">
-                عرض {{ visibleFrom }} إلى {{ visibleTo }} من {{ totalDepartments }} عيادة
+                عرض {{ visibleFrom }} إلى {{ visibleTo }} من
+                {{ totalDepartments }} عيادة
             </p>
         </div>
     </div>

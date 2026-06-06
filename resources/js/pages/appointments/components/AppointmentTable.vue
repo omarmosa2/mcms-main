@@ -1,18 +1,32 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
+import { ArrowDown, ArrowUp, ArrowUpDown, Stethoscope } from 'lucide-vue-next';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch, FilterSelect } from '@/components/ui/filter';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { appointmentStatusClass, appointmentStatusDotClass, appointmentStatusLabel } from './appointmentHelpers';
-import type { Appointment, AppointmentSortField, PaginatedResponse, SortDirection, Option } from './types';
+import {
+    appointmentStatusClass,
+    appointmentStatusDotClass,
+    appointmentStatusLabel,
+} from './appointmentHelpers';
+import type {
+    Appointment,
+    AppointmentSortField,
+    PaginatedResponse,
+    SortDirection,
+    Option,
+} from './types';
 
 const props = defineProps<{
     appointments: PaginatedResponse<Appointment>;
     localSearch: string;
     localStatus: string;
+    localDoctorId: string;
+    localDepartmentId: string;
+    localDateFrom: string;
+    localDateTo: string;
     localRowsPerPage: number;
     localPage: number;
     sortBy: AppointmentSortField;
@@ -21,6 +35,8 @@ const props = defineProps<{
     localVisibleTo: number;
     totalLocalPages: number;
     statusOptions: { label: string; value: string }[];
+    doctorOptions: { label: string; value: string }[];
+    departmentOptions: { label: string; value: string }[];
     activeFilters: { key: string; label: string; value: string | null }[];
     selectedAppointmentIds: number[];
     deletableAppointmentIds: number[];
@@ -28,39 +44,58 @@ const props = defineProps<{
     canEditAppointment: boolean;
     canDeleteAppointment: boolean;
     canUpdateStatus: boolean;
+    canStartVisit: boolean;
     total: number;
     patients: Option[];
     doctors: Option[];
 }>();
 
-const emit = defineEmits<{
-    'search': [value: string];
-    'status': [value: string];
-    'rows-per-page': [value: number];
-    'page': [value: number];
-    'update:selectedAppointmentIds': [value: number[]];
-    'remove-filter': [key: string];
-    'clear-filters': [];
-    'clear-selection': [];
-    'toggle-select-all': [event: Event];
-    'previous-page': [];
-    'next-page': [];
-    'sort': [field: AppointmentSortField];
-    'view': [appointment: Appointment];
-    'edit': [appointment: Appointment];
-    'delete': [appointment: Appointment];
-    'bulk-delete': [];
-    'status-transition-success': [];
-    'status-transition-error': [];
-}>();
+const emit = defineEmits([
+    'search',
+    'status',
+    'doctor',
+    'department',
+    'date-from',
+    'date-to',
+    'rows-per-page',
+    'page',
+    'update:selectedAppointmentIds',
+    'remove-filter',
+    'clear-filters',
+    'clear-selection',
+    'toggle-select-all',
+    'previous-page',
+    'next-page',
+    'sort',
+    'view',
+    'edit',
+    'delete',
+    'convert-to-visit',
+    'bulk-delete',
+    'status-transition-success',
+    'status-transition-error',
+]);
 
-const transitionStatuses = [
-    'confirmed',
-    'arrived',
-    'completed',
-    'canceled',
-    'no_show',
-];
+const transitionStatuses = ['confirmed', 'arrived', 'canceled', 'no_show'];
+
+const canConvertToVisit = (appointment: Appointment): boolean => {
+    return (
+        props.canStartVisit &&
+        ['scheduled', 'confirmed', 'arrived'].includes(appointment.status)
+    );
+};
+
+const formatDate = (iso: string): string => {
+    return new Date(iso).toLocaleDateString('ar-SA');
+};
+
+const formatTime = (iso: string): string => {
+    return new Date(iso).toLocaleTimeString('ar-SA', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+    });
+};
 
 const sortIconFor = (field: AppointmentSortField) => {
     if (props.sortBy !== field) {
@@ -73,7 +108,9 @@ const sortIconFor = (field: AppointmentSortField) => {
 
 <template>
     <div class="glass-panel-soft p-5">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+        <div
+            class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3"
+        >
             <h3 class="pattern-typographic-title text-[0.76rem]">
                 جميع المواعيد
             </h3>
@@ -82,15 +119,17 @@ const sortIconFor = (field: AppointmentSortField) => {
             </span>
         </div>
 
-        <div class="space-y-3 rounded-2xl border border-border/70 bg-background/60 p-4">
-            <div class="grid gap-3 md:grid-cols-[repeat(3,minmax(0,1fr))] md:items-end">
-                <div class="grid gap-2 md:col-span-2">
+        <div
+            class="space-y-3 rounded-2xl border border-border/70 bg-background/60 p-4"
+        >
+            <div class="grid gap-3 md:items-end lg:grid-cols-4">
+                <div class="grid gap-2 lg:col-span-2">
                     <Label for="appointments_search">بحث</Label>
                     <FilterSearch
                         id="appointments_search"
                         :model-value="localSearch"
                         @update:model-value="emit('search', $event)"
-                        placeholder="رقم الموعد، المريض، الطبيب"
+                        placeholder="رقم الموعد، المريض، رقم الملف، الطبيب"
                     />
                 </div>
 
@@ -104,15 +143,70 @@ const sortIconFor = (field: AppointmentSortField) => {
                         placeholder="جميع الحالات"
                     />
                 </div>
+
+                <div class="grid gap-2">
+                    <Label for="appointments_doctor">الطبيب</Label>
+                    <FilterSelect
+                        id="appointments_doctor"
+                        :model-value="localDoctorId"
+                        @update:model-value="emit('doctor', $event)"
+                        :options="doctorOptions"
+                        placeholder="كل الأطباء"
+                    />
+                </div>
             </div>
 
-            <div class="grid gap-3 md:grid-cols-[repeat(2,minmax(0,1fr))] md:items-end">
+            <div class="grid gap-3 md:items-end lg:grid-cols-4">
+                <div class="grid gap-2">
+                    <Label for="appointments_department">العيادة</Label>
+                    <FilterSelect
+                        id="appointments_department"
+                        :model-value="localDepartmentId"
+                        @update:model-value="emit('department', $event)"
+                        :options="departmentOptions"
+                        placeholder="كل العيادات"
+                    />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="appointments_date_from">من تاريخ</Label>
+                    <Input
+                        id="appointments_date_from"
+                        type="date"
+                        :model-value="localDateFrom"
+                        class="pattern-field-clay"
+                        @update:model-value="
+                            emit('date-from', String($event ?? ''))
+                        "
+                    />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="appointments_date_to">إلى تاريخ</Label>
+                    <Input
+                        id="appointments_date_to"
+                        type="date"
+                        :model-value="localDateTo"
+                        class="pattern-field-clay"
+                        @update:model-value="
+                            emit('date-to', String($event ?? ''))
+                        "
+                    />
+                </div>
+
                 <div class="grid gap-2 md:max-w-44">
                     <Label for="appointments_per_page">صفوف لكل صفحة</Label>
                     <select
                         id="appointments_per_page"
                         :value="localRowsPerPage"
-                        @change="emit('rows-per-page', Number(($event.target as HTMLSelectElement).value))"
+                        @change="
+                            emit(
+                                'rows-per-page',
+                                Number(
+                                    ($event.target as HTMLSelectElement).value,
+                                ),
+                            )
+                        "
                         class="pattern-field-clay h-10 px-3 py-1.5"
                     >
                         <option value="10">10</option>
@@ -156,13 +250,10 @@ const sortIconFor = (field: AppointmentSortField) => {
         </div>
 
         <div class="ui-table-shell">
-            <table class="ui-table md:min-w-[920px]">
+            <table class="ui-table md:min-w-[1080px]">
                 <thead>
                     <tr>
-                        <th
-                            v-if="canDeleteAppointment"
-                            class="px-3 py-2"
-                        >
+                        <th v-if="canDeleteAppointment" class="px-3 py-2">
                             <input
                                 type="checkbox"
                                 class="size-4 rounded border-border"
@@ -177,11 +268,12 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 @click="emit('sort', 'appointment_number')"
                             >
                                 رقم الموعد
-                                <component :is="sortIconFor('appointment_number')" class="size-3.5" />
+                                <component
+                                    :is="sortIconFor('appointment_number')"
+                                    class="size-3.5"
+                                />
                             </button>
                         </th>
-                        <th class="px-3 py-2">المريض</th>
-                        <th class="px-3 py-2">الطبيب</th>
                         <th class="px-3 py-2">
                             <button
                                 type="button"
@@ -189,19 +281,17 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 @click="emit('sort', 'scheduled_for')"
                             >
                                 التاريخ
-                                <component :is="sortIconFor('scheduled_for')" class="size-3.5" />
+                                <component
+                                    :is="sortIconFor('scheduled_for')"
+                                    class="size-3.5"
+                                />
                             </button>
                         </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('sort', 'duration_minutes')"
-                            >
-                                المدة
-                                <component :is="sortIconFor('duration_minutes')" class="size-3.5" />
-                            </button>
-                        </th>
+                        <th class="px-3 py-2">الوقت</th>
+                        <th class="px-3 py-2">المريض</th>
+                        <th class="px-3 py-2">رقم الملف</th>
+                        <th class="px-3 py-2">العيادة</th>
+                        <th class="px-3 py-2">الطبيب</th>
                         <th class="px-3 py-2">
                             <button
                                 type="button"
@@ -209,7 +299,10 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 @click="emit('sort', 'status')"
                             >
                                 الحالة
-                                <component :is="sortIconFor('status')" class="size-3.5" />
+                                <component
+                                    :is="sortIconFor('status')"
+                                    class="size-3.5"
+                                />
                             </button>
                         </th>
                         <th class="px-3 py-2 text-right">الإجراءات</th>
@@ -228,48 +321,96 @@ const sortIconFor = (field: AppointmentSortField) => {
                         >
                             <input
                                 v-if="appointment.status === 'scheduled'"
-                                :checked="selectedAppointmentIds.includes(appointment.id)"
+                                :checked="
+                                    selectedAppointmentIds.includes(
+                                        appointment.id,
+                                    )
+                                "
                                 type="checkbox"
                                 class="size-4 rounded border-border"
                                 :value="appointment.id"
-                                @change="($event) => {
-                                    const checked = ($event.target as HTMLInputElement).checked;
-                                    if (checked) {
-                                        emit('update:selectedAppointmentIds', [...selectedAppointmentIds, appointment.id]);
-                                    } else {
-                                        emit('update:selectedAppointmentIds', selectedAppointmentIds.filter(id => id !== appointment.id));
+                                @change="
+                                    ($event) => {
+                                        const checked = (
+                                            $event.target as HTMLInputElement
+                                        ).checked;
+                                        if (checked) {
+                                            emit(
+                                                'update:selectedAppointmentIds',
+                                                [
+                                                    ...selectedAppointmentIds,
+                                                    appointment.id,
+                                                ],
+                                            );
+                                        } else {
+                                            emit(
+                                                'update:selectedAppointmentIds',
+                                                selectedAppointmentIds.filter(
+                                                    (id) =>
+                                                        id !== appointment.id,
+                                                ),
+                                            );
+                                        }
                                     }
-                                }"
+                                "
                             />
                         </td>
-                        <td class="px-3 py-2 font-medium" data-label="رقم الموعد">
+                        <td
+                            class="px-3 py-2 font-medium"
+                            data-label="رقم الموعد"
+                        >
                             {{ appointment.appointment_number }}
                         </td>
+                        <td class="px-3 py-2" data-label="التاريخ">
+                            {{ formatDate(appointment.scheduled_for) }}
+                        </td>
+                        <td class="px-3 py-2" data-label="الوقت">
+                            {{ formatTime(appointment.scheduled_for) }}
+                        </td>
                         <td class="px-3 py-2" data-label="المريض">
-                            {{ appointment.patient?.full_name ?? '-' }}
+                            <div class="font-medium text-foreground">
+                                {{ appointment.patient?.full_name ?? '-' }}
+                            </div>
+                        </td>
+                        <td class="px-3 py-2" data-label="رقم الملف">
+                            {{ appointment.patient?.file_number ?? '-' }}
+                        </td>
+                        <td class="px-3 py-2" data-label="العيادة">
+                            {{ appointment.doctor?.department?.name ?? '-' }}
                         </td>
                         <td class="px-3 py-2" data-label="الطبيب">
-                            {{ appointment.doctor?.name ?? '-' }}
-                        </td>
-                        <td class="px-3 py-2" data-label="التاريخ">
-                            {{ new Date(appointment.scheduled_for).toLocaleString('ar-SA') }}
-                        </td>
-                        <td class="px-3 py-2" data-label="المدة">
-                            {{ appointment.duration_minutes }} دقيقة
+                            <div class="font-medium text-foreground">
+                                {{ appointment.doctor?.name ?? '-' }}
+                            </div>
+                            <div
+                                v-if="appointment.doctor?.specialty"
+                                class="text-xs text-muted-foreground"
+                            >
+                                {{ appointment.doctor.specialty }}
+                            </div>
                         </td>
                         <td class="px-3 py-2" data-label="الحالة">
                             <span
                                 class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium capitalize"
-                                :class="appointmentStatusClass(appointment.status)"
+                                :class="
+                                    appointmentStatusClass(appointment.status)
+                                "
                             >
                                 <span
                                     class="size-1.5 rounded-full"
-                                    :class="appointmentStatusDotClass(appointment.status)"
+                                    :class="
+                                        appointmentStatusDotClass(
+                                            appointment.status,
+                                        )
+                                    "
                                 ></span>
                                 {{ appointmentStatusLabel(appointment.status) }}
                             </span>
                         </td>
-                        <td class="table-cell-actions px-3 py-2 md:text-right" data-label="الإجراءات">
+                        <td
+                            class="table-cell-actions px-3 py-2 md:text-right"
+                            data-label="الإجراءات"
+                        >
                             <div class="flex flex-wrap justify-end gap-2">
                                 <Button
                                     type="button"
@@ -290,9 +431,26 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 >
                                     تعديل
                                 </Button>
+                                <Button
+                                    v-if="canConvertToVisit(appointment)"
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    class="h-10 px-3 text-xs"
+                                    @click="
+                                        emit('convert-to-visit', appointment)
+                                    "
+                                >
+                                    <Stethoscope class="size-3.5" />
+                                    تحويل إلى زيارة
+                                </Button>
                                 <Form
                                     v-if="canUpdateStatus"
-                                    v-bind="AppointmentController.transitionStatus.form(appointment.id)"
+                                    v-bind="
+                                        AppointmentController.transitionStatus.form(
+                                            appointment.id,
+                                        )
+                                    "
                                     class="flex items-center gap-2"
                                     v-slot="{ processing }"
                                     @success="emit('status-transition-success')"
@@ -339,8 +497,14 @@ const sortIconFor = (field: AppointmentSortField) => {
                             </div>
                         </td>
                     </tr>
-                    <tr v-if="appointments.data.length === 0" class="table-empty-state">
-                        <td :colspan="canDeleteAppointment ? 8 : 7" class="px-3 py-10 text-center text-muted-foreground">
+                    <tr
+                        v-if="appointments.data.length === 0"
+                        class="table-empty-state"
+                    >
+                        <td
+                            :colspan="canDeleteAppointment ? 10 : 9"
+                            class="px-3 py-10 text-center text-muted-foreground"
+                        >
                             لا توجد مواعيد تطابق عوامل التصفية الحالية.
                         </td>
                     </tr>
@@ -348,9 +512,12 @@ const sortIconFor = (field: AppointmentSortField) => {
             </table>
         </div>
 
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2">
+        <div
+            class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2"
+        >
             <p class="text-xs text-muted-foreground">
-                عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من {{ appointments.meta.total }} سجل
+                عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من
+                {{ appointments.meta.total }} سجل
             </p>
             <div class="flex items-center gap-2">
                 <Button

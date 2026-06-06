@@ -72,6 +72,11 @@ class OperationalPagesTest extends TestCase
                 ->has('doctors')
                 ->has('status_options'));
 
+        $this->get(route('financial.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('financial/Index'));
+
         $this->get(route('billing.invoices.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page

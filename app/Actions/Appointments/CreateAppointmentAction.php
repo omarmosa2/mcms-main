@@ -8,6 +8,7 @@ use App\Actions\GenerateNumberAction;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
 use App\Services\DoctorScheduleService;
 use Illuminate\Support\Carbon;
@@ -21,6 +22,7 @@ class CreateAppointmentAction extends BaseAction
         private GenerateNumberAction $generateNumberAction,
         private DoctorScheduleService $doctorScheduleService,
         private ClinicWorkingHoursService $clinicWorkingHoursService,
+        private CacheService $cacheService,
     ) {}
 
     /**
@@ -67,6 +69,9 @@ class CreateAppointmentAction extends BaseAction
                 'status',
             ]),
         );
+
+        $this->cacheService->invalidateDashboardStats($clinicId);
+        $this->cacheService->invalidateDropdowns($clinicId);
 
         return $appointment;
     }

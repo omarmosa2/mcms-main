@@ -35,7 +35,7 @@ export function appointmentStatusLabel(status: string): string {
         scheduled: 'مجدول',
         confirmed: 'مؤكد',
         arrived: 'حاضر',
-        completed: 'مكتمل',
+        completed: 'تم تحويله إلى زيارة',
         canceled: 'ملغي',
         no_show: 'لم يحضر',
     };
@@ -59,11 +59,20 @@ export function toDatetimeLocalValue(isoValue: string): string {
 export function formatTime(iso: string): string {
     const d = new Date(iso);
 
-    return d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return d.toLocaleTimeString('ar-SA', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+    });
 }
 
 export function formatArabicDate(iso: string): string {
     const d = new Date(iso);
 
-    return d.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    return d.toLocaleDateString('ar-SA', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
 }

@@ -5,11 +5,15 @@ namespace App\Actions\Appointments;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\Appointment;
+use App\Services\Cache\CacheService;
 use Illuminate\Validation\ValidationException;
 
 class DeleteAppointmentAction extends BaseAction
 {
-    public function __construct(private LogAuditAction $logAuditAction) {}
+    public function __construct(
+        private LogAuditAction $logAuditAction,
+        private CacheService $cacheService,
+    ) {}
 
     public function handle(int $clinicId, int $appointmentId, int $userId): void
     {
@@ -39,5 +43,8 @@ class DeleteAppointmentAction extends BaseAction
             auditable: $appointment,
             oldValues: $oldValues,
         );
+
+        $this->cacheService->invalidateDashboardStats($clinicId);
+        $this->cacheService->invalidateDropdowns($clinicId);
     }
 }

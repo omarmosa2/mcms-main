@@ -5,11 +5,15 @@ namespace App\Actions\Appointments;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\Appointment;
+use App\Services\Cache\CacheService;
 use Illuminate\Validation\ValidationException;
 
 class TransitionAppointmentStatusAction extends BaseAction
 {
-    public function __construct(private LogAuditAction $logAuditAction) {}
+    public function __construct(
+        private LogAuditAction $logAuditAction,
+        private CacheService $cacheService,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -77,6 +81,9 @@ class TransitionAppointmentStatusAction extends BaseAction
             ],
         );
 
+        $this->cacheService->invalidateDashboardStats($clinicId);
+        $this->cacheService->invalidateDropdowns($clinicId);
+
         return $appointment->fresh();
     }
 
@@ -87,10 +94,12 @@ class TransitionAppointmentStatusAction extends BaseAction
                 Appointment::STATUS_CONFIRMED,
                 Appointment::STATUS_ARRIVED,
                 Appointment::STATUS_CANCELED,
+                Appointment::STATUS_NO_SHOW,
             ],
             Appointment::STATUS_CONFIRMED => [
                 Appointment::STATUS_ARRIVED,
                 Appointment::STATUS_CANCELED,
+                Appointment::STATUS_NO_SHOW,
             ],
             Appointment::STATUS_ARRIVED => [
                 Appointment::STATUS_COMPLETED,

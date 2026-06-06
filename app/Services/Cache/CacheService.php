@@ -374,7 +374,7 @@ class CacheService
         return Cache::remember($key, now()->addSeconds(self::DROPDOWN_OPTIONS_TTL), function () use ($clinicId) {
             return Patient::query()
                 ->forClinic($clinicId)
-                ->select(['id', 'first_name', 'last_name'])
+                ->select(['id', 'first_name', 'last_name', 'file_number', 'phone', 'date_of_birth'])
                 ->orderBy('first_name')
                 ->orderBy('last_name')
                 ->limit(200)
@@ -382,6 +382,10 @@ class CacheService
                 ->map(fn (Patient $patient): array => [
                     'id' => $patient->id,
                     'full_name' => trim("{$patient->first_name} {$patient->last_name}"),
+                    'file_number' => $patient->file_number,
+                    'phone' => $patient->phone,
+                    'date_of_birth' => $patient->date_of_birth?->toDateString(),
+                    'age' => $patient->date_of_birth?->age,
                 ])
                 ->values()
                 ->all();
@@ -406,6 +410,7 @@ class CacheService
         return Cache::remember($key, now()->addSeconds(self::DROPDOWN_OPTIONS_TTL), function () use ($clinicId) {
             return User::query()
                 ->where('clinic_id', $clinicId)
+                ->with(['doctorProfile.department:id,clinic_id,name'])
                 ->whereHas('roles', function ($builder) use ($clinicId): void {
                     $builder
                         ->where('roles.clinic_id', $clinicId)
@@ -418,6 +423,14 @@ class CacheService
                 ->map(fn (User $doctor): array => [
                     'id' => $doctor->id,
                     'name' => $doctor->name,
+                    'department_id' => $doctor->doctorProfile?->department_id,
+                    'specialty' => $doctor->doctorProfile?->specialty,
+                    'department' => $doctor->doctorProfile?->department !== null
+                        ? [
+                            'id' => $doctor->doctorProfile->department->id,
+                            'name' => $doctor->doctorProfile->department->name,
+                        ]
+                        : null,
                 ])
                 ->values()
                 ->all();
@@ -444,6 +457,7 @@ class CacheService
             $query = Appointment::query()
                 ->forClinic($clinicId)
                 ->select(['id', 'appointment_number'])
+                ->whereNotIn('status', Appointment::TERMINAL_STATUSES)
                 ->orderByDesc('scheduled_for')
                 ->limit(200);
 
@@ -547,6 +561,19 @@ class CacheService
         Cache::forget("clinic:{$clinicId}:dropdown:appointments");
         Cache::forget("clinic:{$clinicId}:dropdown:queue");
         Cache::forget("clinic:{$clinicId}:dropdown:visits");
+
+        User::query()
+            ->where('clinic_id', $clinicId)
+            ->whereHas('roles', function ($builder) use ($clinicId): void {
+                $builder
+                    ->where('roles.clinic_id', $clinicId)
+                    ->where('roles.name', 'doctor');
+            })
+            ->select(['id'])
+            ->each(function (User $doctor) use ($clinicId): void {
+                Cache::forget("clinic:{$clinicId}:dropdown:appointments:doctor{$doctor->id}");
+                Cache::forget("clinic:{$clinicId}:dropdown:queue:doctor{$doctor->id}");
+            });
     }
 
     /**

@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { Clock } from 'lucide-vue-next';
+import { computed } from 'vue';
 import InputError from '@/components/InputError.vue';
-import { Switch } from '@/components/ui/switch';
 import type { ClinicWorkingDay, ClinicWorkingHour } from './types';
 
-const workingHours = defineModel<ClinicWorkingHour[]>({ required: true });
-
-defineProps<{
+const props = defineProps<{
+    modelValue: ClinicWorkingHour[];
     errors?: Record<string, string>;
+}>();
+
+const emit = defineEmits<{
+    'update:modelValue': [value: ClinicWorkingHour[]];
 }>();
 
 const weekDays: { value: ClinicWorkingDay; label: string }[] = [
@@ -20,38 +23,44 @@ const weekDays: { value: ClinicWorkingDay; label: string }[] = [
     { value: 'friday', label: 'الجمعة' },
 ];
 
-const ensureRows = (): void => {
+const normalizedWorkingHours = computed<ClinicWorkingHour[]>(() => {
     const currentRows = new Map(
-        workingHours.value.map((row) => [row.day_of_week, row]),
+        props.modelValue.map((row) => [row.day_of_week, row]),
     );
 
-    workingHours.value = weekDays.map(({ value }) => ({
+    return weekDays.map(({ value }) => ({
         day_of_week: value,
         is_active: currentRows.get(value)?.is_active ?? false,
         start_time: currentRows.get(value)?.start_time ?? null,
         end_time: currentRows.get(value)?.end_time ?? null,
     }));
+});
+
+const workingHours = normalizedWorkingHours;
+
+const labelFor = (day: ClinicWorkingDay): string => {
+    return weekDays.find((item) => item.value === day)?.label ?? '';
 };
 
-const updateDay = (day: ClinicWorkingDay, patch: Partial<ClinicWorkingHour>) => {
-    workingHours.value = workingHours.value.map((row) =>
+const updateDay = (day: ClinicWorkingDay, patch: Partial<ClinicWorkingHour>): void => {
+    emit('update:modelValue', normalizedWorkingHours.value.map((row) =>
         row.day_of_week === day ? { ...row, ...patch } : row,
-    );
+    ));
 };
 
-const toggleDay = (day: ClinicWorkingDay, isActive: boolean) => {
+const toggleDay = (day: ClinicWorkingDay, isActive: boolean): void => {
+    const current = normalizedWorkingHours.value.find((row) => row.day_of_week === day);
+
     updateDay(day, {
         is_active: isActive,
-        start_time: isActive ? '09:00' : null,
-        end_time: isActive ? '17:00' : null,
+        start_time: isActive ? (current?.start_time ?? '09:00') : null,
+        end_time: isActive ? (current?.end_time ?? '17:00') : null,
     });
 };
 
-const errorFor = (index: number, field: 'start_time' | 'end_time') => {
-    return errors?.[`working_hours.${index}.${field}`];
+const errorFor = (index: number, field: 'start_time' | 'end_time'): string | undefined => {
+    return props.errors?.[`working_hours.${index}.${field}`];
 };
-
-ensureRows();
 </script>
 
 <template>
@@ -68,18 +77,28 @@ ensureRows();
 
         <div class="space-y-3">
             <div
-                v-for="(day, index) in weekDays"
-                :key="day.value"
+                v-for="(day, index) in normalizedWorkingHours"
+                :key="day.day_of_week"
                 class="rounded-2xl border border-[#E2ECF6] bg-[#F8FCFF] p-4"
             >
                 <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div class="flex items-center gap-3">
-                        <Switch
-                            :model-value="workingHours[index]?.is_active ?? false"
-                            @update:model-value="(value) => toggleDay(day.value, Boolean(value))"
-                        />
+                        <label class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center">
+                            <input
+                                type="checkbox"
+                                class="peer sr-only"
+                                :checked="day.is_active"
+                                @change="toggleDay(day.day_of_week, ($event.target as HTMLInputElement).checked)"
+                            />
+                            <span
+                                class="absolute inset-0 rounded-full bg-[#DDE9F3] transition peer-checked:bg-[#0EA5E9] peer-focus-visible:ring-2 peer-focus-visible:ring-[#0EA5E9]/20 peer-focus-visible:ring-offset-2"
+                            ></span>
+                            <span
+                                class="absolute right-1 size-5 rounded-full bg-white shadow-sm transition-transform peer-checked:-translate-x-5"
+                            ></span>
+                        </label>
                         <div>
-                            <p class="text-sm font-bold text-[#111827]">{{ day.label }}</p>
+                            <p class="text-sm font-bold text-[#111827]">{{ labelFor(day.day_of_week) }}</p>
                             <p class="text-xs font-medium text-[#6C7F95]">
                                 {{ workingHours[index]?.is_active ? 'دوام' : 'لا يوجد دوام' }}
                             </p>
@@ -96,7 +115,7 @@ ensureRows();
                                 :value="workingHours[index]?.start_time ?? ''"
                                 type="time"
                                 class="h-11 w-full rounded-2xl border border-[#DDE9F3] bg-white px-4 text-sm font-semibold text-[#111827] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] focus:border-[#0EA5E9] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/10"
-                                @input="(event) => updateDay(day.value, { start_time: (event.target as HTMLInputElement).value })"
+                                @input="(event) => updateDay(day.day_of_week, { start_time: (event.target as HTMLInputElement).value })"
                             />
                             <InputError class="mt-1" :message="errorFor(index, 'start_time')" />
                         </div>
@@ -106,7 +125,7 @@ ensureRows();
                                 :value="workingHours[index]?.end_time ?? ''"
                                 type="time"
                                 class="h-11 w-full rounded-2xl border border-[#DDE9F3] bg-white px-4 text-sm font-semibold text-[#111827] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] focus:border-[#0EA5E9] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/10"
-                                @input="(event) => updateDay(day.value, { end_time: (event.target as HTMLInputElement).value })"
+                                @input="(event) => updateDay(day.day_of_week, { end_time: (event.target as HTMLInputElement).value })"
                             />
                             <InputError class="mt-1" :message="errorFor(index, 'end_time')" />
                         </div>

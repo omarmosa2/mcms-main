@@ -89,12 +89,25 @@ watch(
     { immediate: true },
 );
 
+const close = (): void => {
+    emit('update:open', false);
+};
+
+const handleOpenChange = (value: boolean): void => {
+    if (!value) {
+        close();
+        return;
+    }
+
+    emit('update:open', true);
+};
+
 const submit = () => {
     const options = {
         preserveScroll: true,
         onSuccess: () => {
             emit('saved');
-            emit('update:open', false);
+            close();
         },
     };
 
@@ -108,8 +121,13 @@ const submit = () => {
 </script>
 
 <template>
-    <Dialog :open="open" @update:open="emit('update:open', $event)">
-        <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-3xl" dir="rtl">
+    <Dialog :open="open" @update:open="handleOpenChange">
+        <DialogContent
+            class="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
+            dir="rtl"
+            @escape-key-down="close"
+            @interact-outside="close"
+        >
             <DialogHeader class="text-right">
                 <DialogTitle class="text-2xl font-bold text-[#111827]">{{ title }}</DialogTitle>
                 <DialogDescription class="text-[#6C7F95]">
@@ -180,7 +198,7 @@ const submit = () => {
                         type="button"
                         variant="ghost"
                         class="h-11 rounded-2xl px-5"
-                        @click="emit('update:open', false)"
+                        @click="close"
                     >
                         إلغاء
                     </Button>

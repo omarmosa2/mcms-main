@@ -9,13 +9,17 @@ use App\Models\Patient;
 use App\Models\QueueEntry;
 use App\Models\User;
 use App\Models\Visit;
+use App\Services\Cache\CacheService;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class StartVisitAction extends BaseAction
 {
-    public function __construct(private LogAuditAction $logAuditAction) {}
+    public function __construct(
+        private LogAuditAction $logAuditAction,
+        private CacheService $cacheService,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -52,6 +56,8 @@ class StartVisitAction extends BaseAction
                         $appointment = $this->resolveAppointmentIfProvided($clinicId, $appointmentId);
                     }
 
+                    $this->ensureAppointmentCanStartVisit($clinicId, $appointment);
+
                     $this->ensureMedicalReferencesAreConsistent(
                         patientId: $patientId,
                         appointment: $appointment,
@@ -83,6 +89,32 @@ class StartVisitAction extends BaseAction
                         $queueEntry->save();
                     }
 
+                    if ($appointment !== null) {
+                        $oldAppointmentValues = $appointment->only([
+                            'status',
+                            'completed_at',
+                        ]);
+
+                        $appointment->status = Appointment::STATUS_COMPLETED;
+                        $appointment->completed_at = now();
+                        $appointment->save();
+
+                        $this->logAuditAction->handle(
+                            clinicId: $clinicId,
+                            userId: $userId,
+                            action: 'appointments.convert_to_visit',
+                            auditable: $appointment,
+                            oldValues: $oldAppointmentValues,
+                            newValues: $appointment->only([
+                                'status',
+                                'completed_at',
+                            ]),
+                            metadata: [
+                                'visit_id' => $visit->id,
+                            ],
+                        );
+                    }
+
                     $this->logAuditAction->handle(
                         clinicId: $clinicId,
                         userId: $userId,
@@ -98,6 +130,9 @@ class StartVisitAction extends BaseAction
                             'status',
                         ]),
                     );
+
+                    $this->cacheService->invalidateDashboardStats($clinicId);
+                    $this->cacheService->invalidateDropdowns($clinicId);
 
                     return $visit;
                 });
@@ -144,6 +179,30 @@ class StartVisitAction extends BaseAction
         }
 
         return $appointment;
+    }
+
+    private function ensureAppointmentCanStartVisit(int $clinicId, ?Appointment $appointment): void
+    {
+        if ($appointment === null) {
+            return;
+        }
+
+        if (in_array($appointment->status, Appointment::TERMINAL_STATUSES, true)) {
+            throw ValidationException::withMessages([
+                'appointment_id' => 'Cannot start a visit from a terminal appointment.',
+            ]);
+        }
+
+        $visitExists = Visit::query()
+            ->forClinic($clinicId)
+            ->where('appointment_id', $appointment->id)
+            ->exists();
+
+        if ($visitExists) {
+            throw ValidationException::withMessages([
+                'appointment_id' => 'A visit already exists for the selected appointment.',
+            ]);
+        }
     }
 
     private function ensureQueueEntryBelongsToClinicIfProvided(int $clinicId, mixed $queueEntryId, bool $lockForUpdate = false): ?QueueEntry

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { Kanban, Plus, Table2, Download, FileText } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import VisitController from '@/actions/App/Http/Controllers/Visits/VisitController';
@@ -9,13 +9,19 @@ import ConfirmationDialog from '@/components/ui/confirmation-dialog/Confirmation
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
-import { usePage } from '@inertiajs/vue3';
 import VisitCreateSheet from './components/VisitCreateSheet.vue';
 import VisitEditDialog from './components/VisitEditDialog.vue';
 import VisitKanbanView from './components/VisitKanbanView.vue';
 import VisitTable from './components/VisitTable.vue';
 import VisitViewDialog from './components/VisitViewDialog.vue';
-import type { KanbanColumn, Option, PaginatedResponse, Visit, VisitSortField, SortDirection } from './components/types';
+import type {
+    KanbanColumn,
+    Option,
+    PaginatedResponse,
+    Visit,
+    VisitSortField,
+    SortDirection,
+} from './components/types';
 
 const {
     visits,
@@ -53,15 +59,53 @@ defineOptions({
 });
 
 const { can } = usePermissions();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const {
+    isOpen: isConfirmOpen,
+    options: confirmOptions,
+    confirm,
+    handleConfirm: handleConfirmDelete,
+    handleCancel: handleConfirmCancel,
+} = useConfirm();
 const toast = useToast();
 const page = usePage();
 
+type VisitPrefill = {
+    patient_id: number | null;
+    appointment_id: number | null;
+    doctor_id: number | null;
+};
+
+const numberQueryParam = (
+    params: URLSearchParams,
+    key: string,
+): number | null => {
+    const value = Number(params.get(key));
+
+    return Number.isFinite(value) && value > 0 ? value : null;
+};
+
+const visitPrefill = computed<VisitPrefill>(() => {
+    const queryString = page.url.split('?')[1] ?? '';
+    const params = new URLSearchParams(queryString);
+
+    return {
+        patient_id: numberQueryParam(params, 'patient_id'),
+        appointment_id: numberQueryParam(params, 'appointment_id'),
+        doctor_id: numberQueryParam(params, 'doctor_id'),
+    };
+});
+
+const hasVisitPrefill = computed<boolean>(() => {
+    return (
+        visitPrefill.value.patient_id !== null ||
+        visitPrefill.value.appointment_id !== null
+    );
+});
+
 const roleNames = computed<string[]>(() => {
     return (
-        ((page.props.auth as { roles?: string[] } | undefined)?.roles ?? [])
-            .filter((value): value is string => typeof value === 'string')
-    );
+        (page.props.auth as { roles?: string[] } | undefined)?.roles ?? []
+    ).filter((value): value is string => typeof value === 'string');
 });
 
 const primaryRole = computed<string>(() => {
@@ -74,7 +118,9 @@ const primaryRole = computed<string>(() => {
         'accountant',
     ];
 
-    return rolePriority.find((role) => roleNames.value.includes(role)) ?? 'staff';
+    return (
+        rolePriority.find((role) => roleNames.value.includes(role)) ?? 'staff'
+    );
 });
 
 const roleLabels: Record<string, string> = {
@@ -87,25 +133,33 @@ const roleLabels: Record<string, string> = {
     staff: 'موظف',
 };
 
-const activeRoleLabel = computed<string>(() => roleLabels[primaryRole.value] ?? roleLabels.staff);
+const activeRoleLabel = computed<string>(
+    () => roleLabels[primaryRole.value] ?? roleLabels.staff,
+);
 
 const visibleVisits = computed<Visit[]>(() => visits.data);
 
 const startedVisitsCount = computed<number>(
-    () => visibleVisits.value.filter((visit) => visit.status === 'started').length,
+    () =>
+        visibleVisits.value.filter((visit) => visit.status === 'started')
+            .length,
 );
 
 const inProgressVisitsCount = computed<number>(
-    () => visibleVisits.value.filter((visit) => visit.status === 'in_progress').length,
+    () =>
+        visibleVisits.value.filter((visit) => visit.status === 'in_progress')
+            .length,
 );
 
 const completedVisitsCount = computed<number>(
-    () => visibleVisits.value.filter((visit) => visit.status === 'completed').length,
+    () =>
+        visibleVisits.value.filter((visit) => visit.status === 'completed')
+            .length,
 );
 
 const viewingVisit = ref<Visit | null>(null);
 const editingVisit = ref<Visit | null>(null);
-const isCreateSheetOpen = ref(false);
+const isCreateSheetOpen = ref(can('visit.start') && hasVisitPrefill.value);
 
 const canViewVisit = computed<boolean>(
     () => can('visit.start') || can('visit.update') || can('visit.complete'),
@@ -181,9 +235,24 @@ const handleBulkDelete = async (ids: number[]) => {
 const viewMode = ref<'kanban' | 'table'>('kanban');
 
 const kanbanColumns: KanbanColumn[] = [
-    { key: 'started', label: 'بدأت', dotColor: 'bg-[var(--accent-teal)]', headerBg: 'bg-[var(--accent-teal-soft)]' },
-    { key: 'in_progress', label: 'قيد التنفيذ', dotColor: 'bg-[var(--accent-coral)]', headerBg: 'bg-[var(--accent-coral-soft)]' },
-    { key: 'completed', label: 'مكتملة', dotColor: 'bg-[var(--accent-mint)]', headerBg: 'bg-[var(--accent-mint-soft)]' },
+    {
+        key: 'started',
+        label: 'بدأت',
+        dotColor: 'bg-[var(--accent-teal)]',
+        headerBg: 'bg-[var(--accent-teal-soft)]',
+    },
+    {
+        key: 'in_progress',
+        label: 'قيد التنفيذ',
+        dotColor: 'bg-[var(--accent-coral)]',
+        headerBg: 'bg-[var(--accent-coral-soft)]',
+    },
+    {
+        key: 'completed',
+        label: 'مكتملة',
+        dotColor: 'bg-[var(--accent-mint)]',
+        headerBg: 'bg-[var(--accent-mint-soft)]',
+    },
 ];
 </script>
 
@@ -191,13 +260,19 @@ const kanbanColumns: KanbanColumn[] = [
     <Head title="الزيارات" />
 
     <div class="container-modern space-y-5" dir="rtl">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
             <div class="flex items-center gap-3">
                 <div>
                     <h1 class="page-title">الزيارات</h1>
-                    <p class="mt-1 text-sm text-slate-500">إدارة الزيارات السريرية وتحويل الحالات.</p>
+                    <p class="mt-1 text-sm text-slate-500">
+                        إدارة الزيارات السريرية وتحويل الحالات.
+                    </p>
                 </div>
-                <span class="inline-flex items-center rounded-full border border-slate-100/80 bg-slate-50/60 px-2.5 py-0.5 text-[0.7rem] font-medium text-slate-500">
+                <span
+                    class="inline-flex items-center rounded-full border border-slate-100/80 bg-slate-50/60 px-2.5 py-0.5 text-[0.7rem] font-medium text-slate-500"
+                >
                     {{ activeRoleLabel }}
                 </span>
             </div>
@@ -205,24 +280,30 @@ const kanbanColumns: KanbanColumn[] = [
             <div class="flex items-center gap-2">
                 <a
                     :href="VisitExportController.export()"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-100/80 bg-white px-3 py-2 text-xs font-medium text-slate-500 transition hover:text-[#0EA5E9] hover:border-[#0EA5E9]/20"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-100/80 bg-white px-3 py-2 text-xs font-medium text-slate-500 transition hover:border-[#0EA5E9]/20 hover:text-[#0EA5E9]"
                 >
                     <Download class="size-3.5" />
                     تصدير Excel
                 </a>
                 <a
                     :href="VisitExportController.exportPdf()"
-                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-100/80 bg-white px-3 py-2 text-xs font-medium text-slate-500 transition hover:text-[#0EA5E9] hover:border-[#0EA5E9]/20"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-slate-100/80 bg-white px-3 py-2 text-xs font-medium text-slate-500 transition hover:border-[#0EA5E9]/20 hover:text-[#0EA5E9]"
                 >
                     <FileText class="size-3.5" />
                     تصدير PDF
                 </a>
 
-                <div class="inline-flex rounded-lg border border-slate-100/80 bg-white p-0.5">
+                <div
+                    class="inline-flex rounded-lg border border-slate-100/80 bg-white p-0.5"
+                >
                     <button
                         type="button"
                         class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all"
-                        :class="viewMode === 'kanban' ? 'bg-[#0EA5E9] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                        :class="
+                            viewMode === 'kanban'
+                                ? 'bg-[#0EA5E9] text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                        "
                         @click="viewMode = 'kanban'"
                     >
                         <Kanban class="size-3.5" />
@@ -231,7 +312,11 @@ const kanbanColumns: KanbanColumn[] = [
                     <button
                         type="button"
                         class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all"
-                        :class="viewMode === 'table' ? 'bg-[#0EA5E9] text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                        :class="
+                            viewMode === 'table'
+                                ? 'bg-[#0EA5E9] text-white shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                        "
                         @click="viewMode = 'table'"
                     >
                         <Table2 class="size-3.5" />
@@ -243,7 +328,7 @@ const kanbanColumns: KanbanColumn[] = [
                     v-if="can('visit.start')"
                     variant="default"
                     size="sm"
-                    class="h-9 rounded-lg bg-[#0EA5E9] text-white hover:bg-[#0284C7] shadow-sm"
+                    class="h-9 rounded-lg bg-[#0EA5E9] text-white shadow-sm hover:bg-[#0284C7]"
                     @click="isCreateSheetOpen = true"
                 >
                     <Plus class="size-3.5" />
@@ -255,21 +340,42 @@ const kanbanColumns: KanbanColumn[] = [
         <section class="card-float px-4 py-3">
             <div class="flex flex-wrap items-center gap-4 md:gap-6">
                 <div class="flex items-center gap-2">
-                    <span class="size-2.5 rounded-full bg-[#0EA5E9]" aria-hidden="true"></span>
+                    <span
+                        class="size-2.5 rounded-full bg-[#0EA5E9]"
+                        aria-hidden="true"
+                    ></span>
                     <span class="text-sm text-slate-500">بدأت</span>
-                    <span class="metric-value text-[#0EA5E9]">{{ startedVisitsCount }}</span>
+                    <span class="metric-value text-[#0EA5E9]">{{
+                        startedVisitsCount
+                    }}</span>
                 </div>
-                <div class="hidden h-5 w-px bg-slate-100/80 md:block" aria-hidden="true"></div>
+                <div
+                    class="hidden h-5 w-px bg-slate-100/80 md:block"
+                    aria-hidden="true"
+                ></div>
                 <div class="flex items-center gap-2">
-                    <span class="size-2.5 rounded-full bg-[#F59E0B]" aria-hidden="true"></span>
+                    <span
+                        class="size-2.5 rounded-full bg-[#F59E0B]"
+                        aria-hidden="true"
+                    ></span>
                     <span class="text-sm text-slate-500">قيد التنفيذ</span>
-                    <span class="metric-value text-[#F59E0B]">{{ inProgressVisitsCount }}</span>
+                    <span class="metric-value text-[#F59E0B]">{{
+                        inProgressVisitsCount
+                    }}</span>
                 </div>
-                <div class="hidden h-5 w-px bg-slate-100/80 md:block" aria-hidden="true"></div>
+                <div
+                    class="hidden h-5 w-px bg-slate-100/80 md:block"
+                    aria-hidden="true"
+                ></div>
                 <div class="flex items-center gap-2">
-                    <span class="size-2.5 rounded-full bg-[#10B981]" aria-hidden="true"></span>
+                    <span
+                        class="size-2.5 rounded-full bg-[#10B981]"
+                        aria-hidden="true"
+                    ></span>
                     <span class="text-sm text-slate-500">مكتملة</span>
-                    <span class="metric-value text-[#10B981]">{{ completedVisitsCount }}</span>
+                    <span class="metric-value text-[#10B981]">{{
+                        completedVisitsCount
+                    }}</span>
                 </div>
             </div>
         </section>
@@ -304,13 +410,11 @@ const kanbanColumns: KanbanColumn[] = [
             :queue-entries="queue_entries"
             :appointments="appointments"
             :doctors="doctors"
+            :prefill="visitPrefill"
             @update:open="isCreateSheetOpen = $event"
         />
 
-        <VisitViewDialog
-            :visit="viewingVisit"
-            @close="closeViewVisit"
-        />
+        <VisitViewDialog :visit="viewingVisit" @close="closeViewVisit" />
 
         <VisitEditDialog
             :visit="editingVisit"

@@ -8,6 +8,7 @@ import {
     Heart,
     Paperclip,
     Pill,
+    Stethoscope,
     TestTube,
     User,
 } from 'lucide-vue-next';
@@ -139,6 +140,7 @@ const activeTab = ref('info');
 const tabs = [
     { id: 'info', label: 'المعلومات الأساسية', icon: User },
     { id: 'medical', label: 'السجل الطبي', icon: Heart },
+    { id: 'records', label: 'السجلات الطبية', icon: Stethoscope },
     { id: 'appointments', label: 'المواعيد', icon: Calendar },
     { id: 'invoices', label: 'الفواتير', icon: CreditCard },
     { id: 'prescriptions', label: 'الوصفات', icon: Pill },
@@ -455,6 +457,20 @@ return 'غير محدد';
                         </Badge>
                     </div>
                     <p v-else class="text-sm text-muted-foreground">لا توجد أدوية حالية مسجلة.</p>
+                </div>
+            </div>
+
+            <div v-if="activeTab === 'records'" class="space-y-4">
+                <div class="rounded-xl border border-border/70 bg-background/55 p-6 text-center">
+                    <Stethoscope class="mx-auto size-8 text-muted-foreground/50" />
+                    <p class="mt-2 text-sm text-muted-foreground">السجلات الطبية لهذا المريض</p>
+                    <Link
+                        :href="`/medical-records?search=${patient.file_number}`"
+                        class="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+                    >
+                        <FileText class="size-4" />
+                        عرض السجلات الطبية
+                    </Link>
                 </div>
             </div>
 

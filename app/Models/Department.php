@@ -24,6 +24,11 @@ class Department extends BaseModel
         ];
     }
 
+    public function medicalRecords(): HasMany
+    {
+        return $this->hasMany(MedicalRecord::class);
+    }
+
     public function clinic(): BelongsTo
     {
         return $this->belongsTo(Clinic::class);

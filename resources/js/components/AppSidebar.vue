@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     Building2,
     CalendarClock,
     Key,
     LayoutGrid,
     CalendarDays,
+    LogOut,
     Settings,
     Shield,
+    Stethoscope,
     UserCog,
     UserRound,
     Users,
@@ -28,13 +30,14 @@ import NavMain from '@/components/NavMain.vue';
 import {
     Sidebar,
     SidebarContent,
+    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { usePermissions } from '@/composables/usePermissions';
-import { dashboard } from '@/routes';
+import { dashboard, logout } from '@/routes';
 import { clinic as adminSettingsUrl } from '@/routes/admin-settings';
 import { index as financialIndex } from '@/routes/financial';
 import type { NavItem, NavSection } from '@/types';
@@ -54,6 +57,7 @@ const roleItemOrder: Record<string, string[]> = {
         'العيادات',
         'الأطباء',
         'المواعيد',
+        'السجلات الطبية',
         'المالية',
         'جداول الدوام',
     ],
@@ -73,6 +77,7 @@ const roleItemOrder: Record<string, string[]> = {
         'العيادات',
         'الأطباء',
         'المواعيد',
+        'السجلات الطبية',
         'المالية',
         'جداول الدوام',
         'المستخدمون',
@@ -85,6 +90,7 @@ const roleItemOrder: Record<string, string[]> = {
         'العيادات',
         'الأطباء',
         'المواعيد',
+        'السجلات الطبية',
         'المالية',
         'جداول الدوام',
         'المستخدمون',
@@ -97,6 +103,7 @@ const roleItemOrder: Record<string, string[]> = {
         'العيادات',
         'الأطباء',
         'المواعيد',
+        'السجلات الطبية',
         'المالية',
         'جداول الدوام',
         'المستخدمون',
@@ -169,6 +176,13 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 icon: CalendarClock,
                 group: 'clinical',
                 permission: 'appointment.view',
+            },
+            {
+                title: 'السجلات الطبية',
+                href: '/medical-records',
+                icon: Stethoscope,
+                group: 'clinical',
+                permission: 'medical_record.view',
             },
             {
                 title: 'المالية',
@@ -267,6 +281,10 @@ const sidebarSections = computed<NavSection[]>(() =>
         ),
     })),
 );
+
+const handleLogout = () => {
+    router.post(logout());
+};
 </script>
 
 <template>
@@ -298,7 +316,21 @@ const sidebarSections = computed<NavSection[]>(() =>
             <NavMain :sections="sidebarSections" />
         </SidebarContent>
 
-       
+        <!-- Logout Button -->
+        <SidebarFooter class="border-t border-[#CFE8F7]/80 px-3 py-3">
+            <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton
+                        size="lg"
+                        class="rounded-2xl transition-colors duration-200 hover:bg-white/70"
+                        @click="handleLogout"
+                    >
+                        <LogOut class="h-5 w-5" />
+                        <span>تسجيل الخروج</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            </SidebarMenu>
+        </SidebarFooter>
     </Sidebar>
 
     <slot />

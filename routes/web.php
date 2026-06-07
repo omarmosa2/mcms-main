@@ -42,3 +42,4 @@ require __DIR__.'/diagnostics.php';
 require __DIR__.'/monitoring.php';
 require __DIR__.'/api-docs.php';
 require __DIR__.'/trash.php';
+require __DIR__.'/medical-records.php';

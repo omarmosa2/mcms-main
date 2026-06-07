@@ -40,6 +40,7 @@ class SyncClinicRbacAction extends BaseAction
             'user.*',
             'salary.*',
             'cashbox.*',
+            'medical_record.*',
         ],
         'admin' => [
             'patients.*',
@@ -66,6 +67,7 @@ class SyncClinicRbacAction extends BaseAction
             'user.*',
             'salary.*',
             'cashbox.*',
+            'medical_record.*',
         ],
         'receptionist' => [
             'patient.create',
@@ -86,6 +88,9 @@ class SyncClinicRbacAction extends BaseAction
             'doctor_profile.view',
             'appointment.view',
             'medical.notes.create',
+            'medical_record.view',
+            'medical_record.create',
+            'medical_record.update',
         ],
         'accountant' => [
             'billing.view',
@@ -142,6 +147,11 @@ class SyncClinicRbacAction extends BaseAction
         'appointment.*',
         'appointments.*',
         'medical.notes.create',
+        'medical_record.view',
+        'medical_record.create',
+        'medical_record.update',
+        'medical_record.delete',
+        'medical_record.*',
         'billing.view',
         'billing.generate',
         'billing.*',

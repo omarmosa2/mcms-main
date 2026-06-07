@@ -68,7 +68,7 @@ const filteredDoctors = computed(() => {
         :open="props.appointment !== null"
         @update:open="(open: boolean) => !open && emit('close')"
     >
-        <DialogContent size="lg">
+        <DialogContent class="max-h-[calc(100vh-2rem)]" size="2xl">
             <DialogHeader>
                 <DialogTitle>تعديل بيانات الموعد</DialogTitle>
                 <DialogDescription
@@ -257,8 +257,8 @@ const filteredDoctors = computed(() => {
                     <DialogFooter class="gap-2">
                         <Button
                             type="button"
-                            variant="ghost"
-                            class="text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#374151]"
+                            variant="outline"
+                            class="min-h-[44px]"
                             :disabled="processing"
                             @click="emit('close')"
                             >إلغاء</Button
@@ -266,6 +266,7 @@ const filteredDoctors = computed(() => {
                         <Button
                             type="submit"
                             variant="default"
+                            class="min-h-[44px]"
                             :disabled="processing"
                         >
                             <Spinner v-if="processing" class="me-2 h-4 w-4" />

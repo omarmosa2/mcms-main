@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogBody,
@@ -8,7 +9,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import {
     appointmentStatusClass,
     appointmentStatusDotClass,
@@ -30,7 +30,7 @@ defineEmits<{
         :open="props.appointment !== null"
         @update:open="(open: boolean) => !open && $emit('close')"
     >
-        <DialogContent size="md">
+        <DialogContent class="max-h-[calc(100vh-2rem)]" size="lg">
             <DialogHeader>
                 <DialogTitle>عرض تفاصيل الموعد</DialogTitle>
                 <DialogDescription>تفاصيل الموعد.</DialogDescription>
@@ -220,8 +220,8 @@ defineEmits<{
             <DialogFooter>
                 <Button
                     type="button"
-                    variant="ghost"
-                    class="text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#374151]"
+                    variant="outline"
+                    class="min-h-[44px]"
                     @click="$emit('close')"
                     >إغلاق</Button
                 >

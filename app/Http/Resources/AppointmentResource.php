@@ -24,6 +24,8 @@ class AppointmentResource extends JsonResource
             'scheduled_for' => $this->scheduled_for?->toISOString(),
             'duration_minutes' => $this->duration_minutes,
             'status' => $this->status,
+            'appointment_type' => $this->appointment_type,
+            'cost' => $this->cost !== null ? (float) $this->cost : 0,
             'arrived_at' => $this->arrived_at?->toISOString(),
             'completed_at' => $this->completed_at?->toISOString(),
             'canceled_at' => $this->canceled_at?->toISOString(),

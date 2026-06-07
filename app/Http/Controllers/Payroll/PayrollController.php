@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Payroll;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\DoctorAppointmentEntitlement;
 use App\Models\DoctorDeduction;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSalaryPayment;
 use App\Models\Employee;
 use App\Models\EmployeeSalaryPayment;
-use App\Models\Invoice;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -287,28 +287,38 @@ class PayrollController extends Controller
      */
     private function doctorDue(int $clinicId, DoctorProfile $doctor, CarbonImmutable $periodStart, CarbonImmutable $periodEnd): array
     {
-        $visitStats = Invoice::query()
-            ->forClinic($clinicId)
-            ->join('visits', 'visits.id', '=', 'invoices.visit_id')
-            ->where('visits.doctor_id', $doctor->user_id)
-            ->whereBetween('invoices.issued_at', [$periodStart, $periodEnd])
-            ->selectRaw('COUNT(DISTINCT visits.id) as visits_count, COALESCE(SUM(invoices.total_amount), 0) as revenue')
-            ->first();
+        $compensationValue = (float) ($doctor->compensation_value ?? 0);
 
-        $visitCount = (int) ($visitStats->visits_count ?? 0);
-        $revenue = (float) ($visitStats->revenue ?? 0);
+        if ($doctor->compensation_type === DoctorProfile::COMPENSATION_PERCENTAGE) {
+            $entitlementStats = DoctorAppointmentEntitlement::query()
+                ->forClinic($clinicId)
+                ->where('doctor_profile_id', $doctor->id)
+                ->whereBetween('appointment_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+                ->selectRaw('COUNT(*) as appointments_count, COALESCE(SUM(entitlement_amount), 0) as total_entitlement, COALESCE(SUM(appointment_cost), 0) as total_revenue')
+                ->first();
+
+            $visitCount = (int) ($entitlementStats->appointments_count ?? 0);
+            $revenue = (float) ($entitlementStats->total_revenue ?? 0);
+            $gross = (float) ($entitlementStats->total_entitlement ?? 0);
+        } elseif ($doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY) {
+            $visitCount = 0;
+            $revenue = 0.0;
+            $gross = $compensationValue * (int) ceil(($periodStart->diffInDays($periodEnd) + 1) / 7);
+        } elseif ($doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY) {
+            $visitCount = 0;
+            $revenue = 0.0;
+            $gross = $compensationValue;
+        } else {
+            $visitCount = 0;
+            $revenue = 0.0;
+            $gross = 0;
+        }
+
         $deductions = (float) DoctorDeduction::query()
             ->forClinic($clinicId)
             ->where('doctor_profile_id', $doctor->id)
             ->whereBetween('deduction_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
             ->sum('amount');
-        $compensationValue = (float) ($doctor->compensation_value ?? 0);
-        $gross = match ($doctor->compensation_type) {
-            DoctorProfile::COMPENSATION_PERCENTAGE => $revenue * ($compensationValue / 100),
-            DoctorProfile::COMPENSATION_WEEKLY => $compensationValue * (int) ceil(($periodStart->diffInDays($periodEnd) + 1) / 7),
-            DoctorProfile::COMPENSATION_MONTHLY => $compensationValue,
-            default => 0,
-        };
 
         return [
             'visits_count' => $visitCount,

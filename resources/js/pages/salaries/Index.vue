@@ -112,9 +112,11 @@ const statusClass = (value: string): string => {
     if (value === 'paid') {
         return 'bg-emerald-50 text-emerald-700';
     }
+
     if (value === 'partially_paid') {
         return 'bg-amber-50 text-amber-700';
     }
+
     return 'bg-slate-100 text-slate-600';
 };
 
@@ -142,9 +144,11 @@ watch([month, dateFrom, dateTo, personType, status, departmentId], () => {
     if (personType.value === 'employee') {
         activeTab.value = 'employees';
     }
+
     if (personType.value === 'doctor') {
         activeTab.value = 'doctors';
     }
+
     reload();
 });
 
@@ -183,6 +187,7 @@ const submitPayment = (): void => {
 
     if (paymentKind.value === 'employee') {
         paymentForm.post(PayrollController.storeEmployeePayment.url(), options);
+
         return;
     }
 
@@ -251,14 +256,14 @@ const submitPayment = (): void => {
             <div v-if="activeTab === 'doctors'" class="overflow-hidden rounded-lg border bg-white">
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[1240px] text-right text-sm">
-                        <thead class="bg-slate-50 text-xs text-slate-500"><tr><th class="px-4 py-3">اسم الطبيب</th><th class="px-4 py-3">العيادة</th><th class="px-4 py-3">نوع الأجر</th><th class="px-4 py-3">قيمة الأجر</th><th class="px-4 py-3">الزيارات</th><th class="px-4 py-3">إيرادات المعاينات</th><th class="px-4 py-3">إيرادات الإجراءات</th><th class="px-4 py-3">الخصومات / السلف</th><th class="px-4 py-3">المستحق</th><th class="px-4 py-3">المدفوع</th><th class="px-4 py-3">المتبقي</th><th class="px-4 py-3">الحالة</th><th class="px-4 py-3">الإجراءات</th></tr></thead>
+                        <thead class="bg-slate-50 text-xs text-slate-500"><tr><th class="px-4 py-3">اسم الطبيب</th><th class="px-4 py-3">العيادة</th><th class="px-4 py-3">نوع الأجر</th><th class="px-4 py-3">قيمة الأجر</th><th class="px-4 py-3">عدد المواعيد</th><th class="px-4 py-3">إجمالي تكاليف المواعيد</th><th class="px-4 py-3">الخصومات / السلف</th><th class="px-4 py-3">المستحق</th><th class="px-4 py-3">المدفوع</th><th class="px-4 py-3">المتبقي</th><th class="px-4 py-3">الحالة</th><th class="px-4 py-3">الإجراءات</th></tr></thead>
                         <tbody>
                             <tr v-for="row in doctor_dues" :key="row.doctor_profile_id" class="border-t">
-                                <td class="px-4 py-3 font-semibold">{{ row.name }}</td><td class="px-4 py-3">{{ row.department ?? '-' }}</td><td class="px-4 py-3">{{ labelFor(row.compensation_type) }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.compensation_value) }}</td><td class="px-4 py-3">{{ row.visits_count }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.consultation_revenue) }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.procedure_revenue) }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.deductions) }}</td><td class="px-4 py-3 font-mono font-bold">{{ formatMoney(row.amount_due) }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.amount_paid) }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.amount_remaining) }}</td>
+                                <td class="px-4 py-3 font-semibold">{{ row.name }}</td><td class="px-4 py-3">{{ row.department ?? '-' }}</td><td class="px-4 py-3">{{ labelFor(row.compensation_type) }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.compensation_value) }}</td><td class="px-4 py-3">{{ row.visits_count }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.consultation_revenue) }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.deductions) }}</td><td class="px-4 py-3 font-mono font-bold">{{ formatMoney(row.amount_due) }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.amount_paid) }}</td><td class="px-4 py-3 font-mono">{{ formatMoney(row.amount_remaining) }}</td>
                                 <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="statusClass(row.status)">{{ labelFor(row.status) }}</span></td>
                                 <td class="px-4 py-3"><Button v-if="can('salaries.pay') && row.amount_remaining > 0" size="sm" class="bg-emerald-600 text-white hover:bg-emerald-700" @click="openDoctorPayment(row)"><CircleDollarSign class="size-4" />تسديد مستحقات</Button></td>
                             </tr>
-                            <tr v-if="doctor_dues.length === 0"><td colspan="13" class="px-4 py-10 text-center text-slate-500">لا توجد مستحقات أطباء ضمن الفلاتر الحالية.</td></tr>
+                            <tr v-if="doctor_dues.length === 0"><td colspan="12" class="px-4 py-10 text-center text-slate-500">لا توجد مستحقات أطباء ضمن الفلاتر الحالية.</td></tr>
                         </tbody>
                     </table>
                 </div>

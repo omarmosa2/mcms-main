@@ -66,6 +66,8 @@ class StoreAppointmentRequest extends FormRequest
             ],
             'scheduled_for' => ['required', 'date', 'after_or_equal:now'],
             'duration_minutes' => ['required', 'integer', Rule::in([15, 30, 45, 60])],
+            'appointment_type' => ['required', 'string', Rule::in(['first_visit', 'review'])],
+            'cost' => ['required', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
         ];
     }

@@ -4,14 +4,14 @@ namespace Tests\Feature\Payroll;
 
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Actions\Rbac\SyncClinicRbacAction;
+use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\DoctorAppointmentEntitlement;
 use App\Models\DoctorProfile;
 use App\Models\Employee;
 use App\Models\EmployeeSalaryPayment;
-use App\Models\Invoice;
 use App\Models\Patient;
 use App\Models\User;
-use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -90,20 +90,23 @@ class PayrollControllerTest extends TestCase
             'compensation_value' => 40,
         ]);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
-        $visit = Visit::factory()->create([
+        $appointment = Appointment::factory()->create([
             'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
             'doctor_id' => $doctorUser->id,
-            'patient_id' => $patient->id,
-            'started_at' => '2026-06-02 09:00:00',
+            'scheduled_for' => '2026-06-02 09:00:00',
+            'cost' => 1000,
+            'appointment_type' => 'first_visit',
         ]);
-        Invoice::factory()->create([
+        DoctorAppointmentEntitlement::query()->create([
             'clinic_id' => $clinic->id,
-            'patient_id' => $patient->id,
-            'visit_id' => $visit->id,
-            'issued_at' => '2026-06-02 10:00:00',
-            'total_amount' => 1000,
-            'paid_amount' => 1000,
-            'balance_amount' => 0,
+            'doctor_profile_id' => $doctor->id,
+            'appointment_id' => $appointment->id,
+            'appointment_cost' => 1000,
+            'percentage' => 40,
+            'entitlement_amount' => 400,
+            'status' => DoctorAppointmentEntitlement::STATUS_UNPAID,
+            'appointment_date' => '2026-06-02',
         ]);
 
         $this->getJson(route('salaries.index', ['month' => '2026-06', 'person_type' => 'doctor']))

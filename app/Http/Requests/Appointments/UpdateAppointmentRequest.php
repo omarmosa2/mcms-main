@@ -70,6 +70,8 @@ class UpdateAppointmentRequest extends FormRequest
             ],
             'scheduled_for' => ['sometimes', 'required', 'date', 'after_or_equal:now'],
             'duration_minutes' => ['sometimes', 'required', 'integer', Rule::in([15, 30, 45, 60])],
+            'appointment_type' => ['sometimes', 'required', 'string', Rule::in(['first_visit', 'review'])],
+            'cost' => ['sometimes', 'required', 'numeric', 'min:0'],
             'notes' => ['sometimes', 'nullable', 'string'],
         ];
     }

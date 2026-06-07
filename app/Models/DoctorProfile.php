@@ -63,4 +63,9 @@ class DoctorProfile extends BaseModel
     {
         return $this->hasMany(DoctorDeduction::class);
     }
+
+    public function appointmentEntitlements(): HasMany
+    {
+        return $this->hasMany(DoctorAppointmentEntitlement::class);
+    }
 }

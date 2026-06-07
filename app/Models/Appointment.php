@@ -26,6 +26,10 @@ class Appointment extends BaseModel
 
     public const STATUS_NO_SHOW = 'no_show';
 
+    public const TYPE_FIRST_VISIT = 'first_visit';
+
+    public const TYPE_REVIEW = 'review';
+
     public const TERMINAL_STATUSES = [
         self::STATUS_COMPLETED,
         self::STATUS_CANCELED,
@@ -40,6 +44,7 @@ class Appointment extends BaseModel
             'completed_at' => 'datetime',
             'canceled_at' => 'datetime',
             'duration_minutes' => 'integer',
+            'cost' => 'decimal:2',
         ];
     }
 
@@ -81,5 +86,10 @@ class Appointment extends BaseModel
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function doctorEntitlement(): HasMany
+    {
+        return $this->hasMany(DoctorAppointmentEntitlement::class);
     }
 }

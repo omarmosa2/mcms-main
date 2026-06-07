@@ -65,6 +65,8 @@ class AppointmentControllerTest extends TestCase
             'appointment_number' => 'APT-3000',
             'scheduled_for' => now()->addDay()->toISOString(),
             'duration_minutes' => 45,
+            'appointment_type' => 'first_visit',
+            'cost' => 500,
             'notes' => 'First consultation',
         ];
 
@@ -144,6 +146,8 @@ class AppointmentControllerTest extends TestCase
             'patient_id' => $patient->id,
             'scheduled_for' => '2026-06-06T10:00:00+00:00',
             'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
         ]);
 
         $response->assertCreated();

@@ -50,7 +50,7 @@ const filteredDoctors = computed(() => {
 
         <Form
             v-bind="AppointmentController.store.form()"
-            class="grid gap-3 md:grid-cols-6 md:items-end"
+            class="grid gap-3 md:grid-cols-4 lg:grid-cols-8 md:items-end"
             v-slot="{ errors, processing }"
             reset-on-success
             @success="emit('success')"
@@ -155,6 +155,39 @@ const filteredDoctors = computed(() => {
                     class="text-xs text-destructive"
                 >
                     {{ errors.duration_minutes }}
+                </p>
+            </div>
+
+            <div class="grid gap-1">
+                <Label for="quick_type" class="text-xs">نوع الموعد *</Label>
+                <select
+                    id="quick_type"
+                    name="appointment_type"
+                    required
+                    class="pattern-field-clay h-9 px-2 py-1 text-sm"
+                >
+                    <option value="first_visit">كشفية أولى</option>
+                    <option value="review">مراجعة</option>
+                </select>
+                <p v-if="errors.appointment_type" class="text-xs text-destructive">
+                    {{ errors.appointment_type }}
+                </p>
+            </div>
+
+            <div class="grid gap-1">
+                <Label for="quick_cost" class="text-xs">التكلفة *</Label>
+                <input
+                    id="quick_cost"
+                    name="cost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    placeholder="0"
+                    class="pattern-field-clay h-9 px-2 py-1 text-sm"
+                />
+                <p v-if="errors.cost" class="text-xs text-destructive">
+                    {{ errors.cost }}
                 </p>
             </div>
 

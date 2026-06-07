@@ -6,6 +6,8 @@ use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Actions\GenerateNumberAction;
 use App\Models\Appointment;
+use App\Models\DoctorAppointmentEntitlement;
+use App\Models\DoctorProfile;
 use App\Models\Patient;
 use App\Models\User;
 use App\Services\Cache\CacheService;
@@ -67,8 +69,12 @@ class CreateAppointmentAction extends BaseAction
                 'scheduled_for',
                 'duration_minutes',
                 'status',
+                'appointment_type',
+                'cost',
             ]),
         );
+
+        $this->createDoctorEntitlementIfNeeded($clinicId, $appointment);
 
         $this->cacheService->invalidateDashboardStats($clinicId);
         $this->cacheService->invalidateDropdowns($clinicId);
@@ -212,5 +218,50 @@ class CreateAppointmentAction extends BaseAction
                 'doctor_id' => 'الطبيب المحدد غير متاح لهذه العيادة.',
             ]);
         }
+    }
+
+    private function createDoctorEntitlementIfNeeded(int $clinicId, Appointment $appointment): void
+    {
+        if ($appointment->doctor_id === null) {
+            return;
+        }
+
+        $cost = (float) ($appointment->cost ?? 0);
+
+        if ($cost <= 0) {
+            return;
+        }
+
+        $doctorProfile = DoctorProfile::query()
+            ->forClinic($clinicId)
+            ->where('user_id', $appointment->doctor_id)
+            ->first();
+
+        if ($doctorProfile === null) {
+            return;
+        }
+
+        if ($doctorProfile->compensation_type !== DoctorProfile::COMPENSATION_PERCENTAGE) {
+            return;
+        }
+
+        $percentage = (float) ($doctorProfile->compensation_value ?? 0);
+
+        if ($percentage <= 0) {
+            return;
+        }
+
+        $entitlementAmount = $cost * ($percentage / 100);
+
+        DoctorAppointmentEntitlement::query()->create([
+            'clinic_id' => $clinicId,
+            'doctor_profile_id' => $doctorProfile->id,
+            'appointment_id' => $appointment->id,
+            'appointment_cost' => $cost,
+            'percentage' => $percentage,
+            'entitlement_amount' => $entitlementAmount,
+            'status' => DoctorAppointmentEntitlement::STATUS_UNPAID,
+            'appointment_date' => Carbon::parse($appointment->scheduled_for)->toDateString(),
+        ]);
     }
 }

@@ -45,7 +45,13 @@ defineOptions({
 });
 
 const { can } = usePermissions();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const {
+    isOpen: isConfirmOpen,
+    options: confirmOptions,
+    confirm,
+    handleConfirm: handleConfirmDelete,
+    handleCancel: handleConfirmCancel,
+} = useConfirm();
 const toast = useToast();
 
 const viewingPatient = ref<Patient | null>(null);
@@ -73,7 +79,10 @@ const allowedPatientSortFields: PatientSortField[] = [
 const resolveInitialSortBy = (): PatientSortField => {
     const sortBy = filters.sort_by;
 
-    if (sortBy !== null && allowedPatientSortFields.includes(sortBy as PatientSortField)) {
+    if (
+        sortBy !== null &&
+        allowedPatientSortFields.includes(sortBy as PatientSortField)
+    ) {
         return sortBy;
     }
 
@@ -88,7 +97,9 @@ const localSortDirection = ref<SortDirection>(
 const isSyncingFromServer = ref(false);
 let patientFiltersDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const totalLocalPages = computed<number>(() => Math.max(1, patients.meta.last_page));
+const totalLocalPages = computed<number>(() =>
+    Math.max(1, patients.meta.last_page),
+);
 const localVisibleFrom = computed<number>(() => patients.meta.from ?? 0);
 const localVisibleTo = computed<number>(() => patients.meta.to ?? 0);
 
@@ -96,7 +107,11 @@ const activeFilters = computed<ActiveFilter[]>(() => {
     const f: ActiveFilter[] = [];
 
     if (localSearch.value.trim()) {
-        f.push({ key: 'search', label: 'بحث', value: localSearch.value.trim() });
+        f.push({
+            key: 'search',
+            label: 'بحث',
+            value: localSearch.value.trim(),
+        });
     }
 
     return f;
@@ -166,7 +181,8 @@ const reloadPatients = (
 
 const toggleSort = (field: PatientSortField): void => {
     if (localSortBy.value === field) {
-        localSortDirection.value = localSortDirection.value === 'asc' ? 'desc' : 'asc';
+        localSortDirection.value =
+            localSortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
         localSortBy.value = field;
         localSortDirection.value = 'asc';
@@ -204,16 +220,19 @@ const handleDeleteConfirm = async () => {
     isDeleting.value = true;
 
     try {
-        await router.delete(PatientController.destroy(deletingPatient.value.id), {
-            onSuccess: () => {
-                toast.success('تم حذف المريض بنجاح');
-                isDeleteDialogOpen.value = false;
-                deletingPatient.value = null;
+        await router.delete(
+            PatientController.destroy(deletingPatient.value.id),
+            {
+                onSuccess: () => {
+                    toast.success('تم حذف المريض بنجاح');
+                    isDeleteDialogOpen.value = false;
+                    deletingPatient.value = null;
+                },
+                onError: () => {
+                    toast.error('فشل حذف المريض');
+                },
             },
-            onError: () => {
-                toast.error('فشل حذف المريض');
-            },
-        });
+        );
     } finally {
         isDeleting.value = false;
     }
@@ -248,7 +267,13 @@ const handleQuickAddCreated = () => {
     reloadPatients({ page: 1 });
 };
 
-const handleCompleteFile = (data: { id: number; name: string; dateOfBirth: string; gender: string; phone: string }) => {
+const handleCompleteFile = (data: {
+    id: number;
+    name: string;
+    dateOfBirth: string;
+    gender: string;
+    phone: string;
+}) => {
     const nameParts = data.name.split(' ');
     editingPatient.value = {
         id: data.id,
@@ -287,7 +312,8 @@ watch(
         localSearch.value = filters.search ?? '';
         localRowsPerPage.value = filters.per_page;
         localSortBy.value = resolveInitialSortBy();
-        localSortDirection.value = filters.sort_direction === 'asc' ? 'asc' : 'desc';
+        localSortDirection.value =
+            filters.sort_direction === 'asc' ? 'asc' : 'desc';
         localPage.value = patients.meta.current_page;
         isSyncingFromServer.value = false;
     },
@@ -333,11 +359,15 @@ onBeforeUnmount(() => {
 <template>
     <Head title="المرضى" />
 
-    <div class="container-modern space-y-8 py-5" dir="rtl">
-        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <div class="container-modern space-y-4 py-5" dir="rtl">
+        <div
+            class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"
+        >
             <div>
                 <h1 class="page-title text-[2.35rem]">إدارة المرضى</h1>
-                <p class="page-subtitle mt-2 text-base">إدارة معلومات المرضى وسجلاتهم الطبية</p>
+                <p class="page-subtitle mt-2 text-base">
+                    إدارة معلومات المرضى وسجلاتهم الطبية
+                </p>
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
@@ -400,8 +430,14 @@ onBeforeUnmount(() => {
             :active-filters="activeFilters"
             @update:search="localSearch = $event"
             @update:rows-per-page="localRowsPerPage = $event"
-            @previous-page="localPage -= 1; reloadPatients({ page: localPage })"
-            @next-page="localPage += 1; reloadPatients({ page: localPage })"
+            @previous-page="
+                localPage -= 1;
+                reloadPatients({ page: localPage });
+            "
+            @next-page="
+                localPage += 1;
+                reloadPatients({ page: localPage });
+            "
             @sort="toggleSort"
             @remove-filter="handleRemoveFilter"
             @clear-filters="resetLocalFilters"
@@ -423,13 +459,19 @@ onBeforeUnmount(() => {
         <PatientEditDialog
             :patient="editingPatient"
             @close="editingPatient = null"
-            @saved="editingPatient = null; reloadPatients()"
+            @saved="
+                editingPatient = null;
+                reloadPatients();
+            "
         />
 
         <PatientDeleteDialog
             :patient="deletingPatient"
             :loading="isDeleting"
-            @close="isDeleteDialogOpen = false; deletingPatient = null"
+            @close="
+                isDeleteDialogOpen = false;
+                deletingPatient = null;
+            "
             @confirm="handleDeleteConfirm"
             @update:open="isDeleteDialogOpen = $event"
         />

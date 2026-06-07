@@ -1,11 +1,26 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Filter, MoreVertical, Pencil, Trash2, Users } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
+import {
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    Eye,
+    Filter,
+    Pencil,
+    Trash2,
+    Users,
+} from 'lucide-vue-next';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch } from '@/components/ui/filter';
 import { usePermissions } from '@/composables/usePermissions';
-import type { ActiveFilter, Patient, PatientSortField, SortDirection } from './types';
+import type {
+    ActiveFilter,
+    Patient,
+    PatientSortField,
+    SortDirection,
+} from './types';
 
 const props = defineProps<{
     patients: Patient[];
@@ -26,23 +41,15 @@ const emit = defineEmits<{
     'update:rowsPerPage': [value: number];
     'previous-page': [];
     'next-page': [];
-    'sort': [field: PatientSortField];
+    sort: [field: PatientSortField];
     'remove-filter': [key: string];
     'clear-filters': [];
-    'delete': [patient: Patient];
-    'edit': [patient: Patient];
+    delete: [patient: Patient];
+    edit: [patient: Patient];
     'toggle-quick-add': [];
 }>();
 
 const { can } = usePermissions();
-
-const sortIconFor = (field: PatientSortField) => {
-    if (props.sortBy !== field) {
-        return null;
-    }
-
-    return props.sortDirection === 'asc' ? 'asc' : 'desc';
-};
 
 const patientGenderClass = (gender: string | null): string => {
     if (gender === 'male') {
@@ -118,190 +125,249 @@ const formatDate = (value: string | null): string => {
 </script>
 
 <template>
-    <div class="space-y-8">
-        <section class="rounded-[1.45rem] border border-[#E2ECF6] bg-white/95 p-6 shadow-card-float">
-            <div class="grid gap-4 lg:grid-cols-[1fr_18rem_9rem]">
+    <div class="space-y-4">
+        <section
+            class="rounded-2xl border border-border/60 bg-card p-4 shadow-sm"
+        >
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <FilterSearch
                     :model-value="search"
                     placeholder="البحث في جميع بيانات المريض..."
+                    class="flex-1"
                     @update:model-value="handleSearch"
                 />
-
                 <FilterSearch
                     :model-value="search"
                     placeholder="البحث برقم المريض..."
+                    class="sm:w-64"
                     @update:model-value="handleSearch"
                 />
-
                 <button
                     type="button"
-                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#E8EEF6] bg-white px-5 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_24px_-24px_rgb(15_42_71_/_0.35)] transition-all duration-200 hover:bg-[#F7FBFE] hover:text-[#075985]"
+                    class="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-border/60 bg-background px-4 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
-                    <Filter class="size-4" />
+                    <Filter class="size-3.5" />
                     تصفية
                 </button>
             </div>
 
             <FilterBar
                 v-if="activeFilters.length > 0"
-                class="mt-4"
+                class="mt-3"
                 :active-filters="activeFilters"
                 @remove="handleRemoveFilter"
                 @clear-all="handleClearFilters"
             />
         </section>
-        <section class="overflow-hidden rounded-[1.35rem] border border-[#DDE8F3] bg-white/95 shadow-card-float">
+
+        <section
+            class="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm"
+        >
             <div class="w-full overflow-x-auto">
-                <table class="w-full table-fixed border-separate border-spacing-0">
-                    <colgroup>
-                        <col class="w-[4%]" />
-                        <col class="w-[34%]" />
-                        <col class="w-[10%]" />
-                        <col class="w-[8%]" />
-                        <col class="w-[8%]" />
-                        <col class="w-[15%]" />
-                        <col class="w-[12%]" />
-                        <col class="w-[8%]" />
-                    </colgroup>
+                <table class="w-full border-separate border-spacing-0">
                     <thead>
-                        <tr class="h-16 bg-[#F3F8FC]">
-                            <th class="w-10 px-3 py-3 text-right text-sm font-bold text-[#111827]">#</th>
+                        <tr class="border-b border-border/60 bg-muted/40">
                             <th
-                                class="w-[22rem] cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground"
+                            >
+                                #
+                            </th>
+                            <th
+                                class="cursor-pointer px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground transition-colors select-none hover:text-foreground"
                                 @click="handleSort('full_name')"
                             >
-                                الاسم الكامل للمريض
-                                <span class="ms-1 text-[#A8B8C8]">↕</span>
+                                <div class="flex items-center gap-1">
+                                    الاسم الكامل للمريض
+                                    <span class="text-[10px] opacity-50"
+                                        >↕</span
+                                    >
+                                </div>
                             </th>
                             <th
-                                class="w-28 cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground transition-colors select-none hover:text-foreground"
                                 @click="handleSort('file_number')"
                             >
-                                رقم المريض
-                                <span class="ms-1 text-[#A8B8C8]">↕</span>
+                                <div class="flex items-center gap-1">
+                                    رقم المريض
+                                    <span class="text-[10px] opacity-50"
+                                        >↕</span
+                                    >
+                                </div>
                             </th>
                             <th
-                                class="w-24 cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground transition-colors select-none hover:text-foreground"
                                 @click="handleSort('gender')"
                             >
-                                الجنس
-                                <span class="ms-1 text-[#A8B8C8]">↕</span>
-                            </th>
-                            <th class="w-20 px-3 py-3 text-right text-sm font-bold text-[#111827]">
-                                العمر
-                                <span class="ms-1 text-[#A8B8C8]">↕</span>
+                                <div class="flex items-center gap-1">
+                                    الجنس
+                                    <span class="text-[10px] opacity-50"
+                                        >↕</span
+                                    >
+                                </div>
                             </th>
                             <th
-                                class="w-36 cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground"
+                            >
+                                العمر
+                            </th>
+                            <th
+                                class="cursor-pointer px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground transition-colors select-none hover:text-foreground"
                                 @click="handleSort('phone')"
                             >
-                                رقم الهاتف
-                                <span class="ms-1 text-[#A8B8C8]">↕</span>
+                                <div class="flex items-center gap-1">
+                                    رقم الهاتف
+                                    <span class="text-[10px] opacity-50"
+                                        >↕</span
+                                    >
+                                </div>
                             </th>
                             <th
-                                class="w-32 cursor-pointer select-none px-3 py-3 text-right text-sm font-bold text-[#111827] transition-colors hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground transition-colors select-none hover:text-foreground"
                                 @click="handleSort('created_at')"
                             >
-                                تاريخ الإضافة
-                                <span class="ms-1 text-[#A8B8C8]">↕</span>
+                                <div class="flex items-center gap-1">
+                                    تاريخ الإضافة
+                                    <span class="text-[10px] opacity-50"
+                                        >↕</span
+                                    >
+                                </div>
                             </th>
-                            <th class="w-24 px-3 py-3 text-right text-sm font-bold text-[#111827]">الإجراءات</th>
+                            <th
+                                class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground"
+                            >
+                                الإجراءات
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr
                             v-for="(patient, index) in patients"
                             :key="patient.id"
-                            class="group h-20 border-b border-[#E8EEF6] transition-all duration-150 last:border-b-0 hover:bg-[#F8FCFF]"
+                            class="group border-b border-border/40 transition-colors last:border-b-0 hover:bg-muted/30"
                         >
-                            <td class="px-3 py-4 text-sm font-bold text-[#111827]" data-label="#">
+                            <td
+                                class="px-3 py-2.5 text-sm font-medium text-muted-foreground"
+                                data-label="#"
+                            >
                                 {{ visibleFrom + index }}
                             </td>
-                            <td class="px-3 py-4" data-label="الاسم الكامل للمريض">
-                                <div class="flex min-w-0 items-center gap-3">
-                                    <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0EA5E9] text-sm font-bold text-white shadow-[0_12px_24px_-18px_rgb(14_165_233_/_0.95)]">
-                                        {{ patient.full_name?.charAt(0) ?? '?' }}
+                            <td
+                                class="px-3 py-2.5"
+                                data-label="الاسم الكامل للمريض"
+                            >
+                                <div class="flex min-w-0 items-center gap-2.5">
+                                    <span
+                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground"
+                                    >
+                                        {{
+                                            patient.full_name?.charAt(0) ?? '?'
+                                        }}
                                     </span>
-                                    <span class="truncate text-sm font-semibold text-[#111827]">{{ patient.full_name }}</span>
+                                    <span
+                                        class="truncate text-sm font-medium text-foreground"
+                                        >{{ patient.full_name }}</span
+                                    >
                                 </div>
                             </td>
-                            <td class="whitespace-nowrap px-3 py-4 text-sm font-semibold text-[#111827]" data-label="رقم المريض">
+                            <td
+                                class="px-3 py-2.5 text-sm whitespace-nowrap text-foreground"
+                                data-label="رقم المريض"
+                            >
                                 {{ patient.file_number || '-' }}
                             </td>
-                            <td class="px-3 py-4" data-label="الجنس">
+                            <td class="px-3 py-2.5" data-label="الجنس">
                                 <span
-                                    class="inline-flex min-w-12 items-center justify-center rounded-full px-2.5 py-1.5 text-xs font-bold"
+                                    class="inline-flex min-w-12 items-center justify-center rounded-full px-2 py-0.5 text-[0.7rem] font-medium"
                                     :class="patientGenderClass(patient.gender)"
                                 >
                                     {{ patientGenderLabel(patient.gender) }}
                                 </span>
                             </td>
-                            <td class="whitespace-nowrap px-3 py-4 text-sm text-[#111827]" data-label="العمر">
-                                {{ patient.age !== null ? `${patient.age} سنة` : '-' }}
+                            <td
+                                class="px-3 py-2.5 text-sm whitespace-nowrap text-muted-foreground"
+                                data-label="العمر"
+                            >
+                                {{
+                                    patient.age !== null
+                                        ? `${patient.age} سنة`
+                                        : '-'
+                                }}
                             </td>
-                            <td class="truncate px-3 py-4 text-sm text-[#6C7F95]" data-label="رقم الهاتف">
+                            <td
+                                class="px-3 py-2.5 text-sm whitespace-nowrap text-muted-foreground"
+                                data-label="رقم الهاتف"
+                            >
                                 {{ patient.phone ?? 'غير محدد' }}
                             </td>
-                            <td class="whitespace-nowrap px-3 py-4 text-sm text-[#111827]" data-label="تاريخ الإضافة">
+                            <td
+                                class="px-3 py-2.5 text-sm whitespace-nowrap text-muted-foreground"
+                                data-label="تاريخ الإضافة"
+                            >
                                 {{ formatDate(patient.created_at) }}
                             </td>
-                            <td class="px-3 py-4 md:text-right" data-label="الإجراءات">
-                                <div class="hidden items-center justify-end gap-2 md:flex">
+                            <td class="px-3 py-2.5" data-label="الإجراءات">
+                                <div
+                                    class="flex items-center justify-end gap-1"
+                                >
                                     <button
                                         v-if="can('patient.delete')"
                                         type="button"
-                                        class="inline-flex size-8 items-center justify-center rounded-lg text-[#FF3B30] transition-all duration-150 hover:bg-[#FEF2F2] active:scale-[0.95]"
+                                        class="inline-flex size-7 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10"
                                         :aria-label="`حذف ${patient.full_name}`"
                                         :title="'حذف'"
                                         @click="emit('delete', patient)"
                                     >
-                                        <Trash2 class="size-4" />
+                                        <Trash2 class="size-3.5" />
                                     </button>
                                     <button
                                         v-if="can('patient.update')"
                                         type="button"
-                                        class="inline-flex size-8 items-center justify-center rounded-lg text-[#2563EB] transition-all duration-150 hover:bg-[#EFF6FF] active:scale-[0.95]"
+                                        class="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10"
                                         :aria-label="`تعديل ${patient.full_name}`"
                                         :title="'تعديل'"
                                         @click="emit('edit', patient)"
                                     >
-                                        <Pencil class="size-4" />
+                                        <Pencil class="size-3.5" />
                                     </button>
                                     <Link
                                         v-if="can('patient.view')"
-                                        :href="PatientController.show.url(patient.id)"
-                                        class="inline-flex size-8 items-center justify-center rounded-lg text-[#0EA5E9] transition-all duration-150 hover:bg-[#EAF7FE] active:scale-[0.95]"
+                                        :href="
+                                            PatientController.show.url(
+                                                patient.id,
+                                            )
+                                        "
+                                        class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
                                         :aria-label="`عرض ${patient.full_name}`"
                                         :title="'عرض'"
                                     >
-                                        <Eye class="size-4" />
+                                        <Eye class="size-3.5" />
                                     </Link>
-                                </div>
-                                <div class="flex items-center justify-end md:hidden">
-                                    <button
-                                        type="button"
-                                        class="inline-flex size-9 items-center justify-center rounded-xl border border-[#DDE9F3] bg-white text-[#6C7F95] transition-all duration-150 hover:bg-[#F7FBFE] active:scale-[0.95]"
-                                        :aria-label="`إجراءات ${patient.full_name}`"
-                                    >
-                                        <MoreVertical class="size-4" />
-                                    </button>
                                 </div>
                             </td>
                         </tr>
 
                         <tr v-if="patients.length === 0">
                             <td colspan="8" class="px-5">
-                                <div class="py-20 text-center">
-                                    <div class="mb-4 flex justify-center">
-                                        <Users class="size-16 text-[#C6D5E4]" />
-                                    </div>
-                                    <h3 class="mb-2 text-base font-bold text-[#111827]">لا يوجد مرضى</h3>
-                                    <p class="mb-6 text-sm text-[#6C7F95]">جرب تغيير كلمة البحث أو أضف مريضاً جديداً للبدء</p>
+                                <div class="py-16 text-center">
+                                    <Users
+                                        class="mx-auto mb-3 size-12 text-muted-foreground/40"
+                                    />
+                                    <h3
+                                        class="mb-1 text-sm font-semibold text-foreground"
+                                    >
+                                        لا يوجد مرضى
+                                    </h3>
+                                    <p
+                                        class="mb-4 text-xs text-muted-foreground"
+                                    >
+                                        جرب تغيير كلمة البحث أو أضف مريضاً
+                                        جديداً
+                                    </p>
                                     <Button
                                         v-if="can('patient.create')"
                                         variant="default"
                                         size="sm"
-                                        class="h-10 rounded-xl bg-[#0EA5E9] px-4 text-sm font-bold text-white hover:bg-[#0284C7]"
+                                        class="h-9 rounded-lg px-4 text-xs"
                                         @click="emit('toggle-quick-add')"
                                     >
                                         إضافة أول مريض
@@ -314,62 +380,74 @@ const formatDate = (value: string | null): string => {
             </div>
         </section>
 
-        <div class="flex flex-col gap-4 px-2 md:flex-row md:items-center md:justify-between">
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2">
+        <div
+            class="flex flex-col items-center justify-between gap-3 px-1 sm:flex-row"
+        >
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1">
                     <button
                         type="button"
-                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        class="inline-flex size-8 items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
                         :disabled="currentPage === 1"
                         @click="handlePreviousPage"
                     >
-                        <ChevronsRight class="size-4" />
+                        <ChevronsRight class="size-3.5" />
                     </button>
                     <button
                         type="button"
-                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        class="inline-flex size-8 items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
                         :disabled="currentPage === 1"
                         @click="handlePreviousPage"
                     >
-                        <ChevronRight class="size-4" />
+                        <ChevronRight class="size-3.5" />
                     </button>
                     <button
                         type="button"
-                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        class="inline-flex size-8 items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
                         :disabled="currentPage >= totalPages"
                         @click="handleNextPage"
                     >
-                        <ChevronLeft class="size-4" />
+                        <ChevronLeft class="size-3.5" />
                     </button>
                     <button
                         type="button"
-                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        class="inline-flex size-8 items-center justify-center rounded-lg border border-border/60 bg-background text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40"
                         :disabled="currentPage >= totalPages"
                         @click="handleNextPage"
                     >
-                        <ChevronsLeft class="size-4" />
+                        <ChevronsLeft class="size-3.5" />
                     </button>
                 </div>
 
-                <span class="truncate text-sm font-semibold text-[#111827]">صفحة {{ currentPage }} من {{ totalPages }}</span>
+                <span class="text-xs text-muted-foreground"
+                    >صفحة {{ currentPage }} من {{ totalPages }}</span
+                >
 
-                <div class="flex min-w-0 items-center gap-3">
+                <div class="flex items-center gap-2">
                     <select
                         :value="rowsPerPage"
-                        class="h-11 rounded-2xl border border-[#DDE9F3] bg-white px-4 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition-colors focus:border-[#0EA5E9] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/10"
-                        @change="(e) => handleRowsPerPage(Number((e.target as HTMLSelectElement).value))"
+                        class="h-8 rounded-lg border border-border/60 bg-background px-2 text-xs text-foreground transition-colors focus:border-ring focus:ring-1 focus:ring-ring/20 focus:outline-none"
+                        @change="
+                            (e) =>
+                                handleRowsPerPage(
+                                    Number(
+                                        (e.target as HTMLSelectElement).value,
+                                    ),
+                                )
+                        "
                     >
                         <option value="10">10</option>
                         <option value="15">15</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
                     </select>
-                    <span class="truncate text-sm font-semibold text-[#111827]">عدد الصفوف لكل صفحة</span>
+                    <span class="text-xs text-muted-foreground">صف</span>
                 </div>
             </div>
 
-            <p class="text-sm font-medium text-[#6C7F95]">
-                عرض {{ visibleFrom }} إلى {{ visibleTo }} من {{ totalRecords }} مريض
+            <p class="text-xs text-muted-foreground">
+                عرض {{ visibleFrom }} إلى {{ visibleTo }} من
+                {{ totalRecords }} مريض
             </p>
         </div>
     </div>

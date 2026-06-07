@@ -9,11 +9,13 @@ import ConfirmationDialog from '@/components/ui/confirmation-dialog/Confirmation
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
 
 type DepartmentOption = { id: number; name: string };
+type UserBrief = { id: number; name: string; email: string };
 type Employee = {
     id: number;
     full_name: string;
@@ -22,17 +24,25 @@ type Employee = {
     phone: string;
     address: string | null;
     national_id: string | null;
+    marital_status: string | null;
     hire_date: string;
     status: 'active' | 'inactive';
     job_title: string;
     department_id: number | null;
     department: DepartmentOption | null;
     employee_type: string;
+    specialty: string | null;
+    job_description: string | null;
     education_level: string | null;
-    certificate_type: string | null;
+    certificate_name: string | null;
+    education_specialty: string | null;
+    graduation_year: number | null;
+    issuing_institution: string | null;
     base_salary: number;
+    additional_allowance: number | null;
     salary_notes: string | null;
     salary_payments_count: number;
+    user: UserBrief | null;
 };
 type Paginated<T> = {
     data: T[];
@@ -50,7 +60,13 @@ const props = defineProps<{
     departments: DepartmentOption[];
     filters: Record<string, string | number | null>;
     stats: { total: number; active: number; inactive: number; monthly_salaries: number };
-    options: { employee_types: string[]; education_levels: string[]; statuses: string[] };
+    options: {
+        employee_types: string[];
+        education_levels: string[];
+        statuses: string[];
+        marital_statuses: string[];
+        account_roles: string[];
+    };
 }>();
 
 defineOptions({
@@ -78,11 +94,13 @@ const labels: Record<string, string> = {
     reception: 'استقبال',
     nurse: 'ممرض',
     lab: 'مخبري',
+    user: 'مستخدم',
     cleaner: 'عامل نظافة',
     guard: 'حارس',
     accountant: 'محاسب',
     administrative: 'إداري',
     other: 'أخرى',
+    secondary: 'ثانوي',
     institute: 'معهد',
     college: 'كلية',
     postgraduate: 'دراسات عليا',
@@ -91,6 +109,12 @@ const labels: Record<string, string> = {
     inactive: 'غير نشط',
     male: 'ذكر',
     female: 'أنثى',
+    single: 'أعزب',
+    married: 'متزوج',
+    divorced: 'مطلق',
+    widowed: 'أرمل',
+    receptionist: 'استقبال',
+    admin: 'إداري',
 };
 
 type EmployeeForm = {
@@ -100,15 +124,26 @@ type EmployeeForm = {
     phone: string;
     address: string;
     national_id: string;
+    marital_status: string;
     hire_date: string;
     status: 'active' | 'inactive';
     job_title: string;
     department_id: number | '';
     employee_type: string;
+    specialty: string;
+    job_description: string;
     education_level: string;
-    certificate_type: string;
+    certificate_name: string;
+    education_specialty: string;
+    graduation_year: string;
+    issuing_institution: string;
     base_salary: string;
+    additional_allowance: string;
     salary_notes: string;
+    create_account: boolean;
+    email: string;
+    password: string;
+    role_name: string;
 };
 
 const defaults = (employee: Employee | null = null): EmployeeForm => ({
@@ -118,15 +153,26 @@ const defaults = (employee: Employee | null = null): EmployeeForm => ({
     phone: employee?.phone ?? '',
     address: employee?.address ?? '',
     national_id: employee?.national_id ?? '',
+    marital_status: employee?.marital_status ?? '',
     hire_date: employee?.hire_date ?? new Date().toISOString().slice(0, 10),
     status: employee?.status ?? 'active',
     job_title: employee?.job_title ?? '',
     department_id: employee?.department_id ?? '',
     employee_type: employee?.employee_type ?? 'reception',
+    specialty: employee?.specialty ?? '',
+    job_description: employee?.job_description ?? '',
     education_level: employee?.education_level ?? 'none',
-    certificate_type: employee?.certificate_type ?? '',
+    certificate_name: employee?.certificate_name ?? '',
+    education_specialty: employee?.education_specialty ?? '',
+    graduation_year: employee?.graduation_year ? String(employee.graduation_year) : '',
+    issuing_institution: employee?.issuing_institution ?? '',
     base_salary: employee !== null ? String(employee.base_salary) : '0',
+    additional_allowance: employee?.additional_allowance !== null && employee?.additional_allowance !== undefined ? String(employee.additional_allowance) : '',
     salary_notes: employee?.salary_notes ?? '',
+    create_account: false,
+    email: '',
+    password: '',
+    role_name: 'receptionist',
 });
 
 const form = useForm<EmployeeForm>(defaults());
@@ -156,6 +202,7 @@ watch(search, () => {
     if (timer !== null) {
         clearTimeout(timer);
     }
+
     timer = setTimeout(reload, 350);
 });
 
@@ -176,6 +223,14 @@ const openEdit = (employee: Employee): void => {
 };
 
 const submit = (): void => {
+    const data: Record<string, unknown> = { ...form };
+
+    if (!data.create_account) {
+        delete data.email;
+        delete data.password;
+        delete data.role_name;
+    }
+
     const options = {
         preserveScroll: true,
         onSuccess: () => {
@@ -187,6 +242,7 @@ const submit = (): void => {
 
     if (editing.value !== null) {
         form.put(EmployeeController.update.url(editing.value.id), options);
+
         return;
     }
 
@@ -245,7 +301,7 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
             <div class="grid gap-3 md:grid-cols-7">
                 <div class="relative md:col-span-2">
                     <Search class="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                    <Input v-model="search" class="h-10 pr-10" placeholder="الاسم، الهاتف، الهوية، المسمى..." />
+                    <Input v-model="search" class="h-10 pr-10" placeholder="الاسم، الهاتف، الهوية، المسمى، الاختصاص..." />
                 </div>
                 <select v-model="employeeType" class="h-10 rounded-md border px-3 text-sm"><option value="">كل الأنواع</option><option v-for="type in options.employee_types" :key="type" :value="type">{{ labelFor(type) }}</option></select>
                 <select v-model="status" class="h-10 rounded-md border px-3 text-sm"><option value="">كل الحالات</option><option value="active">نشط</option><option value="inactive">غير نشط</option></select>
@@ -257,17 +313,18 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
 
         <section class="overflow-hidden rounded-lg border bg-white">
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[1180px] text-right text-sm">
+                <table class="w-full min-w-[1400px] text-right text-sm">
                     <thead class="bg-slate-50 text-xs text-slate-500">
                         <tr>
                             <th class="px-4 py-3">الاسم الكامل</th>
                             <th class="px-4 py-3">الجنس</th>
                             <th class="px-4 py-3">رقم الهاتف</th>
-                            <th class="px-4 py-3">المسمى الوظيفي</th>
                             <th class="px-4 py-3">نوع الموظف</th>
+                            <th class="px-4 py-3">المسمى الوظيفي</th>
                             <th class="px-4 py-3">القسم / العيادة</th>
+                            <th class="px-4 py-3">الاختصاص</th>
                             <th class="px-4 py-3">المستوى العلمي</th>
-                            <th class="px-4 py-3">نوع الشهادة</th>
+                            <th class="px-4 py-3">اسم الشهادة</th>
                             <th class="px-4 py-3">الراتب الشهري</th>
                             <th class="px-4 py-3">الحالة</th>
                             <th class="px-4 py-3">تاريخ التعيين</th>
@@ -279,11 +336,12 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                             <td class="px-4 py-3 font-semibold text-slate-900">{{ employee.full_name }}</td>
                             <td class="px-4 py-3">{{ labelFor(employee.gender) }}</td>
                             <td class="px-4 py-3">{{ employee.phone }}</td>
-                            <td class="px-4 py-3">{{ employee.job_title }}</td>
                             <td class="px-4 py-3">{{ labelFor(employee.employee_type) }}</td>
+                            <td class="px-4 py-3">{{ employee.job_title }}</td>
                             <td class="px-4 py-3">{{ employee.department?.name ?? '-' }}</td>
+                            <td class="px-4 py-3">{{ employee.specialty ?? '-' }}</td>
                             <td class="px-4 py-3">{{ labelFor(employee.education_level) }}</td>
-                            <td class="px-4 py-3">{{ employee.certificate_type ?? '-' }}</td>
+                            <td class="px-4 py-3">{{ employee.certificate_name ?? '-' }}</td>
                             <td class="px-4 py-3 font-mono">{{ formatMoney(employee.base_salary) }}</td>
                             <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="employee.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ labelFor(employee.status) }}</span></td>
                             <td class="px-4 py-3">{{ employee.hire_date }}</td>
@@ -295,7 +353,7 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                                 </div>
                             </td>
                         </tr>
-                        <tr v-if="employees.data.length === 0"><td colspan="12" class="px-4 py-10 text-center text-slate-500">لا توجد بيانات موظفين.</td></tr>
+                        <tr v-if="employees.data.length === 0"><td colspan="13" class="px-4 py-10 text-center text-slate-500">لا توجد بيانات موظفين.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -313,30 +371,65 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
         <Dialog :open="showForm" @update:open="showForm = $event">
             <DialogContent class="max-h-[92vh] max-w-5xl overflow-hidden rounded-lg bg-white p-0" dir="rtl">
                 <DialogHeader class="border-b px-6 py-4 text-right"><DialogTitle>{{ isEditing ? 'تعديل موظف' : 'إضافة موظف جديد' }}</DialogTitle></DialogHeader>
-                <form class="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5" @submit.prevent="submit">
-                    <section class="grid gap-4 md:grid-cols-3">
-                        <div class="grid gap-2"><Label>الاسم الكامل</Label><Input v-model="form.full_name" /><InputError :message="form.errors.full_name" /></div>
-                        <div class="grid gap-2"><Label>الجنس</Label><select v-model="form.gender" class="h-10 rounded-md border px-3"><option value="male">ذكر</option><option value="female">أنثى</option></select><InputError :message="form.errors.gender" /></div>
-                        <div class="grid gap-2"><Label>تاريخ الميلاد</Label><Input v-model="form.birth_date" type="date" /><InputError :message="form.errors.birth_date" /></div>
-                        <div class="grid gap-2"><Label>رقم الهاتف</Label><Input v-model="form.phone" /><InputError :message="form.errors.phone" /></div>
-                        <div class="grid gap-2"><Label>الرقم الوطني أو الهوية</Label><Input v-model="form.national_id" /><InputError :message="form.errors.national_id" /></div>
-                        <div class="grid gap-2"><Label>تاريخ التعيين</Label><Input v-model="form.hire_date" type="date" /><InputError :message="form.errors.hire_date" /></div>
-                        <div class="grid gap-2 md:col-span-2"><Label>العنوان</Label><Input v-model="form.address" /><InputError :message="form.errors.address" /></div>
-                        <div class="grid gap-2"><Label>الحالة</Label><select v-model="form.status" class="h-10 rounded-md border px-3"><option value="active">نشط</option><option value="inactive">غير نشط</option></select></div>
-                    </section>
-                    <section class="grid gap-4 md:grid-cols-3">
-                        <div class="grid gap-2"><Label>المسمى الوظيفي</Label><Input v-model="form.job_title" /><InputError :message="form.errors.job_title" /></div>
-                        <div class="grid gap-2"><Label>القسم / العيادة</Label><select v-model="form.department_id" class="h-10 rounded-md border px-3"><option value="">بدون</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select><InputError :message="form.errors.department_id" /></div>
-                        <div class="grid gap-2"><Label>نوع الموظف</Label><select v-model="form.employee_type" class="h-10 rounded-md border px-3"><option v-for="type in options.employee_types" :key="type" :value="type">{{ labelFor(type) }}</option></select><InputError :message="form.errors.employee_type" /></div>
-                    </section>
-                    <section class="grid gap-4 md:grid-cols-2">
-                        <div class="grid gap-2"><Label>المستوى العلمي</Label><select v-model="form.education_level" class="h-10 rounded-md border px-3"><option v-for="level in options.education_levels" :key="level" :value="level">{{ labelFor(level) }}</option></select><InputError :message="form.errors.education_level" /></div>
-                        <div class="grid gap-2"><Label>نوع الشهادة</Label><Input v-model="form.certificate_type" placeholder="تمريض، مخبر، محاسبة..." /><InputError :message="form.errors.certificate_type" /></div>
-                    </section>
-                    <section class="grid gap-4 md:grid-cols-2">
-                        <div class="grid gap-2"><Label>الراتب الشهري الأساسي</Label><Input v-model="form.base_salary" type="number" min="0" step="0.01" /><InputError :message="form.errors.base_salary" /></div>
-                        <div class="grid gap-2"><Label>ملاحظات الراتب</Label><Input v-model="form.salary_notes" /><InputError :message="form.errors.salary_notes" /></div>
-                    </section>
+                <form class="max-h-[70vh] space-y-6 overflow-y-auto px-6 py-5" @submit.prevent="submit">
+                    <fieldset class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">البيانات الشخصية</legend>
+                        <div class="grid gap-4 md:grid-cols-3">
+                            <div class="grid gap-2"><Label>الاسم الكامل <span class="text-red-500">*</span></Label><Input v-model="form.full_name" /><InputError :message="form.errors.full_name" /></div>
+                            <div class="grid gap-2"><Label>الجنس <span class="text-red-500">*</span></Label><select v-model="form.gender" class="h-10 rounded-md border px-3"><option value="male">ذكر</option><option value="female">أنثى</option></select><InputError :message="form.errors.gender" /></div>
+                            <div class="grid gap-2"><Label>تاريخ الميلاد</Label><Input v-model="form.birth_date" type="date" /><InputError :message="form.errors.birth_date" /></div>
+                            <div class="grid gap-2"><Label>رقم الهاتف <span class="text-red-500">*</span></Label><Input v-model="form.phone" /><InputError :message="form.errors.phone" /></div>
+                            <div class="grid gap-2"><Label>الرقم الوطني أو الهوية</Label><Input v-model="form.national_id" /><InputError :message="form.errors.national_id" /></div>
+                            <div class="grid gap-2"><Label>الحالة الاجتماعية</Label><select v-model="form.marital_status" class="h-10 rounded-md border px-3"><option value="">غير محدد</option><option v-for="ms in options.marital_statuses" :key="ms" :value="ms">{{ labelFor(ms) }}</option></select><InputError :message="form.errors.marital_status" /></div>
+                            <div class="grid gap-2"><Label>تاريخ التعيين <span class="text-red-500">*</span></Label><Input v-model="form.hire_date" type="date" /><InputError :message="form.errors.hire_date" /></div>
+                            <div class="grid gap-2 md:col-span-2"><Label>العنوان</Label><Input v-model="form.address" /><InputError :message="form.errors.address" /></div>
+                            <div class="grid gap-2"><Label>حالة الموظف <span class="text-red-500">*</span></Label><select v-model="form.status" class="h-10 rounded-md border px-3"><option value="active">نشط</option><option value="inactive">غير نشط</option></select><InputError :message="form.errors.status" /></div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">بيانات الوظيفة</legend>
+                        <div class="grid gap-4 md:grid-cols-3">
+                            <div class="grid gap-2"><Label>نوع الموظف <span class="text-red-500">*</span></Label><select v-model="form.employee_type" class="h-10 rounded-md border px-3"><option v-for="type in options.employee_types" :key="type" :value="type">{{ labelFor(type) }}</option></select><InputError :message="form.errors.employee_type" /></div>
+                            <div class="grid gap-2"><Label>المسمى الوظيفي <span class="text-red-500">*</span></Label><Input v-model="form.job_title" /><InputError :message="form.errors.job_title" /></div>
+                            <div class="grid gap-2"><Label>القسم أو العيادة</Label><select v-model="form.department_id" class="h-10 rounded-md border px-3"><option value="">بدون</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select><InputError :message="form.errors.department_id" /></div>
+                            <div class="grid gap-2"><Label>الاختصاص أو مجال العمل</Label><Input v-model="form.specialty" placeholder="مثال: تمريض عام، محاسبة..." /><InputError :message="form.errors.specialty" /></div>
+                            <div class="grid gap-2 md:col-span-2"><Label>وصف مهام الموظف</Label><Input v-model="form.job_description" placeholder="وصف مختصر لمهام الموظف..." /><InputError :message="form.errors.job_description" /></div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">البيانات العلمية</legend>
+                        <div class="grid gap-4 md:grid-cols-3">
+                            <div class="grid gap-2"><Label>المستوى العلمي</Label><select v-model="form.education_level" class="h-10 rounded-md border px-3"><option v-for="level in options.education_levels" :key="level" :value="level">{{ labelFor(level) }}</option></select><InputError :message="form.errors.education_level" /></div>
+                            <div class="grid gap-2"><Label>اسم الشهادة</Label><Input v-model="form.certificate_name" placeholder="مثال: دبلوم تمريض، بكالوريوس محاسبة..." /><InputError :message="form.errors.certificate_name" /></div>
+                            <div class="grid gap-2"><Label>نوع الشهادة</Label><Input v-model="form.education_specialty" placeholder="مثال: تمريض، محاسبة، إدارة..." /><InputError :message="form.errors.education_specialty" /></div>
+                            <div class="grid gap-2"><Label>سنة التخرج</Label><Input v-model="form.graduation_year" type="number" min="1950" max="2100" placeholder="2020" /><InputError :message="form.errors.graduation_year" /></div>
+                            <div class="grid gap-2 md:col-span-2"><Label>الجهة أو الجامعة المانحة</Label><Input v-model="form.issuing_institution" placeholder="مثال: جامعة دمشق..." /><InputError :message="form.errors.issuing_institution" /></div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">بيانات الراتب</legend>
+                        <div class="grid gap-4 md:grid-cols-3">
+                            <div class="grid gap-2"><Label>الراتب الشهري الأساسي <span class="text-red-500">*</span></Label><Input v-model="form.base_salary" type="number" min="0" step="0.01" /><InputError :message="form.errors.base_salary" /></div>
+                            <div class="grid gap-2"><Label>بدل إضافي</Label><Input v-model="form.additional_allowance" type="number" min="0" step="0.01" placeholder="0" /><InputError :message="form.errors.additional_allowance" /></div>
+                            <div class="grid gap-2"><Label>ملاحظات الراتب</Label><Input v-model="form.salary_notes" /><InputError :message="form.errors.salary_notes" /></div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset v-if="!isEditing" class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">إنشاء حساب مستخدم (اختياري)</legend>
+                        <div class="flex items-center gap-3">
+                            <Switch id="create-account" v-model:checked="form.create_account" />
+                            <Label for="create-account" class="cursor-pointer text-sm font-medium">إنشاء حساب دخول للنظام</Label>
+                        </div>
+                        <div v-if="form.create_account" class="grid gap-4 md:grid-cols-3">
+                            <div class="grid gap-2"><Label>البريد الإلكتروني <span class="text-red-500">*</span></Label><Input v-model="form.email" type="email" placeholder="employee@clinic.com" /><InputError :message="form.errors.email" /></div>
+                            <div class="grid gap-2"><Label>كلمة المرور <span class="text-red-500">*</span></Label><Input v-model="form.password" type="password" placeholder="8 أحرف على الأقل" /><InputError :message="form.errors.password" /></div>
+                            <div class="grid gap-2"><Label>الصلاحية <span class="text-red-500">*</span></Label><select v-model="form.role_name" class="h-10 rounded-md border px-3"><option v-for="role in options.account_roles" :key="role" :value="role">{{ labelFor(role) }}</option></select><InputError :message="form.errors.role_name" /></div>
+                        </div>
+                    </fieldset>
                 </form>
                 <DialogFooter class="border-t px-6 py-4">
                     <Button type="button" variant="outline" @click="showForm = false"><X class="size-4" />إلغاء</Button>
@@ -346,15 +439,62 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
         </Dialog>
 
         <Dialog :open="viewing !== null" @update:open="viewing = null">
-            <DialogContent class="max-w-3xl rounded-lg bg-white" dir="rtl">
-                <DialogHeader class="text-right"><DialogTitle>{{ viewing?.full_name }}</DialogTitle></DialogHeader>
-                <div v-if="viewing" class="grid gap-3 text-sm md:grid-cols-2">
-                    <p><b>الهاتف:</b> {{ viewing.phone }}</p><p><b>الهوية:</b> {{ viewing.national_id ?? '-' }}</p>
-                    <p><b>الوظيفة:</b> {{ viewing.job_title }}</p><p><b>نوع الموظف:</b> {{ labelFor(viewing.employee_type) }}</p>
-                    <p><b>القسم:</b> {{ viewing.department?.name ?? '-' }}</p><p><b>الشهادة:</b> {{ labelFor(viewing.education_level) }} / {{ viewing.certificate_type ?? '-' }}</p>
-                    <p><b>الراتب:</b> {{ formatMoney(viewing.base_salary) }}</p><p><b>الحالة:</b> {{ labelFor(viewing.status) }}</p>
-                    <p class="md:col-span-2"><b>العنوان:</b> {{ viewing.address ?? '-' }}</p>
-                    <p class="md:col-span-2"><b>ملاحظات الراتب:</b> {{ viewing.salary_notes ?? '-' }}</p>
+            <DialogContent class="max-h-[90vh] max-w-4xl overflow-hidden rounded-lg bg-white" dir="rtl">
+                <DialogHeader class="border-b px-6 py-4 text-right"><DialogTitle>{{ viewing?.full_name }}</DialogTitle></DialogHeader>
+                <div v-if="viewing" class="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
+                    <fieldset class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">البيانات الشخصية</legend>
+                        <div class="grid gap-3 text-sm md:grid-cols-2">
+                            <p><b>الاسم الكامل:</b> {{ viewing.full_name }}</p>
+                            <p><b>الجنس:</b> {{ labelFor(viewing.gender) }}</p>
+                            <p><b>تاريخ الميلاد:</b> {{ viewing.birth_date ?? '-' }}</p>
+                            <p><b>رقم الهاتف:</b> {{ viewing.phone }}</p>
+                            <p><b>الرقم الوطني:</b> {{ viewing.national_id ?? '-' }}</p>
+                            <p><b>الحالة الاجتماعية:</b> {{ labelFor(viewing.marital_status) }}</p>
+                            <p><b>تاريخ التعيين:</b> {{ viewing.hire_date }}</p>
+                            <p><b>الحالة:</b> <span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="viewing.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'">{{ labelFor(viewing.status) }}</span></p>
+                            <p class="md:col-span-2"><b>العنوان:</b> {{ viewing.address ?? '-' }}</p>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">بيانات الوظيفة</legend>
+                        <div class="grid gap-3 text-sm md:grid-cols-2">
+                            <p><b>نوع الموظف:</b> {{ labelFor(viewing.employee_type) }}</p>
+                            <p><b>المسمى الوظيفي:</b> {{ viewing.job_title }}</p>
+                            <p><b>القسم / العيادة:</b> {{ viewing.department?.name ?? '-' }}</p>
+                            <p><b>الاختصاص:</b> {{ viewing.specialty ?? '-' }}</p>
+                            <p class="md:col-span-2"><b>وصف المهام:</b> {{ viewing.job_description ?? '-' }}</p>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">البيانات العلمية</legend>
+                        <div class="grid gap-3 text-sm md:grid-cols-2">
+                            <p><b>المستوى العلمي:</b> {{ labelFor(viewing.education_level) }}</p>
+                            <p><b>اسم الشهادة:</b> {{ viewing.certificate_name ?? '-' }}</p>
+                            <p><b>اختصاص الشهادة:</b> {{ viewing.education_specialty ?? '-' }}</p>
+                            <p><b>سنة التخرج:</b> {{ viewing.graduation_year ?? '-' }}</p>
+                            <p class="md:col-span-2"><b>الجهة المانحة:</b> {{ viewing.issuing_institution ?? '-' }}</p>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">بيانات الراتب</legend>
+                        <div class="grid gap-3 text-sm md:grid-cols-2">
+                            <p><b>الراتب الأساسي:</b> <span class="font-mono">{{ formatMoney(viewing.base_salary) }}</span></p>
+                            <p><b>البدل الإضافي:</b> <span class="font-mono">{{ viewing.additional_allowance !== null ? formatMoney(viewing.additional_allowance) : '-' }}</span></p>
+                            <p class="md:col-span-2"><b>ملاحظات الراتب:</b> {{ viewing.salary_notes ?? '-' }}</p>
+                        </div>
+                    </fieldset>
+
+                    <fieldset v-if="viewing.user" class="space-y-3">
+                        <legend class="mb-2 border-b pb-2 text-sm font-bold text-sky-700">حساب النظام</legend>
+                        <div class="grid gap-3 text-sm md:grid-cols-2">
+                            <p><b>اسم المستخدم:</b> {{ viewing.user.name }}</p>
+                            <p><b>البريد الإلكتروني:</b> {{ viewing.user.email }}</p>
+                        </div>
+                    </fieldset>
                 </div>
             </DialogContent>
         </Dialog>

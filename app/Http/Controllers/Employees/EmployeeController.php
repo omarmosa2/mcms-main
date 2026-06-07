@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Employees;
 
+use App\Actions\Rbac\AssignUserRoleAction;
 use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Employee;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -23,7 +26,7 @@ class EmployeeController extends Controller
 
         $employees = Employee::query()
             ->forClinic($clinicId)
-            ->with('department:id,name,code')
+            ->with(['department:id,name,code', 'user:id,name,email'])
             ->withCount('salaryPayments')
             ->when($filters['search'] !== null, function ($query) use ($filters): void {
                 $search = $filters['search'];
@@ -33,7 +36,8 @@ class EmployeeController extends Controller
                         ->where('full_name', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%")
                         ->orWhere('national_id', 'like', "%{$search}%")
-                        ->orWhere('job_title', 'like', "%{$search}%");
+                        ->orWhere('job_title', 'like', "%{$search}%")
+                        ->orWhere('specialty', 'like', "%{$search}%");
                 });
             })
             ->when($filters['employee_type'] !== null, fn ($query) => $query->where('employee_type', $filters['employee_type']))
@@ -60,6 +64,8 @@ class EmployeeController extends Controller
                 'employee_types' => $this->employeeTypes(),
                 'education_levels' => $this->educationLevels(),
                 'statuses' => [Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE],
+                'marital_statuses' => $this->maritalStatuses(),
+                'account_roles' => $this->accountRoles(),
             ],
         ];
 
@@ -74,14 +80,35 @@ class EmployeeController extends Controller
     {
         $clinicId = $this->resolveClinicId($request);
         $payload = $this->validatedPayload($request, $clinicId);
+        $createAccount = $request->boolean('create_account');
+        $accountData = $createAccount ? $this->validatedAccountPayload($request, $clinicId) : null;
 
-        $employee = Employee::query()->create([
-            ...$payload,
-            'clinic_id' => $clinicId,
-        ]);
+        $employee = DB::transaction(function () use ($payload, $accountData, $clinicId, $request): Employee {
+            $userId = null;
+
+            if ($accountData !== null) {
+                $user = User::query()->create([
+                    'clinic_id' => $clinicId,
+                    'name' => $payload['full_name'],
+                    'email' => $accountData['email'],
+                    'password' => Hash::make($accountData['password']),
+                    'is_active' => true,
+                ]);
+
+                app(AssignUserRoleAction::class)->handle($user, $accountData['role_name'], (int) $request->user()->id);
+
+                $userId = $user->id;
+            }
+
+            return Employee::query()->create([
+                ...$payload,
+                'clinic_id' => $clinicId,
+                'user_id' => $userId,
+            ]);
+        });
 
         if ($request->expectsJson()) {
-            return response()->json(['data' => $this->employeePayload($employee->load('department'))], Response::HTTP_CREATED);
+            return response()->json(['data' => $this->employeePayload($employee->load(['department', 'user']))], Response::HTTP_CREATED);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Employee saved successfully.']);
@@ -98,7 +125,7 @@ class EmployeeController extends Controller
         $employee->update($payload);
 
         if ($request->expectsJson()) {
-            return response()->json(['data' => $this->employeePayload($employee->refresh()->load('department'))]);
+            return response()->json(['data' => $this->employeePayload($employee->refresh()->load(['department', 'user']))]);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Employee updated successfully.']);
@@ -175,6 +202,7 @@ class EmployeeController extends Controller
                 'max:100',
                 Rule::unique('employees', 'national_id')->where('clinic_id', $clinicId)->ignore($employeeId),
             ],
+            'marital_status' => ['nullable', Rule::in($this->maritalStatuses())],
             'hire_date' => ['required', 'date'],
             'status' => ['required', Rule::in([Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE])],
             'job_title' => ['required', 'string', 'max:255'],
@@ -183,10 +211,33 @@ class EmployeeController extends Controller
                 Rule::exists('departments', 'id')->where('clinic_id', $clinicId),
             ],
             'employee_type' => ['required', Rule::in($this->employeeTypes())],
+            'specialty' => ['nullable', 'string', 'max:150'],
+            'job_description' => ['nullable', 'string', 'max:2000'],
             'education_level' => ['nullable', Rule::in($this->educationLevels())],
-            'certificate_type' => ['nullable', 'string', 'max:255'],
+            'certificate_name' => ['nullable', 'string', 'max:255'],
+            'education_specialty' => ['nullable', 'string', 'max:150'],
+            'graduation_year' => ['nullable', 'integer', 'min:1950', 'max:2100'],
+            'issuing_institution' => ['nullable', 'string', 'max:255'],
             'base_salary' => ['required', 'numeric', 'min:0'],
+            'additional_allowance' => ['nullable', 'numeric', 'min:0'],
             'salary_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validatedAccountPayload(Request $request, int $clinicId): array
+    {
+        return $request->validate([
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->where('clinic_id', $clinicId),
+            ],
+            'password' => ['required', 'string', 'min:8'],
+            'role_name' => ['required', Rule::in($this->accountRoles())],
         ]);
     }
 
@@ -200,6 +251,7 @@ class EmployeeController extends Controller
             'phone' => $employee->phone,
             'address' => $employee->address,
             'national_id' => $employee->national_id,
+            'marital_status' => $employee->marital_status,
             'hire_date' => $employee->hire_date?->toDateString(),
             'status' => $employee->status,
             'job_title' => $employee->job_title,
@@ -209,11 +261,22 @@ class EmployeeController extends Controller
                 'name' => $employee->department->name,
             ] : null,
             'employee_type' => $employee->employee_type,
+            'specialty' => $employee->specialty,
+            'job_description' => $employee->job_description,
             'education_level' => $employee->education_level,
-            'certificate_type' => $employee->certificate_type,
+            'certificate_name' => $employee->certificate_name,
+            'education_specialty' => $employee->education_specialty,
+            'graduation_year' => $employee->graduation_year,
+            'issuing_institution' => $employee->issuing_institution,
             'base_salary' => (float) $employee->base_salary,
+            'additional_allowance' => $employee->additional_allowance !== null ? (float) $employee->additional_allowance : null,
             'salary_notes' => $employee->salary_notes,
             'salary_payments_count' => (int) ($employee->salary_payments_count ?? 0),
+            'user' => $employee->user !== null ? [
+                'id' => $employee->user->id,
+                'name' => $employee->user->name,
+                'email' => $employee->user->email,
+            ] : null,
         ];
     }
 
@@ -240,6 +303,7 @@ class EmployeeController extends Controller
             Employee::TYPE_RECEPTION,
             Employee::TYPE_NURSE,
             Employee::TYPE_LAB,
+            Employee::TYPE_USER,
             Employee::TYPE_CLEANER,
             Employee::TYPE_GUARD,
             Employee::TYPE_ACCOUNTANT,
@@ -254,12 +318,34 @@ class EmployeeController extends Controller
     private function educationLevels(): array
     {
         return [
+            Employee::EDUCATION_NONE,
+            Employee::EDUCATION_SECONDARY,
             Employee::EDUCATION_INSTITUTE,
             Employee::EDUCATION_COLLEGE,
             Employee::EDUCATION_POSTGRADUATE,
-            Employee::EDUCATION_NONE,
             Employee::EDUCATION_OTHER,
         ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function maritalStatuses(): array
+    {
+        return [
+            Employee::MARITAL_SINGLE,
+            Employee::MARITAL_MARRIED,
+            Employee::MARITAL_DIVORCED,
+            Employee::MARITAL_WIDOWED,
+        ];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function accountRoles(): array
+    {
+        return ['receptionist', 'admin', 'accountant'];
     }
 
     private function nullableString(mixed $value): ?string

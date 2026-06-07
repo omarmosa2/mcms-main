@@ -53,13 +53,8 @@ const { can } = usePermissions();
 const roleItemOrder: Record<string, string[]> = {
     doctor: [
         'لوحة التحكم',
-        'المرضى',
-        'العيادات',
-        'الأطباء',
         'المواعيد',
         'السجلات الطبية',
-        'المالية',
-        'جداول الدوام',
     ],
     receptionist: [
         'لوحة التحكم',

@@ -82,10 +82,6 @@ class SyncClinicRbacAction extends BaseAction
             'appointment.delete',
         ],
         'doctor' => [
-            'patient.view',
-            'patient.national_id.view',
-            'department.view',
-            'doctor_profile.view',
             'appointment.view',
             'medical.notes.create',
             'medical_record.view',

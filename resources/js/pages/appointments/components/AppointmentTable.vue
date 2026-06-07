@@ -47,6 +47,7 @@ const props = defineProps<{
     total: number;
     patients: Option[];
     doctors: Option[];
+    isDoctor: boolean;
 }>();
 
 const emit = defineEmits([
@@ -135,7 +136,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                     />
                 </div>
 
-                <div class="grid gap-2">
+                <div v-if="!isDoctor" class="grid gap-2">
                     <Label for="appointments_doctor">الطبيب</Label>
                     <FilterSelect
                         id="appointments_doctor"
@@ -148,7 +149,7 @@ const sortIconFor = (field: AppointmentSortField) => {
             </div>
 
             <div class="grid gap-3 md:items-end lg:grid-cols-4">
-                <div class="grid gap-2">
+                <div v-if="!isDoctor" class="grid gap-2">
                     <Label for="appointments_department">العيادة</Label>
                     <FilterSelect
                         id="appointments_department"

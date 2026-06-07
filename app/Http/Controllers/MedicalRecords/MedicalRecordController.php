@@ -11,6 +11,7 @@ use App\Http\Requests\MedicalRecords\UpdateMedicalRecordRequest;
 use App\Http\Resources\MedicalRecordResource;
 use App\Models\Department;
 use App\Models\MedicalRecord;
+use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -32,16 +33,18 @@ class MedicalRecordController extends Controller
     public function index(Request $request): AnonymousResourceCollection|InertiaResponse
     {
         $clinicId = $this->resolveClinicId($request);
-        $filters = $this->resolveFilters($request);
+        $user = $request->user();
+        $isDoctor = $user !== null && $user->hasRole('doctor');
+        $filters = $this->resolveFilters($request, $isDoctor);
 
         $records = $this->listMedicalRecordsAction->handle(
             clinicId: $clinicId,
-            userId: (int) $request->user()->id,
+            userId: (int) $user->id,
             perPage: $filters['per_page'],
             search: $filters['search'],
-            departmentId: $filters['department_id'],
+            departmentId: $isDoctor ? null : $filters['department_id'],
             doctorId: $filters['doctor_id'],
-            clinicType: $filters['clinic_type'],
+            clinicType: $isDoctor ? null : $filters['clinic_type'],
             status: $filters['status'],
             dateFrom: $filters['date_from'],
             dateTo: $filters['date_to'],
@@ -50,15 +53,19 @@ class MedicalRecordController extends Controller
             sortDirection: $filters['sort_direction'],
         );
 
-        $departments = Department::query()
-            ->forClinic($clinicId)
-            ->where('is_active', true)
-            ->get(['id', 'name', 'clinic_type']);
+        $departments = $isDoctor
+            ? collect()
+            : Department::query()
+                ->forClinic($clinicId)
+                ->where('is_active', true)
+                ->get(['id', 'name', 'clinic_type']);
 
-        $doctors = User::query()
-            ->forClinic($clinicId)
-            ->whereHas('doctorProfile')
-            ->get(['id', 'name']);
+        $doctors = $isDoctor
+            ? collect()
+            : User::query()
+                ->forClinic($clinicId)
+                ->whereHas('doctorProfile')
+                ->get(['id', 'name']);
 
         $recordsResource = MedicalRecordResource::collection($records);
 
@@ -70,8 +77,9 @@ class MedicalRecordController extends Controller
             'records' => $recordsResource->response()->getData(true),
             'departments' => $departments,
             'doctors' => $doctors,
-            'clinicTypes' => MedicalRecord::CLINIC_TYPES,
+            'clinicTypes' => $isDoctor ? [] : MedicalRecord::CLINIC_TYPES,
             'filters' => $filters,
+            'is_doctor' => $isDoctor,
         ]);
     }
 
@@ -84,9 +92,15 @@ class MedicalRecordController extends Controller
             ->where('is_active', true)
             ->get(['id', 'name', 'clinic_type']);
 
+        $patients = Patient::query()
+            ->forClinic($clinicId)
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'file_number']);
+
         return Inertia::render('medical-records/Create', [
             'departments' => $departments,
             'clinicTypes' => MedicalRecord::CLINIC_TYPES,
+            'patients' => $patients,
         ]);
     }
 
@@ -217,14 +231,14 @@ class MedicalRecordController extends Controller
      *     sort_direction: string
      * }
      */
-    private function resolveFilters(Request $request): array
+    private function resolveFilters(Request $request, bool $isDoctor = false): array
     {
         return [
             'search' => $request->filled('search') ? trim($request->query('search', '')) : null,
             'per_page' => $this->normalizePerPage($request->query('per_page', 15)),
-            'department_id' => $request->filled('department_id') ? (int) $request->query('department_id') : null,
+            'department_id' => ($isDoctor || ! $request->filled('department_id')) ? null : (int) $request->query('department_id'),
             'doctor_id' => $request->filled('doctor_id') ? (int) $request->query('doctor_id') : null,
-            'clinic_type' => $request->filled('clinic_type') ? $request->query('clinic_type') : null,
+            'clinic_type' => ($isDoctor || ! $request->filled('clinic_type')) ? null : $request->query('clinic_type'),
             'status' => $request->filled('status') ? $request->query('status') : null,
             'date_from' => $request->filled('date_from') ? $request->query('date_from') : null,
             'date_to' => $request->filled('date_to') ? $request->query('date_to') : null,

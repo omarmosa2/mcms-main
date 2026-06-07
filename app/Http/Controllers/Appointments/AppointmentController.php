@@ -108,6 +108,7 @@ class AppointmentController extends Controller
             'filters' => $filters,
             'clinic_working_hours' => $this->clinicWorkingHoursService->getForClinic($clinicId),
             'today_appointments' => AppointmentResource::collection($todayAppointments)->response()->getData(true)['data'],
+            'is_doctor' => $doctorScopeUserId !== null,
         ]);
     }
 

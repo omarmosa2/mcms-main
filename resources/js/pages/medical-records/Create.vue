@@ -1,28 +1,18 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
-    CalendarClock,
-    FileText,
     Plus,
     Save,
     Stethoscope,
     Trash2,
-    X,
 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { usePermissions } from '@/composables/usePermissions';
 
 type Department = {
@@ -33,13 +23,15 @@ type Department = {
 
 type PatientOption = {
     id: number;
-    full_name: string;
+    first_name: string;
+    last_name: string;
     file_number: number;
 };
 
-const { departments, clinicTypes } = defineProps<{
+const { departments, clinicTypes, patients } = defineProps<{
     departments: Department[];
     clinicTypes: string[];
+    patients: PatientOption[];
 }>();
 
 defineOptions({
@@ -58,10 +50,6 @@ defineOptions({
 });
 
 const { can } = usePermissions();
-
-const patientSearch = ref('');
-const patientResults = ref<PatientOption[]>([]);
-const isSearching = ref(false);
 
 const form = useForm({
     patient_id: null as number | null,
@@ -104,46 +92,6 @@ watch(
         }
     },
 );
-
-watch(patientSearch, async (value) => {
-    if (value.length < 2) {
-        patientResults.value = [];
-        return;
-    }
-
-    isSearching.value = true;
-    try {
-        router.get(
-            '/patients',
-            { search: value, per_page: 10 },
-            {
-                preserveState: true,
-                preserveScroll: true,
-                only: ['patients'],
-                onSuccess: (page) => {
-                    const patientsData = page.props.patients as { data: PatientOption[] } | undefined;
-                    patientResults.value = patientsData?.data ?? [];
-                },
-            },
-        );
-    } finally {
-        setTimeout(() => {
-            isSearching.value = false;
-        }, 300);
-    }
-});
-
-function selectPatient(patient: PatientOption) {
-    form.patient_id = patient.id;
-    patientSearch.value = patient.full_name;
-    patientResults.value = [];
-}
-
-function clearPatient() {
-    form.patient_id = null;
-    patientSearch.value = '';
-    patientResults.value = [];
-}
 
 function addTreatmentPlan() {
     form.treatment_plans.push({
@@ -310,37 +258,15 @@ function getFormDataField(key: string): string {
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div class="flex flex-col gap-1.5">
                         <Label>المريض *</Label>
-                        <div class="relative">
-                            <Input
-                                v-model="patientSearch"
-                                placeholder="ابحث عن مريض..."
-                                class="ps-3"
-                                @input="patientSearch = $event.target.value"
-                            />
-                            <button
-                                v-if="form.patient_id"
-                                type="button"
-                                class="absolute top-1/2 left-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                @click="clearPatient"
-                            >
-                                <X class="size-4" />
-                            </button>
-                            <div
-                                v-if="patientResults.length > 0 && !form.patient_id"
-                                class="absolute z-50 mt-1 w-full rounded-lg border border-border bg-popover p-1 shadow-md"
-                            >
-                                <button
-                                    v-for="patient in patientResults"
-                                    :key="patient.id"
-                                    type="button"
-                                    class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted"
-                                    @click="selectPatient(patient)"
-                                >
-                                    <span>{{ patient.full_name }}</span>
-                                    <span class="text-xs text-muted-foreground">#{{ patient.file_number }}</span>
-                                </button>
-                            </div>
-                        </div>
+                        <select
+                            v-model="form.patient_id"
+                            class="flex h-10 w-full rounded-lg border border-border bg-background px-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        >
+                            <option :value="null">اختر المريض</option>
+                            <option v-for="patient in patients" :key="patient.id" :value="patient.id">
+                                {{ patient.first_name }} {{ patient.last_name }} (#{{ patient.file_number }})
+                            </option>
+                        </select>
                         <InputError :message="form.errors.patient_id" />
                     </div>
 

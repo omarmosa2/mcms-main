@@ -5,6 +5,7 @@ namespace App\Actions\MedicalRecords;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\MedicalRecord;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -36,6 +37,11 @@ class ListMedicalRecordsAction extends BaseAction
                 'doctor:id,clinic_id,name',
                 'creator:id,clinic_id,name',
             ]);
+
+        $user = User::find($userId);
+        if ($user && $user->hasRole('doctor')) {
+            $query->where('doctor_id', $userId);
+        }
 
         if ($search !== null) {
             $searchTerm = '%'.trim($search).'%';

@@ -342,9 +342,7 @@ class DoctorProfileControllerTest extends TestCase
 
         $response = $this->getJson(route('doctors.index'));
 
-        $response->assertOk();
-        $response->assertJsonCount(1, 'data');
-        $response->assertJsonPath('data.0.id', $assignedProfile->id);
+        $response->assertForbidden();
     }
 
     public function test_show_returns_404_for_profile_from_another_clinic(): void

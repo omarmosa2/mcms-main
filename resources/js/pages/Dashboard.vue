@@ -61,7 +61,15 @@ defineOptions({
 const { can } = usePermissions();
 const page = usePage();
 
-const auth = computed(() => page.props.auth as { user?: { name: string } } | undefined);
+const auth = computed(() => page.props.auth as { user?: { name: string }; roles?: string[] } | undefined);
+
+const roleNames = computed<string[]>(() => {
+    return (
+        (page.props.auth as { roles?: string[] } | undefined)?.roles ?? []
+    ).filter((value): value is string => typeof value === 'string');
+});
+
+const isDoctor = computed(() => roleNames.value.includes('doctor'));
 
 const currentDate = computed(() => {
     const now = new Date();
@@ -101,15 +109,15 @@ const visibleModuleCards = computed<ModuleCard[]>(() => moduleCards.filter((modu
 
 const quickActions = computed(() => [
     { label: 'موعد جديد', icon: Plus, href: AppointmentController.index(), enabled: can('appointment.create'), primary: true },
-    { label: 'مريض جديد', icon: Users, href: PatientController.index(), enabled: can('patient.create'), primary: false },
-    { label: 'فاتورة', icon: ReceiptText, href: InvoiceController.index(), enabled: can('billing.create'), primary: false },
-    { label: 'تقرير', icon: FileText, href: ReportController.index(), enabled: can('reports.view') || can('reports.financial'), primary: false },
+    { label: 'مريض جديد', icon: Users, href: PatientController.index(), enabled: can('patient.create') && !isDoctor.value, primary: false },
+    { label: 'فاتورة', icon: ReceiptText, href: InvoiceController.index(), enabled: can('billing.create') && !isDoctor.value, primary: false },
+    { label: 'تقرير', icon: FileText, href: ReportController.index(), enabled: (can('reports.view') || can('reports.financial')) && !isDoctor.value, primary: false },
 ].filter(action => action.enabled));
 
 const urgentAlerts = computed(() => {
     const alerts: Array<{ type: 'warning' | 'danger'; message: string; href?: string }> = [];
 
-    if ((chartStats?.pending_invoices_today ?? 0) > 5) {
+    if (!isDoctor.value && (chartStats?.pending_invoices_today ?? 0) > 5) {
         alerts.push({
             type: 'warning',
             message: `${chartStats?.pending_invoices_today} فواتير معلقة اليوم`,
@@ -261,7 +269,7 @@ const appointmentsByStatusDatasets = computed(() => [{
             </div>
 
             <!-- New Patients -->
-            <div class="card-float card-hover">
+            <div v-if="!isDoctor" class="card-float card-hover">
                 <div class="flex items-center gap-3">
                     <div class="icon-container bg-[#EFF6FF] text-[#3B82F6]">
                         <Users class="size-5" />
@@ -274,7 +282,7 @@ const appointmentsByStatusDatasets = computed(() => [{
             </div>
 
             <!-- Pending Invoices -->
-            <div class="card-float card-hover">
+            <div v-if="!isDoctor" class="card-float card-hover">
                 <div class="flex items-center gap-3">
                     <div class="icon-container bg-[#FEF3C7] text-[#F59E0B]">
                         <ReceiptText class="size-5" />
@@ -338,7 +346,7 @@ const appointmentsByStatusDatasets = computed(() => [{
                 </article>
 
                 <!-- Revenue chart -->
-                <article v-if="chartStats?.last_7_days_revenue" class="card-float">
+                <article v-if="!isDoctor && chartStats?.last_7_days_revenue" class="card-float">
                     <div class="mb-5 flex items-center justify-between">
                         <h2 class="text-sm font-semibold text-slate-900">الإيرادات (آخر 7 أيام)</h2>
                         <div class="flex items-center gap-1.5 text-[#0284C7]">
@@ -353,7 +361,7 @@ const appointmentsByStatusDatasets = computed(() => [{
             <!-- Left column -->
             <div class="flex flex-col gap-6">
                 <!-- Patients chart -->
-                <article v-if="chartStats?.last_7_days_patients" class="card-float">
+                <article v-if="!isDoctor && chartStats?.last_7_days_patients" class="card-float">
                     <h2 class="mb-5 text-sm font-semibold text-slate-900">مرضى جدد (آخر 7 أيام)</h2>
                     <Chart type="bar" :labels="patientsChartLabels" :datasets="patientsChartDatasets" />
                 </article>

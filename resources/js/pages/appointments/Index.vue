@@ -93,6 +93,7 @@ const {
     filters,
     clinic_working_hours,
     today_appointments,
+    is_doctor,
 } = defineProps<{
     appointments: PaginatedResponse<Appointment>;
     patients: Option[];
@@ -112,6 +113,7 @@ const {
         sort_direction: SortDirection | null;
     };
     today_appointments?: Appointment[];
+    is_doctor?: boolean;
 }>();
 
 defineOptions({
@@ -962,6 +964,7 @@ const todaySummary = computed(() => ({
             "
             :patients="patients"
             :doctors="doctors"
+            :is-doctor="is_doctor ?? false"
             @search="localSearch = $event"
             @status="localStatus = $event"
             @doctor="localDoctorId = $event"

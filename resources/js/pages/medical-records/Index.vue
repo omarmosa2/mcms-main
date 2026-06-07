@@ -89,7 +89,7 @@ type PaginatedResponse<T> = {
     meta: PaginationMeta;
 };
 
-const { records, departments, doctors, clinicTypes, filters } = defineProps<{
+const { records, departments, doctors, clinicTypes, filters, is_doctor } = defineProps<{
     records: PaginatedResponse<MedicalRecord>;
     departments: Department[];
     doctors: Doctor[];
@@ -107,6 +107,7 @@ const { records, departments, doctors, clinicTypes, filters } = defineProps<{
         sort_by: string;
         sort_direction: string;
     };
+    is_doctor: boolean;
 }>();
 
 defineOptions({
@@ -417,9 +418,9 @@ function formatDateTime(date: string | null): string {
                 <div class="min-w-[240px] flex-1">
                     <FilterSearch v-model="search" placeholder="بحث بالاسم أو رقم السجل أو التشخيص..." />
                 </div>
-                <FilterSelect v-model="selectedClinicType" :options="clinicTypeOptions" placeholder="نوع العيادة" />
-                <FilterSelect v-model="selectedDepartment" :options="departmentOptions" placeholder="العيادة" />
-                <FilterSelect v-model="selectedDoctor" :options="doctorOptions" placeholder="الطبيب" />
+                <FilterSelect v-if="!is_doctor" v-model="selectedClinicType" :options="clinicTypeOptions" placeholder="نوع العيادة" />
+                <FilterSelect v-if="!is_doctor" v-model="selectedDepartment" :options="departmentOptions" placeholder="العيادة" />
+                <FilterSelect v-if="!is_doctor" v-model="selectedDoctor" :options="doctorOptions" placeholder="الطبيب" />
                 <FilterSelect v-model="selectedStatus" :options="statusOptions" placeholder="الحالة" />
             </div>
 

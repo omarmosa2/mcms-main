@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('clinic_id')->constrained('clinics')->cascadeOnDelete();
             $table->foreignId('patient_id')->constrained('patients')->cascadeOnDelete();
-            $table->foreignId('visit_id')->nullable()->constrained('visits')->nullOnDelete();
+            $table->unsignedBigInteger('visit_id')->nullable();
             $table->foreignId('appointment_id')->nullable()->constrained('appointments')->nullOnDelete();
             $table->foreignId('issued_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('invoice_number');

@@ -268,7 +268,6 @@ const handleCompleteFile = (data: { id: number; name: string; dateOfBirth: strin
         chronic_conditions: [],
         allergies: [],
         current_medications: [],
-        visit_history: [],
         attachments: [],
         created_at: null,
         updated_at: null,

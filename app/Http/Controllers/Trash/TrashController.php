@@ -25,14 +25,12 @@ use App\Models\Payment;
 use App\Models\PaymentPlan;
 use App\Models\PharmacyDrug;
 use App\Models\Prescription;
-use App\Models\QueueEntry;
 use App\Models\RadiologyOrder;
 use App\Models\RadiologyReport;
 use App\Models\RadiologyStudyType;
 use App\Models\Salary;
 use App\Models\Supplier;
 use App\Models\User;
-use App\Models\Visit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -69,18 +67,6 @@ class TrashController extends Controller
             'model' => Payment::class,
             'label' => 'مدفوعات',
             'name_column' => 'payment_number',
-            'number_column' => null,
-        ],
-        'visits' => [
-            'model' => Visit::class,
-            'label' => 'زيارات',
-            'name_column' => 'id',
-            'number_column' => null,
-        ],
-        'queue_entries' => [
-            'model' => QueueEntry::class,
-            'label' => 'قائمة انتظار',
-            'name_column' => 'queue_number',
             'number_column' => null,
         ],
         'doctor_profiles' => [

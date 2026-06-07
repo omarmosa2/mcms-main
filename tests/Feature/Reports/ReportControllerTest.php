@@ -10,9 +10,7 @@ use App\Models\EmployeeSalaryPayment;
 use App\Models\Invoice;
 use App\Models\Patient;
 use App\Models\Payment;
-use App\Models\QueueEntry;
 use App\Models\User;
-use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -138,34 +136,6 @@ class ReportControllerTest extends TestCase
             'scheduled_for' => '2026-04-15 09:00:00',
         ]);
 
-        QueueEntry::factory()->create([
-            'clinic_id' => $clinic->id,
-            'patient_id' => $patient->id,
-            'queue_date' => '2026-04-15',
-            'status' => QueueEntry::STATUS_WAITING,
-        ]);
-
-        QueueEntry::factory()->create([
-            'clinic_id' => $otherClinic->id,
-            'patient_id' => $otherPatient->id,
-            'queue_date' => '2026-04-15',
-            'status' => QueueEntry::STATUS_WAITING,
-        ]);
-
-        Visit::factory()->create([
-            'clinic_id' => $clinic->id,
-            'patient_id' => $patient->id,
-            'status' => Visit::STATUS_STARTED,
-            'started_at' => '2026-04-15 09:30:00',
-        ]);
-
-        Visit::factory()->create([
-            'clinic_id' => $otherClinic->id,
-            'patient_id' => $otherPatient->id,
-            'status' => Visit::STATUS_STARTED,
-            'started_at' => '2026-04-15 09:30:00',
-        ]);
-
         $response = $this->getJson(route('reports.index', [
             'from' => '2026-04-01',
             'to' => '2026-04-30',
@@ -176,8 +146,6 @@ class ReportControllerTest extends TestCase
         $response->assertJsonPath('data.can_view_financial', false);
         $response->assertJsonPath('data.operational_summary.patients_total', 1);
         $response->assertJsonPath('data.operational_summary.appointments.total', 1);
-        $response->assertJsonPath('data.operational_summary.queue_entries.total', 1);
-        $response->assertJsonPath('data.operational_summary.visits.total', 1);
 
         $this->assertDatabaseHas('audit_logs', [
             'clinic_id' => $clinic->id,

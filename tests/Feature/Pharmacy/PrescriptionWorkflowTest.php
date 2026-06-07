@@ -7,7 +7,6 @@ use App\Models\Clinic;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\User;
-use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,11 +21,6 @@ class PrescriptionWorkflowTest extends TestCase
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
         ]);
-        $visit = Visit::factory()->create([
-            'clinic_id' => $clinic->id,
-            'patient_id' => $patient->id,
-            'doctor_id' => $user->id,
-        ]);
 
         $drugResponse = $this->postJson(route('pharmacy.drugs.store'), [
             'trade_name' => 'Panadol',
@@ -40,7 +34,7 @@ class PrescriptionWorkflowTest extends TestCase
         $drugId = (int) $drugResponse->json('data.id');
 
         $prescriptionResponse = $this->postJson(route('pharmacy.prescriptions.store'), [
-            'visit_id' => $visit->id,
+            'visit_id' => null,
             'patient_id' => $patient->id,
             'items' => [
                 [

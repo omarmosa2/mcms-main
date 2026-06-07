@@ -27,17 +27,7 @@ type OperationalSummary = {
         total: number;
         by_status: StatusCounts;
     };
-    queue_entries: {
-        total: number;
-        by_status: StatusCounts;
-    };
-    visits: {
-        total: number;
-        by_status: StatusCounts;
-    };
     snapshot: {
-        waiting_queue_today: number;
-        active_visits: number;
         arrived_appointments_today: number;
     };
 };
@@ -283,14 +273,6 @@ const auditExportUrl = computed(() => {
                     <p class="text-xs text-muted-foreground">المواعيد</p>
                     <p class="mt-1 text-xl font-semibold">{{ operational_summary.appointments.total }}</p>
                 </div>
-                <div class="rounded-xl border border-border/70 bg-background/60 p-4">
-                    <p class="text-xs text-muted-foreground">قائمة الانتظار</p>
-                    <p class="mt-1 text-xl font-semibold">{{ operational_summary.queue_entries.total }}</p>
-                </div>
-                <div class="rounded-xl border border-border/70 bg-background/60 p-4">
-                    <p class="text-xs text-muted-foreground">الزيارات</p>
-                    <p class="mt-1 text-xl font-semibold">{{ operational_summary.visits.total }}</p>
-                </div>
             </div>
 
             <div class="mt-4 grid gap-4 md:grid-cols-3">
@@ -303,37 +285,9 @@ const auditExportUrl = computed(() => {
                         </li>
                     </ul>
                 </div>
-
-                <div class="rounded-xl border border-border/70 bg-background/60 p-4">
-                    <h4 class="pattern-typographic-title mb-3 text-[0.72rem]">حالات الانتظار</h4>
-                    <ul class="space-y-2 text-sm">
-                        <li v-for="(count, status) in operational_summary.queue_entries.by_status" :key="status" class="flex items-center justify-between">
-                            <span>{{ formatStatus(status) }}</span>
-                            <span class="font-medium">{{ count }}</span>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="rounded-xl border border-border/70 bg-background/60 p-4">
-                    <h4 class="pattern-typographic-title mb-3 text-[0.72rem]">حالات الزيارات</h4>
-                    <ul class="space-y-2 text-sm">
-                        <li v-for="(count, status) in operational_summary.visits.by_status" :key="status" class="flex items-center justify-between">
-                            <span>{{ formatStatus(status) }}</span>
-                            <span class="font-medium">{{ count }}</span>
-                        </li>
-                    </ul>
-                </div>
             </div>
 
             <div class="mt-4 grid gap-3 md:grid-cols-3">
-                <div class="rounded-xl border border-border/70 bg-background/60 p-4">
-                    <p class="text-xs text-muted-foreground">في الانتظار اليوم</p>
-                    <p class="mt-1 text-xl font-semibold">{{ operational_summary.snapshot.waiting_queue_today }}</p>
-                </div>
-                <div class="rounded-xl border border-border/70 bg-background/60 p-4">
-                    <p class="text-xs text-muted-foreground">زيارات نشطة</p>
-                    <p class="mt-1 text-xl font-semibold">{{ operational_summary.snapshot.active_visits }}</p>
-                </div>
                 <div class="rounded-xl border border-border/70 bg-background/60 p-4">
                     <p class="text-xs text-muted-foreground">مواعيد حاضرة اليوم</p>
                     <p class="mt-1 text-xl font-semibold">{{ operational_summary.snapshot.arrived_appointments_today }}</p>

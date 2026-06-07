@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { ArrowDown, ArrowUp, ArrowUpDown, Stethoscope } from 'lucide-vue-next';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch, FilterSelect } from '@/components/ui/filter';
@@ -44,7 +44,6 @@ const props = defineProps<{
     canEditAppointment: boolean;
     canDeleteAppointment: boolean;
     canUpdateStatus: boolean;
-    canStartVisit: boolean;
     total: number;
     patients: Option[];
     doctors: Option[];
@@ -70,20 +69,12 @@ const emit = defineEmits([
     'view',
     'edit',
     'delete',
-    'convert-to-visit',
     'bulk-delete',
     'status-transition-success',
     'status-transition-error',
 ]);
 
 const transitionStatuses = ['confirmed', 'arrived', 'canceled', 'no_show'];
-
-const canConvertToVisit = (appointment: Appointment): boolean => {
-    return (
-        props.canStartVisit &&
-        ['scheduled', 'confirmed', 'arrived'].includes(appointment.status)
-    );
-};
 
 const formatDate = (iso: string): string => {
     return new Date(iso).toLocaleDateString('ar-SA');
@@ -430,19 +421,6 @@ const sortIconFor = (field: AppointmentSortField) => {
                                     @click="emit('edit', appointment)"
                                 >
                                     تعديل
-                                </Button>
-                                <Button
-                                    v-if="canConvertToVisit(appointment)"
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    class="h-10 px-3 text-xs"
-                                    @click="
-                                        emit('convert-to-visit', appointment)
-                                    "
-                                >
-                                    <Stethoscope class="size-3.5" />
-                                    تحويل إلى زيارة
                                 </Button>
                                 <Form
                                     v-if="canUpdateStatus"

@@ -25,11 +25,6 @@ class StorePrescriptionRequest extends FormRequest
         $clinicId = $this->user()?->clinic_id;
 
         return [
-            'visit_id' => [
-                'required',
-                'integer',
-                Rule::exists('visits', 'id')->where(fn ($query) => $query->where('clinic_id', $clinicId)),
-            ],
             'patient_id' => [
                 'required',
                 'integer',

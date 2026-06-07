@@ -38,25 +38,6 @@ class PatientResource extends JsonResource
                 ->all()
             : [];
 
-        $visitHistory = $this->relationLoaded('visits')
-            ? $this->visits
-                ->sortByDesc('started_at')
-                ->values()
-                ->map(fn ($visit): array => [
-                    'id' => $visit->id,
-                    'visit_number' => $visit->visit_number,
-                    'status' => $visit->status,
-                    'doctor' => $visit->doctor !== null ? [
-                        'id' => $visit->doctor->id,
-                        'name' => $visit->doctor->name,
-                    ] : null,
-                    'started_at' => $visit->started_at?->toISOString(),
-                    'in_progress_at' => $visit->in_progress_at?->toISOString(),
-                    'completed_at' => $visit->completed_at?->toISOString(),
-                ])
-                ->all()
-            : [];
-
         $attachments = $this->relationLoaded('attachments')
             ? PatientAttachmentResource::collection($this->attachments)->resolve()
             : [];
@@ -179,7 +160,6 @@ class PatientResource extends JsonResource
             'chronic_conditions' => $chronicConditions,
             'allergies' => $allergies,
             'current_medications' => $currentMedications,
-            'visit_history' => $visitHistory,
             'attachments' => $attachments,
             'appointments' => $appointments,
             'invoices' => $invoices,

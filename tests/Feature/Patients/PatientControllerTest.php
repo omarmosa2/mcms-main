@@ -7,7 +7,6 @@ use App\Models\Clinic;
 use App\Models\Patient;
 use App\Models\PatientAttachment;
 use App\Models\User;
-use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -215,12 +214,6 @@ class PatientControllerTest extends TestCase
             'clinic_id' => $clinic->id,
         ]);
 
-        Visit::factory()->create([
-            'clinic_id' => $clinic->id,
-            'patient_id' => $patient->id,
-            'doctor_id' => $user->id,
-        ]);
-
         $response = $this->getJson(route('patients.show', [
             'patientId' => $patient->id,
             'access_reason' => 'follow-up-care',
@@ -349,20 +342,12 @@ class PatientControllerTest extends TestCase
             'current_medications' => ['Aspirin'],
         ])->assertOk();
 
-        Visit::factory()->create([
-            'clinic_id' => $clinic->id,
-            'patient_id' => $patient->id,
-            'doctor_id' => $doctor->id,
-            'visit_number' => 'VIS-1001',
-        ]);
-
         $response = $this->getJson(route('patients.show', ['patientId' => $patient->id]));
 
         $response->assertOk();
         $response->assertJsonPath('data.chronic_conditions.0', 'Chronic Kidney Disease');
         $response->assertJsonPath('data.allergies.0', 'Seafood');
         $response->assertJsonPath('data.current_medications.0', 'Aspirin');
-        $response->assertJsonPath('data.visit_history.0.visit_number', 'VIS-1001');
     }
 
     public function test_can_upload_download_and_delete_patient_attachment_within_same_clinic(): void

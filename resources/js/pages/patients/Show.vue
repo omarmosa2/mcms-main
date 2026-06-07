@@ -8,7 +8,6 @@ import {
     Heart,
     Paperclip,
     Pill,
-    Stethoscope,
     TestTube,
     User,
 } from 'lucide-vue-next';
@@ -17,16 +16,6 @@ import PatientController from '@/actions/App/Http/Controllers/Patients/PatientCo
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
-
-type VisitHistoryItem = {
-    id: number;
-    visit_number: string;
-    status: string;
-    doctor: { id: number; name: string } | null;
-    started_at: string | null;
-    in_progress_at: string | null;
-    completed_at: string | null;
-};
 
 type Attachment = {
     id: number;
@@ -150,7 +139,6 @@ const activeTab = ref('info');
 const tabs = [
     { id: 'info', label: 'المعلومات الأساسية', icon: User },
     { id: 'medical', label: 'السجل الطبي', icon: Heart },
-    { id: 'visits', label: 'الزيارات', icon: Stethoscope },
     { id: 'appointments', label: 'المواعيد', icon: Calendar },
     { id: 'invoices', label: 'الفواتير', icon: CreditCard },
     { id: 'prescriptions', label: 'الوصفات', icon: Pill },
@@ -197,26 +185,6 @@ const appointmentStatusClass = (status: string) => {
         completed: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
         canceled: 'bg-red-500/10 text-red-600 border-red-500/20',
         no_show: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
-    };
-
-    return classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40';
-};
-
-const visitStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-        started: 'بدأت',
-        in_progress: 'قيد التنفيذ',
-        completed: 'مكتملة',
-    };
-
-    return labels[status] ?? status;
-};
-
-const visitStatusClass = (status: string) => {
-    const classes: Record<string, string> = {
-        started: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-        in_progress: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20',
-        completed: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
     };
 
     return classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40';
@@ -371,11 +339,6 @@ return 'غير محدد';
                     <span class="text-sm font-semibold">{{ patient.age ? patient.age + ' سنة' : 'غير محدد' }}</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <Stethoscope class="size-4 text-muted-foreground" />
-                    <span class="text-sm text-muted-foreground">الزيارات</span>
-                    <span class="text-sm font-semibold">{{ patient.visit_history.length }}</span>
-                </div>
-                <div class="flex items-center gap-2">
                     <CreditCard class="size-4 text-muted-foreground" />
                     <span class="text-sm text-muted-foreground">الفواتير</span>
                     <span class="text-sm font-semibold">{{ patient.invoices.length }}</span>
@@ -493,24 +456,6 @@ return 'غير محدد';
                     </div>
                     <p v-else class="text-sm text-muted-foreground">لا توجد أدوية حالية مسجلة.</p>
                 </div>
-            </div>
-
-            <div v-if="activeTab === 'visits'" class="space-y-4">
-                <div v-if="patient.visit_history.length > 0" class="space-y-3">
-                    <div v-for="visit in patient.visit_history" :key="visit.id" class="rounded-xl border border-border/70 bg-background/55 p-4">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div class="flex items-center gap-3">
-                                <span class="font-mono text-sm">{{ visit.visit_number }}</span>
-                                <Badge :class="visitStatusClass(visit.status)">{{ visitStatusLabel(visit.status) }}</Badge>
-                            </div>
-                            <span class="text-xs text-muted-foreground">{{ formatShortDate(visit.started_at) }}</span>
-                        </div>
-                        <div v-if="visit.doctor" class="mt-2 text-sm text-muted-foreground">
-                            الطبيب: <span class="text-foreground">{{ visit.doctor.name }}</span>
-                        </div>
-                    </div>
-                </div>
-                <p v-else class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground">لا توجد زيارات مسجلة.</p>
             </div>
 
             <div v-if="activeTab === 'appointments'" class="space-y-4">

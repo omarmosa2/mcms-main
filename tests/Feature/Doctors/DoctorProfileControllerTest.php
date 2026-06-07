@@ -8,7 +8,6 @@ use App\Models\ClinicWorkingHour;
 use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\User;
-use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -510,11 +509,6 @@ class DoctorProfileControllerTest extends TestCase
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
             'status' => DoctorProfile::STATUS_ACTIVE,
-        ]);
-
-        Visit::factory()->create([
-            'clinic_id' => $clinic->id,
-            'doctor_id' => $doctor->id,
         ]);
 
         $response = $this->deleteJson(route('doctors.destroy', ['doctorProfileId' => $profile->id]));

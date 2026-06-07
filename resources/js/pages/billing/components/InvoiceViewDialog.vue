@@ -23,7 +23,6 @@ const props = defineProps<{
     invoice: Invoice | null;
     patients: Option[];
     appointments: Option[];
-    visits: Option[];
 }>();
 
 const emit = defineEmits<{
@@ -54,14 +53,6 @@ const resolveAppointmentNumber = (appointmentId: number | null): string => {
         props.appointments.find((appointment) => appointment.id === appointmentId)
             ?.appointment_number ?? '-'
     );
-};
-
-const resolveVisitNumber = (visitId: number | null): string => {
-    if (visitId === null) {
-        return '-';
-    }
-
-    return props.visits.find((visit) => visit.id === visitId)?.visit_number ?? '-';
 };
 
 const handleClose = (): void => {
@@ -109,16 +100,6 @@ const handleClose = (): void => {
                         </dt>
                         <dd class="text-sm capitalize">
                             {{ statusLabels[invoice.status] ?? invoice.status }}
-                        </dd>
-                    </div>
-                    <div class="space-y-1">
-                        <dt
-                            class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
-                        >
-                            الزيارة
-                        </dt>
-                        <dd class="text-sm">
-                            {{ resolveVisitNumber(invoice.visit_id) }}
                         </dd>
                     </div>
                     <div class="space-y-1">

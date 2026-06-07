@@ -17,16 +17,12 @@ class DeletePatientAction extends BaseAction
             ->forClinic($clinicId)
             ->withCount([
                 'appointments',
-                'queueEntries',
-                'visits',
                 'invoices',
             ])
             ->findOrFail($patientId);
 
         if (
             (int) $patient->appointments_count > 0
-            || (int) $patient->queue_entries_count > 0
-            || (int) $patient->visits_count > 0
             || (int) $patient->invoices_count > 0
         ) {
             throw ValidationException::withMessages([

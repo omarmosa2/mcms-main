@@ -23,7 +23,6 @@ const props = defineProps<{
     invoice: Invoice | null;
     patients: Option[];
     appointments: Option[];
-    visits: Option[];
 }>();
 
 const emit = defineEmits<{
@@ -110,29 +109,6 @@ const handleClose = (): void => {
                                 </option>
                             </select>
                             <InputError :message="errors.patient_id" />
-                        </div>
-                        <div class="grid gap-2">
-                            <Label for="edit_invoice_visit">الزيارة</Label>
-                            <select
-                                id="edit_invoice_visit"
-                                name="visit_id"
-                                class="pattern-field-clay h-10 px-3 py-2"
-                                :value="
-                                    invoice.visit_id !== null
-                                        ? String(invoice.visit_id)
-                                        : ''
-                                "
-                            >
-                                <option value="">بدون زيارة</option>
-                                <option
-                                    v-for="visit in visits"
-                                    :key="`edit-invoice-visit-${visit.id}`"
-                                    :value="visit.id"
-                                >
-                                    {{ visit.visit_number }}
-                                </option>
-                            </select>
-                            <InputError :message="errors.visit_id" />
                         </div>
                         <div class="grid gap-2">
                             <Label for="edit_invoice_appointment">

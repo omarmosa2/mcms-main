@@ -74,21 +74,6 @@ class User extends Authenticatable
         return $this->hasMany(Appointment::class, 'created_by');
     }
 
-    public function assignedQueueEntries(): HasMany
-    {
-        return $this->hasMany(QueueEntry::class, 'assigned_doctor_id');
-    }
-
-    public function calledQueueEntries(): HasMany
-    {
-        return $this->hasMany(QueueEntry::class, 'called_by');
-    }
-
-    public function visits(): HasMany
-    {
-        return $this->hasMany(Visit::class, 'doctor_id');
-    }
-
     public function doctorProfile(): HasOne
     {
         return $this->hasOne(DoctorProfile::class);

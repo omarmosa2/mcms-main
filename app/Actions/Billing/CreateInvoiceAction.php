@@ -7,7 +7,6 @@ use App\Actions\BaseAction;
 use App\Models\Appointment;
 use App\Models\Invoice;
 use App\Models\Patient;
-use App\Models\Visit;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -22,14 +21,7 @@ class CreateInvoiceAction extends BaseAction
     public function handle(int $clinicId, int $userId, array $payload): Invoice
     {
         $patient = $this->resolvePatient($clinicId, (int) $payload['patient_id']);
-        $visit = $this->resolveVisitIfProvided($clinicId, $payload['visit_id'] ?? null);
         $appointment = $this->resolveAppointmentIfProvided($clinicId, $payload['appointment_id'] ?? null);
-
-        if ($visit !== null && (int) $visit->patient_id !== (int) $patient->id) {
-            throw ValidationException::withMessages([
-                'visit_id' => 'The selected visit does not belong to the selected patient.',
-            ]);
-        }
 
         if ($appointment !== null && (int) $appointment->patient_id !== (int) $patient->id) {
             throw ValidationException::withMessages([
@@ -49,7 +41,7 @@ class CreateInvoiceAction extends BaseAction
                     $invoice = Invoice::query()->create([
                         'clinic_id' => $clinicId,
                         'patient_id' => $payload['patient_id'],
-                        'visit_id' => $payload['visit_id'] ?? null,
+                        'visit_id' => null,
                         'appointment_id' => $payload['appointment_id'] ?? null,
                         'issued_by' => null,
                         'invoice_number' => $payload['invoice_number'] ?? $this->generateInvoiceNumber($clinicId),
@@ -118,18 +110,6 @@ class CreateInvoiceAction extends BaseAction
         return Patient::query()
             ->forClinic($clinicId)
             ->whereKey($patientId)
-            ->firstOrFail();
-    }
-
-    private function resolveVisitIfProvided(int $clinicId, mixed $visitId): ?Visit
-    {
-        if ($visitId === null) {
-            return null;
-        }
-
-        return Visit::query()
-            ->forClinic($clinicId)
-            ->whereKey((int) $visitId)
             ->firstOrFail();
     }
 

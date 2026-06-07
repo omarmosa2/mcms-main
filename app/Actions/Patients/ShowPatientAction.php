@@ -24,24 +24,6 @@ class ShowPatientAction extends BaseAction
                 'medications:id,clinic_id,patient_id,medication',
                 'attachments:id,clinic_id,patient_id,uploaded_by,disk,path,original_name,mime_type,extension,size_bytes,uploaded_at,created_at',
                 'attachments.uploader:id,name,email',
-                'visits' => function ($builder) use ($clinicId): void {
-                    $builder
-                        ->forClinic($clinicId)
-                        ->select([
-                            'id',
-                            'clinic_id',
-                            'patient_id',
-                            'doctor_id',
-                            'visit_number',
-                            'status',
-                            'started_at',
-                            'in_progress_at',
-                            'completed_at',
-                        ])
-                        ->with('doctor:id,name')
-                        ->orderByDesc('started_at')
-                        ->limit(20);
-                },
                 'appointments' => function ($builder) use ($clinicId): void {
                     $builder
                         ->forClinic($clinicId)

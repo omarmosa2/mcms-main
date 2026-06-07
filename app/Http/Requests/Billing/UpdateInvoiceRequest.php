@@ -34,14 +34,6 @@ class UpdateInvoiceRequest extends FormRequest
                     fn ($query) => $query->where('clinic_id', $clinicId),
                 ),
             ],
-            'visit_id' => [
-                'sometimes',
-                'nullable',
-                'integer',
-                Rule::exists('visits', 'id')->where(
-                    fn ($query) => $query->where('clinic_id', $clinicId),
-                ),
-            ],
             'appointment_id' => [
                 'sometimes',
                 'nullable',

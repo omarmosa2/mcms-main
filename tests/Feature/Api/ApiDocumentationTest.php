@@ -53,8 +53,6 @@ class ApiDocumentationTest extends TestCase
         $requiredTags = [
             'Patients',
             'Appointments',
-            'Queue',
-            'Visits',
             'Billing',
             'Financial',
             'Inventory',
@@ -88,7 +86,7 @@ class ApiDocumentationTest extends TestCase
     {
         $content = File::get(base_path('docs/openapi.yaml'));
 
-        $requiredSchemas = ['Patient', 'QueueEntry', 'Payment', 'PaginationMeta'];
+        $requiredSchemas = ['Patient', 'Payment', 'PaginationMeta'];
 
         foreach ($requiredSchemas as $schema) {
             $this->assertStringContainsString($schema.':', $content, "Missing schema: {$schema}");

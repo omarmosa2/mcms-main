@@ -6,8 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Invoice;
 use App\Models\Patient;
-use App\Models\QueueEntry;
-use App\Models\Visit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
@@ -34,8 +32,6 @@ class MetricsController extends Controller
         $metrics = [];
 
         $metrics[] = $this->gauge('mcms_total_patients', Patient::query()->count(), 'Total number of patients');
-        $metrics[] = $this->gauge('mcms_active_visits', Visit::query()->whereIn('status', ['started', 'in_progress'])->count(), 'Number of active visits');
-        $metrics[] = $this->gauge('mcms_pending_queue', QueueEntry::query()->where('queue_date', today())->where('status', 'waiting')->count(), 'Number of patients waiting in queue');
         $metrics[] = $this->gauge('mcms_today_appointments', Appointment::query()->whereDate('scheduled_for', today())->count(), 'Number of appointments today');
         $metrics[] = $this->gauge('mcms_outstanding_invoices', Invoice::query()->whereIn('status', ['issued', 'partially_paid'])->count(), 'Number of outstanding invoices');
 

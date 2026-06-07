@@ -22,7 +22,6 @@ const {
     invoices,
     patients,
     appointments,
-    visits,
     status_options,
     payment_method_options,
     filters,
@@ -30,7 +29,6 @@ const {
     invoices: PaginatedResponse<Invoice>;
     patients: Option[];
     appointments: Option[];
-    visits: Option[];
     status_options: string[];
     payment_method_options: string[];
     filters: {
@@ -567,14 +565,12 @@ const handleNextPage = (): void => {
             @update:open="isCreateSheetOpen = $event"
             :patients="patients"
             :appointments="appointments"
-            :visits="visits"
         />
 
         <InvoiceViewDialog
             :invoice="viewingInvoice"
             :patients="patients"
             :appointments="appointments"
-            :visits="visits"
             @close="closeViewInvoice"
         />
 
@@ -582,7 +578,6 @@ const handleNextPage = (): void => {
             :invoice="editingInvoice"
             :patients="patients"
             :appointments="appointments"
-            :visits="visits"
             @close="closeEditInvoice"
         />
     </div>

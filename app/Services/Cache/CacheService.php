@@ -8,11 +8,9 @@ use App\Models\Department;
 use App\Models\ExpenseCategory;
 use App\Models\Invoice;
 use App\Models\Patient;
-use App\Models\QueueEntry;
 use App\Models\Role;
 use App\Models\SecurityPolicy;
 use App\Models\User;
-use App\Models\Visit;
 use Closure;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
@@ -222,16 +220,6 @@ class CacheService
                 ->orderBy('scheduled_for')
                 ->get();
 
-            $todayQueueEntries = QueueEntry::query()
-                ->forClinic($clinicId)
-                ->where('queue_date', $today);
-
-            $longWaitingPatients = (clone $todayQueueEntries)
-                ->where('status', 'waiting')
-                ->where('created_at', '<=', $now->copy()->subMinutes(30))
-                ->with(['patient'])
-                ->get();
-
             $pendingInvoicesToday = Invoice::query()
                 ->forClinic($clinicId)
                 ->whereDate('created_at', $today)
@@ -250,11 +238,6 @@ class CacheService
                     ->groupBy('status')
                     ->pluck('count', 'status')
                     ->toArray(),
-                'pending_queue' => (clone $todayQueueEntries)->where('status', 'waiting')->count(),
-                'active_visits' => Visit::query()
-                    ->forClinic($clinicId)
-                    ->whereIn('status', ['started', 'in_progress'])
-                    ->count(),
                 'pending_invoices_today' => (clone $pendingInvoicesToday)->count(),
                 'pending_invoices_amount_today' => (clone $pendingInvoicesToday)->sum('total_amount'),
                 'upcoming_appointments' => $upcomingAppointments->map(function ($appointment) {
@@ -264,14 +247,6 @@ class CacheService
                         'patient_name' => trim($appointment->patient?->first_name.' '.$appointment->patient?->last_name),
                         'doctor_name' => $appointment->doctor?->name,
                         'status' => $appointment->status,
-                    ];
-                })->values()->all(),
-                'long_waiting_patients' => $longWaitingPatients->map(function ($entry) use ($now) {
-                    return [
-                        'id' => $entry->id,
-                        'queue_number' => $entry->queue_number,
-                        'patient_name' => trim($entry->patient?->first_name.' '.$entry->patient?->last_name),
-                        'waiting_minutes' => $entry->created_at?->diffInMinutes($now) ?? 0,
                     ];
                 })->values()->all(),
                 'patients_by_month' => Patient::query()
@@ -296,14 +271,6 @@ class CacheService
                     ->groupBy('month')
                     ->orderBy('month')
                     ->pluck('total', 'month')
-                    ->toArray(),
-                'visits_by_month' => Visit::query()
-                    ->forClinic($clinicId)
-                    ->selectRaw($monthExpr.', COUNT(*) as count')
-                    ->where('created_at', '>=', now()->subMonths(6))
-                    ->groupBy('month')
-                    ->orderBy('month')
-                    ->pluck('count', 'month')
                     ->toArray(),
                 'last_7_days_revenue' => Invoice::query()
                     ->forClinic($clinicId)
@@ -475,92 +442,11 @@ class CacheService
         });
     }
 
-    public function getQueueEntriesDropdown(int $clinicId, ?int $doctorId = null): array
-    {
-        $doctorKey = $doctorId !== null ? ":doctor{$doctorId}" : '';
-        $key = "clinic:{$clinicId}:dropdown:queue{$doctorKey}";
-
-        $queueEntries = Cache::get($key);
-
-        if ($this->isUnsafeCachedValue($queueEntries)) {
-            Cache::forget($key);
-            $queueEntries = null;
-        }
-
-        if (is_array($queueEntries)) {
-            return $queueEntries;
-        }
-
-        return Cache::remember($key, now()->addSeconds(self::DROPDOWN_OPTIONS_TTL), function () use ($clinicId, $doctorId) {
-            $query = QueueEntry::query()
-                ->forClinic($clinicId)
-                ->select(['id', 'queue_number', 'queue_date', 'status'])
-                ->whereIn('status', [
-                    QueueEntry::STATUS_CALLED,
-                    QueueEntry::STATUS_IN_SERVICE,
-                ])
-                ->orderByDesc('queue_date')
-                ->orderBy('queue_number')
-                ->limit(200);
-
-            if ($doctorId !== null) {
-                $query->where(function ($builder) use ($doctorId): void {
-                    $builder
-                        ->where('assigned_doctor_id', $doctorId)
-                        ->orWhereHas('visit', function ($visitQuery) use ($doctorId): void {
-                            $visitQuery->where('doctor_id', $doctorId);
-                        });
-                });
-            }
-
-            return $query->get()
-                ->map(fn (QueueEntry $entry): array => [
-                    'id' => $entry->id,
-                    'label' => sprintf('#%s - %s (%s)', $entry->queue_number, $entry->queue_date?->toDateString(), $entry->status),
-                ])
-                ->values()
-                ->all();
-        });
-    }
-
-    public function getVisitsDropdown(int $clinicId): array
-    {
-        $key = "clinic:{$clinicId}:dropdown:visits";
-
-        $visits = Cache::get($key);
-
-        if ($this->isUnsafeCachedValue($visits)) {
-            Cache::forget($key);
-            $visits = null;
-        }
-
-        if (is_array($visits)) {
-            return $visits;
-        }
-
-        return Cache::remember($key, now()->addSeconds(self::DROPDOWN_OPTIONS_TTL), function () use ($clinicId) {
-            return Visit::query()
-                ->forClinic($clinicId)
-                ->select(['id', 'visit_number'])
-                ->orderByDesc('started_at')
-                ->limit(200)
-                ->get()
-                ->map(fn (Visit $visit): array => [
-                    'id' => $visit->id,
-                    'visit_number' => $visit->visit_number,
-                ])
-                ->values()
-                ->all();
-        });
-    }
-
     public function invalidateDropdowns(int $clinicId): void
     {
         Cache::forget("clinic:{$clinicId}:dropdown:patients");
         Cache::forget("clinic:{$clinicId}:dropdown:doctors");
         Cache::forget("clinic:{$clinicId}:dropdown:appointments");
-        Cache::forget("clinic:{$clinicId}:dropdown:queue");
-        Cache::forget("clinic:{$clinicId}:dropdown:visits");
 
         User::query()
             ->where('clinic_id', $clinicId)
@@ -572,7 +458,6 @@ class CacheService
             ->select(['id'])
             ->each(function (User $doctor) use ($clinicId): void {
                 Cache::forget("clinic:{$clinicId}:dropdown:appointments:doctor{$doctor->id}");
-                Cache::forget("clinic:{$clinicId}:dropdown:queue:doctor{$doctor->id}");
             });
     }
 

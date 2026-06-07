@@ -20,7 +20,6 @@ class SidebarNavigationTest extends TestCase
             'العيادات',
             'الأطباء',
             'المواعيد',
-            'قائمة الانتظار',
             'المالية',
         ]);
 

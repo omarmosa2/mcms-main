@@ -7,7 +7,6 @@ use App\Models\Clinic;
 use App\Models\Patient;
 use App\Models\RadiologyOrder;
 use App\Models\User;
-use App\Models\Visit;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -233,15 +232,10 @@ class RadiologyOrderStateMachineTest extends TestCase
     {
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
         $user = User::factory()->create(['clinic_id' => $clinic->id]);
-        $visit = Visit::factory()->create([
-            'clinic_id' => $clinic->id,
-            'patient_id' => $patient->id,
-            'doctor_id' => $user->id,
-        ]);
 
         return RadiologyOrder::query()->create([
             'clinic_id' => $clinic->id,
-            'visit_id' => $visit->id,
+            'visit_id' => null,
             'patient_id' => $patient->id,
             'ordered_by' => $user->id,
             'study_name' => 'Chest X-Ray',

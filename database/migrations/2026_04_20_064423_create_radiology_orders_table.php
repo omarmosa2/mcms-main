@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('radiology_orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('clinic_id')->constrained('clinics')->cascadeOnDelete();
-            $table->foreignId('visit_id')->nullable()->constrained('visits')->nullOnDelete();
+            $table->unsignedBigInteger('visit_id')->nullable();
             $table->foreignId('patient_id')->constrained('patients')->cascadeOnDelete();
             $table->foreignId('ordered_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('study_code')->nullable();

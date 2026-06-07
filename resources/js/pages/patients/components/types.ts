@@ -1,16 +1,3 @@
-export type PatientVisitHistoryItem = {
-    id: number;
-    visit_number: string;
-    status: string;
-    doctor: {
-        id: number;
-        name: string;
-    } | null;
-    started_at: string | null;
-    in_progress_at: string | null;
-    completed_at: string | null;
-};
-
 export type PatientAttachment = {
     id: number;
     patient_id: number;
@@ -45,7 +32,6 @@ export type Patient = {
     chronic_conditions: string[];
     allergies: string[];
     current_medications: string[];
-    visit_history: PatientVisitHistoryItem[];
     attachments: PatientAttachment[];
     created_at: string | null;
     updated_at: string | null;

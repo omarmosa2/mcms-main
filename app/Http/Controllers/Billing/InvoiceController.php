@@ -64,13 +64,10 @@ class InvoiceController extends Controller
 
         $appointments = $this->cacheService->getAppointmentsDropdown($clinicId);
 
-        $visits = $this->cacheService->getVisitsDropdown($clinicId);
-
         return Inertia::render('billing/Index', [
             'invoices' => $invoicesResource->response()->getData(true),
             'patients' => $patients,
             'appointments' => $appointments,
-            'visits' => $visits,
             'status_options' => [
                 Invoice::STATUS_DRAFT,
                 Invoice::STATUS_ISSUED,

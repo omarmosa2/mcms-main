@@ -2,12 +2,10 @@
 
 namespace Tests\Feature\Security;
 
-use App\Actions\Queue\EnqueuePatientAction;
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Clinic;
 use App\Models\Invoice;
 use App\Models\Patient;
-use App\Models\QueueEntry;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,35 +13,6 @@ use Tests\TestCase;
 class ClinicIsolationTest extends TestCase
 {
     use RefreshDatabase;
-
-    public function test_user_cannot_see_queue_entries_from_other_clinic(): void
-    {
-        $clinic1 = Clinic::factory()->create();
-        $clinic2 = Clinic::factory()->create();
-        $user = $this->createAuthenticatedUser($clinic1);
-        $patient = Patient::factory()->create(['clinic_id' => $clinic1->id]);
-
-        $entry = app(EnqueuePatientAction::class)->handle($clinic1->id, $user->id, [
-            'patient_id' => $patient->id,
-        ]);
-
-        QueueEntry::query()->withoutClinicScope()->create([
-            'clinic_id' => $clinic2->id,
-            'patient_id' => Patient::factory()->create(['clinic_id' => $clinic2->id])->id,
-            'queue_date' => now()->toDateString(),
-            'queue_number' => 1,
-            'priority' => 0,
-            'status' => QueueEntry::STATUS_WAITING,
-            'checked_in_at' => now(),
-        ]);
-
-        $this->actingAs($user);
-
-        $visibleEntries = QueueEntry::query()->get();
-
-        $this->assertCount(1, $visibleEntries);
-        $this->assertEquals($entry->id, $visibleEntries->first()->id);
-    }
 
     public function test_user_cannot_see_invoices_from_other_clinic(): void
     {

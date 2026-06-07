@@ -10,7 +10,6 @@ use App\Models\PharmacyDispense;
 use App\Models\PharmacyDrug;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
-use App\Models\Visit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -68,21 +67,10 @@ class PrescriptionController extends Controller
         $clinicId = $this->resolveClinicId($request);
         $payload = $request->validated();
 
-        $visit = Visit::query()
-            ->forClinic($clinicId)
-            ->whereKey((int) $payload['visit_id'])
-            ->firstOrFail();
-
-        if ((int) $visit->patient_id !== (int) $payload['patient_id']) {
-            throw ValidationException::withMessages([
-                'patient_id' => 'The selected patient does not belong to the selected visit.',
-            ]);
-        }
-
         $prescription = DB::transaction(function () use ($clinicId, $request, $payload): Prescription {
             $prescription = Prescription::query()->create([
                 'clinic_id' => $clinicId,
-                'visit_id' => (int) $payload['visit_id'],
+                'visit_id' => null,
                 'patient_id' => (int) $payload['patient_id'],
                 'prescribed_by' => $request->user()?->id,
                 'prescription_number' => $payload['prescription_number'] ?? $this->generatePrescriptionNumber($clinicId),

@@ -14,12 +14,6 @@ return new class extends Migration
             }
         });
 
-        Schema::table('visits', function (Blueprint $table) {
-            if (! $this->hasIndex('visits', 'visits_doctor_id_index')) {
-                $table->index('doctor_id', 'visits_doctor_id_index');
-            }
-        });
-
         Schema::table('invoices', function (Blueprint $table) {
             if (! $this->hasIndex('invoices', 'invoices_issued_at_index')) {
                 $table->index('issued_at', 'invoices_issued_at_index');
@@ -57,10 +51,6 @@ return new class extends Migration
     {
         Schema::table('patients', function (Blueprint $table) {
             $table->dropIndex('patients_email_index');
-        });
-
-        Schema::table('visits', function (Blueprint $table) {
-            $table->dropIndex('visits_doctor_id_index');
         });
 
         Schema::table('invoices', function (Blueprint $table) {

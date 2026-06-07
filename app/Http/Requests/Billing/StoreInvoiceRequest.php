@@ -32,13 +32,6 @@ class StoreInvoiceRequest extends FormRequest
                     fn ($query) => $query->where('clinic_id', $clinicId),
                 ),
             ],
-            'visit_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('visits', 'id')->where(
-                    fn ($query) => $query->where('clinic_id', $clinicId),
-                ),
-            ],
             'appointment_id' => [
                 'nullable',
                 'integer',

@@ -124,11 +124,6 @@ class Invoice extends BaseModel
         return $this->belongsTo(Patient::class);
     }
 
-    public function visit(): BelongsTo
-    {
-        return $this->belongsTo(Visit::class);
-    }
-
     public function appointment(): BelongsTo
     {
         return $this->belongsTo(Appointment::class);

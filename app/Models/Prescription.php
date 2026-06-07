@@ -49,11 +49,6 @@ class Prescription extends BaseModel
         return $this->belongsTo(Clinic::class);
     }
 
-    public function visit(): BelongsTo
-    {
-        return $this->belongsTo(Visit::class);
-    }
-
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);

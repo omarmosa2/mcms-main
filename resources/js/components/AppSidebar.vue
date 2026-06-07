@@ -7,15 +7,12 @@ import {
     HelpCircle,
     Key,
     LayoutGrid,
-    ListOrdered,
+    CalendarDays,
     Shield,
-    Stethoscope,
-    Trash2,
+    UserCog,
     UserRound,
     Users,
     Wallet,
-    CalendarDays,
-    UserCog,
     BadgeDollarSign,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -25,10 +22,8 @@ import DoctorProfileController from '@/actions/App/Http/Controllers/Doctors/Doct
 import EmployeeController from '@/actions/App/Http/Controllers/Employees/EmployeeController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import PayrollController from '@/actions/App/Http/Controllers/Payroll/PayrollController';
-import QueueEntryController from '@/actions/App/Http/Controllers/Queue/QueueEntryController';
 import RoleController from '@/actions/App/Http/Controllers/Rbac/RoleController';
 import UserController from '@/actions/App/Http/Controllers/Security/UserController';
-import VisitController from '@/actions/App/Http/Controllers/Visits/VisitController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -60,9 +55,7 @@ const roleItemOrder: Record<string, string[]> = {
         'العيادات',
         'الأطباء',
         'المواعيد',
-        'قائمة الانتظار',
         'المالية',
-        'الزيارات',
         'جداول الدوام',
         'لوحة التحكم',
     ],
@@ -71,7 +64,6 @@ const roleItemOrder: Record<string, string[]> = {
         'العيادات',
         'الأطباء',
         'المواعيد',
-        'قائمة الانتظار',
         'المالية',
         'جداول الدوام',
         'لوحة التحكم',
@@ -83,10 +75,8 @@ const roleItemOrder: Record<string, string[]> = {
         'العيادات',
         'الأطباء',
         'المواعيد',
-        'قائمة الانتظار',
         'المالية',
         'جداول الدوام',
-        'الزيارات',
         'المستخدمون',
         'الأدوار',
     ],
@@ -95,10 +85,8 @@ const roleItemOrder: Record<string, string[]> = {
         'العيادات',
         'الأطباء',
         'المواعيد',
-        'قائمة الانتظار',
         'المالية',
         'جداول الدوام',
-        'الزيارات',
         'لوحة التحكم',
         'المستخدمون',
         'الأدوار',
@@ -108,10 +96,8 @@ const roleItemOrder: Record<string, string[]> = {
         'العيادات',
         'الأطباء',
         'المواعيد',
-        'قائمة الانتظار',
         'المالية',
         'جداول الدوام',
-        'الزيارات',
         'لوحة التحكم',
         'المستخدمون',
         'الأدوار',
@@ -184,13 +170,6 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 permission: 'appointment.view',
             },
             {
-                title: 'قائمة الانتظار',
-                href: QueueEntryController.index(),
-                icon: ListOrdered,
-                group: 'clinical',
-                permission: 'queue.view',
-            },
-            {
                 title: 'المالية',
                 href: financialIndex(),
                 icon: Wallet,
@@ -220,17 +199,6 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 icon: CalendarDays,
                 group: 'clinical',
                 permission: 'doctor_schedule.view',
-            },
-            {
-                title: 'الزيارات',
-                href: VisitController.index(),
-                icon: Stethoscope,
-                group: 'clinical',
-                anyPermissions: [
-                    'visit.start',
-                    'visit.update',
-                    'visit.complete',
-                ],
             },
             {
                 title: 'المستخدمون',

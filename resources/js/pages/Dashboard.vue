@@ -6,10 +6,8 @@ import {
     CalendarClock,
     Clock,
     FileText,
-    ListOrdered,
     Plus,
     ReceiptText,
-    Stethoscope,
     Users,
     AlertTriangle,
     ChevronLeft,
@@ -21,9 +19,7 @@ import { computed } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import InvoiceController from '@/actions/App/Http/Controllers/Billing/InvoiceController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
-import QueueEntryController from '@/actions/App/Http/Controllers/Queue/QueueEntryController';
 import ReportController from '@/actions/App/Http/Controllers/Reports/ReportController';
-import VisitController from '@/actions/App/Http/Controllers/Visits/VisitController';
 import Chart from '@/components/Chart.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
@@ -33,13 +29,10 @@ type ChartStats = {
     patients_by_month: Record<string, number>;
     appointments_by_status: Record<string, number>;
     revenue_by_month: Record<string, number>;
-    visits_by_month: Record<string, number>;
     total_patients: number;
     today_new_patients: number;
     today_appointments: number;
     today_appointments_by_status: Record<string, number>;
-    pending_queue: number;
-    active_visits: number;
     pending_invoices_today: number;
     pending_invoices_amount_today: number;
     upcoming_appointments: Array<{
@@ -48,12 +41,6 @@ type ChartStats = {
         patient_name: string;
         doctor_name: string;
         status: string;
-    }>;
-    long_waiting_patients: Array<{
-        id: number;
-        queue_number: number;
-        patient_name: string;
-        waiting_minutes: number;
     }>;
     last_7_days_revenue: Record<string, number>;
     last_7_days_patients: Record<string, number>;
@@ -94,8 +81,6 @@ type ModuleCard = NavItem & {
 const moduleCards: ModuleCard[] = [
     { title: 'المرضى', href: PatientController.index(), icon: Users, description: 'سجلات المرضى والبيانات الديموغرافية.', metric: 'السجلات', permission: 'patient.view' },
     { title: 'المواعيد', href: AppointmentController.index(), icon: CalendarClock, description: 'الجداول اليومية والحضور وعدم الحضور.', metric: 'الجدولة', permission: 'appointment.view' },
-    { title: 'قائمة الانتظار', href: QueueEntryController.index(), icon: ListOrdered, description: 'سير الانتظار الفعلي والتريج واستدعاء التالي.', metric: 'مباشر', permission: 'queue.view' },
-    { title: 'الزيارات', href: VisitController.index(), icon: Stethoscope, description: 'حالة الاستشارات والملاحظات الطبية والتقدم.', metric: 'سريري', anyPermissions: ['visit.start', 'visit.update', 'visit.complete'] },
     { title: 'الفواتير', href: InvoiceController.index(), icon: ReceiptText, description: 'الفواتير والمدفوعات وتتبع الحسابات غير المسددة.', metric: 'الإيرادات', permission: 'billing.view' },
     { title: 'التقارير', href: ReportController.index(), icon: BarChart3, description: 'رؤى تشغيلية ومالية مع بيانات جاهزة للتصدير.', metric: 'الرؤى', anyPermissions: ['reports.view', 'reports.financial'] },
 ];
@@ -123,16 +108,6 @@ const quickActions = computed(() => [
 
 const urgentAlerts = computed(() => {
     const alerts: Array<{ type: 'warning' | 'danger'; message: string; href?: string }> = [];
-
-    if (chartStats?.long_waiting_patients && chartStats.long_waiting_patients.length > 0) {
-        chartStats.long_waiting_patients.forEach(patient => {
-            alerts.push({
-                type: 'danger',
-                message: `${patient.patient_name} ينتظر منذ ${patient.waiting_minutes} دقيقة`,
-                href: QueueEntryController.index.url(),
-            });
-        });
-    }
 
     if ((chartStats?.pending_invoices_today ?? 0) > 5) {
         alerts.push({
@@ -218,21 +193,6 @@ const appointmentsByStatusDatasets = computed(() => [{
     borderWidth: 0,
     borderRadius: 4,
 }]);
-
-const visitsByMonthLabels = computed(() => Object.keys(chartStats?.visits_by_month ?? {}));
-const visitsByMonthDatasets = computed(() => [{
-    label: 'الزيارات',
-    data: Object.values(chartStats?.visits_by_month ?? {}),
-    backgroundColor: 'rgba(14, 165, 233, 0.08)',
-    borderColor: '#0EA5E9',
-    fill: true,
-    borderWidth: 2,
-    tension: 0.4,
-    pointRadius: 2,
-    pointBackgroundColor: '#0EA5E9',
-    pointBorderColor: '#FFFFFF',
-    pointBorderWidth: 2,
-}]);
 </script>
 
 <template>
@@ -286,7 +246,7 @@ const visitsByMonthDatasets = computed(() => [{
         </section>
 
         <!-- Stats cards -->
-        <section class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <section class="grid grid-cols-2 gap-4 lg:grid-cols-3">
             <!-- Today's Appointments -->
             <div class="card-float card-hover">
                 <div class="flex items-center gap-3">
@@ -313,28 +273,15 @@ const visitsByMonthDatasets = computed(() => [{
                 </div>
             </div>
 
-            <!-- Queue -->
+            <!-- Pending Invoices -->
             <div class="card-float card-hover">
                 <div class="flex items-center gap-3">
                     <div class="icon-container bg-[#FEF3C7] text-[#F59E0B]">
-                        <ListOrdered class="size-5" />
+                        <ReceiptText class="size-5" />
                     </div>
                     <div>
-                        <p class="metric-label">في الانتظار</p>
-                        <p class="metric-value mt-0.5">{{ chartStats?.pending_queue ?? 0 }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active Visits -->
-            <div class="card-float card-hover">
-                <div class="flex items-center gap-3">
-                    <div class="icon-container bg-[#F0FDF4] text-[#22C55E]">
-                        <Stethoscope class="size-5" />
-                    </div>
-                    <div>
-                        <p class="metric-label">زيارات نشطة</p>
-                        <p class="metric-value mt-0.5">{{ chartStats?.active_visits ?? 0 }}</p>
+                        <p class="metric-label">فواتير معلقة</p>
+                        <p class="metric-value mt-0.5">{{ chartStats?.pending_invoices_today ?? 0 }}</p>
                     </div>
                 </div>
             </div>
@@ -405,33 +352,6 @@ const visitsByMonthDatasets = computed(() => [{
 
             <!-- Left column -->
             <div class="flex flex-col gap-6">
-                <!-- Queue status -->
-                <article class="card-float">
-                    <div class="mb-4 flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <ListOrdered class="size-4 text-slate-400" />
-                            <h2 class="text-sm font-semibold text-slate-900">حالة الانتظار</h2>
-                        </div>
-                        <Link
-                            :href="QueueEntryController.index()"
-                            class="text-xs font-medium text-[#0284C7] transition hover:underline"
-                            v-if="can('queue.view')"
-                        >
-                            عرض القائمة
-                        </Link>
-                    </div>
-                    <div class="space-y-2.5">
-                        <div class="flex items-center justify-between rounded-xl bg-[#F7FAFD] p-3.5">
-                            <span class="text-sm text-slate-600">مرضى في الانتظار</span>
-                            <span class="text-xl font-bold text-slate-900 tabular-nums">{{ chartStats?.pending_queue ?? 0 }}</span>
-                        </div>
-                        <div class="flex items-center justify-between rounded-xl bg-[#F7FAFD] p-3.5">
-                            <span class="text-sm text-slate-600">انتظار أكثر من 30 دقيقة</span>
-                            <span class="text-xl font-bold text-slate-900 tabular-nums">{{ chartStats?.long_waiting_patients?.length ?? 0 }}</span>
-                        </div>
-                    </div>
-                </article>
-
                 <!-- Patients chart -->
                 <article v-if="chartStats?.last_7_days_patients" class="card-float">
                     <h2 class="mb-5 text-sm font-semibold text-slate-900">مرضى جدد (آخر 7 أيام)</h2>
@@ -466,10 +386,6 @@ const visitsByMonthDatasets = computed(() => [{
             <article class="card-float">
                 <h2 class="mb-5 text-sm font-semibold text-slate-900">المواعيد حسب الحالة (آخر 30 يوم)</h2>
                 <Chart type="bar" :labels="appointmentsByStatusLabels" :datasets="appointmentsByStatusDatasets" />
-            </article>
-            <article class="card-float">
-                <h2 class="mb-5 text-sm font-semibold text-slate-900">الزيارات (آخر 6 أشهر)</h2>
-                <Chart type="line" :labels="visitsByMonthLabels" :datasets="visitsByMonthDatasets" />
             </article>
         </section>
     </div>

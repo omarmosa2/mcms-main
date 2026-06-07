@@ -6,7 +6,6 @@ use App\Actions\Audit\LogAuditAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Radiology\StoreRadiologyOrderRequest;
 use App\Models\RadiologyOrder;
-use App\Models\Visit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -64,16 +63,9 @@ class RadiologyOrderController extends Controller
         $clinicId = $this->resolveClinicId($request);
         $payload = $request->validated();
 
-        if (isset($payload['visit_id'])) {
-            Visit::query()
-                ->forClinic($clinicId)
-                ->whereKey((int) $payload['visit_id'])
-                ->firstOrFail();
-        }
-
         $order = RadiologyOrder::query()->create([
             'clinic_id' => $clinicId,
-            'visit_id' => $payload['visit_id'] ?? null,
+            'visit_id' => null,
             'patient_id' => (int) $payload['patient_id'],
             'ordered_by' => $request->user()?->id,
             'study_code' => $payload['study_code'] ?? null,

@@ -7,7 +7,6 @@ use App\Actions\BaseAction;
 use App\Models\Appointment;
 use App\Models\Invoice;
 use App\Models\Patient;
-use App\Models\Visit;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -35,22 +34,17 @@ class UpdateInvoiceAction extends BaseAction
             ? $this->resolvePatient($clinicId, (int) $payload['patient_id'])
             : $this->resolvePatient($clinicId, (int) $invoice->patient_id);
 
-        $visit = array_key_exists('visit_id', $payload)
-            ? $this->resolveVisitIfProvided($clinicId, $payload['visit_id'])
-            : $this->resolveVisitIfProvided($clinicId, $invoice->visit_id);
-
         $appointment = array_key_exists('appointment_id', $payload)
             ? $this->resolveAppointmentIfProvided($clinicId, $payload['appointment_id'])
             : $this->resolveAppointmentIfProvided($clinicId, $invoice->appointment_id);
 
-        $this->ensureVisitAndAppointmentBelongToPatient(
+        $this->ensureAppointmentBelongsToPatient(
             patientId: (int) $patient->id,
-            visit: $visit,
             appointment: $appointment,
         );
 
         $payload['patient_id'] = $patient->id;
-        $payload['visit_id'] = $visit?->id;
+        $payload['visit_id'] = null;
         $payload['appointment_id'] = $appointment?->id;
 
         $oldValues = $invoice->only([
@@ -143,18 +137,6 @@ class UpdateInvoiceAction extends BaseAction
             ->firstOrFail();
     }
 
-    private function resolveVisitIfProvided(int $clinicId, mixed $visitId): ?Visit
-    {
-        if ($visitId === null) {
-            return null;
-        }
-
-        return Visit::query()
-            ->forClinic($clinicId)
-            ->whereKey((int) $visitId)
-            ->firstOrFail();
-    }
-
     private function resolveAppointmentIfProvided(int $clinicId, mixed $appointmentId): ?Appointment
     {
         if ($appointmentId === null) {
@@ -167,17 +149,10 @@ class UpdateInvoiceAction extends BaseAction
             ->firstOrFail();
     }
 
-    private function ensureVisitAndAppointmentBelongToPatient(
+    private function ensureAppointmentBelongsToPatient(
         int $patientId,
-        ?Visit $visit,
         ?Appointment $appointment,
     ): void {
-        if ($visit !== null && (int) $visit->patient_id !== $patientId) {
-            throw ValidationException::withMessages([
-                'visit_id' => 'The selected visit does not belong to the selected patient.',
-            ]);
-        }
-
         if ($appointment !== null && (int) $appointment->patient_id !== $patientId) {
             throw ValidationException::withMessages([
                 'appointment_id' => 'The selected appointment does not belong to the selected patient.',

@@ -27,9 +27,9 @@ const capabilities = [
         icon: Stethoscope,
     },
     {
-        title: 'المواعيد وقائمة الانتظار',
+        title: 'المواعيد',
         description:
-            'إدارة المواعيد وسير الانتظار مع انتقالات حالة سريعة.',
+            'إدارة المواعيد مع انتقالات حالة سريعة.',
         icon: CalendarClock,
     },
     {

@@ -35,16 +35,6 @@ class Clinic extends Model
         return $this->hasMany(Permission::class);
     }
 
-    public function queueEntries(): HasMany
-    {
-        return $this->hasMany(QueueEntry::class);
-    }
-
-    public function visits(): HasMany
-    {
-        return $this->hasMany(Visit::class);
-    }
-
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);

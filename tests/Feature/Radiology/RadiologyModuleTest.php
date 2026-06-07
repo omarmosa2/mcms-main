@@ -7,7 +7,6 @@ use App\Models\Clinic;
 use App\Models\Patient;
 use App\Models\RadiologyOrder;
 use App\Models\User;
-use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,14 +21,8 @@ class RadiologyModuleTest extends TestCase
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
         ]);
-        $visit = Visit::factory()->create([
-            'clinic_id' => $clinic->id,
-            'patient_id' => $patient->id,
-            'doctor_id' => $user->id,
-        ]);
-
         $orderResponse = $this->postJson(route('radiology.orders.store'), [
-            'visit_id' => $visit->id,
+            'visit_id' => null,
             'patient_id' => $patient->id,
             'study_code' => 'CXR-PA',
             'study_name' => 'Chest X-Ray',

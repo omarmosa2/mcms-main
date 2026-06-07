@@ -104,8 +104,6 @@ class ReportController extends Controller
             $lines[] = 'Operational Summary';
             $lines[] = sprintf('Patients Total: %d', (int) ($operational['patients_total'] ?? 0));
             $lines[] = sprintf('Appointments Total: %d', (int) ($operational['appointments']['total'] ?? 0));
-            $lines[] = sprintf('Queue Entries Total: %d', (int) ($operational['queue_entries']['total'] ?? 0));
-            $lines[] = sprintf('Visits Total: %d', (int) ($operational['visits']['total'] ?? 0));
             $lines[] = '';
         }
 
@@ -124,7 +122,6 @@ class ReportController extends Controller
             $doctorPerformance = $payload['doctor_performance'];
             $lines[] = 'Doctor Performance';
             $lines[] = sprintf('Doctors Count: %d', (int) ($doctorPerformance['doctors_count'] ?? 0));
-            $lines[] = sprintf('Visits Total: %d', (int) ($doctorPerformance['totals']['visits'] ?? 0));
             $lines[] = sprintf('Unique Patients: %d', (int) ($doctorPerformance['totals']['unique_patients'] ?? 0));
             $lines[] = sprintf('Revenue Amount: %.2f', (float) ($doctorPerformance['totals']['revenue_amount'] ?? 0));
             $lines[] = '';
@@ -368,7 +365,6 @@ class ReportController extends Controller
     {
         fputcsv($output, ['Doctor Performance']);
         fputcsv($output, ['Doctors Count', (int) ($summary['doctors_count'] ?? 0)]);
-        fputcsv($output, ['Total Visits', (int) ($summary['totals']['visits'] ?? 0)]);
         fputcsv($output, ['Total Unique Patients', (int) ($summary['totals']['unique_patients'] ?? 0)]);
         fputcsv($output, ['Total Lab Orders', (int) ($summary['totals']['lab_orders'] ?? 0)]);
         fputcsv($output, ['Total Radiology Orders', (int) ($summary['totals']['radiology_orders'] ?? 0)]);

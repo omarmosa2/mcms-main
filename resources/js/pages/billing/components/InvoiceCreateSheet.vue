@@ -19,7 +19,6 @@ defineProps<{
     open: boolean;
     patients: Option[];
     appointments: Option[];
-    visits: Option[];
 }>();
 
 const emit = defineEmits<{
@@ -78,25 +77,6 @@ const emit = defineEmits<{
                         </option>
                     </select>
                     <InputError :message="errors.appointment_id" />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="visit_id">الزيارة</Label>
-                    <select
-                        id="visit_id"
-                        name="visit_id"
-                        class="pattern-field-clay h-10 px-3 py-2"
-                    >
-                        <option value="">بدون زيارة</option>
-                        <option
-                            v-for="visit in visits"
-                            :key="visit.id"
-                            :value="visit.id"
-                        >
-                            {{ visit.visit_number }}
-                        </option>
-                    </select>
-                    <InputError :message="errors.visit_id" />
                 </div>
 
                 <div class="grid gap-2">

@@ -7,7 +7,6 @@ use App\Models\Invoice;
 use App\Models\NumberRange;
 use App\Models\Patient;
 use App\Models\Prescription;
-use App\Models\Visit;
 use Illuminate\Support\Facades\DB;
 
 class GenerateNumberAction extends BaseAction
@@ -15,8 +14,6 @@ class GenerateNumberAction extends BaseAction
     public const ENTITY_PATIENT = 'patient';
 
     public const ENTITY_APPOINTMENT = 'appointment';
-
-    public const ENTITY_VISIT = 'visit';
 
     public const ENTITY_INVOICE = 'invoice';
 
@@ -89,7 +86,6 @@ class GenerateNumberAction extends BaseAction
         $model = match ($entityType) {
             self::ENTITY_PATIENT => Patient::class,
             self::ENTITY_APPOINTMENT => Appointment::class,
-            self::ENTITY_VISIT => Visit::class,
             self::ENTITY_INVOICE => Invoice::class,
             self::ENTITY_PRESCRIPTION => Prescription::class,
             default => null,

@@ -15,12 +15,10 @@ use App\Models\Payment;
 use App\Models\PaymentPlan;
 use App\Models\PharmacyDrug;
 use App\Models\Prescription;
-use App\Models\QueueEntry;
 use App\Models\RadiologyOrder;
 use App\Models\Role;
 use App\Models\Salary;
 use App\Models\User;
-use App\Models\Visit;
 use App\Policies\AppointmentPolicy;
 use App\Policies\CashboxPolicy;
 use App\Policies\DepartmentPolicy;
@@ -34,12 +32,10 @@ use App\Policies\PaymentPlanPolicy;
 use App\Policies\PaymentPolicy;
 use App\Policies\PharmacyDrugPolicy;
 use App\Policies\PrescriptionPolicy;
-use App\Policies\QueueEntryPolicy;
 use App\Policies\RadiologyOrderPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\SalaryPolicy;
 use App\Policies\UserPolicy;
-use App\Policies\VisitPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -63,12 +59,10 @@ class AuthServiceProvider extends ServiceProvider
         PaymentPlan::class => PaymentPlanPolicy::class,
         PharmacyDrug::class => PharmacyDrugPolicy::class,
         Prescription::class => PrescriptionPolicy::class,
-        QueueEntry::class => QueueEntryPolicy::class,
         RadiologyOrder::class => RadiologyOrderPolicy::class,
         Role::class => RolePolicy::class,
         Salary::class => SalaryPolicy::class,
         User::class => UserPolicy::class,
-        Visit::class => VisitPolicy::class,
     ];
 
     /**

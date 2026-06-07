@@ -68,16 +68,6 @@ class Appointment extends BaseModel
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function queueEntries(): HasMany
-    {
-        return $this->hasMany(QueueEntry::class);
-    }
-
-    public function visits(): HasMany
-    {
-        return $this->hasMany(Visit::class);
-    }
-
     public function reminders(): HasMany
     {
         return $this->hasMany(AppointmentReminder::class);

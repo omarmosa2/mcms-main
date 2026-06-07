@@ -7,7 +7,6 @@ use App\Models\Clinic;
 use App\Models\LabOrder;
 use App\Models\Patient;
 use App\Models\User;
-use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,14 +21,8 @@ class LabModuleTest extends TestCase
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
         ]);
-        $visit = Visit::factory()->create([
-            'clinic_id' => $clinic->id,
-            'patient_id' => $patient->id,
-            'doctor_id' => $user->id,
-        ]);
-
         $orderResponse = $this->postJson(route('lab.orders.store'), [
-            'visit_id' => $visit->id,
+            'visit_id' => null,
             'patient_id' => $patient->id,
             'test_code' => 'CBC',
             'test_name' => 'Complete Blood Count',

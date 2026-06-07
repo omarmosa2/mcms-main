@@ -4,7 +4,6 @@ import { Activity, CalendarDays, Search } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
-import QueueEntryController from '@/actions/App/Http/Controllers/Queue/QueueEntryController';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -41,7 +40,6 @@ return [];
         { title: 'لوحة التحكم', href: dashboard() },
         { title: 'المرضى', href: PatientController.index() },
         { title: 'المواعيد', href: AppointmentController.index() },
-        { title: 'قائمة الانتظار', href: QueueEntryController.index() },
     ].filter((item) => item.title.toLowerCase().includes(query));
 });
 

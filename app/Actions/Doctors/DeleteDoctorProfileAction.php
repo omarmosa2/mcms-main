@@ -8,7 +8,6 @@ use App\Models\Appointment;
 use App\Models\DoctorProfile;
 use App\Models\Invoice;
 use App\Models\Payment;
-use App\Models\Visit;
 use Illuminate\Support\Facades\DB;
 
 class DeleteDoctorProfileAction extends BaseAction
@@ -68,10 +67,6 @@ class DeleteDoctorProfileAction extends BaseAction
             ->where('clinic_id', $clinicId)
             ->where('doctor_id', $doctorUserId)
             ->exists()
-            || Visit::query()
-                ->where('clinic_id', $clinicId)
-                ->where('doctor_id', $doctorUserId)
-                ->exists()
             || Invoice::query()
                 ->where('clinic_id', $clinicId)
                 ->where('issued_by', $doctorUserId)

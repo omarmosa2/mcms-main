@@ -77,16 +77,6 @@ class Patient extends BaseModel
         return $this->hasMany(Appointment::class);
     }
 
-    public function queueEntries(): HasMany
-    {
-        return $this->hasMany(QueueEntry::class);
-    }
-
-    public function visits(): HasMany
-    {
-        return $this->hasMany(Visit::class);
-    }
-
     public function chronicConditions(): HasMany
     {
         return $this->hasMany(PatientChronicCondition::class);

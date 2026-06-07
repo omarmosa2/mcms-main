@@ -6,7 +6,6 @@ use App\Actions\Audit\LogAuditAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Lab\StoreLabOrderRequest;
 use App\Models\LabOrder;
-use App\Models\Visit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -61,13 +60,6 @@ class LabOrderController extends Controller
     {
         $clinicId = $this->resolveClinicId($request);
         $payload = $request->validated();
-
-        if (isset($payload['visit_id'])) {
-            Visit::query()
-                ->forClinic($clinicId)
-                ->whereKey((int) $payload['visit_id'])
-                ->firstOrFail();
-        }
 
         $order = LabOrder::query()->create([
             'clinic_id' => $clinicId,

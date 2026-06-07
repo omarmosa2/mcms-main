@@ -6,8 +6,6 @@ use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\Appointment;
 use App\Models\Patient;
-use App\Models\QueueEntry;
-use App\Models\Visit;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -30,14 +28,6 @@ class GetOperationalReportAction extends BaseAction
             ->forClinic($clinicId)
             ->whereBetween('scheduled_for', [$from, $to]);
 
-        $queueEntriesInPeriod = QueueEntry::query()
-            ->forClinic($clinicId)
-            ->whereBetween('queue_date', [$from->toDateString(), $to->toDateString()]);
-
-        $visitsInPeriod = Visit::query()
-            ->forClinic($clinicId)
-            ->whereBetween('started_at', [$from, $to]);
-
         $today = CarbonImmutable::now()->toDateString();
 
         $report = [
@@ -52,27 +42,7 @@ class GetOperationalReportAction extends BaseAction
                 'total' => (clone $appointmentsInPeriod)->count(),
                 'by_status' => $this->countAppointmentsByStatus($appointmentsInPeriod),
             ],
-            'queue_entries' => [
-                'total' => (clone $queueEntriesInPeriod)->count(),
-                'by_status' => $this->countQueueEntriesByStatus($queueEntriesInPeriod),
-            ],
-            'visits' => [
-                'total' => (clone $visitsInPeriod)->count(),
-                'by_status' => $this->countVisitsByStatus($visitsInPeriod),
-            ],
             'snapshot' => [
-                'waiting_queue_today' => QueueEntry::query()
-                    ->forClinic($clinicId)
-                    ->whereDate('queue_date', $today)
-                    ->where('status', QueueEntry::STATUS_WAITING)
-                    ->count(),
-                'active_visits' => Visit::query()
-                    ->forClinic($clinicId)
-                    ->whereIn('status', [
-                        Visit::STATUS_STARTED,
-                        Visit::STATUS_IN_PROGRESS,
-                    ])
-                    ->count(),
                 'arrived_appointments_today' => Appointment::query()
                     ->forClinic($clinicId)
                     ->whereDate('scheduled_for', $today)
@@ -128,65 +98,6 @@ class GetOperationalReportAction extends BaseAction
             Appointment::STATUS_COMPLETED,
             Appointment::STATUS_CANCELED,
             Appointment::STATUS_NO_SHOW,
-        ];
-
-        $counts = array_fill_keys($statuses, 0);
-
-        $results = (clone $query)
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->get();
-
-        foreach ($results as $row) {
-            if (isset($counts[$row->status])) {
-                $counts[$row->status] = (int) $row->count;
-            }
-        }
-
-        return $counts;
-    }
-
-    /**
-     * @param  Builder<QueueEntry>  $query
-     * @return array<string, int>
-     */
-    private function countQueueEntriesByStatus($query): array
-    {
-        $statuses = [
-            QueueEntry::STATUS_WAITING,
-            QueueEntry::STATUS_CALLED,
-            QueueEntry::STATUS_IN_SERVICE,
-            QueueEntry::STATUS_COMPLETED,
-            QueueEntry::STATUS_SKIPPED,
-            QueueEntry::STATUS_CANCELED,
-        ];
-
-        $counts = array_fill_keys($statuses, 0);
-
-        $results = (clone $query)
-            ->selectRaw('status, COUNT(*) as count')
-            ->groupBy('status')
-            ->get();
-
-        foreach ($results as $row) {
-            if (isset($counts[$row->status])) {
-                $counts[$row->status] = (int) $row->count;
-            }
-        }
-
-        return $counts;
-    }
-
-    /**
-     * @param  Builder<Visit>  $query
-     * @return array<string, int>
-     */
-    private function countVisitsByStatus($query): array
-    {
-        $statuses = [
-            Visit::STATUS_STARTED,
-            Visit::STATUS_IN_PROGRESS,
-            Visit::STATUS_COMPLETED,
         ];
 
         $counts = array_fill_keys($statuses, 0);

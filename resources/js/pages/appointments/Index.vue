@@ -16,7 +16,6 @@ import {
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import AppointmentExportController from '@/actions/App/Http/Controllers/Appointments/AppointmentExportController';
-import VisitController from '@/actions/App/Http/Controllers/Visits/VisitController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
@@ -563,18 +562,6 @@ const closeEditAppointment = (): void => {
     editingAppointment.value = null;
 };
 
-const convertAppointmentToVisit = (appointment: Appointment): void => {
-    router.visit(
-        VisitController.index.url({
-            query: {
-                appointment_id: appointment.id,
-                patient_id: appointment.patient_id,
-                doctor_id: appointment.doctor_id ?? undefined,
-            },
-        }),
-    );
-};
-
 const selectedDoctorName = computed<string | null>(() => {
     const doctorId = Number(localDoctorId.value);
 
@@ -973,7 +960,6 @@ const todaySummary = computed(() => ({
             :can-update-status="
                 can('appointment.update') || can('appointment.arrival')
             "
-            :can-start-visit="can('visit.start')"
             :patients="patients"
             :doctors="doctors"
             @search="localSearch = $event"
@@ -992,7 +978,6 @@ const todaySummary = computed(() => ({
             @delete="deleteAppointment"
             @edit="openEditAppointment"
             @view="openViewAppointment"
-            @convert-to-visit="convertAppointmentToVisit"
             @bulk-delete="handleBulkDelete"
             @clear-selection="clearSelectedAppointments"
             @status-transition-success="() => reloadAppointments({ page: 1 })"

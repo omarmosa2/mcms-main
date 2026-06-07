@@ -106,17 +106,6 @@ const formatDateTime = (value: string | null): string => {
     return new Date(value).toLocaleString('ar-SA');
 };
 
-const formatVisitStatus = (value: string): string => {
-    const labels: Record<string, string> = {
-        started: 'بدأت',
-        in_progress: 'قيد التنفيذ',
-        completed: 'مكتملة',
-        canceled: 'ملغاة',
-    };
-
-    return labels[value] ?? value.replaceAll('_', ' ');
-};
-
 const patientGenderLabel = (gender: string | null): string => {
     const labels: Record<string, string> = {
         male: 'ذكر',
@@ -232,24 +221,6 @@ const refreshDetails = async () => {
                         <li v-for="(item, index) in detailedPatient.current_medications" :key="`view-medication-${index}`" class="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-sm text-[#6B7280]">{{ item }}</li>
                     </ul>
                     <p v-else class="text-sm text-[#9CA3AF]">غير محددة</p>
-                </div>
-
-                <div class="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
-                    <div class="flex items-center justify-between gap-2 mb-3">
-                        <h4 class="text-xs font-semibold tracking-wider uppercase text-[#9CA3AF]">سجل الزيارات</h4>
-                        <span class="text-xs text-[#9CA3AF]">آخر {{ detailedPatient.visit_history.length }} زيارة</span>
-                    </div>
-                    <div v-if="detailedPatient.visit_history.length > 0" class="space-y-2">
-                        <div v-for="visit in detailedPatient.visit_history" :key="`view-visit-${visit.id}`" class="rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm">
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                                <span class="font-medium text-[#374151]">{{ visit.visit_number }}</span>
-                                <span class="text-[#6B7280]">{{ formatVisitStatus(visit.status) }}</span>
-                            </div>
-                            <p class="text-xs text-[#9CA3AF]">الطبيب: {{ visit.doctor?.name ?? 'غير محدد' }}</p>
-                            <p class="text-xs text-[#9CA3AF]">بدأت: {{ formatDateTime(visit.started_at) }}</p>
-                        </div>
-                    </div>
-                    <p v-else class="text-sm text-[#9CA3AF]">لا يوجد سجل زيارات بعد.</p>
                 </div>
 
                 <div class="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">

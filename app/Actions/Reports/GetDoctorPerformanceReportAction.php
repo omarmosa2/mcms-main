@@ -7,7 +7,6 @@ use App\Models\Invoice;
 use App\Models\LabOrder;
 use App\Models\RadiologyOrder;
 use App\Models\User;
-use App\Models\Visit;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -17,7 +16,7 @@ class GetDoctorPerformanceReportAction extends BaseAction
      * @return array{
      *     period: array{from: string, to: string},
      *     doctors_count: int,
-     *     totals: array{visits: int, unique_patients: int, lab_orders: int, radiology_orders: int, revenue_amount: float},
+     *     totals: array{unique_patients: int, lab_orders: int, radiology_orders: int, revenue_amount: float},
      *     doctors: array<int, array<string, mixed>>
      * }
      */
@@ -35,15 +34,6 @@ class GetDoctorPerformanceReportAction extends BaseAction
             ->select(['id', 'name'])
             ->orderBy('name')
             ->get();
-
-        $visitAggregates = Visit::query()
-            ->forClinic($clinicId)
-            ->whereBetween('started_at', [$from, $to])
-            ->whereNotNull('doctor_id')
-            ->selectRaw('doctor_id, COUNT(*) as visits_count, COUNT(DISTINCT patient_id) as unique_patients')
-            ->groupBy('doctor_id')
-            ->get()
-            ->keyBy('doctor_id');
 
         $labOrderAggregates = LabOrder::query()
             ->forClinic($clinicId)
@@ -63,27 +53,21 @@ class GetDoctorPerformanceReportAction extends BaseAction
 
         $revenueAggregates = Invoice::query()
             ->where('invoices.clinic_id', $clinicId)
-            ->whereNotNull('visit_id')
+            ->whereNotNull('issued_by')
             ->whereBetween('issued_at', [$from, $to])
-            ->join('visits', 'visits.id', '=', 'invoices.visit_id')
-            ->where('visits.clinic_id', $clinicId)
-            ->selectRaw('visits.doctor_id as doctor_id, COALESCE(SUM(invoices.total_amount), 0) as revenue_amount')
-            ->groupBy('visits.doctor_id')
+            ->selectRaw('issued_by as doctor_id, COALESCE(SUM(total_amount), 0) as revenue_amount')
+            ->groupBy('issued_by')
             ->pluck('revenue_amount', 'doctor_id');
 
-        $doctorRows = $doctors->map(function (User $doctor) use ($visitAggregates, $labOrderAggregates, $radiologyOrderAggregates, $revenueAggregates): array {
-            $visitSummary = $visitAggregates->get($doctor->id);
-
+        $doctorRows = $doctors->map(function (User $doctor) use ($labOrderAggregates, $radiologyOrderAggregates, $revenueAggregates): array {
             return [
                 'doctor_id' => $doctor->id,
                 'doctor_name' => $doctor->name,
-                'visits_count' => $visitSummary !== null ? (int) $visitSummary->visits_count : 0,
-                'unique_patients' => $visitSummary !== null ? (int) $visitSummary->unique_patients : 0,
                 'lab_orders_count' => (int) ($labOrderAggregates->get($doctor->id) ?? 0),
                 'radiology_orders_count' => (int) ($radiologyOrderAggregates->get($doctor->id) ?? 0),
                 'revenue_amount' => round((float) ($revenueAggregates->get($doctor->id) ?? 0), 2),
             ];
-        })->sortByDesc('visits_count')->values();
+        })->sortByDesc('revenue_amount')->values();
 
         return [
             'period' => [
@@ -92,7 +76,6 @@ class GetDoctorPerformanceReportAction extends BaseAction
             ],
             'doctors_count' => $doctors->count(),
             'totals' => [
-                'visits' => (int) $doctorRows->sum('visits_count'),
                 'unique_patients' => $this->countUniquePatientsAcrossDoctors($doctorRows),
                 'lab_orders' => (int) $doctorRows->sum('lab_orders_count'),
                 'radiology_orders' => (int) $doctorRows->sum('radiology_orders_count'),

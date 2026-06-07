@@ -193,8 +193,8 @@ class ReportControllerTest extends TestCase
 
         EmployeeSalaryPayment::factory()->create([
             'clinic_id' => $clinic->id,
-            'amount_paid' => 700,
-            'paid_at' => '2026-06-05',
+            'amount' => 700,
+            'payment_date' => '2026-06-05',
         ]);
         DoctorSalaryPayment::factory()->create([
             'clinic_id' => $clinic->id,

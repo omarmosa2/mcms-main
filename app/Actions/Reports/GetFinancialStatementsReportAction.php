@@ -4,6 +4,7 @@ namespace App\Actions\Reports;
 
 use App\Actions\BaseAction;
 use App\Models\Account;
+use App\Models\DoctorDuePayment;
 use App\Models\DoctorSalaryPayment;
 use App\Models\EmployeeSalaryPayment;
 use App\Models\Expense;
@@ -49,13 +50,17 @@ class GetFinancialStatementsReportAction extends BaseAction
             ->sum('net_salary');
         $employeePayrollExpenses = (float) EmployeeSalaryPayment::query()
             ->forClinic($clinicId)
-            ->whereBetween('paid_at', [$from->toDateString(), $to->toDateString()])
-            ->sum('amount_paid');
+            ->whereBetween('payment_date', [$from->toDateString(), $to->toDateString()])
+            ->sum('amount');
         $doctorPayrollExpenses = (float) DoctorSalaryPayment::query()
             ->forClinic($clinicId)
             ->whereBetween('paid_at', [$from->toDateString(), $to->toDateString()])
             ->sum('amount_paid');
-        $payrollExpenses = $legacyPayrollExpenses + $employeePayrollExpenses + $doctorPayrollExpenses;
+        $doctorDuePayrollExpenses = (float) DoctorDuePayment::query()
+            ->forClinic($clinicId)
+            ->whereBetween('payment_date', [$from->toDateString(), $to->toDateString()])
+            ->sum('amount');
+        $payrollExpenses = $legacyPayrollExpenses + $employeePayrollExpenses + $doctorPayrollExpenses + $doctorDuePayrollExpenses;
 
         $totalExpenses = round($operatingExpenses + $payrollExpenses, 2);
         $netIncome = round($revenue - $totalExpenses, 2);
@@ -97,12 +102,16 @@ class GetFinancialStatementsReportAction extends BaseAction
                 ->sum('net_salary')
             + EmployeeSalaryPayment::query()
                 ->forClinic($clinicId)
-                ->whereBetween('paid_at', [$from->toDateString(), $to->toDateString()])
-                ->sum('amount_paid')
+                ->whereBetween('payment_date', [$from->toDateString(), $to->toDateString()])
+                ->sum('amount')
             + DoctorSalaryPayment::query()
                 ->forClinic($clinicId)
                 ->whereBetween('paid_at', [$from->toDateString(), $to->toDateString()])
                 ->sum('amount_paid')
+            + DoctorDuePayment::query()
+                ->forClinic($clinicId)
+                ->whereBetween('payment_date', [$from->toDateString(), $to->toDateString()])
+                ->sum('amount')
         );
 
         return [

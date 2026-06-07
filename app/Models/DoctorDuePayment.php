@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use App\Domain\Shared\Models\BaseModel;
-use Database\Factories\EmployeeSalaryPaymentFactory;
+use Database\Factories\DoctorDuePaymentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class EmployeeSalaryPayment extends BaseModel
+class DoctorDuePayment extends BaseModel
 {
-    /** @use HasFactory<EmployeeSalaryPaymentFactory> */
+    /** @use HasFactory<DoctorDuePaymentFactory> */
     use HasFactory;
 
     protected function casts(): array
@@ -20,14 +20,14 @@ class EmployeeSalaryPayment extends BaseModel
         ];
     }
 
-    public function monthlySalary(): BelongsTo
+    public function monthlyDue(): BelongsTo
     {
-        return $this->belongsTo(EmployeeMonthlySalary::class);
+        return $this->belongsTo(DoctorMonthlyDue::class);
     }
 
-    public function employee(): BelongsTo
+    public function doctor(): BelongsTo
     {
-        return $this->belongsTo(Employee::class);
+        return $this->belongsTo(DoctorProfile::class, 'doctor_id');
     }
 
     public function payer(): BelongsTo

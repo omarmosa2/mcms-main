@@ -3,17 +3,19 @@
 namespace Database\Factories;
 
 use App\Models\Clinic;
-use App\Models\Employee;
-use App\Models\EmployeeMonthlySalary;
-use App\Models\EmployeeSalaryPayment;
+use App\Models\DoctorDuePayment;
+use App\Models\DoctorMonthlyDue;
+use App\Models\DoctorProfile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<EmployeeSalaryPayment>
+ * @extends Factory<DoctorDuePayment>
  */
-class EmployeeSalaryPaymentFactory extends Factory
+class DoctorDuePaymentFactory extends Factory
 {
+    protected $model = DoctorDuePayment::class;
+
     /**
      * @return array<string, mixed>
      */
@@ -24,14 +26,14 @@ class EmployeeSalaryPaymentFactory extends Factory
 
         return [
             'clinic_id' => $clinic,
-            'employee_monthly_salary_id' => EmployeeMonthlySalary::factory([
+            'doctor_monthly_due_id' => DoctorMonthlyDue::factory([
                 'clinic_id' => $clinic,
                 'salary_month' => $salaryMonth,
             ]),
-            'employee_id' => function (array $attributes): int {
-                $monthlySalary = EmployeeMonthlySalary::find($attributes['employee_monthly_salary_id']);
+            'doctor_id' => function (array $attributes): int {
+                $monthlyDue = DoctorMonthlyDue::find($attributes['doctor_monthly_due_id']);
 
-                return $monthlySalary?->employee_id ?? Employee::factory()->create(['clinic_id' => $attributes['clinic_id']])->id;
+                return $monthlyDue?->doctor_id ?? DoctorProfile::factory()->create(['clinic_id' => $attributes['clinic_id']])->id;
             },
             'paid_by' => function (array $attributes): int {
                 return User::factory()->create([

@@ -67,4 +67,9 @@ class Employee extends BaseModel
     {
         return $this->hasMany(EmployeeSalaryPayment::class);
     }
+
+    public function monthlySalaries(): HasMany
+    {
+        return $this->hasMany(EmployeeMonthlySalary::class);
+    }
 }

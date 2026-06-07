@@ -68,4 +68,9 @@ class DoctorProfile extends BaseModel
     {
         return $this->hasMany(DoctorAppointmentEntitlement::class);
     }
+
+    public function monthlyDues(): HasMany
+    {
+        return $this->hasMany(DoctorMonthlyDue::class, 'doctor_id');
+    }
 }

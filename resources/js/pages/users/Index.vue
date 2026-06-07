@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { Form, Head, router, usePage } from '@inertiajs/vue3';
-import { ArrowDown, ArrowUp, ArrowUpDown, Plus, Shield } from 'lucide-vue-next';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { Plus } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import UserController from '@/actions/App/Http/Controllers/Security/UserController';
+import { Button } from '@/components/ui/button';
+import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
@@ -235,45 +237,9 @@ const clearSelectedUsers = () => {
     selectedUserIds.value = [];
 };
 
-const activeFilters = computed(() => {
-    const filters: { key: string; label: string; value: string | null }[] = [];
-    if (localSearch.value.trim()) {
-        filters.push({ key: 'search', label: 'بحث', value: localSearch.value.trim() });
-    }
-    if (localRoleName.value) {
-        const role = roles.find(r => r.name === localRoleName.value);
-        filters.push({ key: 'role_name', label: 'الدور', value: role?.name || localRoleName.value });
-    }
-    if (localIsActive.value !== 'all') {
-        filters.push({ key: 'is_active', label: 'الحالة', value: localIsActive.value === 'active' ? 'نشط' : 'غير نشط' });
-    }
-    return filters;
-});
-
 const roleOptions = computed(() =>
     roles.map(role => ({ label: role.name, value: role.name }))
 );
-
-const statusOptions = [
-    { label: 'الكل', value: 'all' },
-    { label: 'نشط', value: 'active' },
-    { label: 'غير نشط', value: 'inactive' },
-];
-
-const handleRemoveFilter = (key: string) => {
-    if (key === 'search') {
-        localSearch.value = '';
-    } else if (key === 'role_name') {
-        localRoleName.value = null;
-    } else if (key === 'is_active') {
-        localIsActive.value = 'all';
-    }
-};
-
-const sortIconFor = (field: UserSortField) => {
-    if (localSortBy.value !== field) return ArrowUpDown;
-    return localSortDirection.value === 'asc' ? ArrowUp : ArrowDown;
-};
 
 const toggleSort = (field: UserSortField) => {
     if (localSortBy.value === field) {
@@ -339,16 +305,8 @@ const openEditUser = (user: User) => {
     editingUser.value = user;
 };
 
-const closeEditUser = () => {
-    editingUser.value = null;
-};
-
 const openViewUser = (user: User) => {
     viewingUser.value = user;
-};
-
-const closeViewUser = () => {
-    viewingUser.value = null;
 };
 
 const deleteUser = async (userId: number) => {
@@ -366,8 +324,6 @@ const deleteUser = async (userId: number) => {
         });
     }
 };
-
-const bulkDeleteForm = UserController.bulkDestroy.form();
 
 const resetLocalFilters = () => {
     localSearch.value = '';
@@ -396,14 +352,14 @@ watch(selectableUserIds, (ids) => {
 <template>
     <Head title="المستخدمين" />
 
-    <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6" dir="rtl">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-center gap-3">
+    <div class="container-modern space-y-8 py-5" dir="rtl">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div class="flex items-center gap-4">
                 <div>
-                    <h1 class="page-title">المستخدمين</h1>
-                    <p class="mt-1 text-sm text-muted-foreground">إدارة حسابات المستخدمين والأدوار والصلاحيات.</p>
+                    <h1 class="page-title text-[2.35rem]">إدارة المستخدمين</h1>
+                    <p class="page-subtitle mt-2 text-base">إدارة حسابات المستخدمين والأدوار والصلاحيات</p>
                 </div>
-                <span class="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground">
+                <span class="inline-flex items-center rounded-full border border-[#DDE9F3] bg-white px-3 py-1 text-xs font-semibold text-[#6C7F95]">
                     {{ activeRoleLabel }}
                 </span>
             </div>
@@ -411,52 +367,45 @@ watch(selectableUserIds, (ids) => {
             <div class="flex items-center gap-2">
                 <Button
                     v-if="can('users.create')"
-                    variant="clay"
-                    size="sm"
-                    class="h-8 rounded-lg px-3 text-xs"
+                    variant="default"
+                    size="lg"
+                    class="h-12 rounded-2xl bg-[#0EA5E9] px-6 text-sm font-bold text-white shadow-[0_18px_34px_-22px_rgb(14_165_233_/_0.9)] hover:bg-[#0284C7]"
                     @click="isCreateSheetOpen = true"
                 >
-                    <Plus class="size-3.5" />
+                    <Plus class="size-4" />
                     إنشاء مستخدم
                 </Button>
             </div>
         </div>
 
         <UserTable
+            v-model:search="localSearch"
+            v-model:active-filter="localIsActive"
+            v-model:role-name="localRoleName"
+            v-model:rows-per-page="localRowsPerPage"
+            v-model:selected-ids="selectedUserIds"
             :users="visibleUsers"
-            :local-page="localPage"
+            :page="localPage"
             :total-pages="totalLocalPages"
-            :local-search="localSearch"
-            :local-is-active="localIsActive"
-            :local-role-name="localRoleName"
-            :local-rows-per-page="localRowsPerPage"
-            :selected-ids="selectedUserIds"
+            :visible-from="localVisibleFrom"
+            :visible-to="localVisibleTo"
+            :total="users.meta.total"
+            :sort-by="localSortBy"
+            :sort-direction="localSortDirection"
             :are-all-selected="areAllUsersSelected"
             :can-view="can('users.view')"
             :can-update="can('users.update')"
             :can-delete="can('users.delete')"
-            :active-filters="activeFilters"
             :role-options="roleOptions"
-            :status-options="statusOptions"
-            :sort-by="localSortBy"
-            :sort-direction="localSortDirection"
-            :local-visible-from="localVisibleFrom"
-            :local-visible-to="localVisibleTo"
-            :total="users.meta.total"
-            :is-confirm-open="isConfirmOpen"
-            :confirm-options="confirmOptions"
             @toggle-sort="toggleSort"
+            @previous-page="goToPreviousPage"
+            @next-page="goToNextPage"
+            @reset-filters="resetLocalFilters"
             @toggle-all-selection="toggleAllUsersSelection"
-            @change-page="(page) => { localPage.value = page; reloadUsers({ page }); }"
-            @change-rows-per-page="(v) => { localRowsPerPage.value = v; }"
-            @open-view="openViewUser"
-            @open-edit="openEditUser"
-            @delete-user="deleteUser"
-            @remove-filter="handleRemoveFilter"
-            @clear-filters="resetLocalFilters"
-            @confirm-delete="handleConfirmDelete"
-            @cancel-delete="handleConfirmCancel"
-            @update-confirm-open="(v) => { if (!v) handleConfirmCancel(); }"
+            @clear-selection="clearSelectedUsers"
+            @view="openViewUser"
+            @edit="openEditUser"
+            @delete="deleteUser"
         />
 
         <UserCreateSheet

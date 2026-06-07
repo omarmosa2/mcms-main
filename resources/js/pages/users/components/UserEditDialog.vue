@@ -1,8 +1,16 @@
 <script setup lang="ts">
+import { Form } from '@inertiajs/vue3';
 import UserController from '@/actions/App/Http/Controllers/Security/UserController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -25,56 +33,66 @@ type Role = {
     is_system: boolean;
 };
 
-const props = defineProps<{ user: User | null; roles: Role[] }>();
+defineProps<{ user: User | null; roles: Role[] }>();
+
 const emit = defineEmits<{ close: [] }>();
 </script>
 
 <template>
     <Dialog :open="user !== null" @update:open="(open) => !open && emit('close')">
-        <DialogContent class="sm:max-w-lg">
-            <DialogHeader>
-                <DialogTitle>تعديل المستخدم</DialogTitle>
-                <DialogDescription>تعديل بيانات المستخدم والأدوار.</DialogDescription>
+        <DialogContent class="max-w-[520px] bg-white rounded-xl">
+            <DialogHeader class="p-6 pb-4 border-b border-[#E5E7EB]">
+                <DialogTitle class="text-base font-medium text-[#1A1A1A]">تعديل المستخدم</DialogTitle>
+                <DialogDescription class="text-sm text-[#6B7280] mt-0.5">تعديل بيانات المستخدم والأدوار</DialogDescription>
             </DialogHeader>
 
             <Form
                 v-if="user"
                 v-bind="UserController.update.form(user.id)"
-                class="space-y-4"
+                class="p-6 space-y-4 max-h-[60vh] overflow-y-auto"
                 v-slot="{ errors, processing }"
             >
-                <div class="grid gap-2">
-                    <Label for="edit_name">الاسم الكامل</Label>
+                <div class="flex flex-col gap-1.5">
+                    <Label for="edit_name" class="text-sm font-medium text-[#374151]">
+                        الاسم الكامل
+                        <span class="text-[#DC2626] mr-1">*</span>
+                    </Label>
                     <Input
                         id="edit_name"
                         name="name"
                         :default-value="user.name"
                         required
-                        class="pattern-field-clay"
+                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
                     />
                     <InputError :message="errors.name" />
                 </div>
 
-                <div class="grid gap-2">
-                    <Label for="edit_email">البريد الإلكتروني</Label>
+                <div class="flex flex-col gap-1.5">
+                    <Label for="edit_email" class="text-sm font-medium text-[#374151]">
+                        البريد الإلكتروني
+                        <span class="text-[#DC2626] mr-1">*</span>
+                    </Label>
                     <Input
                         id="edit_email"
                         name="email"
                         type="email"
                         :default-value="user.email"
                         required
-                        class="pattern-field-clay"
+                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
                     />
                     <InputError :message="errors.email" />
                 </div>
 
-                <div class="grid gap-2">
-                    <Label for="edit_role_name">الدور</Label>
+                <div class="flex flex-col gap-1.5">
+                    <Label for="edit_role_name" class="text-sm font-medium text-[#374151]">
+                        الدور
+                        <span class="text-[#DC2626] mr-1">*</span>
+                    </Label>
                     <select
                         id="edit_role_name"
                         name="role_name"
                         required
-                        class="pattern-field-clay h-9 px-3 py-1.5"
+                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#6B7280] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors appearance-none cursor-pointer"
                     >
                         <option value="">اختر دوراً</option>
                         <option
@@ -98,14 +116,29 @@ const emit = defineEmits<{ close: [] }>();
                         :checked="user.is_active"
                         class="size-4 rounded border-border"
                     />
-                    <Label for="edit_is_active" class="text-sm font-normal">
+                    <Label for="edit_is_active" class="text-sm font-normal text-[#374151]">
                         حساب نشط
                     </Label>
                 </div>
 
-                <DialogFooter>
-                    <Button type="button" variant="ghost" @click="emit('close')">إلغاء</Button>
-                    <Button type="submit" variant="clay" :disabled="processing">حفظ التغييرات</Button>
+                <DialogFooter class="flex items-center justify-between p-6 pt-4 gap-2">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        class="h-9 px-4 rounded-lg text-[#6B7280] text-sm font-medium hover:bg-[#F9FAFB] hover:text-[#374151] transition-colors duration-150 active:scale-[0.98]"
+                        :disabled="processing"
+                        @click="emit('close')"
+                    >
+                        إلغاء
+                    </Button>
+                    <Button
+                        type="submit"
+                        variant="default"
+                        :disabled="processing"
+                        class="h-9 px-4 rounded-lg bg-[#0EA5E9] text-white text-sm font-medium hover:bg-[#0284C7] active:scale-[0.98] transition-all duration-150"
+                    >
+                        حفظ التغييرات
+                    </Button>
                 </DialogFooter>
             </Form>
         </DialogContent>

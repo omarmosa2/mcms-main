@@ -33,8 +33,11 @@ class LabOrderController extends Controller
                 $q->where('test_name', 'like', "%{$search}%")
                     ->orWhere('test_code', 'like', "%{$search}%")
                     ->orWhereHas('patient', function ($pq) use ($search): void {
-                        $pq->where('full_name', 'like', "%{$search}%")
-                            ->orWhere('file_number', 'like', "%{$search}%");
+                        $pq->where('full_name', 'like', "%{$search}%");
+
+                        if (ctype_digit($search)) {
+                            $pq->orWhere('file_number', (int) $search);
+                        }
                     });
             });
         }

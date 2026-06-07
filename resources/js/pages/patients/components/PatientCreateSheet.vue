@@ -71,7 +71,9 @@ const resetCreateMedicalLists = (): void => {
                     <Input
                         id="file_number"
                         name="file_number"
-                        placeholder="MRN-20250421-0001"
+                        type="number"
+                        min="1"
+                        placeholder="1"
                         class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
                     />
                     <InputError :message="errors.file_number" />

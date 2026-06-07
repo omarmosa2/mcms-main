@@ -36,7 +36,7 @@ class PatientImport implements ToCollection, WithChunkReading, WithHeadingRow, W
                 $existing = Patient::query()
                     ->where('clinic_id', $this->clinicId)
                     ->where(function ($query) use ($data): void {
-                        if (isset($data['file_number']) && $data['file_number'] !== '') {
+                        if (isset($data['file_number']) && $data['file_number'] > 0) {
                             $query->where('file_number', $data['file_number']);
                         }
                         if (isset($data['national_id_hash']) && $data['national_id_hash'] !== '') {
@@ -84,7 +84,7 @@ class PatientImport implements ToCollection, WithChunkReading, WithHeadingRow, W
             'gender' => 'nullable|string|in:male,female,other',
             'date_of_birth' => 'nullable|date',
             'national_id' => 'nullable|string|max:100',
-            'file_number' => 'nullable|string|max:100',
+            'file_number' => 'nullable|integer|min:1',
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:1000',
@@ -120,11 +120,11 @@ class PatientImport implements ToCollection, WithChunkReading, WithHeadingRow, W
 
         $firstName = $this->normalizeString($row['first_name'] ?? '');
         $lastName = $this->normalizeString($row['last_name'] ?? '');
-        $fileNumber = $this->normalizeString($row['file_number'] ?? '');
+        $fileNumber = $row['file_number'] ?? null;
 
         $data['first_name'] = $firstName;
         $data['last_name'] = $lastName;
-        $data['file_number'] = $fileNumber !== '' ? $fileNumber : $this->generateFileNumber();
+        $data['file_number'] = ($fileNumber !== null && (int) $fileNumber > 0) ? (int) $fileNumber : $this->generateFileNumber();
 
         if (isset($row['date_of_birth']) && $this->normalizeString($row['date_of_birth']) !== '') {
             $data['date_of_birth'] = $this->normalizeDate($row['date_of_birth']);
@@ -180,8 +180,10 @@ class PatientImport implements ToCollection, WithChunkReading, WithHeadingRow, W
         return $date;
     }
 
-    private function generateFileNumber(): string
+    private function generateFileNumber(): int
     {
-        return 'IMP-'.now()->format('YmdHis').'-'.str_pad((string) rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        $maxFileNumber = (int) Patient::query()->max('file_number');
+
+        return $maxFileNumber + 1;
     }
 }

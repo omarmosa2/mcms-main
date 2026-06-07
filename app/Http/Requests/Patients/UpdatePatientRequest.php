@@ -25,8 +25,8 @@ class UpdatePatientRequest extends FormRequest
             'file_number' => [
                 'sometimes',
                 'nullable',
-                'string',
-                'max:50',
+                'integer',
+                'min:1',
                 Rule::unique('patients', 'file_number')
                     ->ignore($patientId)
                     ->where(fn ($query) => $query->where('clinic_id', $clinicId)),

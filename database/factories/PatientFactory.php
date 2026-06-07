@@ -20,7 +20,7 @@ class PatientFactory extends Factory
     {
         return [
             'clinic_id' => Clinic::factory(),
-            'file_number' => strtoupper(fake()->unique()->bothify('PT-#####')),
+            'file_number' => fake()->unique()->numberBetween(1, 999999),
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'date_of_birth' => fake()->optional()->date(),

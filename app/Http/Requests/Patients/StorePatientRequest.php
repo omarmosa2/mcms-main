@@ -23,8 +23,8 @@ class StorePatientRequest extends FormRequest
         return [
             'file_number' => [
                 'nullable',
-                'string',
-                'max:50',
+                'integer',
+                'min:1',
                 Rule::unique('patients', 'file_number')->where(
                     fn ($query) => $query->where('clinic_id', $clinicId),
                 ),

@@ -35,8 +35,11 @@ class RadiologyOrderController extends Controller
                     ->orWhere('study_code', 'like', "%{$search}%")
                     ->orWhere('modality', 'like', "%{$search}%")
                     ->orWhereHas('patient', function ($pq) use ($search): void {
-                        $pq->where('full_name', 'like', "%{$search}%")
-                            ->orWhere('file_number', 'like', "%{$search}%");
+                        $pq->where('full_name', 'like', "%{$search}%");
+
+                        if (ctype_digit($search)) {
+                            $pq->orWhere('file_number', (int) $search);
+                        }
                     });
             });
         }

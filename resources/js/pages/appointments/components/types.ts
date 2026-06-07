@@ -2,7 +2,7 @@ export type Option = {
     id: number;
     name?: string;
     full_name?: string;
-    file_number?: string | null;
+    file_number?: number | null;
     phone?: string | null;
     date_of_birth?: string | null;
     age?: number | null;
@@ -50,7 +50,7 @@ export type Appointment = {
         first_name?: string;
         last_name?: string;
         full_name?: string;
-        file_number?: string | null;
+        file_number?: number | null;
         phone?: string | null;
         date_of_birth?: string | null;
         age?: number | null;

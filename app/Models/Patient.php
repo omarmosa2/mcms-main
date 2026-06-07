@@ -20,6 +20,7 @@ class Patient extends BaseModel
     {
         return [
             'date_of_birth' => 'date',
+            'file_number' => 'integer',
         ];
     }
 

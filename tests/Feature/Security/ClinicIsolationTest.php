@@ -99,7 +99,7 @@ class ClinicIsolationTest extends TestCase
         $this->actingAs($user);
 
         $patient = Patient::query()->create([
-            'file_number' => 'TEST-001',
+            'file_number' => 1,
             'first_name' => 'Test',
             'last_name' => 'Patient',
         ]);

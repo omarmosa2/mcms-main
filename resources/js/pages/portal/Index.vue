@@ -28,7 +28,7 @@ type Appointment = {
 type Patient = {
     id: number;
     full_name: string;
-    file_number: string;
+    file_number: number;
     phone: string | null;
 };
 

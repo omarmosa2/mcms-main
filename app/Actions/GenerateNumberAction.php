@@ -29,13 +29,17 @@ class GenerateNumberAction extends BaseAction
      * Generate a unique number for the given entity type.
      * Uses database locking to ensure thread-safety.
      */
-    public function handle(int $clinicId, string $entityType, ?string $providedNumber = null): string
+    public function handle(int $clinicId, string $entityType, ?string $providedNumber = null): string|int
     {
         if ($providedNumber !== null && trim($providedNumber) !== '') {
+            if ($entityType === self::ENTITY_PATIENT) {
+                return (int) $providedNumber;
+            }
+
             return trim($providedNumber);
         }
 
-        return DB::transaction(function () use ($clinicId, $entityType): string {
+        return DB::transaction(function () use ($clinicId, $entityType): string|int {
             $numberRange = NumberRange::query()
                 ->where('clinic_id', $clinicId)
                 ->where('entity_type', $entityType)
@@ -46,10 +50,14 @@ class GenerateNumberAction extends BaseAction
                 ->first();
 
             if ($numberRange === null) {
-                return $this->generateFallbackNumber($entityType);
+                $fallback = $this->generateFallbackNumber($entityType);
+
+                return $entityType === self::ENTITY_PATIENT ? (int) $fallback : $fallback;
             }
 
-            return $this->generateFromRange($numberRange);
+            $number = $this->generateFromRange($numberRange);
+
+            return $entityType === self::ENTITY_PATIENT ? (int) $number : $number;
         });
     }
 
@@ -63,6 +71,12 @@ class GenerateNumberAction extends BaseAction
 
     private function generateFallbackNumber(string $entityType): string
     {
+        if ($entityType === self::ENTITY_PATIENT) {
+            $maxFileNumber = (int) Patient::query()->max('file_number');
+
+            return (string) ($maxFileNumber + 1);
+        }
+
         $prefix = match ($entityType) {
             self::ENTITY_PATIENT => 'MRN',
             self::ENTITY_APPOINTMENT => 'APT',

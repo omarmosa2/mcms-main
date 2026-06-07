@@ -65,14 +65,17 @@ class ListAppointmentsAction extends BaseAction
         if ($search !== null) {
             $searchTerm = '%'.trim($search).'%';
 
-            $query->where(function (Builder $builder) use ($searchTerm): void {
+            $query->where(function (Builder $builder) use ($searchTerm, $search): void {
                 $builder
                     ->where('appointment_number', 'like', $searchTerm)
-                    ->orWhereHas('patient', function (Builder $patientQuery) use ($searchTerm): void {
+                    ->orWhereHas('patient', function (Builder $patientQuery) use ($searchTerm, $search): void {
                         $patientQuery
                             ->where('first_name', 'like', $searchTerm)
-                            ->orWhere('last_name', 'like', $searchTerm)
-                            ->orWhere('file_number', 'like', $searchTerm);
+                            ->orWhere('last_name', 'like', $searchTerm);
+
+                        if (ctype_digit($search)) {
+                            $patientQuery->orWhere('file_number', (int) $search);
+                        }
                     })
                     ->orWhereHas('doctor', function (Builder $doctorQuery) use ($searchTerm): void {
                         $doctorQuery->where('name', 'like', $searchTerm);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Financial;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Department;
+use App\Models\Invoice;
 use App\Models\Payment;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
@@ -165,7 +166,7 @@ class FinancialController extends Controller
             return [];
         }
 
-        $invoicePayments = DB::table('invoices')
+        $invoicePayments = Invoice::query()
             ->forClinic($clinicId)
             ->join('payments', 'payments.invoice_id', '=', 'invoices.id')
             ->whereIn('invoices.appointment_id', $appointmentIds)

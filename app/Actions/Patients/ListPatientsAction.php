@@ -33,14 +33,17 @@ class ListPatientsAction extends BaseAction
             $searchTerm = '%'.trim($search).'%';
             $nationalIdHash = Patient::hashNationalId($search);
 
-            $query->where(function (Builder $builder) use ($searchTerm, $nationalIdHash): void {
+            $query->where(function (Builder $builder) use ($searchTerm, $search, $nationalIdHash): void {
                 $builder
-                    ->where('file_number', 'like', $searchTerm)
-                    ->orWhere('first_name', 'like', $searchTerm)
+                    ->where('first_name', 'like', $searchTerm)
                     ->orWhere('last_name', 'like', $searchTerm)
                     ->orWhere('phone', 'like', $searchTerm)
                     ->orWhere('email', 'like', $searchTerm)
                     ->orWhere('national_id', 'like', $searchTerm);
+
+                if (ctype_digit($search)) {
+                    $builder->orWhere('file_number', (int) $search);
+                }
 
                 if ($nationalIdHash !== null) {
                     $builder->orWhere('national_id_hash', $nationalIdHash);

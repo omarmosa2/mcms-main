@@ -10,7 +10,7 @@ type DepartmentOption = { id: number; name: string };
 type FinancialRow = {
     appointment_id: number;
     patient_name: string;
-    file_number: string | null;
+    file_number: number | null;
     doctor_name: string;
     department: string;
     appointment_type: string;

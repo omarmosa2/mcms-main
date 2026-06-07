@@ -24,12 +24,12 @@ class PatientControllerTest extends TestCase
 
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
-            'file_number' => 'PT-1000',
+            'file_number' => 1000,
         ]);
 
         Patient::factory()->create([
             'clinic_id' => $otherClinic->id,
-            'file_number' => 'PT-2000',
+            'file_number' => 2000,
         ]);
 
         $response = $this->getJson(route('patients.index'));
@@ -51,7 +51,7 @@ class PatientControllerTest extends TestCase
         $user = $this->authenticateForClinic($clinic);
 
         $payload = [
-            'file_number' => 'PT-3000',
+            'file_number' => 3000,
             'first_name' => 'Ali',
             'last_name' => 'Hassan',
             'date_of_birth' => '1995-01-12',
@@ -70,10 +70,10 @@ class PatientControllerTest extends TestCase
         $response = $this->postJson(route('patients.store'), $payload);
 
         $response->assertCreated();
-        $response->assertJsonPath('data.file_number', 'PT-3000');
+        $response->assertJsonPath('data.file_number', 3000);
         $response->assertJsonPath('data.clinic_id', $clinic->id);
 
-        $patient = Patient::query()->where('file_number', 'PT-3000')->firstOrFail();
+        $patient = Patient::query()->where('file_number', 3000)->firstOrFail();
 
         $this->assertDatabaseHas('patients', [
             'id' => $patient->id,
@@ -114,7 +114,7 @@ class PatientControllerTest extends TestCase
         $tooLongValue = str_repeat('A', 192);
 
         $response = $this->postJson(route('patients.store'), [
-            'file_number' => 'PT-3001',
+            'file_number' => 3001,
             'first_name' => 'Ali',
             'last_name' => 'Hassan',
             'chronic_conditions' => [$tooLongValue],
@@ -137,19 +137,19 @@ class PatientControllerTest extends TestCase
 
         $matchingPatient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
-            'file_number' => 'PT-SRCH-100',
+            'file_number' => 100,
             'first_name' => 'Searchable',
             'last_name' => 'Patient',
         ]);
 
         Patient::factory()->create([
             'clinic_id' => $clinic->id,
-            'file_number' => 'PT-OTHER-200',
+            'file_number' => 200,
             'first_name' => 'Different',
             'last_name' => 'Record',
         ]);
 
-        $response = $this->getJson(route('patients.index', ['search' => 'SRCH']));
+        $response = $this->getJson(route('patients.index', ['search' => '100']));
 
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
@@ -163,12 +163,12 @@ class PatientControllerTest extends TestCase
 
         $firstPatient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
-            'file_number' => 'PT-100',
+            'file_number' => 100,
         ]);
 
         $secondPatient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
-            'file_number' => 'PT-200',
+            'file_number' => 200,
         ]);
 
         $ascResponse = $this->getJson(route('patients.index', [
@@ -239,7 +239,7 @@ class PatientControllerTest extends TestCase
 
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
-            'file_number' => 'PT-4000',
+            'file_number' => 4000,
             'first_name' => 'Saleh',
             'last_name' => 'Ahmed',
         ]);

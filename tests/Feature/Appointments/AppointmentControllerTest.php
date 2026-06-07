@@ -213,11 +213,11 @@ class AppointmentControllerTest extends TestCase
 
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
-            'file_number' => 'P-FILE-123',
+            'file_number' => 123,
         ]);
         $otherPatient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
-            'file_number' => 'P-FILE-999',
+            'file_number' => 999,
         ]);
 
         $matchingAppointment = Appointment::factory()->create([
@@ -242,7 +242,7 @@ class AppointmentControllerTest extends TestCase
         ]);
 
         $response = $this->getJson(route('appointments.index', [
-            'search' => 'P-FILE-123',
+            'search' => '123',
             'doctor_id' => $doctor->id,
             'department_id' => $department->id,
             'date_from' => '2026-06-01',
@@ -252,7 +252,7 @@ class AppointmentControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', $matchingAppointment->id);
-        $response->assertJsonPath('data.0.patient.file_number', 'P-FILE-123');
+        $response->assertJsonPath('data.0.patient.file_number', 123);
         $response->assertJsonPath('data.0.doctor.department.name', 'عيادة الأسنان');
     }
 

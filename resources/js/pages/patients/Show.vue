@@ -86,7 +86,7 @@ type RadiologyOrder = {
 
 type Patient = {
     id: number;
-    file_number: string;
+    file_number: number;
     first_name: string;
     last_name: string;
     full_name: string;

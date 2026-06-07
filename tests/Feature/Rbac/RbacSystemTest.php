@@ -70,18 +70,18 @@ class RbacSystemTest extends TestCase
         $user = $this->authenticateForClinic($clinic, 'receptionist');
 
         $storeResponse = $this->postJson(route('patients.store'), [
-            'file_number' => 'PT-RBAC-1',
+            'file_number' => 5001,
             'first_name' => 'Sara',
             'last_name' => 'Khaled',
             'date_of_birth' => '1994-02-20',
         ]);
 
         $storeResponse->assertCreated();
-        $storeResponse->assertJsonPath('data.file_number', 'PT-RBAC-1');
+        $storeResponse->assertJsonPath('data.file_number', 5001);
 
         $patient = Patient::query()
             ->forClinic($clinic->id)
-            ->where('file_number', 'PT-RBAC-1')
+            ->where('file_number', 5001)
             ->firstOrFail();
 
         $viewResponse = $this->getJson(route('patients.show', ['patientId' => $patient->id]));
@@ -129,7 +129,7 @@ class RbacSystemTest extends TestCase
 
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
-            'file_number' => 'PT-RBAC-2',
+            'file_number' => 5002,
         ]);
 
         $response = $this->deleteJson(route('patients.destroy', ['patientId' => $patient->id]));

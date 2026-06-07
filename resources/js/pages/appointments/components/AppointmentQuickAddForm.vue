@@ -1,9 +1,27 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import {
+    Building2,
+    Calculator,
+    Clock,
+    DollarSign,
+    Stethoscope,
+    User,
+    Zap,
+} from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
+import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
 import type { ClinicWorkingHour, DepartmentOption, Option } from './types';
 
@@ -33,183 +51,276 @@ const filteredDoctors = computed(() => {
         (doctor) => doctor.department_id === departmentId,
     );
 });
+
+const handleDepartmentChange = (value: unknown) => {
+    selectedDepartmentId.value = String(value ?? '');
+};
 </script>
 
 <template>
     <section
-        class="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-4"
+        class="overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card to-card/80 shadow-sm transition-shadow hover:shadow-md"
     >
-        <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-primary">
-                إضافة سريعة - موعد جديد
-            </h3>
-            <span class="text-xs text-muted-foreground"
-                >Enter = حفظ وإضافة التالي</span
+        <div
+            class="flex items-center justify-between border-b border-border/50 bg-muted/30 px-5 py-3"
+        >
+            <div class="flex items-center gap-2.5">
+                <div
+                    class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                >
+                    <Zap class="size-4" />
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-foreground">
+                        إضافة سريعة - موعد جديد
+                    </h3>
+                    <p class="text-[0.7rem] text-muted-foreground">
+                        املأ الحقول واضغط Enter للحفظ والإضافة التالية
+                    </p>
+                </div>
+            </div>
+            <span
+                class="hidden items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[0.65rem] font-medium text-muted-foreground sm:inline-flex"
             >
+                <kbd
+                    class="rounded border border-border/70 bg-background px-1.5 py-0.5 font-mono text-[0.6rem]"
+                    >Enter</kbd
+                >
+                حفظ سريع
+            </span>
         </div>
 
         <Form
             v-bind="AppointmentController.store.form()"
-            class="grid gap-3 md:grid-cols-4 lg:grid-cols-8 md:items-end"
+            class="p-5"
             v-slot="{ errors, processing }"
             reset-on-success
             @success="emit('success')"
             @error="emit('error')"
         >
-            <div class="grid gap-1">
-                <Label for="quick_patient" class="text-xs">المريض *</Label>
-                <select
-                    id="quick_patient"
-                    name="patient_id"
-                    required
-                    class="pattern-field-clay h-9 px-2 py-1 text-sm"
-                >
-                    <option value="">اختر مريضاً</option>
-                    <option
-                        v-for="p in props.patients"
-                        :key="p.id"
-                        :value="p.id"
+            <div
+                class="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7"
+            >
+                <div class="grid gap-1.5 xl:col-span-2">
+                    <Label
+                        for="quick_patient"
+                        class="flex items-center gap-1.5 text-xs font-medium"
                     >
-                        {{
-                            p.file_number
-                                ? `${p.full_name ?? p.name} - ${p.file_number}`
-                                : (p.full_name ?? p.name)
-                        }}
-                    </option>
-                </select>
-                <p v-if="errors.patient_id" class="text-xs text-destructive">
-                    {{ errors.patient_id }}
-                </p>
-            </div>
+                        <User class="size-3.5 text-muted-foreground" />
+                        المريض
+                        <span class="text-destructive">*</span>
+                    </Label>
+                    <Select name="patient_id" required>
+                        <SelectTrigger
+                            id="quick_patient"
+                            class="w-full"
+                            :class="{
+                                'border-destructive': errors.patient_id,
+                            }"
+                        >
+                            <SelectValue placeholder="اختر مريضاً" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem
+                                v-for="p in props.patients"
+                                :key="p.id"
+                                :value="String(p.id)"
+                            >
+                                {{
+                                    p.file_number
+                                        ? `${p.full_name ?? p.name} - ${p.file_number}`
+                                        : (p.full_name ?? p.name)
+                                }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError :message="errors.patient_id" />
+                </div>
 
-            <div class="grid gap-1">
-                <Label for="quick_department" class="text-xs">العيادة</Label>
-                <select
-                    id="quick_department"
-                    v-model="selectedDepartmentId"
-                    class="pattern-field-clay h-9 px-2 py-1 text-sm"
-                >
-                    <option value="">كل العيادات</option>
-                    <option
-                        v-for="department in props.departments"
-                        :key="department.id"
-                        :value="String(department.id)"
+                <div class="grid gap-1.5">
+                    <Label
+                        for="quick_department"
+                        class="flex items-center gap-1.5 text-xs font-medium"
                     >
-                        {{ department.name }}
-                    </option>
-                </select>
-            </div>
-
-            <div class="grid gap-1">
-                <Label for="quick_doctor" class="text-xs">الطبيب</Label>
-                <select
-                    id="quick_doctor"
-                    name="doctor_id"
-                    class="pattern-field-clay h-9 px-2 py-1 text-sm"
-                >
-                    <option value="">اختر طبيباً</option>
-                    <option
-                        v-for="d in filteredDoctors"
-                        :key="d.id"
-                        :value="d.id"
+                        <Building2 class="size-3.5 text-muted-foreground" />
+                        العيادة
+                    </Label>
+                    <Select
+                        :model-value="selectedDepartmentId"
+                        @update:model-value="handleDepartmentChange"
                     >
-                        {{
-                            d.department?.name
-                                ? `${d.name} - ${d.department.name}`
-                                : d.name
-                        }}
-                    </option>
-                </select>
-                <p v-if="errors.doctor_id" class="text-xs text-destructive">
-                    {{ errors.doctor_id }}
-                </p>
-            </div>
+                        <SelectTrigger id="quick_department" class="w-full">
+                            <SelectValue placeholder="كل العيادات" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">كل العيادات</SelectItem>
+                            <SelectItem
+                                v-for="department in props.departments"
+                                :key="department.id"
+                                :value="String(department.id)"
+                            >
+                                {{ department.name }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
 
-            <div class="grid gap-1">
-                <AppointmentWorkingHoursInput
-                    :working-hours="props.clinicWorkingHours"
-                    label="التاريخ والوقت *"
-                />
-                <p v-if="errors.scheduled_for" class="text-xs text-destructive">
-                    {{ errors.scheduled_for }}
-                </p>
-            </div>
+                <div class="grid gap-1.5">
+                    <Label
+                        for="quick_doctor"
+                        class="flex items-center gap-1.5 text-xs font-medium"
+                    >
+                        <Stethoscope class="size-3.5 text-muted-foreground" />
+                        الطبيب
+                    </Label>
+                    <Select name="doctor_id">
+                        <SelectTrigger
+                            id="quick_doctor"
+                            class="w-full"
+                            :class="{
+                                'border-destructive': errors.doctor_id,
+                            }"
+                        >
+                            <SelectValue placeholder="اختر طبيباً" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="">يُحدد لاحقاً</SelectItem>
+                            <SelectItem
+                                v-for="d in filteredDoctors"
+                                :key="d.id"
+                                :value="String(d.id)"
+                            >
+                                {{
+                                    d.department?.name
+                                        ? `${d.name} - ${d.department.name}`
+                                        : d.name
+                                }}
+                            </SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError :message="errors.doctor_id" />
+                </div>
 
-            <div class="grid gap-1">
-                <Label for="quick_duration" class="text-xs"
-                    >المدة (دقيقة) *</Label
-                >
-                <select
-                    id="quick_duration"
-                    name="duration_minutes"
-                    required
-                    class="pattern-field-clay h-9 px-2 py-1 text-sm"
-                >
-                    <option value="15">15 دقيقة</option>
-                    <option value="30">30 دقيقة</option>
-                    <option value="45">45 دقيقة</option>
-                    <option value="60">60 دقيقة</option>
-                </select>
-                <p
-                    v-if="errors.duration_minutes"
-                    class="text-xs text-destructive"
-                >
-                    {{ errors.duration_minutes }}
-                </p>
-            </div>
+                <div class="grid gap-1.5 xl:col-span-2">
+                    <Label
+                        class="flex items-center gap-1.5 text-xs font-medium"
+                    >
+                        <Clock class="size-3.5 text-muted-foreground" />
+                        التاريخ والوقت
+                        <span class="text-destructive">*</span>
+                    </Label>
+                    <AppointmentWorkingHoursInput
+                        :working-hours="props.clinicWorkingHours"
+                        label=""
+                    />
+                    <InputError :message="errors.scheduled_for" />
+                </div>
 
-            <div class="grid gap-1">
-                <Label for="quick_type" class="text-xs">نوع الموعد *</Label>
-                <select
-                    id="quick_type"
-                    name="appointment_type"
-                    required
-                    class="pattern-field-clay h-9 px-2 py-1 text-sm"
-                >
-                    <option value="first_visit">كشفية أولى</option>
-                    <option value="review">مراجعة</option>
-                </select>
-                <p v-if="errors.appointment_type" class="text-xs text-destructive">
-                    {{ errors.appointment_type }}
-                </p>
-            </div>
+                <div class="grid gap-1.5">
+                    <Label
+                        for="quick_duration"
+                        class="flex items-center gap-1.5 text-xs font-medium"
+                    >
+                        <Clock class="size-3.5 text-muted-foreground" />
+                        المدة
+                        <span class="text-destructive">*</span>
+                    </Label>
+                    <Select name="duration_minutes" required>
+                        <SelectTrigger
+                            id="quick_duration"
+                            class="w-full"
+                            :class="{
+                                'border-destructive': errors.duration_minutes,
+                            }"
+                        >
+                            <SelectValue placeholder="15 دقيقة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="15">15 دقيقة</SelectItem>
+                            <SelectItem value="30">30 دقيقة</SelectItem>
+                            <SelectItem value="45">45 دقيقة</SelectItem>
+                            <SelectItem value="60">60 دقيقة</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError :message="errors.duration_minutes" />
+                </div>
 
-            <div class="grid gap-1">
-                <Label for="quick_cost" class="text-xs">التكلفة *</Label>
-                <input
-                    id="quick_cost"
-                    name="cost"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    placeholder="0"
-                    class="pattern-field-clay h-9 px-2 py-1 text-sm"
-                />
-                <p v-if="errors.cost" class="text-xs text-destructive">
-                    {{ errors.cost }}
-                </p>
-            </div>
+                <div class="grid gap-1.5">
+                    <Label
+                        for="quick_type"
+                        class="flex items-center gap-1.5 text-xs font-medium"
+                    >
+                        <Calculator class="size-3.5 text-muted-foreground" />
+                        النوع
+                        <span class="text-destructive">*</span>
+                    </Label>
+                    <Select name="appointment_type" required>
+                        <SelectTrigger
+                            id="quick_type"
+                            class="w-full"
+                            :class="{
+                                'border-destructive': errors.appointment_type,
+                            }"
+                        >
+                            <SelectValue placeholder="كشفية أولى" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="first_visit"
+                                >كشفية أولى</SelectItem
+                            >
+                            <SelectItem value="review">مراجعة</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError :message="errors.appointment_type" />
+                </div>
 
-            <div class="flex gap-2">
-                <Button
-                    type="submit"
-                    variant="default"
-                    size="sm"
-                    class="h-9 px-4 text-xs"
-                    :disabled="processing"
-                >
-                    {{ processing ? 'جاري الحفظ...' : 'حفظ' }}
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    class="h-9 px-3 text-xs"
-                    @click="emit('reset')"
-                >
-                    مسح
-                </Button>
+                <div class="grid gap-1.5">
+                    <Label
+                        for="quick_cost"
+                        class="flex items-center gap-1.5 text-xs font-medium"
+                    >
+                        <DollarSign class="size-3.5 text-muted-foreground" />
+                        التكلفة
+                        <span class="text-destructive">*</span>
+                    </Label>
+                    <Input
+                        id="quick_cost"
+                        name="cost"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        required
+                        placeholder="0"
+                        :class="{ 'border-destructive': errors.cost }"
+                    />
+                    <InputError :message="errors.cost" />
+                </div>
+
+                <div class="flex items-end gap-2 xl:col-span-1">
+                    <Button
+                        type="submit"
+                        variant="default"
+                        size="sm"
+                        class="h-9 flex-1 gap-1.5 text-xs"
+                        :disabled="processing"
+                    >
+                        <Zap v-if="!processing" class="size-3.5" />
+                        <span
+                            v-if="processing"
+                            class="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                        ></span>
+                        {{ processing ? 'جاري...' : 'حفظ' }}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        class="h-9 px-3 text-xs"
+                        @click="emit('reset')"
+                    >
+                        مسح
+                    </Button>
+                </div>
             </div>
         </Form>
     </section>

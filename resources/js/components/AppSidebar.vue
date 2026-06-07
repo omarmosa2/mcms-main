@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import {
-    Bell,
     Building2,
     CalendarClock,
-    HelpCircle,
     Key,
     LayoutGrid,
     CalendarDays,
+    Settings,
     Shield,
     UserCog,
     UserRound,
@@ -26,11 +25,9 @@ import RoleController from '@/actions/App/Http/Controllers/Rbac/RoleController';
 import UserController from '@/actions/App/Http/Controllers/Security/UserController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
-import NavUser from '@/components/NavUser.vue';
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -38,6 +35,7 @@ import {
 } from '@/components/ui/sidebar';
 import { usePermissions } from '@/composables/usePermissions';
 import { dashboard } from '@/routes';
+import { clinic as adminSettingsUrl } from '@/routes/admin-settings';
 import { index as financialIndex } from '@/routes/financial';
 import type { NavItem, NavSection } from '@/types';
 
@@ -51,24 +49,24 @@ const { can } = usePermissions();
 
 const roleItemOrder: Record<string, string[]> = {
     doctor: [
+        'لوحة التحكم',
         'المرضى',
         'العيادات',
         'الأطباء',
         'المواعيد',
         'المالية',
         'جداول الدوام',
-        'لوحة التحكم',
     ],
     receptionist: [
+        'لوحة التحكم',
         'المرضى',
         'العيادات',
         'الأطباء',
         'المواعيد',
         'المالية',
         'جداول الدوام',
-        'لوحة التحكم',
     ],
-    accountant: ['المالية', 'لوحة التحكم'],
+    accountant: ['لوحة التحكم', 'المالية'],
     admin: [
         'لوحة التحكم',
         'المرضى',
@@ -79,28 +77,31 @@ const roleItemOrder: Record<string, string[]> = {
         'جداول الدوام',
         'المستخدمون',
         'الأدوار',
+        'الإعدادات',
     ],
     clinic_admin: [
+        'لوحة التحكم',
         'المرضى',
         'العيادات',
         'الأطباء',
         'المواعيد',
         'المالية',
         'جداول الدوام',
-        'لوحة التحكم',
         'المستخدمون',
         'الأدوار',
+        'الإعدادات',
     ],
     super_admin: [
+        'لوحة التحكم',
         'المرضى',
         'العيادات',
         'الأطباء',
         'المواعيد',
         'المالية',
         'جداول الدوام',
-        'لوحة التحكم',
         'المستخدمون',
         'الأدوار',
+        'الإعدادات',
     ],
 };
 
@@ -214,6 +215,13 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 group: 'settings',
                 permission: 'roles.view',
             },
+            {
+                title: 'الإعدادات',
+                href: adminSettingsUrl(),
+                icon: Settings,
+                group: 'settings',
+                permission: 'settings.view',
+            },
         ] as MainNavItem[]
     ).filter((item) => {
         if (item.permission !== undefined && !can(item.permission)) {
@@ -246,9 +254,9 @@ const mainNavItems = computed<MainNavItem[]>(() => {
 });
 
 const sectionMetadata: Array<Omit<NavSection, 'items'>> = [
+    { key: 'main', label: 'الرئيسية', description: '' },
     { key: 'clinical', label: 'الصفحات المتاحة', description: '' },
-    
-   
+    { key: 'settings', label: 'الإدارة', description: '' },
 ];
 
 const sidebarSections = computed<NavSection[]>(() =>

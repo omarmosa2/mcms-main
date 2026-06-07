@@ -29,6 +29,8 @@ class SyncClinicRbacAction extends BaseAction
             'cashbox.*',
             'accounts.*',
             'reports.view',
+            'settings.view',
+            'settings.manage',
             'patient.*',
             'department.*',
             'doctor_profile.*',
@@ -53,6 +55,8 @@ class SyncClinicRbacAction extends BaseAction
             'cashbox.*',
             'accounts.*',
             'reports.view',
+            'settings.view',
+            'settings.manage',
             'patient.*',
             'department.*',
             'doctor_profile.*',
@@ -184,6 +188,8 @@ class SyncClinicRbacAction extends BaseAction
         'accounts.*',
         'reports.view',
         'reports.financial',
+        'settings.view',
+        'settings.manage',
     ];
 
     public function handle(int $clinicId): void

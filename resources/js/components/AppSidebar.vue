@@ -15,12 +15,16 @@ import {
     Users,
     Wallet,
     CalendarDays,
+    UserCog,
+    BadgeDollarSign,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
 import DoctorProfileController from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
+import EmployeeController from '@/actions/App/Http/Controllers/Employees/EmployeeController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
+import PayrollController from '@/actions/App/Http/Controllers/Payroll/PayrollController';
 import QueueEntryController from '@/actions/App/Http/Controllers/Queue/QueueEntryController';
 import RoleController from '@/actions/App/Http/Controllers/Rbac/RoleController';
 import UserController from '@/actions/App/Http/Controllers/Security/UserController';
@@ -166,6 +170,13 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 permission: 'doctor_profile.view',
             },
             {
+                title: 'إدارة الموظفين',
+                href: EmployeeController.index(),
+                icon: UserCog,
+                group: 'clinical',
+                permission: 'employees.view',
+            },
+            {
                 title: 'المواعيد',
                 href: AppointmentController.index(),
                 icon: CalendarClock,
@@ -195,6 +206,13 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                     'reports.financial',
                     'salaries.view',
                 ],
+            },
+            {
+                title: 'الرواتب',
+                href: PayrollController.index(),
+                icon: BadgeDollarSign,
+                group: 'clinical',
+                permission: 'salaries.view',
             },
             {
                 title: 'جداول الدوام',

@@ -4,6 +4,8 @@ namespace App\Actions\Reports;
 
 use App\Actions\BaseAction;
 use App\Models\Account;
+use App\Models\DoctorSalaryPayment;
+use App\Models\EmployeeSalaryPayment;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -40,11 +42,20 @@ class GetFinancialStatementsReportAction extends BaseAction
             ->where('status', Expense::STATUS_APPROVED)
             ->sum('amount');
 
-        $payrollExpenses = (float) Salary::query()
+        $legacyPayrollExpenses = (float) Salary::query()
             ->forClinic($clinicId)
             ->whereBetween('paid_at', [$from, $to])
             ->where('status', Salary::STATUS_PAID)
             ->sum('net_salary');
+        $employeePayrollExpenses = (float) EmployeeSalaryPayment::query()
+            ->forClinic($clinicId)
+            ->whereBetween('paid_at', [$from->toDateString(), $to->toDateString()])
+            ->sum('amount_paid');
+        $doctorPayrollExpenses = (float) DoctorSalaryPayment::query()
+            ->forClinic($clinicId)
+            ->whereBetween('paid_at', [$from->toDateString(), $to->toDateString()])
+            ->sum('amount_paid');
+        $payrollExpenses = $legacyPayrollExpenses + $employeePayrollExpenses + $doctorPayrollExpenses;
 
         $totalExpenses = round($operatingExpenses + $payrollExpenses, 2);
         $netIncome = round($revenue - $totalExpenses, 2);
@@ -84,6 +95,14 @@ class GetFinancialStatementsReportAction extends BaseAction
                 ->whereBetween('paid_at', [$from, $to])
                 ->where('status', Salary::STATUS_PAID)
                 ->sum('net_salary')
+            + EmployeeSalaryPayment::query()
+                ->forClinic($clinicId)
+                ->whereBetween('paid_at', [$from->toDateString(), $to->toDateString()])
+                ->sum('amount_paid')
+            + DoctorSalaryPayment::query()
+                ->forClinic($clinicId)
+                ->whereBetween('paid_at', [$from->toDateString(), $to->toDateString()])
+                ->sum('amount_paid')
         );
 
         return [

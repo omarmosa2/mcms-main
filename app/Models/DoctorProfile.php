@@ -6,6 +6,7 @@ use App\Domain\Shared\Models\BaseModel;
 use Database\Factories\DoctorProfileFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DoctorProfile extends BaseModel
@@ -51,5 +52,15 @@ class DoctorProfile extends BaseModel
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function salaryPayments(): HasMany
+    {
+        return $this->hasMany(DoctorSalaryPayment::class);
+    }
+
+    public function deductions(): HasMany
+    {
+        return $this->hasMany(DoctorDeduction::class);
     }
 }

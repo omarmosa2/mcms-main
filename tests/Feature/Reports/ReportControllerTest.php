@@ -5,6 +5,8 @@ namespace Tests\Feature\Reports;
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\DoctorSalaryPayment;
+use App\Models\EmployeeSalaryPayment;
 use App\Models\Invoice;
 use App\Models\Patient;
 use App\Models\Payment;
@@ -182,6 +184,32 @@ class ReportControllerTest extends TestCase
             'user_id' => $user->id,
             'action' => 'reports.view',
         ]);
+    }
+
+    public function test_financial_statements_include_new_employee_and_doctor_payroll_payments(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'accountant');
+
+        EmployeeSalaryPayment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'amount_paid' => 700,
+            'paid_at' => '2026-06-05',
+        ]);
+        DoctorSalaryPayment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'amount_paid' => 300,
+            'paid_at' => '2026-06-06',
+        ]);
+
+        $response = $this->getJson(route('reports.index', [
+            'from' => '2026-06-01',
+            'to' => '2026-06-30',
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.financial_statements.income_statement.payroll_expenses', 1000);
+        $response->assertJsonPath('data.financial_statements.cash_flow.cash_outflow', 1000);
     }
 
     public function test_user_without_reports_permissions_gets_forbidden(): void

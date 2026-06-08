@@ -4,6 +4,7 @@ import {
     ArrowLeft,
     CalendarClock,
     ClipboardList,
+    Download,
     FileText,
     Plus,
     Stethoscope,
@@ -324,6 +325,13 @@ const formDataEntries = computed(() => {
                 <Badge :class="statusClass(record.status)" class="text-sm">
                     {{ statusLabel(record.status) }}
                 </Badge>
+                <a
+                    :href="`/medical-records/${record.id}/export`"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                >
+                    <Download class="size-3.5" />
+                    تصدير PDF
+                </a>
             </div>
         </div>
 
@@ -335,6 +343,7 @@ const formDataEntries = computed(() => {
                 </div>
                 <p class="mt-2 text-sm font-semibold">{{ record.patient?.full_name ?? '—' }}</p>
                 <p class="text-xs text-muted-foreground">ملف: {{ record.patient?.file_number ?? '—' }}</p>
+                <p v-if="record.patient?.phone" class="text-xs text-muted-foreground">هاتف: {{ record.patient.phone }}</p>
             </div>
             <div class="rounded-xl border border-border/70 bg-card p-4">
                 <div class="flex items-center gap-2 text-muted-foreground">
@@ -357,6 +366,20 @@ const formDataEntries = computed(() => {
                 </div>
                 <p class="mt-2 text-sm font-semibold">{{ clinicTypeLabel(record.clinic_type) }}</p>
             </div>
+        </div>
+
+        <div v-if="record.patient?.date_of_birth || record.patient?.gender" class="glass-panel-soft p-5">
+            <h3 class="mb-3 text-sm font-semibold border-b border-border/50 pb-3">معلومات إضافية</h3>
+            <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs">
+                <div v-if="record.patient?.date_of_birth">
+                    <dt class="text-muted-foreground">تاريخ الميلاد</dt>
+                    <dd class="font-medium">{{ formatDate(record.patient.date_of_birth) }}</dd>
+                </div>
+                <div v-if="record.patient?.gender">
+                    <dt class="text-muted-foreground">الجنس</dt>
+                    <dd class="font-medium">{{ record.patient.gender === 'male' ? 'ذكر' : 'أنثى' }}</dd>
+                </div>
+            </dl>
         </div>
 
         <div class="glass-panel-soft space-y-5 p-5">

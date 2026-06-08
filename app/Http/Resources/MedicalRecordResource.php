@@ -25,6 +25,9 @@ class MedicalRecordResource extends JsonResource
                 'id' => $this->patient->id,
                 'full_name' => trim("{$this->patient->first_name} {$this->patient->last_name}"),
                 'file_number' => $this->patient->file_number,
+                'phone' => $this->patient->phone,
+                'date_of_birth' => $this->patient->date_of_birth?->toDateString(),
+                'gender' => $this->patient->gender,
             ]),
             'department_id' => $this->department_id,
             'department' => $this->whenLoaded('department', fn () => [

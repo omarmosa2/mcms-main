@@ -502,4 +502,25 @@ class MedicalRecordTest extends TestCase
         $this->assertEquals('140/90', $record->form_data['blood_pressure']);
         $this->assertEquals('80 bpm', $record->form_data['pulse']);
     }
+
+    public function test_can_export_medical_record_as_pdf(): void
+    {
+        $record = MedicalRecord::query()->create([
+            'clinic_id' => $this->clinic->id,
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->doctor->id,
+            'record_number' => 'MR-EXPORT-0001',
+            'clinic_type' => 'cardiology',
+            'status' => 'active',
+            'visit_date' => now()->toDateString(),
+            'chief_complaint' => 'Chest pain',
+            'primary_diagnosis' => 'Hypertension',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get("/medical-records/{$record->id}/export");
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'application/pdf');
+    }
 }

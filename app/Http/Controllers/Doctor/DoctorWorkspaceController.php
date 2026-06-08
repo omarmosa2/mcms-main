@@ -146,24 +146,6 @@ class DoctorWorkspaceController extends Controller
         ]);
     }
 
-    public function prescriptions(Request $request): Response
-    {
-        $user = $request->user();
-        $clinicId = (int) $user->clinic_id;
-        $doctorId = (int) $user->id;
-
-        $prescriptions = Prescription::query()
-            ->forClinic($clinicId)
-            ->where('prescribed_by', $doctorId)
-            ->with(['patient:id,clinic_id,first_name,last_name,file_number', 'items'])
-            ->orderByDesc('created_at')
-            ->paginate(15);
-
-        return Inertia::render('doctor/Prescriptions', [
-            'prescriptions' => $prescriptions,
-        ]);
-    }
-
     public function followUps(Request $request): Response
     {
         $user = $request->user();

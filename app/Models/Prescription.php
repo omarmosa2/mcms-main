@@ -59,6 +59,11 @@ class Prescription extends BaseModel
         return $this->belongsTo(User::class, 'prescribed_by');
     }
 
+    public function medicalRecord(): BelongsTo
+    {
+        return $this->belongsTo(MedicalRecord::class);
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(PrescriptionItem::class);

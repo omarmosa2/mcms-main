@@ -116,4 +116,9 @@ class MedicalRecord extends BaseModel
     {
         return $this->hasMany(FollowUp::class);
     }
+
+    public function prescriptions(): HasMany
+    {
+        return $this->hasMany(Prescription::class);
+    }
 }

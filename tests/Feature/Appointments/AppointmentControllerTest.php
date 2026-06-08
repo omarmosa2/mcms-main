@@ -11,6 +11,7 @@ use App\Models\DoctorProfile;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class AppointmentControllerTest extends TestCase
@@ -104,10 +105,14 @@ class AppointmentControllerTest extends TestCase
             'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
+        $nextSaturday = Carbon::now()->next(Carbon::SATURDAY)->format('Y-m-d');
+
         $response = $this->postJson(route('appointments.store'), [
             'patient_id' => $patient->id,
-            'scheduled_for' => '2026-06-06T10:00:00+00:00',
+            'scheduled_for' => "{$nextSaturday}T10:00:00+00:00",
             'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
         ]);
 
         $response->assertUnprocessable();
@@ -123,10 +128,14 @@ class AppointmentControllerTest extends TestCase
             'saturday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
+        $nextSaturday = Carbon::now()->next(Carbon::SATURDAY)->format('Y-m-d');
+
         $response = $this->postJson(route('appointments.store'), [
             'patient_id' => $patient->id,
-            'scheduled_for' => '2026-06-06T18:00:00+00:00',
+            'scheduled_for' => "{$nextSaturday}T18:00:00+00:00",
             'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
         ]);
 
         $response->assertUnprocessable();
@@ -142,9 +151,11 @@ class AppointmentControllerTest extends TestCase
             'saturday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
+        $nextSaturday = Carbon::now()->next(Carbon::SATURDAY)->format('Y-m-d');
+
         $response = $this->postJson(route('appointments.store'), [
             'patient_id' => $patient->id,
-            'scheduled_for' => '2026-06-06T10:00:00+00:00',
+            'scheduled_for' => "{$nextSaturday}T10:00:00+00:00",
             'duration_minutes' => 30,
             'appointment_type' => 'first_visit',
             'cost' => 100,

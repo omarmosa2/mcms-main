@@ -53,7 +53,17 @@ const filteredDoctors = computed(() => {
 });
 
 const handleDepartmentChange = (value: unknown) => {
-    selectedDepartmentId.value = String(value ?? '');
+    const strValue = String(value ?? '');
+    selectedDepartmentId.value = strValue === '__all__' ? '' : strValue;
+};
+
+const handleSubmit = (event: SubmitEvent) => {
+    const form = event.target as HTMLFormElement;
+    const doctorSelect = form.querySelector('select[name="doctor_id"]') as HTMLSelectElement | null;
+    if (doctorSelect && doctorSelect.value === '__none__') {
+        doctorSelect.disabled = true;
+        setTimeout(() => { doctorSelect.disabled = false; }, 0);
+    }
 };
 </script>
 
@@ -95,6 +105,7 @@ const handleDepartmentChange = (value: unknown) => {
             class="p-5"
             v-slot="{ errors, processing }"
             reset-on-success
+            @submit="handleSubmit"
             @success="emit('success')"
             @error="emit('error')"
         >
@@ -153,7 +164,7 @@ const handleDepartmentChange = (value: unknown) => {
                             <SelectValue placeholder="كل العيادات" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">كل العيادات</SelectItem>
+                            <SelectItem value="__all__">كل العيادات</SelectItem>
                             <SelectItem
                                 v-for="department in props.departments"
                                 :key="department.id"
@@ -184,7 +195,7 @@ const handleDepartmentChange = (value: unknown) => {
                             <SelectValue placeholder="اختر طبيباً" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">يُحدد لاحقاً</SelectItem>
+                            <SelectItem value="__none__">يُحدد لاحقاً</SelectItem>
                             <SelectItem
                                 v-for="d in filteredDoctors"
                                 :key="d.id"

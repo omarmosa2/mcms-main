@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     Plus,
@@ -7,7 +7,7 @@ import {
     Stethoscope,
     Trash2,
 } from 'lucide-vue-next';
-import { computed, watch } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,10 +28,21 @@ type PatientOption = {
     file_number: number;
 };
 
-const { departments, clinicTypes, patients } = defineProps<{
+type AppointmentData = {
+    appointment_id: number;
+    patient_id: number;
+    doctor_id: number | null;
+    department_id: number | null;
+    clinic_type: string | null;
+    scheduled_for: string;
+    appointment_type: string | null;
+} | null;
+
+const { departments, clinicTypes, patients, appointment_data } = defineProps<{
     departments: Department[];
     clinicTypes: string[];
     patients: PatientOption[];
+    appointment_data: AppointmentData;
 }>();
 
 defineOptions({
@@ -55,6 +66,7 @@ const form = useForm({
     patient_id: null as number | null,
     department_id: null as number | null,
     clinic_type: '' as string,
+    appointment_id: null as number | null,
     visit_date: new Date().toISOString().split('T')[0],
     chief_complaint: '',
     examination: '',
@@ -75,6 +87,15 @@ const form = useForm({
         notes: string;
         recommended_action: string;
     }>,
+});
+
+onMounted(() => {
+    if (appointment_data) {
+        form.patient_id = appointment_data.patient_id;
+        form.department_id = appointment_data.department_id;
+        form.clinic_type = appointment_data.clinic_type ?? '';
+        form.appointment_id = appointment_data.appointment_id;
+    }
 });
 
 const selectedDepartment = computed(() =>
@@ -252,6 +273,21 @@ function getFormDataField(key: string): string {
         </div>
 
         <form @submit.prevent="submit" class="space-y-6">
+            <div v-if="appointment_data" class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div class="flex items-center gap-2 text-emerald-700">
+                    <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="text-sm font-medium">تم تعبئة البيانات تلقائياً من الموعد</span>
+                </div>
+                <p class="mt-1 text-xs text-emerald-600">
+                    الموعد: {{ new Date(appointment_data.scheduled_for).toLocaleString('ar-SA') }}
+                    <span v-if="appointment_data.appointment_type" class="ms-2">
+                        ({{ appointment_data.appointment_type === 'first_visit' ? 'زيارة أولى' : 'متابعة' }})
+                    </span>
+                </p>
+            </div>
+
             <div class="glass-panel-soft space-y-5 p-5">
                 <h3 class="text-sm font-semibold border-b border-border/50 pb-3">بيانات الزيارة</h3>
 

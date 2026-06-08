@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\MedicalRecords\StoreMedicalRecordRequest;
 use App\Http\Requests\MedicalRecords\UpdateMedicalRecordRequest;
 use App\Http\Resources\MedicalRecordResource;
+use App\Models\Appointment;
 use App\Models\Department;
 use App\Models\MedicalRecord;
 use App\Models\Patient;
@@ -97,10 +98,38 @@ class MedicalRecordController extends Controller
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'file_number']);
 
+        $appointmentData = null;
+        $patientId = $request->query('patient_id');
+
+        if ($patientId) {
+            $appointment = Appointment::query()
+                ->forClinic($clinicId)
+                ->where('patient_id', (int) $patientId)
+                ->whereNotIn('status', Appointment::TERMINAL_STATUSES)
+                ->orderByDesc('scheduled_for')
+                ->first();
+
+            if ($appointment) {
+                $doctorProfile = $appointment->doctor?->doctorProfile;
+                $department = $doctorProfile?->department;
+
+                $appointmentData = [
+                    'appointment_id' => $appointment->id,
+                    'patient_id' => $appointment->patient_id,
+                    'doctor_id' => $appointment->doctor_id,
+                    'department_id' => $department?->id,
+                    'clinic_type' => $department?->clinic_type,
+                    'scheduled_for' => $appointment->scheduled_for,
+                    'appointment_type' => $appointment->appointment_type,
+                ];
+            }
+        }
+
         return Inertia::render('medical-records/Create', [
             'departments' => $departments,
             'clinicTypes' => MedicalRecord::CLINIC_TYPES,
             'patients' => $patients,
+            'appointment_data' => $appointmentData,
         ]);
     }
 

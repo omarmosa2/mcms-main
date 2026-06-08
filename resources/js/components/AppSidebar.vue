@@ -15,6 +15,9 @@ import {
     Users,
     Wallet,
     BadgeDollarSign,
+    FileText,
+    ClipboardList,
+    UserCircle,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
@@ -46,6 +49,7 @@ type MainNavItem = NavItem & {
     group: string;
     permission?: string;
     anyPermissions?: string[];
+    doctorOnly?: boolean;
 };
 
 const { can } = usePermissions();
@@ -53,8 +57,11 @@ const { can } = usePermissions();
 const roleItemOrder: Record<string, string[]> = {
     doctor: [
         'لوحة التحكم',
-        'المواعيد',
+        'مواعيد اليوم',
         'السجلات الطبية',
+        'الوصفات الطبية',
+        'المتابعات',
+        'ملفي الشخصي',
     ],
     receptionist: [
         'لوحة التحكم',
@@ -128,12 +135,14 @@ const primaryRole = computed<string>(() => {
     );
 });
 
+const isDoctor = computed(() => primaryRole.value === 'doctor');
+
 const mainNavItems = computed<MainNavItem[]>(() => {
     const visibleItems = (
         [
             {
                 title: 'لوحة التحكم',
-                href: dashboard(),
+                href: isDoctor.value ? '/doctor/workspace' : dashboard(),
                 icon: LayoutGrid,
                 group: 'main',
             },
@@ -173,11 +182,39 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 permission: 'appointment.view',
             },
             {
+                title: 'مواعيد اليوم',
+                href: '/doctor/appointments/today',
+                icon: CalendarClock,
+                group: 'clinical',
+                doctorOnly: true,
+            },
+            {
                 title: 'السجلات الطبية',
                 href: '/medical-records',
                 icon: Stethoscope,
                 group: 'clinical',
                 permission: 'medical_record.view',
+            },
+            {
+                title: 'الوصفات الطبية',
+                href: '/doctor/prescriptions',
+                icon: FileText,
+                group: 'clinical',
+                doctorOnly: true,
+            },
+            {
+                title: 'المتابعات',
+                href: '/doctor/follow-ups',
+                icon: ClipboardList,
+                group: 'clinical',
+                doctorOnly: true,
+            },
+            {
+                title: 'ملفي الشخصي',
+                href: '/doctor/profile',
+                icon: UserCircle,
+                group: 'clinical',
+                doctorOnly: true,
             },
             {
                 title: 'المالية',
@@ -233,6 +270,14 @@ const mainNavItems = computed<MainNavItem[]>(() => {
             },
         ] as MainNavItem[]
     ).filter((item) => {
+        if (item.doctorOnly) {
+            return isDoctor.value;
+        }
+
+        if (isDoctor.value && !item.doctorOnly && item.title !== 'لوحة التحكم') {
+            return false;
+        }
+
         if (item.permission !== undefined && !can(item.permission)) {
             return false;
         }

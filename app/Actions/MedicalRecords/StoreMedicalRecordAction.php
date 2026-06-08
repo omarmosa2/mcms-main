@@ -4,6 +4,7 @@ namespace App\Actions\MedicalRecords;
 
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
+use App\Models\Appointment;
 use App\Models\Department;
 use App\Models\FollowUp;
 use App\Models\MedicalRecord;
@@ -77,6 +78,19 @@ class StoreMedicalRecordAction extends BaseAction
                         'recommended_action' => $followUp['recommended_action'] ?? null,
                         'status' => FollowUp::STATUS_SCHEDULED,
                         'created_by' => $userId,
+                    ]);
+                }
+            }
+
+            if (! empty($payload['appointment_id'])) {
+                $appointment = Appointment::query()
+                    ->forClinic($clinicId)
+                    ->find($payload['appointment_id']);
+
+                if ($appointment && $appointment->status !== Appointment::STATUS_COMPLETED) {
+                    $appointment->update([
+                        'status' => Appointment::STATUS_COMPLETED,
+                        'completed_at' => now(),
                     ]);
                 }
             }

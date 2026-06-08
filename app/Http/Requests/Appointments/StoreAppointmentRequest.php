@@ -6,6 +6,7 @@ use App\Models\User;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class StoreAppointmentRequest extends FormRequest
@@ -64,7 +65,33 @@ class StoreAppointmentRequest extends FormRequest
                     fn ($query) => $query->where('clinic_id', $clinicId),
                 ),
             ],
-            'scheduled_for' => ['required', 'date', 'after_or_equal:now'],
+            'scheduled_for' => [
+                'required',
+                'date',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    $scheduledFor = Carbon::parse($value);
+                    $now = now();
+
+                    if ($scheduledFor->isPast()) {
+                        $fail('لا يمكن حجز موعد في وقت سابق.');
+
+                        return;
+                    }
+
+                    $today = $now->toDateString();
+                    $scheduledDate = $scheduledFor->toDateString();
+
+                    if ($scheduledDate < $today) {
+                        $fail('لا يمكن حجز موعد في تاريخ سابق.');
+
+                        return;
+                    }
+
+                    if ($scheduledDate === $today && $scheduledFor->lte($now)) {
+                        $fail('الوقت المختار قد مضى بالفعل.');
+                    }
+                },
+            ],
             'duration_minutes' => ['required', 'integer', Rule::in([15, 30, 45, 60])],
             'appointment_type' => ['required', 'string', Rule::in(['first_visit', 'review'])],
             'cost' => ['required', 'numeric', 'min:0'],

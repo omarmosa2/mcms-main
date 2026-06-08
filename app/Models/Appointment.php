@@ -82,4 +82,9 @@ class Appointment extends BaseModel
     {
         return $this->hasMany(DoctorAppointmentEntitlement::class);
     }
+
+    public function medicalRecords(): HasMany
+    {
+        return $this->hasMany(MedicalRecord::class, 'appointment_id');
+    }
 }

@@ -46,6 +46,7 @@ class HandleInertiaRequests extends Middleware
         $branding = null;
         $securityPolicy = null;
         $canManageSecurityPolicies = false;
+        $doctorClinic = null;
 
         if ($request->user() !== null) {
             $user = $request->user();
@@ -72,6 +73,19 @@ class HandleInertiaRequests extends Middleware
 
                 $securityPolicy = $this->cacheService->getSecurityPolicy($clinicIdInt);
             }
+
+            if (in_array('doctor', $roles, true) && $user->doctorProfile !== null) {
+                $doctorProfile = $user->doctorProfile;
+                $department = $doctorProfile->department;
+                $clinic = $user->clinic;
+
+                $doctorClinic = [
+                    'name' => $clinic?->name,
+                    'department_name' => $department?->name,
+                    'clinic_type' => $department?->clinic_type,
+                    'specialty' => $doctorProfile->specialty,
+                ];
+            }
         }
 
         $locale = app()->getLocale();
@@ -84,6 +98,7 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user() !== null ? $this->sharedUser($request->user()) : null,
                 'roles' => $roles,
                 'permissions' => $permissions,
+                'doctor_clinic' => $doctorClinic,
             ],
             'branding' => [
                 'company_name' => $branding?->company_name,

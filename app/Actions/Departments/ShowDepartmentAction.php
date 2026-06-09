@@ -16,6 +16,7 @@ class ShowDepartmentAction extends BaseAction
             ->forClinic($clinicId)
             ->withCount('doctorProfiles')
             ->with([
+                'workingHours',
                 'creator:id,clinic_id,name',
                 'updater:id,clinic_id,name',
             ])

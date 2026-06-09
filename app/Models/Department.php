@@ -48,4 +48,9 @@ class Department extends BaseModel
     {
         return $this->hasMany(DoctorProfile::class);
     }
+
+    public function workingHours(): HasMany
+    {
+        return $this->hasMany(ClinicWorkingHour::class);
+    }
 }

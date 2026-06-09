@@ -437,11 +437,10 @@ class DoctorProfileController extends Controller
      */
     private function resolveDepartmentOptions(int $clinicId): array
     {
-        $workingHours = $this->clinicWorkingHoursService->getForClinic($clinicId);
-
         return Department::query()
             ->forClinic($clinicId)
             ->select(['id', 'name', 'code', 'is_active'])
+            ->with('workingHours')
             ->orderBy('name')
             ->limit(250)
             ->get()
@@ -450,7 +449,7 @@ class DoctorProfileController extends Controller
                 'name' => $department->name,
                 'code' => $department->code,
                 'is_active' => (bool) $department->is_active,
-                'working_hours' => $workingHours,
+                'working_hours' => $this->clinicWorkingHoursService->getForDepartment($department->id),
             ])
             ->values()
             ->all();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ClinicSetting;
 use App\Models\User;
 use App\Services\Cache\CacheService;
 use Illuminate\Http\Request;
@@ -72,6 +73,8 @@ class HandleInertiaRequests extends Middleware
                 $branding = $this->cacheService->getBrandingSettings($clinicIdInt);
 
                 $securityPolicy = $this->cacheService->getSecurityPolicy($clinicIdInt);
+
+                $clinicName = ClinicSetting::get($clinicIdInt, 'clinic', 'name');
             }
 
             if (in_array('doctor', $roles, true) && $user->doctorProfile !== null) {
@@ -94,6 +97,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'clinic_name' => $clinicName ?? null,
             'auth' => [
                 'user' => $request->user() !== null ? $this->sharedUser($request->user()) : null,
                 'roles' => $roles,

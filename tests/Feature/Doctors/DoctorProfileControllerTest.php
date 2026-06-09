@@ -48,12 +48,12 @@ class DoctorProfileControllerTest extends TestCase
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
-        Department::factory()->create([
+        $department = Department::factory()->create([
             'clinic_id' => $clinic->id,
             'name' => 'Cardiology',
         ]);
 
-        $this->setClinicWorkingHours($clinic, [
+        $this->setDepartmentWorkingHours($department, [
             'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
@@ -157,7 +157,7 @@ class DoctorProfileControllerTest extends TestCase
         $this->authenticateForClinic($clinic);
         $department = Department::factory()->create(['clinic_id' => $clinic->id]);
 
-        $this->setClinicWorkingHours($clinic, [
+        $this->setDepartmentWorkingHours($department, [
             'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
             'thursday' => ['start_time' => '11:00', 'end_time' => '15:00'],
         ]);
@@ -458,7 +458,7 @@ class DoctorProfileControllerTest extends TestCase
             'department_id' => $department->id,
         ]);
 
-        $this->setClinicWorkingHours($clinic, [
+        $this->setDepartmentWorkingHours($department, [
             'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
@@ -586,13 +586,13 @@ class DoctorProfileControllerTest extends TestCase
     /**
      * @param  array<string, array{start_time: string, end_time: string}>  $activeDays
      */
-    private function setClinicWorkingHours(Clinic $clinic, array $activeDays): void
+    private function setDepartmentWorkingHours(Department $department, array $activeDays): void
     {
         foreach (ClinicWorkingHour::DAYS as $day) {
             $hours = $activeDays[$day] ?? null;
 
             ClinicWorkingHour::query()->create([
-                'clinic_id' => $clinic->id,
+                'department_id' => $department->id,
                 'day_of_week' => $day,
                 'is_active' => $hours !== null,
                 'start_time' => $hours['start_time'] ?? null,

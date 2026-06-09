@@ -10,12 +10,12 @@ class ClinicWorkingHoursService
     /**
      * @param  array<int, array<string, mixed>>  $workingHours
      */
-    public function replaceForClinic(int $clinicId, array $workingHours): void
+    public function replaceForDepartment(int $departmentId, array $workingHours): void
     {
         foreach ($this->normalizeRows($workingHours) as $row) {
             ClinicWorkingHour::query()->updateOrCreate(
                 [
-                    'clinic_id' => $clinicId,
+                    'department_id' => $departmentId,
                     'day_of_week' => $row['day_of_week'],
                 ],
                 [
@@ -27,13 +27,10 @@ class ClinicWorkingHoursService
         }
     }
 
-    /**
-     * @return array<int, array{day_of_week: string, is_active: bool, start_time: ?string, end_time: ?string}>
-     */
-    public function getForClinic(int $clinicId): array
+    public function getForDepartment(int $departmentId): array
     {
         $rows = ClinicWorkingHour::query()
-            ->where('clinic_id', $clinicId)
+            ->where('department_id', $departmentId)
             ->get()
             ->keyBy('day_of_week');
 
@@ -53,12 +50,12 @@ class ClinicWorkingHoursService
     }
 
     public function isAppointmentWithinWorkingHours(
-        int $clinicId,
+        int $departmentId,
         mixed $scheduledFor,
         int $durationMinutes,
     ): bool {
         $hasSchedule = ClinicWorkingHour::query()
-            ->where('clinic_id', $clinicId)
+            ->where('department_id', $departmentId)
             ->exists();
 
         if (! $hasSchedule) {
@@ -70,7 +67,7 @@ class ClinicWorkingHoursService
         $day = strtolower($start->format('l'));
 
         $workingHour = ClinicWorkingHour::query()
-            ->where('clinic_id', $clinicId)
+            ->where('department_id', $departmentId)
             ->where('day_of_week', $day)
             ->first();
 

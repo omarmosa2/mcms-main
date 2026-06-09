@@ -162,14 +162,14 @@ class StoreDoctorProfileRequest extends FormRequest
      */
     private function activeClinicWorkingHoursByDoctorDay(): array
     {
-        $clinicId = $this->user()?->clinic_id;
+        $departmentId = $this->input('department_id');
 
-        if ($clinicId === null) {
+        if ($departmentId === null) {
             return [];
         }
 
         return ClinicWorkingHour::query()
-            ->where('clinic_id', $clinicId)
+            ->where('department_id', $departmentId)
             ->where('is_active', true)
             ->whereNotNull('start_time')
             ->whereNotNull('end_time')
@@ -185,14 +185,14 @@ class StoreDoctorProfileRequest extends FormRequest
 
     private function hasClinicWorkingHoursConfigured(): bool
     {
-        $clinicId = $this->user()?->clinic_id;
+        $departmentId = $this->input('department_id');
 
-        if ($clinicId === null) {
+        if ($departmentId === null) {
             return false;
         }
 
         return ClinicWorkingHour::query()
-            ->where('clinic_id', $clinicId)
+            ->where('department_id', $departmentId)
             ->exists();
     }
 

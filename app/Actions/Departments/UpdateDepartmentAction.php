@@ -42,7 +42,7 @@ class UpdateDepartmentAction extends BaseAction
             $department->save();
 
             if (is_array($workingHours)) {
-                $this->clinicWorkingHoursService->replaceForClinic($clinicId, $workingHours);
+                $this->clinicWorkingHoursService->replaceForDepartment($department->id, $workingHours);
             }
 
             $this->logAuditAction->handle(
@@ -60,7 +60,7 @@ class UpdateDepartmentAction extends BaseAction
             );
 
             return $department->loadCount('doctorProfiles')->load([
-                'clinic.workingHours',
+                'workingHours',
                 'creator:id,clinic_id,name',
                 'updater:id,clinic_id,name',
             ]);

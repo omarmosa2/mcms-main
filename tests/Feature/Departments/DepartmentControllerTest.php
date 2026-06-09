@@ -95,8 +95,10 @@ class DepartmentControllerTest extends TestCase
         $response->assertCreated();
         $response->assertJsonPath('data.working_hours.0.day_of_week', 'saturday');
 
+        $departmentId = (int) $response->json('data.id');
+
         $this->assertDatabaseHas('clinic_working_hours', [
-            'clinic_id' => $clinic->id,
+            'department_id' => $departmentId,
             'day_of_week' => 'saturday',
             'is_active' => true,
             'start_time' => '09:00',
@@ -104,7 +106,7 @@ class DepartmentControllerTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('clinic_working_hours', [
-            'clinic_id' => $clinic->id,
+            'department_id' => $departmentId,
             'day_of_week' => 'friday',
             'is_active' => false,
             'start_time' => null,
@@ -119,7 +121,7 @@ class DepartmentControllerTest extends TestCase
         $department = Department::factory()->create(['clinic_id' => $clinic->id]);
 
         ClinicWorkingHour::query()->create([
-            'clinic_id' => $clinic->id,
+            'department_id' => $department->id,
             'day_of_week' => 'saturday',
             'is_active' => true,
             'start_time' => '09:00',
@@ -136,7 +138,7 @@ class DepartmentControllerTest extends TestCase
         $response->assertOk();
 
         $this->assertDatabaseHas('clinic_working_hours', [
-            'clinic_id' => $clinic->id,
+            'department_id' => $department->id,
             'day_of_week' => 'saturday',
             'is_active' => false,
             'start_time' => null,
@@ -144,7 +146,7 @@ class DepartmentControllerTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('clinic_working_hours', [
-            'clinic_id' => $clinic->id,
+            'department_id' => $department->id,
             'day_of_week' => 'monday',
             'is_active' => true,
             'start_time' => '08:30',
@@ -171,38 +173,6 @@ class DepartmentControllerTest extends TestCase
 
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['working_hours.0.end_time']);
-    }
-
-    public function test_api_update_clinic_replaces_working_hours(): void
-    {
-        $clinic = Clinic::factory()->create([
-            'name' => 'Old Clinic Name',
-        ]);
-        $this->authenticateForClinic($clinic);
-
-        $response = $this->putJson(route('api.clinics.update', ['clinicId' => $clinic->id]), [
-            'name' => 'Updated Clinic Name',
-            'working_hours' => $this->workingHoursPayload([
-                'tuesday' => ['start_time' => '11:00', 'end_time' => '18:00'],
-            ]),
-        ]);
-
-        $response->assertOk();
-        $response->assertJsonPath('data.name', 'Updated Clinic Name');
-        $response->assertJsonPath('data.working_hours.3.day_of_week', 'tuesday');
-
-        $this->assertDatabaseHas('clinics', [
-            'id' => $clinic->id,
-            'name' => 'Updated Clinic Name',
-        ]);
-
-        $this->assertDatabaseHas('clinic_working_hours', [
-            'clinic_id' => $clinic->id,
-            'day_of_week' => 'tuesday',
-            'is_active' => true,
-            'start_time' => '11:00',
-            'end_time' => '18:00',
-        ]);
     }
 
     public function test_index_applies_search_filter(): void

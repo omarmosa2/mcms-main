@@ -30,4 +30,9 @@ class ClinicWorkingHour extends Model
     {
         return $this->belongsTo(Clinic::class);
     }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
 }

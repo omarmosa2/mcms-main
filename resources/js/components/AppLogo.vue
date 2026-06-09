@@ -6,11 +6,17 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
 const page = usePage();
 
 const appName = computed<string>(() => {
+    const clinicName = page.props.clinic_name;
+
+    if (typeof clinicName === 'string' && clinicName.trim() !== '') {
+        return clinicName;
+    }
+
     const name = page.props.name;
 
     if (typeof name === 'string' && name.trim() !== '') {
-return name;
-}
+        return name;
+    }
 
     return 'MCMS';
 });

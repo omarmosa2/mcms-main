@@ -171,7 +171,9 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
     <div class="space-y-6">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
             <div>
-                <h1 class="page-title">العيادات المتوفرة اليوم</h1>
+                <h1 class="page-title">
+                    {{ clinicName }} - العيادات المتوفرة اليوم
+                </h1>
                 <p class="mt-1 text-sm text-muted-foreground">
                     {{ scheduleData.day_name }} - {{ scheduleData.formatted_date }}
                 </p>

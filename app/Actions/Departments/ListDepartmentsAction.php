@@ -26,7 +26,7 @@ class ListDepartmentsAction extends BaseAction
             ->withoutTrashed()
             ->withCount('doctorProfiles')
             ->with([
-                'clinic.workingHours',
+                'workingHours',
                 'creator:id,clinic_id,name',
                 'updater:id,clinic_id,name',
             ])

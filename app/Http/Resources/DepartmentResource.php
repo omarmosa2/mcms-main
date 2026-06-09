@@ -23,8 +23,8 @@ class DepartmentResource extends JsonResource
             'description' => $this->description,
             'is_active' => (bool) $this->is_active,
             'doctor_profiles_count' => (int) ($this->doctor_profiles_count ?? 0),
-            'working_hours' => $this->whenLoaded('clinic', fn () => $this->clinic?->workingHours
-                ? $this->clinic->workingHours
+            'working_hours' => $this->whenLoaded('workingHours', fn () => $this->workingHours
+                ? $this->workingHours
                     ->sortBy(fn ($hour) => array_search($hour->day_of_week, ClinicWorkingHour::DAYS, true))
                     ->values()
                     ->map(fn ($hour) => [

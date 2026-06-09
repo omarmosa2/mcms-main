@@ -5,6 +5,7 @@ namespace App\Actions\Appointments;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\Appointment;
+use App\Models\DoctorProfile;
 use App\Models\Patient;
 use App\Models\User;
 use App\Services\Cache\CacheService;
@@ -177,8 +178,23 @@ class UpdateAppointmentAction extends BaseAction
      */
     private function checkClinicWorkingHours(int $clinicId, array $payload): void
     {
+        $doctorId = $payload['doctor_id'] ?? null;
+
+        if ($doctorId === null) {
+            return;
+        }
+
+        $doctorProfile = DoctorProfile::query()
+            ->forClinic($clinicId)
+            ->where('user_id', $doctorId)
+            ->first();
+
+        if ($doctorProfile === null || $doctorProfile->department_id === null) {
+            return;
+        }
+
         $isAvailable = $this->clinicWorkingHoursService->isAppointmentWithinWorkingHours(
-            $clinicId,
+            $doctorProfile->department_id,
             $payload['scheduled_for'],
             (int) ($payload['duration_minutes'] ?? 30),
         );

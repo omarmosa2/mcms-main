@@ -67,7 +67,7 @@ class ListDailyScheduleAction extends BaseAction
 
         foreach ($departments as $department) {
             $clinicHours = ClinicWorkingHour::query()
-                ->where('clinic_id', $clinicId)
+                ->where('department_id', $department->id)
                 ->where('day_of_week', $dayString)
                 ->where('is_active', true)
                 ->first();

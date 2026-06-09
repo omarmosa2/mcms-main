@@ -101,7 +101,15 @@ class AppointmentControllerTest extends TestCase
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
-        $this->setClinicWorkingHours($clinic, [
+        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
+        $doctor = User::factory()->create(['clinic_id' => $clinic->id]);
+        app(AssignUserRoleAction::class)->handle($doctor, 'doctor');
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'department_id' => $department->id,
+        ]);
+        $this->setDepartmentWorkingHours($department, [
             'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
@@ -109,6 +117,7 @@ class AppointmentControllerTest extends TestCase
 
         $response = $this->postJson(route('appointments.store'), [
             'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
             'scheduled_for' => "{$nextSaturday}T10:00:00+00:00",
             'duration_minutes' => 30,
             'appointment_type' => 'first_visit',
@@ -124,7 +133,15 @@ class AppointmentControllerTest extends TestCase
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
-        $this->setClinicWorkingHours($clinic, [
+        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
+        $doctor = User::factory()->create(['clinic_id' => $clinic->id]);
+        app(AssignUserRoleAction::class)->handle($doctor, 'doctor');
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'department_id' => $department->id,
+        ]);
+        $this->setDepartmentWorkingHours($department, [
             'saturday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
@@ -132,6 +149,7 @@ class AppointmentControllerTest extends TestCase
 
         $response = $this->postJson(route('appointments.store'), [
             'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
             'scheduled_for' => "{$nextSaturday}T18:00:00+00:00",
             'duration_minutes' => 30,
             'appointment_type' => 'first_visit',
@@ -147,7 +165,15 @@ class AppointmentControllerTest extends TestCase
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
-        $this->setClinicWorkingHours($clinic, [
+        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
+        $doctor = User::factory()->create(['clinic_id' => $clinic->id]);
+        app(AssignUserRoleAction::class)->handle($doctor, 'doctor');
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'department_id' => $department->id,
+        ]);
+        $this->setDepartmentWorkingHours($department, [
             'saturday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
@@ -155,6 +181,7 @@ class AppointmentControllerTest extends TestCase
 
         $response = $this->postJson(route('appointments.store'), [
             'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
             'scheduled_for' => "{$nextSaturday}T10:00:00+00:00",
             'duration_minutes' => 30,
             'appointment_type' => 'first_visit',
@@ -634,11 +661,11 @@ class AppointmentControllerTest extends TestCase
     /**
      * @param  array<string, array{start_time: string, end_time: string}>  $activeDays
      */
-    private function setClinicWorkingHours(Clinic $clinic, array $activeDays): void
+    private function setDepartmentWorkingHours(Department $department, array $activeDays): void
     {
         foreach (ClinicWorkingHour::DAYS as $day) {
             ClinicWorkingHour::query()->create([
-                'clinic_id' => $clinic->id,
+                'department_id' => $department->id,
                 'day_of_week' => $day,
                 'is_active' => array_key_exists($day, $activeDays),
                 'start_time' => $activeDays[$day]['start_time'] ?? null,

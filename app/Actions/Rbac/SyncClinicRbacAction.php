@@ -41,6 +41,7 @@ class SyncClinicRbacAction extends BaseAction
             'salary.*',
             'cashbox.*',
             'medical_record.*',
+            'doctor_schedule.*',
         ],
         'admin' => [
             'patients.*',
@@ -68,6 +69,7 @@ class SyncClinicRbacAction extends BaseAction
             'salary.*',
             'cashbox.*',
             'medical_record.*',
+            'doctor_schedule.*',
         ],
         'receptionist' => [
             'patient.create',
@@ -215,6 +217,11 @@ class SyncClinicRbacAction extends BaseAction
         'reports.financial',
         'settings.view',
         'settings.manage',
+        'doctor_schedule.view',
+        'doctor_schedule.create',
+        'doctor_schedule.update',
+        'doctor_schedule.delete',
+        'doctor_schedule.*',
     ];
 
     public function handle(int $clinicId): void

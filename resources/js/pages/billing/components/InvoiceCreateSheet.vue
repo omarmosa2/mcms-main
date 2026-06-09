@@ -61,7 +61,7 @@ const emit = defineEmits<{
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="appointment_id">الموعد </Label>
+                    <Label for="appointment_id">الموعد</Label>
                     <select
                         id="appointment_id"
                         name="appointment_id"

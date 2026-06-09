@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
 import { Clock, CalendarDays, Pencil, Plus, Save, Trash2 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import DoctorScheduleController from '@/actions/App/Http/Controllers/DoctorSchedules/DoctorScheduleController';
 import InputError from '@/components/InputError.vue';
@@ -59,6 +59,39 @@ const DAYS = [
     { value: 5, label: 'الجمعة' },
     { value: 6, label: 'السبت' },
 ];
+
+const selectedDay = ref<number | null>(null);
+const startTime = ref('09:00');
+const endTime = ref('17:00');
+const isLoadingHours = ref(false);
+
+watch(selectedDay, async (newDay) => {
+    if (newDay === null) {
+        return;
+    }
+
+    isLoadingHours.value = true;
+
+    try {
+        const response = await fetch(`/doctor-schedules/clinic-hours?day_of_week=${newDay}`, {
+            headers: {
+                'X-Inertia': 'true',
+                'Accept': 'application/json',
+            },
+        });
+
+        const data = await response.json();
+
+        if (data.start_time && data.end_time) {
+            startTime.value = data.start_time.substring(0, 5);
+            endTime.value = data.end_time.substring(0, 5);
+        }
+    } catch (error) {
+        console.error('Failed to fetch clinic hours:', error);
+    } finally {
+        isLoadingHours.value = false;
+    }
+});
 
 const editingSchedule = ref<{
     id: number;
@@ -133,7 +166,7 @@ function formatTime(time: string): string {
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="page-title">جداول دوام الأطباء</h1>
-                <p class="mt-1 text-sm text-muted-foreground">إدارة أوقات دوام الأطباء لكل يوم من أيام أسبوع</p>
+                <p class="mt-1 text-sm text-muted-foreground">إدارة أوقات دوام الأطباء لكل يوم من أيام الأسبوع</p>
             </div>
         </div>
 
@@ -169,9 +202,11 @@ function formatTime(time: string): string {
                     <div class="w-[160px]">
                         <Label>اليوم</Label>
                         <select
+                            v-model="selectedDay"
                             name="day_of_week"
                             class="pattern-field-clay h-9 w-full px-3 py-1.5"
                         >
+                            <option value="">اختر اليوم</option>
                             <option v-for="day in DAYS" :key="day.value" :value="day.value">
                                 {{ day.label }}
                             </option>
@@ -181,13 +216,13 @@ function formatTime(time: string): string {
 
                     <div class="w-[140px]">
                         <Label>وقت البدء</Label>
-                        <Input name="start_time" type="time" value="09:00" />
+                        <Input v-model="startTime" name="start_time" type="time" :disabled="isLoadingHours" />
                         <InputError :message="errors.start_time" />
                     </div>
 
                     <div class="w-[140px]">
                         <Label>وقت الانتهاء</Label>
-                        <Input name="end_time" type="time" value="17:00" />
+                        <Input v-model="endTime" name="end_time" type="time" :disabled="isLoadingHours" />
                         <InputError :message="errors.end_time" />
                     </div>
 
@@ -196,7 +231,7 @@ function formatTime(time: string): string {
                         <Label class="text-sm">متاح</Label>
                     </div>
 
-                    <Button type="submit" :disabled="processing">
+                    <Button type="submit" :disabled="processing || isLoadingHours">
                         <Save class="size-4 ms-2" />
                         حفظ
                     </Button>

@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DoctorSchedules\StoreDoctorScheduleRequest;
 use App\Http\Requests\DoctorSchedules\UpdateDoctorScheduleRequest;
 use App\Http\Resources\DoctorScheduleResource;
+use App\Models\ClinicWorkingHour;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -109,6 +110,35 @@ class DoctorScheduleController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'تم حذف جدول الدوام بنجاح.']);
 
         return to_route('doctor-schedules.index');
+    }
+
+    public function clinicHours(Request $request): JsonResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+        $dayOfWeek = (int) $request->query('day_of_week', 0);
+
+        $dayStrings = [
+            0 => 'sunday',
+            1 => 'monday',
+            2 => 'tuesday',
+            3 => 'wednesday',
+            4 => 'thursday',
+            5 => 'friday',
+            6 => 'saturday',
+        ];
+
+        $dayString = $dayStrings[$dayOfWeek] ?? 'sunday';
+
+        $clinicHour = ClinicWorkingHour::query()
+            ->where('clinic_id', $clinicId)
+            ->where('day_of_week', $dayString)
+            ->where('is_active', true)
+            ->first();
+
+        return response()->json([
+            'start_time' => $clinicHour?->start_time,
+            'end_time' => $clinicHour?->end_time,
+        ]);
     }
 
     private function resolveClinicId(Request $request): int

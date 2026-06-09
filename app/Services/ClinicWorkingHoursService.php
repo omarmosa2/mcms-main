@@ -49,6 +49,46 @@ class ClinicWorkingHoursService
             ->all();
     }
 
+    /**
+     * @return array<int, array{day_of_week: string, is_active: bool, start_time: ?string, end_time: ?string}>
+     */
+    public function getForClinic(int $clinicId): array
+    {
+        $allHours = ClinicWorkingHour::query()
+            ->whereHas('department', fn ($query) => $query->where('clinic_id', $clinicId))
+            ->get();
+
+        return collect(ClinicWorkingHour::DAYS)
+            ->map(function (string $day) use ($allHours): array {
+                $dayHours = $allHours
+                    ->where('day_of_week', $day)
+                    ->where('is_active', true)
+                    ->whereNotNull('start_time')
+                    ->whereNotNull('end_time');
+
+                if ($dayHours->isEmpty()) {
+                    return [
+                        'day_of_week' => $day,
+                        'is_active' => false,
+                        'start_time' => null,
+                        'end_time' => null,
+                    ];
+                }
+
+                $earliestStart = $dayHours->min('start_time');
+                $latestEnd = $dayHours->max('end_time');
+
+                return [
+                    'day_of_week' => $day,
+                    'is_active' => true,
+                    'start_time' => $this->formatTime($earliestStart),
+                    'end_time' => $this->formatTime($latestEnd),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
     public function isAppointmentWithinWorkingHours(
         int $departmentId,
         mixed $scheduledFor,

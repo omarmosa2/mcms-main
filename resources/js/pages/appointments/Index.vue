@@ -1,42 +1,17 @@
 <script setup lang="ts">
-import { Form, Head, router, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import {
-    ArrowDown,
-    ArrowUp,
-    ArrowUpDown,
-    Calendar,
     CalendarDays,
     Plus,
     Table2,
-    Eye,
-    Pencil,
     Download,
     FileText,
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import AppointmentExportController from '@/actions/App/Http/Controllers/Appointments/AppointmentExportController';
-import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { FilterBar, FilterSearch, FilterSelect } from '@/components/ui/filter';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
@@ -325,14 +300,6 @@ const reloadAppointments = (
     executeReload();
 };
 
-const sortIconFor = (field: AppointmentSortField) => {
-    if (localSortBy.value !== field) {
-        return ArrowUpDown;
-    }
-
-    return localSortDirection.value === 'asc' ? ArrowUp : ArrowDown;
-};
-
 const toggleSort = (field: AppointmentSortField): void => {
     if (localSortBy.value === field) {
         localSortDirection.value =
@@ -368,24 +335,6 @@ const resetLocalFilters = (): void => {
         sort_by: 'scheduled_for',
         sort_direction: 'desc',
     });
-};
-
-const goToPreviousPage = (): void => {
-    if (localPage.value <= 1) {
-        return;
-    }
-
-    localPage.value -= 1;
-    reloadAppointments({ page: localPage.value });
-};
-
-const goToNextPage = (): void => {
-    if (localPage.value >= totalLocalPages.value) {
-        return;
-    }
-
-    localPage.value += 1;
-    reloadAppointments({ page: localPage.value });
 };
 
 watch(
@@ -552,10 +501,6 @@ const openViewAppointment = (appointment: Appointment): void => {
     viewingAppointment.value = appointment;
 };
 
-const closeViewAppointment = (): void => {
-    viewingAppointment.value = null;
-};
-
 const openEditAppointment = (appointment: Appointment): void => {
     editingAppointment.value = appointment;
 };
@@ -682,18 +627,6 @@ const handleRemoveFilter = (key: string) => {
         localDateTo.value = '';
     }
 };
-
-const defaultScheduledFor = computed(() => {
-    const now = new Date();
-    now.setHours(now.getHours() + 1);
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-});
 
 const resetQuickAdd = () => {
     // quickAddFormSuccess ref was not declared in original code
@@ -837,21 +770,6 @@ const todaySummary = computed(() => ({
             </div>
 
             <div class="flex items-center gap-2">
-                <a
-                    :href="AppointmentExportController.export.url()"
-                    class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
-                >
-                    <Download class="size-3.5" />
-                    تصدير Excel
-                </a>
-                <a
-                    :href="AppointmentExportController.exportPdf.url()"
-                    class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
-                >
-                    <FileText class="size-3.5" />
-                    تصدير PDF
-                </a>
-
                 <div
                     class="inline-flex rounded-lg border border-border/60 bg-background/60 p-0.5"
                 >
@@ -883,6 +801,21 @@ const todaySummary = computed(() => ({
                     </button>
                 </div>
 
+                <a
+                    :href="AppointmentExportController.export.url()"
+                    class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                >
+                    <Download class="size-3.5" />
+                    تصدير Excel
+                </a>
+                <a
+                    :href="AppointmentExportController.exportPdf.url()"
+                    class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                >
+                    <FileText class="size-3.5" />
+                    تصدير PDF
+                </a>
+
                 <Button
                     v-if="can('appointment.create')"
                     variant="ghost"
@@ -896,11 +829,11 @@ const todaySummary = computed(() => ({
                     v-if="can('appointment.create')"
                     variant="default"
                     size="sm"
-                    class="h-10 rounded-lg px-3 text-xs"
+                    class="h-10 rounded-lg gap-1.5 px-4 text-xs"
                     @click="isCreateSheetOpen = true"
                 >
                     <Plus class="size-3.5" />
-                    إضافة متقدمة
+                    إضافة موعد
                 </Button>
             </div>
         </div>

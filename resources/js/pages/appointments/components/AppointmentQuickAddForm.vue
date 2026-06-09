@@ -59,17 +59,22 @@ const handleDepartmentChange = (value: unknown) => {
 
 const handleSubmit = (event: SubmitEvent) => {
     const form = event.target as HTMLFormElement;
-    const doctorSelect = form.querySelector('select[name="doctor_id"]') as HTMLSelectElement | null;
+    const doctorSelect = form.querySelector(
+        'select[name="doctor_id"]',
+    ) as HTMLSelectElement | null;
+
     if (doctorSelect && doctorSelect.value === '__none__') {
         doctorSelect.disabled = true;
-        setTimeout(() => { doctorSelect.disabled = false; }, 0);
+        setTimeout(() => {
+            doctorSelect.disabled = false;
+        }, 0);
     }
 };
 </script>
 
 <template>
     <section
-        class="overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card to-card/80 shadow-sm transition-shadow hover:shadow-md"
+        class="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm"
     >
         <div
             class="flex items-center justify-between border-b border-border/50 bg-muted/30 px-5 py-3"

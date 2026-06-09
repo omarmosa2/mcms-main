@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
+import {
+    Building2,
+    Clock,
+    FileText,
+    Hash,
+    Stethoscope,
+    User,
+} from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import InputError from '@/components/InputError.vue';
@@ -15,7 +23,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { toDatetimeLocalValue } from './appointmentHelpers';
 import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
 import type {
@@ -68,12 +82,12 @@ const filteredDoctors = computed(() => {
         :open="props.appointment !== null"
         @update:open="(open: boolean) => !open && emit('close')"
     >
-        <DialogContent class="max-h-[calc(100vh-2rem)]" size="2xl">
+        <DialogContent class="max-h-[calc(100vh-2rem)]" size="lg">
             <DialogHeader>
                 <DialogTitle>تعديل بيانات الموعد</DialogTitle>
-                <DialogDescription
-                    >تحديث تفاصيل الجدولة بسرعة.</DialogDescription
-                >
+                <DialogDescription>
+                    تحديث تفاصيل الموعد. الحقول المميزة بـ * مطلوبة.
+                </DialogDescription>
             </DialogHeader>
 
             <DialogBody>
@@ -82,154 +96,230 @@ const filteredDoctors = computed(() => {
                     v-bind="
                         AppointmentController.update.form(props.appointment.id)
                     "
-                    class="space-y-4"
+                    class="space-y-5"
                     :options="{ preserveScroll: true }"
                     v-slot="{ errors, processing }"
                     @success="emit('close')"
                 >
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <div class="grid gap-2">
-                            <Label for="edit_appointment_number"
-                                >رقم الموعد</Label
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="grid gap-1.5">
+                            <Label
+                                for="edit_appointment_number"
+                                class="flex items-center gap-1.5 text-xs font-medium"
                             >
+                                <Hash class="size-3.5 text-muted-foreground" />
+                                رقم الموعد
+                            </Label>
                             <Input
                                 id="edit_appointment_number"
                                 name="appointment_number"
                                 :value="props.appointment.appointment_number"
-                                class="pattern-field-clay"
                                 required
+                                :class="{
+                                    'border-destructive':
+                                        errors.appointment_number,
+                                }"
                             />
                             <InputError :message="errors.appointment_number" />
                         </div>
-                        <div class="grid gap-2">
-                            <Label for="edit_appointment_duration"
-                                >المدة (دقيقة)</Label
+
+                        <div class="grid gap-1.5">
+                            <Label
+                                for="edit_appointment_duration"
+                                class="flex items-center gap-1.5 text-xs font-medium"
                             >
-                            <select
-                                id="edit_appointment_duration"
+                                <Clock class="size-3.5 text-muted-foreground" />
+                                المدة
+                                <span class="text-destructive">*</span>
+                            </Label>
+                            <Select
                                 name="duration_minutes"
-                                :value="
+                                :model-value="
                                     String(props.appointment.duration_minutes)
                                 "
-                                class="pattern-field-clay h-10 px-3 py-2"
                                 required
                             >
-                                <option value="15">15 دقيقة</option>
-                                <option value="30">30 دقيقة</option>
-                                <option value="45">45 دقيقة</option>
-                                <option value="60">60 دقيقة</option>
-                            </select>
+                                <SelectTrigger
+                                    :class="{
+                                        'border-destructive':
+                                            errors.duration_minutes,
+                                    }"
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="15">15 دقيقة</SelectItem>
+                                    <SelectItem value="30">30 دقيقة</SelectItem>
+                                    <SelectItem value="45">45 دقيقة</SelectItem>
+                                    <SelectItem value="60">60 دقيقة</SelectItem>
+                                </SelectContent>
+                            </Select>
                             <InputError :message="errors.duration_minutes" />
                         </div>
                     </div>
 
-                    <div class="grid gap-3 sm:grid-cols-3">
-                        <div class="grid gap-2">
-                            <Label for="edit_appointment_patient">المريض</Label>
-                            <select
-                                id="edit_appointment_patient"
-                                name="patient_id"
-                                class="pattern-field-clay h-10 px-3 py-2"
-                                :value="String(props.appointment.patient_id)"
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div class="grid gap-1.5">
+                            <Label
+                                for="edit_appointment_patient"
+                                class="flex items-center gap-1.5 text-xs font-medium"
                             >
-                                <option
-                                    v-for="patient in props.patients"
-                                    :key="`edit-appointment-patient-${patient.id}`"
-                                    :value="patient.id"
+                                <User class="size-3.5 text-muted-foreground" />
+                                المريض
+                                <span class="text-destructive">*</span>
+                            </Label>
+                            <Select
+                                name="patient_id"
+                                :model-value="
+                                    String(props.appointment.patient_id)
+                                "
+                                required
+                            >
+                                <SelectTrigger
+                                    :class="{
+                                        'border-destructive': errors.patient_id,
+                                    }"
                                 >
-                                    {{
-                                        patient.file_number
-                                            ? `${patient.full_name} - ${patient.file_number}`
-                                            : patient.full_name
-                                    }}
-                                </option>
-                                <option
-                                    v-if="
-                                        !props.patients.some(
-                                            (p) =>
-                                                p.id ===
-                                                props.appointment!.patient_id,
-                                        )
-                                    "
-                                    :key="`edit-appointment-patient-current-${props.appointment.patient_id}`"
-                                    :value="props.appointment.patient_id"
-                                    selected
-                                >
-                                    {{
-                                        props.appointment.patient?.full_name ??
-                                        'مريض حالي'
-                                    }}
-                                </option>
-                            </select>
+                                    <SelectValue placeholder="اختر مريضاً" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem
+                                        v-for="patient in props.patients"
+                                        :key="`edit-appointment-patient-${patient.id}`"
+                                        :value="String(patient.id)"
+                                    >
+                                        {{
+                                            patient.file_number
+                                                ? `${patient.full_name ?? patient.name} - ${patient.file_number}`
+                                                : (patient.full_name ?? patient.name)
+                                        }}
+                                    </SelectItem>
+                                    <SelectItem
+                                        v-if="
+                                            !props.patients.some(
+                                                (p) =>
+                                                    p.id ===
+                                                    props.appointment!
+                                                        .patient_id,
+                                            )
+                                        "
+                                        :key="`edit-appointment-patient-current-${props.appointment.patient_id}`"
+                                        :value="
+                                            String(
+                                                props.appointment.patient_id,
+                                            )
+                                        "
+                                    >
+                                        {{
+                                            props.appointment.patient
+                                                ?.full_name ?? 'مريض حالي'
+                                        }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                             <InputError :message="errors.patient_id" />
                         </div>
-                        <div class="grid gap-2">
-                            <Label for="edit_appointment_department"
-                                >العيادة</Label
+
+                        <div class="grid gap-1.5">
+                            <Label
+                                for="edit_appointment_department"
+                                class="flex items-center gap-1.5 text-xs font-medium"
                             >
-                            <select
-                                id="edit_appointment_department"
-                                v-model="selectedDepartmentId"
-                                class="pattern-field-clay h-10 px-3 py-2"
+                                <Building2 class="size-3.5 text-muted-foreground" />
+                                العيادة
+                            </Label>
+                            <Select
+                                :model-value="selectedDepartmentId"
+                                @update:model-value="
+                                    selectedDepartmentId = String($event ?? '')
+                                "
                             >
-                                <option value="">كل العيادات</option>
-                                <option
-                                    v-for="department in props.departments"
-                                    :key="department.id"
-                                    :value="String(department.id)"
-                                >
-                                    {{ department.name }}
-                                </option>
-                            </select>
+                                <SelectTrigger id="edit_appointment_department">
+                                    <SelectValue placeholder="كل العيادات" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__all__">
+                                        كل العيادات
+                                    </SelectItem>
+                                    <SelectItem
+                                        v-for="department in props.departments"
+                                        :key="department.id"
+                                        :value="String(department.id)"
+                                    >
+                                        {{ department.name }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
-                        <div class="grid gap-2">
-                            <Label for="edit_appointment_doctor">الطبيب</Label>
-                            <select
-                                id="edit_appointment_doctor"
+
+                        <div class="grid gap-1.5">
+                            <Label
+                                for="edit_appointment_doctor"
+                                class="flex items-center gap-1.5 text-xs font-medium"
+                            >
+                                <Stethoscope class="size-3.5 text-muted-foreground" />
+                                الطبيب
+                            </Label>
+                            <Select
                                 name="doctor_id"
-                                class="pattern-field-clay h-10 px-3 py-2"
-                                :value="
+                                :model-value="
                                     props.appointment.doctor_id !== null
                                         ? String(props.appointment.doctor_id)
                                         : ''
                                 "
                             >
-                                <option value="">غير محدد</option>
-                                <option
-                                    v-for="doctor in filteredDoctors"
-                                    :key="`edit-appointment-doctor-${doctor.id}`"
-                                    :value="doctor.id"
+                                <SelectTrigger
+                                    :class="{
+                                        'border-destructive': errors.doctor_id,
+                                    }"
                                 >
-                                    {{
-                                        doctor.department?.name
-                                            ? `${doctor.name} - ${doctor.department.name}`
-                                            : doctor.name
-                                    }}
-                                </option>
-                                <option
-                                    v-if="
-                                        props.appointment.doctor_id !== null &&
-                                        !filteredDoctors.some(
-                                            (doctor) =>
-                                                doctor.id ===
-                                                props.appointment!.doctor_id,
-                                        )
-                                    "
-                                    :key="`edit-appointment-doctor-current-${props.appointment.doctor_id}`"
-                                    :value="props.appointment.doctor_id"
-                                    selected
-                                >
-                                    {{
-                                        props.appointment.doctor?.name ??
-                                        'طبيب حالي'
-                                    }}
-                                </option>
-                            </select>
+                                    <SelectValue placeholder="اختر طبيباً" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__none__">
+                                        غير محدد
+                                    </SelectItem>
+                                    <SelectItem
+                                        v-for="doctor in filteredDoctors"
+                                        :key="`edit-appointment-doctor-${doctor.id}`"
+                                        :value="String(doctor.id)"
+                                    >
+                                        {{
+                                            doctor.department?.name
+                                                ? `${doctor.name} - ${doctor.department.name}`
+                                                : (doctor.name ?? `#${doctor.id}`)
+                                        }}
+                                    </SelectItem>
+                                    <SelectItem
+                                        v-if="
+                                            props.appointment.doctor_id !==
+                                                null &&
+                                            !filteredDoctors.some(
+                                                (doctor) =>
+                                                    doctor.id ===
+                                                    props.appointment!
+                                                        .doctor_id,
+                                            )
+                                        "
+                                        :key="`edit-appointment-doctor-current-${props.appointment.doctor_id}`"
+                                        :value="
+                                            String(
+                                                props.appointment.doctor_id,
+                                            )
+                                        "
+                                    >
+                                        {{
+                                            props.appointment.doctor?.name ??
+                                            'طبيب حالي'
+                                        }}
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
                             <InputError :message="errors.doctor_id" />
                         </div>
                     </div>
 
-                    <div class="grid gap-2">
+                    <div class="grid gap-1.5">
                         <AppointmentWorkingHoursInput
                             :working-hours="clinicWorkingHours"
                             :default-value="
@@ -237,19 +327,26 @@ const filteredDoctors = computed(() => {
                                     props.appointment.scheduled_for,
                                 )
                             "
-                            label="موعد"
+                            label="التاريخ والوقت"
                         />
                         <InputError :message="errors.scheduled_for" />
                     </div>
 
-                    <div class="grid gap-2">
-                        <Label for="edit_appointment_notes">ملاحظات</Label>
+                    <div class="grid gap-1.5">
+                        <Label
+                            for="edit_appointment_notes"
+                            class="flex items-center gap-1.5 text-xs font-medium"
+                        >
+                            <FileText class="size-3.5 text-muted-foreground" />
+                            ملاحظات
+                        </Label>
                         <textarea
                             id="edit_appointment_notes"
                             name="notes"
                             rows="3"
-                            class="pattern-field-clay"
+                            class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                             :value="props.appointment.notes ?? ''"
+                            placeholder="أي ملاحظات إضافية حول الموعد..."
                         />
                         <InputError :message="errors.notes" />
                     </div>
@@ -258,18 +355,16 @@ const filteredDoctors = computed(() => {
                         <Button
                             type="button"
                             variant="outline"
-                            class="min-h-[44px]"
                             :disabled="processing"
                             @click="emit('close')"
-                            >إلغاء</Button
                         >
-                        <Button
-                            type="submit"
-                            variant="default"
-                            class="min-h-[44px]"
-                            :disabled="processing"
-                        >
-                            <Spinner v-if="processing" class="me-2 h-4 w-4" />
+                            إلغاء
+                        </Button>
+                        <Button type="submit" :disabled="processing">
+                            <span
+                                v-if="processing"
+                                class="inline-block size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+                            ></span>
                             {{ processing ? 'جارٍ الحفظ...' : 'حفظ التغييرات' }}
                         </Button>
                     </DialogFooter>

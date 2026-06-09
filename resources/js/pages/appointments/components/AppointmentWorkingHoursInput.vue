@@ -1,7 +1,15 @@
 <script setup lang="ts">
+import { Calendar } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { ClinicWorkingDay, ClinicWorkingHour } from './types';
 
 const props = withDefaults(
@@ -123,8 +131,12 @@ function buildSlots(startTime: string, endTime: string): string[] {
 </script>
 
 <template>
-    <div class="grid gap-2">
-        <Label>{{ label }}</Label>
+    <div class="grid gap-1.5">
+        <Label v-if="label" class="flex items-center gap-1.5 text-xs font-medium">
+            <Calendar class="size-3.5 text-muted-foreground" />
+            {{ label }}
+            <span class="text-destructive">*</span>
+        </Label>
         <input :name="name" type="hidden" :value="selectedValue" />
 
         <div class="grid gap-2 md:grid-cols-2">
@@ -132,22 +144,32 @@ function buildSlots(startTime: string, endTime: string): string[] {
                 v-model="selectedDate"
                 type="date"
                 required
-                class="pattern-field-clay"
             />
 
-            <select
-                v-model="selectedTime"
-                required
-                class="pattern-field-clay h-10 px-3 py-1.5"
+            <Select
+                :model-value="selectedTime"
+                @update:model-value="selectedTime = String($event ?? '')"
                 :disabled="timeSlots.length === 0"
             >
-                <option value="">
-                    {{ timeSlots.length === 0 ? 'لا توجد أوقات متاحة' : 'اختر الوقت' }}
-                </option>
-                <option v-for="slot in timeSlots" :key="slot" :value="slot">
-                    {{ slot }}
-                </option>
-            </select>
+                <SelectTrigger>
+                    <SelectValue
+                        :placeholder="
+                            timeSlots.length === 0
+                                ? 'لا توجد أوقات متاحة'
+                                : 'اختر الوقت'
+                        "
+                    />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem
+                        v-for="slot in timeSlots"
+                        :key="slot"
+                        :value="slot"
+                    >
+                        {{ slot }}
+                    </SelectItem>
+                </SelectContent>
+            </Select>
         </div>
     </div>
 </template>

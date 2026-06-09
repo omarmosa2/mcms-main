@@ -29,9 +29,9 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent class="max-w-[520px] p-0 overflow-hidden">
-            <DialogHeader class="p-6 pb-4 border-b border-[#E5E7EB]">
-                <DialogTitle class="text-lg font-medium text-[#1A1A1A]">إنشاء مستخدم</DialogTitle>
-                <DialogDescription class="text-sm text-[#6B7280] mt-1">إضافة مستخدم جديد إلى النظام</DialogDescription>
+            <DialogHeader class="p-6 pb-4 border-b border-border">
+                <DialogTitle class="text-lg font-medium text-foreground">إنشاء مستخدم</DialogTitle>
+                <DialogDescription class="text-sm text-muted-foreground mt-1">إضافة مستخدم جديد إلى النظام</DialogDescription>
             </DialogHeader>
 
             <Form
@@ -42,24 +42,24 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
                 v-slot="{ errors, processing }"
             >
                 <div class="flex flex-col gap-1.5">
-                    <Label for="name" class="text-sm font-medium text-[#374151]">
+                    <Label for="name" class="text-sm font-medium text-foreground">
                         الاسم الكامل
-                        <span class="text-[#DC2626] mr-1">*</span>
+                        <span class="text-destructive mr-1">*</span>
                     </Label>
                     <Input
                         id="name"
                         name="name"
                         required
                         placeholder="الاسم الكامل"
-                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                        class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                     />
                     <InputError :message="errors.name" />
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                    <Label for="email" class="text-sm font-medium text-[#374151]">
+                    <Label for="email" class="text-sm font-medium text-foreground">
                         البريد الإلكتروني
-                        <span class="text-[#DC2626] mr-1">*</span>
+                        <span class="text-destructive mr-1">*</span>
                     </Label>
                     <Input
                         id="email"
@@ -67,21 +67,21 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
                         type="email"
                         required
                         placeholder="example@domain.com"
-                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                        class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                     />
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                    <Label for="role_name" class="text-sm font-medium text-[#374151]">
+                    <Label for="role_name" class="text-sm font-medium text-foreground">
                         الدور
-                        <span class="text-[#DC2626] mr-1">*</span>
+                        <span class="text-destructive mr-1">*</span>
                     </Label>
                     <select
                         id="role_name"
                         name="role_name"
                         required
-                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#6B7280] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors appearance-none cursor-pointer"
+                        class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors appearance-none cursor-pointer"
                     >
                         <option value="">اختر دوراً</option>
                         <option
@@ -96,16 +96,16 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                    <Label for="password" class="text-sm font-medium text-[#374151]">كلمة المرور</Label>
+                    <Label for="password" class="text-sm font-medium text-foreground">كلمة المرور</Label>
                     <Input
                         id="password"
                         name="password"
                         type="password"
                         placeholder="اتركه فارغاً للتوليد التلقائي"
-                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                        class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                     />
                     <InputError :message="errors.password" />
-                    <p class="text-xs text-[#9CA3AF]">
+                    <p class="text-xs text-muted-foreground/60">
                         8 أحرف على الأقل، أو اتركه فارغاً للتوليد التلقائي.
                     </p>
                 </div>
@@ -119,7 +119,7 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
                         checked
                         class="size-4 rounded border-border"
                     />
-                    <Label for="is_active" class="text-sm font-normal text-[#374151]">
+                    <Label for="is_active" class="text-sm font-normal text-foreground">
                         حساب نشط
                     </Label>
                 </div>
@@ -127,17 +127,17 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
                 <Button
                     :disabled="processing"
                     variant="default"
-                    class="w-full h-10 rounded-lg bg-[#0EA5E9] text-white text-sm font-medium hover:bg-[#0284C7] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+                    class="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
                 >
                     إنشاء مستخدم
                 </Button>
             </Form>
 
-            <DialogFooter class="p-6 pt-4 border-t border-[#E5E7EB]">
+            <DialogFooter class="p-6 pt-4 border-t border-border">
                 <Button
                     type="button"
                     variant="outline"
-                    class="h-9 px-4 rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] text-sm font-medium hover:bg-[#F9FAFB] hover:text-[#1A1A1A] transition-colors duration-150"
+                    class="h-9 px-4 rounded-lg border border-input bg-card text-muted-foreground text-sm font-medium hover:bg-muted hover:text-foreground transition-colors duration-150"
                     @click="emit('update:open', false)"
                 >
                     إلغاء
@@ -146,7 +146,7 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
                     form="user-create-form"
                     type="submit"
                     variant="default"
-                    class="h-9 px-4 rounded-lg bg-[#0EA5E9] text-white text-sm font-medium hover:bg-[#0284C7] active:scale-[0.98] transition-all duration-150"
+                    class="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] transition-all duration-150"
                 >
                     إنشاء مستخدم
                 </Button>

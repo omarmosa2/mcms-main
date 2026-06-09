@@ -342,7 +342,7 @@ const handleLogout = () => {
         side="right"
         collapsible="icon"
         variant="sidebar"
-        class="border-inline-start border-[#CFE8F7]/80 bg-[#EAF7FE] shadow-sidebar"
+        class="border-inline-start border-sidebar-border/80 bg-sidebar shadow-sidebar"
     >
         <!-- Logo & Clinic Name -->
         <SidebarHeader class="px-4 pt-4 pb-3">
@@ -351,7 +351,7 @@ const handleLogout = () => {
                     <SidebarMenuButton
                         size="lg"
                         as-child
-                        class="h-12 rounded-2xl px-2.5 transition-colors duration-200 hover:bg-white/70"
+                        class="h-12 rounded-2xl px-2.5 transition-colors duration-200 hover:bg-sidebar-accent/50"
                     >
                         <Link :href="dashboard()">
                             <AppLogo />
@@ -367,12 +367,12 @@ const handleLogout = () => {
         </SidebarContent>
 
         <!-- Logout Button -->
-        <SidebarFooter class="border-t border-[#CFE8F7]/80 px-3 py-3">
+        <SidebarFooter class="border-t border-sidebar-border/80 px-3 py-3">
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton
                         size="lg"
-                        class="rounded-2xl transition-colors duration-200 hover:bg-white/70"
+                        class="rounded-2xl transition-colors duration-200 hover:bg-sidebar-accent/50"
                         @click="handleLogout"
                     >
                         <LogOut class="h-5 w-5" />

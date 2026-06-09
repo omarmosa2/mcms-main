@@ -60,30 +60,7 @@ const allSidebarNavItems: SettingsNavItem[] = [
         icon: Building2,
         adminOnly: true,
     },
-    {
-        title: 'المواعيد',
-        href: appointmentsUrl(),
-        icon: CalendarClock,
-        adminOnly: true,
-    },
-    {
-        title: 'المالية',
-        href: financialUrl(),
-        icon: Wallet,
-        adminOnly: true,
-    },
-    {
-        title: 'الصلاحيات',
-        href: permissionsUrl(),
-        icon: ShieldCheck,
-        adminOnly: true,
-    },
-    {
-        title: 'مظهر النظام',
-        href: adminAppearanceUrl(),
-        icon: MonitorSmartphone,
-        adminOnly: true,
-    },
+    
     {
         title: 'الأمان والنسخ',
         href: adminSecurityUrl(),

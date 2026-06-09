@@ -242,22 +242,22 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
             </CardContent>
         </Card>
 
-        <div ref="exportRef" class="bg-white p-8 rounded-2xl shadow-sm" dir="rtl">
-            <div class="flex items-center justify-between border-b-4 border-[#0EA5E9] pb-6 mb-8">
+        <div ref="exportRef" class="bg-card p-8 rounded-2xl shadow-sm" dir="rtl">
+            <div class="flex items-center justify-between border-b-4 border-primary pb-6 mb-8">
                 <div class="flex items-center gap-5">
-                    <div v-if="logoPath" class="flex size-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-[#E2EEF8] bg-white">
+                    <div v-if="logoPath" class="flex size-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-border bg-card">
                         <img :src="`/storage/${logoPath}`" :alt="clinicName" class="size-full object-contain" />
                     </div>
-                    <div v-else class="flex size-20 items-center justify-center rounded-2xl bg-[#0EA5E9]">
-                        <Stethoscope class="size-10 text-white" />
+                    <div v-else class="flex size-20 items-center justify-center rounded-2xl bg-primary">
+                        <Stethoscope class="size-10 text-primary-foreground" />
                     </div>
                     <div>
-                        <h2 class="text-3xl font-bold text-[#075985]">{{ clinicName }}</h2>
-                        <p class="mt-1 text-xl font-semibold text-[#264762]">جدول العيادات المتوفرة</p>
+                        <h2 class="text-3xl font-bold text-accent-foreground">{{ clinicName }}</h2>
+                        <p class="mt-1 text-xl font-semibold text-foreground">جدول العيادات المتوفرة</p>
                     </div>
                 </div>
                 <div class="text-left">
-                    <div class="flex items-center gap-3 rounded-xl bg-[#0EA5E9] px-6 py-4 text-white">
+                    <div class="flex items-center gap-3 rounded-xl bg-primary px-6 py-4 text-primary-foreground">
                         <CalendarDays class="size-7" />
                         <div>
                             <p class="text-2xl font-bold">{{ scheduleData.day_name }}</p>
@@ -271,9 +271,9 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                 <div
                     v-for="clinic in scheduleData.clinics"
                     :key="clinic.id"
-                    class="overflow-hidden rounded-2xl border-2 border-[#E2EEF8] bg-white shadow-md"
+                    class="overflow-hidden rounded-2xl border-2 border-border bg-card shadow-md"
                 >
-                    <div class="bg-[#0EA5E9] p-5">
+                    <div class="bg-primary p-5">
                         <div class="flex items-center gap-3">
                             <div class="flex size-12 items-center justify-center rounded-xl bg-white/30">
                                 <Stethoscope class="size-6 text-white" />
@@ -283,7 +283,7 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                                 <span v-if="clinic.clinic_type" class="text-sm text-white/90">{{ clinic.clinic_type }}</span>
                             </div>
                         </div>
-                        <div v-if="clinic.clinic_start_time" class="mt-3 flex items-center gap-2 rounded-lg bg-[#0284C7] px-4 py-2 text-base text-white">
+                        <div v-if="clinic.clinic_start_time" class="mt-3 flex items-center gap-2 rounded-lg bg-primary/80 px-4 py-2 text-base text-white">
                             <Clock class="size-4" />
                             <span class="tabular-nums font-medium">{{ formatTimeShort(clinic.clinic_start_time) }} - {{ formatTimeShort(clinic.clinic_end_time!) }}</span>
                         </div>
@@ -294,22 +294,22 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                             <div
                                 v-for="doctor in clinic.doctors"
                                 :key="doctor.doctor_id"
-                                class="flex items-center justify-between rounded-xl border border-[#E2EEF8] bg-[#F8FCFF] p-3"
+                                class="flex items-center justify-between rounded-xl border border-border bg-muted p-3"
                             >
                                 <div class="flex items-center gap-3">
-                                    <div class="flex size-10 items-center justify-center rounded-full bg-[#0EA5E9]">
-                                        <span class="text-base font-bold text-white">{{ doctor.doctor_name?.charAt(0) }}</span>
+                                    <div class="flex size-10 items-center justify-center rounded-full bg-primary">
+                                        <span class="text-base font-bold text-primary-foreground">{{ doctor.doctor_name?.charAt(0) }}</span>
                                     </div>
                                     <div>
-                                        <p class="text-base font-bold text-[#264762]">
+                                        <p class="text-base font-bold text-foreground">
                                             {{ doctor.doctor_name }}
                                         </p>
-                                        <p v-if="doctor.specialty" class="text-sm text-gray-500">
+                                        <p v-if="doctor.specialty" class="text-sm text-muted-foreground">
                                             {{ doctor.specialty }}
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 rounded-lg bg-[#E0F2FE] px-3 py-2 text-sm font-bold text-[#075985]">
+                                <div class="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-bold text-accent-foreground">
                                     <Clock class="size-3.5" />
                                     <span class="tabular-nums">
                                         {{ formatTimeShort(doctor.start_time) }} - {{ formatTimeShort(doctor.end_time) }}
@@ -321,17 +321,17 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                 </div>
             </div>
 
-            <div v-else class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#CFE8F7] bg-[#F8FCFF] py-16 text-center">
-                <div class="flex size-20 items-center justify-center rounded-full bg-[#E0F2FE]">
-                    <CalendarDays class="size-10 text-[#0EA5E9]" />
+            <div v-else class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted py-16 text-center">
+                <div class="flex size-20 items-center justify-center rounded-full bg-accent">
+                    <CalendarDays class="size-10 text-primary" />
                 </div>
-                <h3 class="mt-4 text-xl font-bold text-[#264762]">لا توجد عيادات متوفرة اليوم</h3>
-                <p class="mt-2 text-base text-gray-500">
+                <h3 class="mt-4 text-xl font-bold text-foreground">لا توجد عيادات متوفرة اليوم</h3>
+                <p class="mt-2 text-base text-muted-foreground">
                     لا توجد عيادات أو أطباء مسجلين للدوام في هذا اليوم.
                 </p>
             </div>
 
-            <div v-if="scheduleData.clinic_settings.phone || scheduleData.clinic_settings.address" class="mt-8 border-t-2 border-[#E2EEF8] pt-4 text-center text-base text-gray-600">
+            <div v-if="scheduleData.clinic_settings.phone || scheduleData.clinic_settings.address" class="mt-8 border-t-2 border-border pt-4 text-center text-base text-muted-foreground">
                 <p v-if="scheduleData.clinic_settings.phone" class="font-medium">
                     هاتف: {{ scheduleData.clinic_settings.phone }}
                 </p>

@@ -359,7 +359,7 @@ watch(selectableUserIds, (ids) => {
                     <h1 class="page-title text-[2.35rem]">إدارة المستخدمين</h1>
                     <p class="page-subtitle mt-2 text-base">إدارة حسابات المستخدمين والأدوار والصلاحيات</p>
                 </div>
-                <span class="inline-flex items-center rounded-full border border-[#DDE9F3] bg-white px-3 py-1 text-xs font-semibold text-[#6C7F95]">
+                <span class="inline-flex items-center rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
                     {{ activeRoleLabel }}
                 </span>
             </div>
@@ -369,7 +369,7 @@ watch(selectableUserIds, (ids) => {
                     v-if="can('users.create')"
                     variant="default"
                     size="lg"
-                    class="h-12 rounded-2xl bg-[#0EA5E9] px-6 text-sm font-bold text-white shadow-[0_18px_34px_-22px_rgb(14_165_233_/_0.9)] hover:bg-[#0284C7]"
+                    class="h-12 rounded-2xl bg-primary px-6 text-sm font-bold text-primary-foreground shadow-primary/30 hover:bg-primary/90"
                     @click="isCreateSheetOpen = true"
                 >
                     <Plus class="size-4" />

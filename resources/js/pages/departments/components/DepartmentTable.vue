@@ -99,8 +99,8 @@ const activeHoursCount = (department: Department): number => {
 
 const statusClass = (isActive: boolean): string => {
     return isActive
-        ? 'bg-[#DBEAFE] text-[#1D4ED8]'
-        : 'bg-[#F4F7FA] text-[#6B7280]';
+        ? 'bg-accent text-primary'
+        : 'bg-muted text-muted-foreground';
 };
 
 const sortMark = (field: DepartmentSortField): string => {
@@ -115,7 +115,7 @@ const sortMark = (field: DepartmentSortField): string => {
 <template>
     <div class="space-y-8">
         <section
-            class="rounded-[1.45rem] border border-[#E2ECF6] bg-white/95 p-6 shadow-card-float"
+            class="rounded-[1.45rem] border border-border bg-card/95 p-6 shadow-card-float"
         >
             <div class="grid gap-4 lg:grid-cols-[1fr_18rem_9rem]">
                 <FilterSearch
@@ -131,7 +131,7 @@ const sortMark = (field: DepartmentSortField): string => {
 
                 <button
                     type="button"
-                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-[#E8EEF6] bg-white px-5 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_24px_-24px_rgb(15_42_71_/_0.35)] transition-all duration-200 hover:bg-[#F7FBFE] hover:text-[#075985]"
+                    class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-border bg-card px-5 text-sm font-semibold text-foreground shadow-sm transition-all duration-200 hover:bg-muted hover:text-accent-foreground"
                     @click="emit('reset-filters')"
                 >
                     <Filter class="size-4" />
@@ -151,7 +151,7 @@ const sortMark = (field: DepartmentSortField): string => {
         <Form
             v-if="canDelete && selectedIds.length > 0"
             v-bind="DepartmentController.bulkDestroy.form()"
-            class="flex items-center gap-3 rounded-2xl border border-[#FECACA] bg-[#FEF2F2] p-4 shadow-card"
+            class="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 shadow-card"
             v-slot="{ processing }"
         >
             <input
@@ -162,7 +162,7 @@ const sortMark = (field: DepartmentSortField): string => {
                 :value="departmentId"
             />
 
-            <p class="flex-1 text-sm font-semibold text-[#DC2626]">
+            <p class="flex-1 text-sm font-semibold text-destructive">
                 {{ selectedIds.length }} عيادة محددة
             </p>
             <Button
@@ -178,7 +178,7 @@ const sortMark = (field: DepartmentSortField): string => {
                 type="button"
                 variant="ghost"
                 size="sm"
-                class="h-9 rounded-xl px-4 text-xs text-[#6B7280] hover:bg-white"
+                class="h-9 rounded-xl px-4 text-xs text-muted-foreground hover:bg-muted"
                 @click="emit('clear-selection')"
             >
                 إلغاء
@@ -186,7 +186,7 @@ const sortMark = (field: DepartmentSortField): string => {
         </Form>
 
         <section
-            class="overflow-hidden rounded-[1.35rem] border border-[#DDE8F3] bg-white/95 shadow-card-float"
+            class="overflow-hidden rounded-[1.35rem] border border-border bg-card/95 shadow-card-float"
         >
             <div class="w-full overflow-hidden">
                 <table
@@ -203,67 +203,67 @@ const sortMark = (field: DepartmentSortField): string => {
                         <col class="w-[10%]" />
                     </colgroup>
                     <thead>
-                        <tr class="h-16 bg-[#F3F8FC]">
+                        <tr class="h-16 bg-muted">
                             <th
-                                class="px-2 py-3 text-center text-sm font-bold text-[#111827]"
+                                class="px-2 py-3 text-center text-sm font-bold text-foreground"
                             >
                                 #
                             </th>
                             <th
-                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-foreground transition-colors select-none hover:text-primary"
                                 @click="emit('toggle-sort', 'name')"
                             >
                                 اسم العيادة
-                                <span class="ms-1 text-[#A8B8C8]">{{
+                                <span class="ms-1 text-muted-foreground/50">{{
                                     sortMark('name')
                                 }}</span>
                             </th>
                             <th
-                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-foreground transition-colors select-none hover:text-primary"
                                 @click="emit('toggle-sort', 'code')"
                             >
                                 الرمز
-                                <span class="ms-1 text-[#A8B8C8]">{{
+                                <span class="ms-1 text-muted-foreground/50">{{
                                     sortMark('code')
                                 }}</span>
                             </th>
-                            <!-- <th class="min-w-64 px-5 py-3 text-right text-sm font-bold text-[#111827]">الوصف</th> -->
+                            <!-- <th class="min-w-64 px-5 py-3 text-right text-sm font-bold text-foreground">الوصف</th> -->
                             <th
-                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-foreground transition-colors select-none hover:text-primary"
                                 @click="
                                     emit('toggle-sort', 'doctor_profiles_count')
                                 "
                             >
                                 الأطباء
-                                <span class="ms-1 text-[#A8B8C8]">{{
+                                <span class="ms-1 text-muted-foreground/50">{{
                                     sortMark('doctor_profiles_count')
                                 }}</span>
                             </th>
                             <th
-                                class="px-3 py-3 text-center text-sm font-bold text-[#111827]"
+                                class="px-3 py-3 text-center text-sm font-bold text-foreground"
                             >
                                 أيام الدوام
                             </th>
                             <th
-                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-foreground transition-colors select-none hover:text-primary"
                                 @click="emit('toggle-sort', 'is_active')"
                             >
                                 الحالة
-                                <span class="ms-1 text-[#A8B8C8]">{{
+                                <span class="ms-1 text-muted-foreground/50">{{
                                     sortMark('is_active')
                                 }}</span>
                             </th>
                             <th
-                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-[#111827] transition-colors select-none hover:text-[#0284C7]"
+                                class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-foreground transition-colors select-none hover:text-primary"
                                 @click="emit('toggle-sort', 'created_at')"
                             >
                                 تاريخ الإضافة
-                                <span class="ms-1 text-[#A8B8C8]">{{
+                                <span class="ms-1 text-muted-foreground/50">{{
                                     sortMark('created_at')
                                 }}</span>
                             </th>
                             <th
-                                class="px-3 py-3 text-center text-sm font-bold text-[#111827]"
+                                class="px-3 py-3 text-center text-sm font-bold text-foreground"
                             >
                                 الإجراءات
                             </th>
@@ -273,10 +273,10 @@ const sortMark = (field: DepartmentSortField): string => {
                         <tr
                             v-for="(department, index) in departments"
                             :key="department.id"
-                            class="group h-20 border-b border-[#E8EEF6] transition-all duration-150 last:border-b-0 hover:bg-[#F8FCFF]"
+                            class="group h-20 border-b border-border transition-all duration-150 last:border-b-0 hover:bg-muted/50"
                         >
                             <td
-                                class="px-2 py-4 text-center text-sm font-bold text-[#111827]"
+                                class="px-2 py-4 text-center text-sm font-bold text-foreground"
                             >
                                 {{ visibleFrom + index }}
                             </td>
@@ -285,34 +285,34 @@ const sortMark = (field: DepartmentSortField): string => {
                                     class="flex items-center justify-center gap-3"
                                 >
                                     <span
-                                        class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0EA5E9] text-sm font-bold text-white shadow-[0_12px_24px_-18px_rgb(14_165_233_/_0.95)]"
+                                        class="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-primary/20"
                                     >
                                         {{ department.name.charAt(0) }}
                                     </span>
                                     <span
-                                        class="min-w-0 truncate text-sm font-semibold text-[#111827]"
+                                        class="min-w-0 truncate text-sm font-semibold text-foreground"
                                         >{{ department.name }}</span
                                     >
                                 </div>
                             </td>
                             <td
-                                class="px-3 py-4 text-center text-sm font-semibold text-[#111827]"
+                                class="px-3 py-4 text-center text-sm font-semibold text-foreground"
                             >
                                 {{ department.code ?? '-' }}
                             </td>
-                            <!-- <td class="max-w-xs px-5 py-4 text-sm text-[#6C7F95]">
+                            <!-- <td class="max-w-xs px-5 py-4 text-sm text-muted-foreground">
                                 <span class="line-clamp-2">{{ department.description ?? '-' }}</span>
                             </td> -->
                             <td class="px-3 py-4 text-center">
                                 <span
-                                    class="inline-flex min-w-10 items-center justify-center rounded-full bg-[#F4F7FA] px-3 py-1.5 text-xs font-bold text-[#111827]"
+                                    class="inline-flex min-w-10 items-center justify-center rounded-full bg-muted px-3 py-1.5 text-xs font-bold text-foreground"
                                 >
                                     {{ department.doctor_profiles_count }}
                                 </span>
                             </td>
                             <td class="px-3 py-4 text-center">
                                 <span
-                                    class="inline-flex items-center justify-center gap-2 rounded-full bg-[#EAF7FE] px-3 py-1.5 text-xs font-bold text-[#0284C7]"
+                                    class="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-primary"
                                 >
                                     <Clock class="size-3.5" />
                                     {{ activeHoursCount(department) }} أيام
@@ -331,7 +331,7 @@ const sortMark = (field: DepartmentSortField): string => {
                                 </span>
                             </td>
                             <td
-                                class="px-3 py-4 text-center text-sm text-[#111827]"
+                                class="px-3 py-4 text-center text-sm text-foreground"
                             >
                                 {{
                                     department.created_at !== null
@@ -348,7 +348,7 @@ const sortMark = (field: DepartmentSortField): string => {
                                     <button
                                         v-if="canDelete"
                                         type="button"
-                                        class="inline-flex size-8 items-center justify-center rounded-lg text-[#FF3B30] transition-all duration-150 hover:bg-[#FEF2F2] active:scale-[0.95]"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-destructive transition-all duration-150 hover:bg-destructive/10 active:scale-[0.95]"
                                         title="حذف"
                                         @click="emit('delete', department)"
                                     >
@@ -357,7 +357,7 @@ const sortMark = (field: DepartmentSortField): string => {
                                     <button
                                         v-if="canUpdate"
                                         type="button"
-                                        class="inline-flex size-8 items-center justify-center rounded-lg text-[#2563EB] transition-all duration-150 hover:bg-[#EFF6FF] active:scale-[0.95]"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-primary transition-all duration-150 hover:bg-primary/10 active:scale-[0.95]"
                                         title="تعديل"
                                         @click="emit('edit', department)"
                                     >
@@ -365,7 +365,7 @@ const sortMark = (field: DepartmentSortField): string => {
                                     </button>
                                     <button
                                         type="button"
-                                        class="inline-flex size-8 items-center justify-center rounded-lg text-[#0EA5E9] transition-all duration-150 hover:bg-[#EAF7FE] active:scale-[0.95]"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-primary transition-all duration-150 hover:bg-accent active:scale-[0.95]"
                                         title="عرض"
                                         @click="emit('view', department)"
                                     >
@@ -379,11 +379,11 @@ const sortMark = (field: DepartmentSortField): string => {
                             <td colspan="8" class="px-5">
                                 <div class="py-20 text-center">
                                     <h3
-                                        class="mb-2 text-base font-bold text-[#111827]"
+                                        class="mb-2 text-base font-bold text-foreground"
                                     >
                                         لا توجد عيادات
                                     </h3>
-                                    <p class="text-sm text-[#6C7F95]">
+                                    <p class="text-sm text-muted-foreground">
                                         غيّر التصفية أو أضف عيادة جديدة للبدء.
                                     </p>
                                 </div>
@@ -401,7 +401,7 @@ const sortMark = (field: DepartmentSortField): string => {
                 <div class="flex items-center gap-2">
                     <button
                         type="button"
-                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition hover:text-accent-foreground disabled:opacity-40"
                         :disabled="page === 1"
                         @click="emit('previous-page')"
                     >
@@ -409,7 +409,7 @@ const sortMark = (field: DepartmentSortField): string => {
                     </button>
                     <button
                         type="button"
-                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition hover:text-accent-foreground disabled:opacity-40"
                         :disabled="page === 1"
                         @click="emit('previous-page')"
                     >
@@ -417,7 +417,7 @@ const sortMark = (field: DepartmentSortField): string => {
                     </button>
                     <button
                         type="button"
-                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition hover:text-accent-foreground disabled:opacity-40"
                         :disabled="page >= totalPages"
                         @click="emit('next-page')"
                     >
@@ -425,7 +425,7 @@ const sortMark = (field: DepartmentSortField): string => {
                     </button>
                     <button
                         type="button"
-                        class="inline-flex size-10 items-center justify-center rounded-full border border-[#E8EEF6] bg-white text-[#93A4B7] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] transition hover:text-[#075985] disabled:opacity-40"
+                        class="inline-flex size-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-sm transition hover:text-accent-foreground disabled:opacity-40"
                         :disabled="page >= totalPages"
                         @click="emit('next-page')"
                     >
@@ -433,27 +433,27 @@ const sortMark = (field: DepartmentSortField): string => {
                     </button>
                 </div>
 
-                <span class="text-sm font-semibold text-[#111827]"
+                <span class="text-sm font-semibold text-foreground"
                     >صفحة {{ page }} من {{ totalPages }}</span
                 >
 
                 <div class="flex items-center gap-3">
                     <select
                         v-model.number="rowsPerPage"
-                        class="h-11 rounded-2xl border border-[#DDE9F3] bg-white px-4 text-sm font-semibold text-[#1A2B3F] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 focus:outline-none"
+                        class="h-11 rounded-2xl border border-input bg-card px-4 text-sm font-semibold text-foreground shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
                     >
                         <option value="10">10</option>
                         <option value="15">15</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
                     </select>
-                    <span class="text-sm font-semibold text-[#111827]"
+                    <span class="text-sm font-semibold text-foreground"
                         >عدد الصفوف لكل صفحة</span
                     >
                 </div>
             </div>
 
-            <p class="text-sm font-medium text-[#6C7F95]">
+            <p class="text-sm font-medium text-muted-foreground">
                 عرض {{ visibleFrom }} إلى {{ visibleTo }} من
                 {{ totalDepartments }} عيادة
             </p>

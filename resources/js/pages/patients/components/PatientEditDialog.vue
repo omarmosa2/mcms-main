@@ -138,15 +138,15 @@ const handleSuccess = () => {
 
 <template>
     <Dialog :open="patient !== null" @update:open="(open) => !open && handleClose()">
-        <DialogContent class="max-w-[520px] bg-white rounded-xl">
-            <DialogHeader class="p-6 pb-4 border-b border-[#E5E7EB]">
-                <DialogTitle class="text-base font-medium text-[#1A1A1A]">تعديل بيانات المريض</DialogTitle>
-                <DialogDescription class="text-sm text-[#6B7280] mt-0.5">تحديث بيانات المريض</DialogDescription>
+        <DialogContent class="max-w-[520px] bg-card rounded-xl">
+            <DialogHeader class="p-6 pb-4 border-b border-border">
+                <DialogTitle class="text-base font-medium text-foreground">تعديل بيانات المريض</DialogTitle>
+                <DialogDescription class="text-sm text-muted-foreground mt-0.5">تحديث بيانات المريض</DialogDescription>
             </DialogHeader>
 
             <DialogBody class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                <p v-if="isLoading" class="rounded-lg border border-[#E5E7EB]/70 bg-[#F9FAFB] px-3 py-2 text-sm text-[#6B7280]">جاري تحميل تفاصيل المريض...</p>
-                <p v-if="error !== null" class="rounded-lg border border-[#DC2626]/35 bg-[#FEF2F2] px-3 py-2 text-sm text-[#DC2626]">{{ error }}</p>
+                <p v-if="isLoading" class="rounded-lg border border-border/70 bg-muted px-3 py-2 text-sm text-muted-foreground">جاري تحميل تفاصيل المريض...</p>
+                <p v-if="error !== null" class="rounded-lg border border-destructive/35 bg-destructive/10 px-3 py-2 text-sm text-destructive">{{ error }}</p>
 
                 <Form
                     v-if="detailedPatient"
@@ -158,24 +158,24 @@ const handleSuccess = () => {
                 >
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_file_number" class="text-sm font-medium text-[#374151]">رقم الملف</Label>
+                        <Label for="edit_patient_file_number" class="text-sm font-medium text-foreground">رقم الملف</Label>
                         <Input
                             id="edit_patient_file_number"
                             name="file_number"
                             type="number"
                             min="1"
                             :value="detailedPatient.file_number"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.file_number" />
                     </div>
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_national_id" class="text-sm font-medium text-[#374151]">رقم الهوية</Label>
+                        <Label for="edit_patient_national_id" class="text-sm font-medium text-foreground">رقم الهوية</Label>
                         <Input
                             id="edit_patient_national_id"
                             name="national_id"
                             :value="detailedPatient.national_id ?? ''"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.national_id" />
                     </div>
@@ -183,22 +183,22 @@ const handleSuccess = () => {
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_first_name" class="text-sm font-medium text-[#374151]">الاسم الأول</Label>
+                        <Label for="edit_patient_first_name" class="text-sm font-medium text-foreground">الاسم الأول</Label>
                         <Input
                             id="edit_patient_first_name"
                             name="first_name"
                             :value="detailedPatient.first_name"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.first_name" />
                     </div>
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_last_name" class="text-sm font-medium text-[#374151]">اسم العائلة</Label>
+                        <Label for="edit_patient_last_name" class="text-sm font-medium text-foreground">اسم العائلة</Label>
                         <Input
                             id="edit_patient_last_name"
                             name="last_name"
                             :value="detailedPatient.last_name"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.last_name" />
                     </div>
@@ -206,22 +206,22 @@ const handleSuccess = () => {
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_dob" class="text-sm font-medium text-[#374151]">تاريخ الميلاد</Label>
+                        <Label for="edit_patient_dob" class="text-sm font-medium text-foreground">تاريخ الميلاد</Label>
                         <Input
                             id="edit_patient_dob"
                             name="date_of_birth"
                             type="date"
                             :value="detailedPatient.date_of_birth ?? ''"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.date_of_birth" />
                     </div>
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_gender" class="text-sm font-medium text-[#374151]">الجنس</Label>
+                        <Label for="edit_patient_gender" class="text-sm font-medium text-foreground">الجنس</Label>
                         <select
                             id="edit_patient_gender"
                             name="gender"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#6B7280] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors appearance-none cursor-pointer"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors appearance-none cursor-pointer"
                             :value="detailedPatient.gender ?? ''"
                         >
                             <option value="">غير محدد</option>
@@ -232,117 +232,117 @@ const handleSuccess = () => {
                         <InputError :message="errors.gender" />
                     </div>
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_phone" class="text-sm font-medium text-[#374151]">الهاتف</Label>
+                        <Label for="edit_patient_phone" class="text-sm font-medium text-foreground">الهاتف</Label>
                         <Input
                             id="edit_patient_phone"
                             name="phone"
                             :value="detailedPatient.phone ?? ''"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.phone" />
                     </div>
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                    <Label for="edit_patient_email" class="text-sm font-medium text-[#374151]">البريد الإلكتروني</Label>
+                    <Label for="edit_patient_email" class="text-sm font-medium text-foreground">البريد الإلكتروني</Label>
                     <Input
                         id="edit_patient_email"
                         name="email"
                         type="email"
                         :value="detailedPatient.email ?? ''"
-                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                        class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                     />
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_emergency_name" class="text-sm font-medium text-[#374151]">اسم جهة اتصال الطوارئ</Label>
+                        <Label for="edit_patient_emergency_name" class="text-sm font-medium text-foreground">اسم جهة اتصال الطوارئ</Label>
                         <Input
                             id="edit_patient_emergency_name"
                             name="emergency_contact_name"
                             :value="detailedPatient.emergency_contact_name ?? ''"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.emergency_contact_name" />
                     </div>
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_emergency_phone" class="text-sm font-medium text-[#374151]">هاتف جهة اتصال الطوارئ</Label>
+                        <Label for="edit_patient_emergency_phone" class="text-sm font-medium text-foreground">هاتف جهة اتصال الطوارئ</Label>
                         <Input
                             id="edit_patient_emergency_phone"
                             name="emergency_contact_phone"
                             :value="detailedPatient.emergency_contact_phone ?? ''"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.emergency_contact_phone" />
                     </div>
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                    <Label for="edit_patient_notes" class="text-sm font-medium text-[#374151]">ملاحظات</Label>
+                    <Label for="edit_patient_notes" class="text-sm font-medium text-foreground">ملاحظات</Label>
                     <textarea
                         id="edit_patient_notes"
                         name="notes"
                         rows="3"
-                        class="w-full h-auto rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors resize-y"
+                        class="w-full h-auto rounded-lg border border-input bg-secondary/50 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors resize-y"
                         :value="detailedPatient.notes ?? ''"
                     ></textarea>
                     <InputError :message="errors.notes" />
                 </div>
 
-                <div class="flex flex-col gap-2 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-3">
+                <div class="flex flex-col gap-2 rounded-xl border border-border bg-muted p-3">
                     <div class="flex items-center justify-between gap-2">
-                        <Label class="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">أمراض مزمنة</Label>
-                        <Button type="button" size="sm" variant="outline" class="h-9 px-3 text-xs rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#1A1A1A]" @click="addMedicalItem(editChronicConditions)">إضافة</Button>
+                        <Label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">أمراض مزمنة</Label>
+                        <Button type="button" size="sm" variant="outline" class="h-9 px-3 text-xs rounded-lg border border-input bg-card text-muted-foreground hover:bg-muted hover:text-foreground" @click="addMedicalItem(editChronicConditions)">إضافة</Button>
                     </div>
                     <div v-for="(item, index) in editChronicConditions" :key="`edit-chronic-${index}`" class="flex items-center gap-2">
                         <Input
                             :name="`chronic_conditions[${index}]`"
                             v-model="editChronicConditions[index]"
                             placeholder="اسم المرض"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
-                        <Button type="button" size="sm" variant="ghost" class="h-9 px-3 text-xs text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#1A1A1A]" @click="removeMedicalItem(editChronicConditions, index)">حذف</Button>
+                        <Button type="button" size="sm" variant="ghost" class="h-9 px-3 text-xs text-muted-foreground hover:bg-muted hover:text-foreground" @click="removeMedicalItem(editChronicConditions, index)">حذف</Button>
                     </div>
                     <InputError :message="errors.chronic_conditions" />
                 </div>
 
-                <div class="flex flex-col gap-2 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-3">
+                <div class="flex flex-col gap-2 rounded-xl border border-border bg-muted p-3">
                     <div class="flex items-center justify-between gap-2">
-                        <Label class="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">حساسية</Label>
-                        <Button type="button" size="sm" variant="outline" class="h-9 px-3 text-xs rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#1A1A1A]" @click="addMedicalItem(editAllergies)">إضافة</Button>
+                        <Label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">حساسية</Label>
+                        <Button type="button" size="sm" variant="outline" class="h-9 px-3 text-xs rounded-lg border border-input bg-card text-muted-foreground hover:bg-muted hover:text-foreground" @click="addMedicalItem(editAllergies)">إضافة</Button>
                     </div>
                     <div v-for="(item, index) in editAllergies" :key="`edit-allergy-${index}`" class="flex items-center gap-2">
                         <Input
                             :name="`allergies[${index}]`"
                             v-model="editAllergies[index]"
                             placeholder="اسم الحساسية"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
-                        <Button type="button" size="sm" variant="ghost" class="h-9 px-3 text-xs text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#1A1A1A]" @click="removeMedicalItem(editAllergies, index)">حذف</Button>
+                        <Button type="button" size="sm" variant="ghost" class="h-9 px-3 text-xs text-muted-foreground hover:bg-muted hover:text-foreground" @click="removeMedicalItem(editAllergies, index)">حذف</Button>
                     </div>
                     <InputError :message="errors.allergies" />
                 </div>
 
-                <div class="flex flex-col gap-2 rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-3">
+                <div class="flex flex-col gap-2 rounded-xl border border-border bg-muted p-3">
                     <div class="flex items-center justify-between gap-2">
-                        <Label class="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">أدوية حالية</Label>
-                        <Button type="button" size="sm" variant="outline" class="h-9 px-3 text-xs rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#1A1A1A]" @click="addMedicalItem(editCurrentMedications)">إضافة</Button>
+                        <Label class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">أدوية حالية</Label>
+                        <Button type="button" size="sm" variant="outline" class="h-9 px-3 text-xs rounded-lg border border-input bg-card text-muted-foreground hover:bg-muted hover:text-foreground" @click="addMedicalItem(editCurrentMedications)">إضافة</Button>
                     </div>
                     <div v-for="(item, index) in editCurrentMedications" :key="`edit-medication-${index}`" class="flex items-center gap-2">
                         <Input
                             :name="`current_medications[${index}]`"
                             v-model="editCurrentMedications[index]"
                             placeholder="اسم الدواء"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
-                        <Button type="button" size="sm" variant="ghost" class="h-9 px-3 text-xs text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#1A1A1A]" @click="removeMedicalItem(editCurrentMedications, index)">حذف</Button>
+                        <Button type="button" size="sm" variant="ghost" class="h-9 px-3 text-xs text-muted-foreground hover:bg-muted hover:text-foreground" @click="removeMedicalItem(editCurrentMedications, index)">حذف</Button>
                     </div>
                     <InputError :message="errors.current_medications" />
                 </div>
 
                     <DialogFooter class="flex items-center justify-between p-6 pt-4 gap-2">
-                        <Button type="button" variant="ghost" class="h-9 px-4 rounded-lg text-[#6B7280] text-sm font-medium hover:bg-[#F9FAFB] hover:text-[#374151] transition-colors duration-150 active:scale-[0.98]" :disabled="processing" @click="handleClose">إلغاء</Button>
+                        <Button type="button" variant="ghost" class="h-9 px-4 rounded-lg text-muted-foreground text-sm font-medium hover:bg-muted hover:text-foreground transition-colors duration-150 active:scale-[0.98]" :disabled="processing" @click="handleClose">إلغاء</Button>
                         <Button
                             type="submit"
                             variant="default"

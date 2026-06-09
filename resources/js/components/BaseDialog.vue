@@ -75,18 +75,18 @@ const handleConfirm = () => {
         >
             <DialogHeader class="flex items-start justify-between gap-4">
                 <div class="flex-1">
-                    <DialogTitle class="text-base font-medium text-[#1A1A1A]">
+                    <DialogTitle class="text-base font-medium text-foreground">
                         {{ title }}
                     </DialogTitle>
                     <DialogDescription
                         v-if="description"
-                        class="mt-1 text-[13px] font-normal text-[#6B7280] line-clamp-1"
+                        class="mt-1 text-[13px] font-normal text-muted-foreground line-clamp-1"
                     >
                         {{ description }}
                     </DialogDescription>
                 </div>
                 <DialogClose
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[#6B7280] transition-colors hover:bg-[#EAF7FE] hover:text-[#075985] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9]/35"
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
                     aria-label="إغلاق"
                 >
                     <X class="h-4 w-4" />

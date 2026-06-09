@@ -40,10 +40,10 @@ const emit = defineEmits<{ close: [] }>();
 
 <template>
     <Dialog :open="user !== null" @update:open="(open) => !open && emit('close')">
-        <DialogContent class="max-w-[520px] bg-white rounded-xl">
-            <DialogHeader class="p-6 pb-4 border-b border-[#E5E7EB]">
-                <DialogTitle class="text-base font-medium text-[#1A1A1A]">تعديل المستخدم</DialogTitle>
-                <DialogDescription class="text-sm text-[#6B7280] mt-0.5">تعديل بيانات المستخدم والأدوار</DialogDescription>
+        <DialogContent class="max-w-[520px] bg-card rounded-xl">
+            <DialogHeader class="p-6 pb-4 border-b border-border">
+                <DialogTitle class="text-base font-medium text-foreground">تعديل المستخدم</DialogTitle>
+                <DialogDescription class="text-sm text-muted-foreground mt-0.5">تعديل بيانات المستخدم والأدوار</DialogDescription>
             </DialogHeader>
 
             <Form
@@ -53,24 +53,24 @@ const emit = defineEmits<{ close: [] }>();
                 v-slot="{ errors, processing }"
             >
                 <div class="flex flex-col gap-1.5">
-                    <Label for="edit_name" class="text-sm font-medium text-[#374151]">
+                    <Label for="edit_name" class="text-sm font-medium text-foreground">
                         الاسم الكامل
-                        <span class="text-[#DC2626] mr-1">*</span>
+                        <span class="text-destructive mr-1">*</span>
                     </Label>
                     <Input
                         id="edit_name"
                         name="name"
                         :default-value="user.name"
                         required
-                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                        class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                     />
                     <InputError :message="errors.name" />
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                    <Label for="edit_email" class="text-sm font-medium text-[#374151]">
+                    <Label for="edit_email" class="text-sm font-medium text-foreground">
                         البريد الإلكتروني
-                        <span class="text-[#DC2626] mr-1">*</span>
+                        <span class="text-destructive mr-1">*</span>
                     </Label>
                     <Input
                         id="edit_email"
@@ -78,21 +78,21 @@ const emit = defineEmits<{ close: [] }>();
                         type="email"
                         :default-value="user.email"
                         required
-                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
+                        class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                     />
                     <InputError :message="errors.email" />
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                    <Label for="edit_role_name" class="text-sm font-medium text-[#374151]">
+                    <Label for="edit_role_name" class="text-sm font-medium text-foreground">
                         الدور
-                        <span class="text-[#DC2626] mr-1">*</span>
+                        <span class="text-destructive mr-1">*</span>
                     </Label>
                     <select
                         id="edit_role_name"
                         name="role_name"
                         required
-                        class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#6B7280] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors appearance-none cursor-pointer"
+                        class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors appearance-none cursor-pointer"
                     >
                         <option value="">اختر دوراً</option>
                         <option
@@ -116,7 +116,7 @@ const emit = defineEmits<{ close: [] }>();
                         :checked="user.is_active"
                         class="size-4 rounded border-border"
                     />
-                    <Label for="edit_is_active" class="text-sm font-normal text-[#374151]">
+                    <Label for="edit_is_active" class="text-sm font-normal text-foreground">
                         حساب نشط
                     </Label>
                 </div>
@@ -125,7 +125,7 @@ const emit = defineEmits<{ close: [] }>();
                     <Button
                         type="button"
                         variant="ghost"
-                        class="h-9 px-4 rounded-lg text-[#6B7280] text-sm font-medium hover:bg-[#F9FAFB] hover:text-[#374151] transition-colors duration-150 active:scale-[0.98]"
+                        class="h-9 px-4 rounded-lg text-muted-foreground text-sm font-medium hover:bg-muted hover:text-foreground transition-colors duration-150 active:scale-[0.98]"
                         :disabled="processing"
                         @click="emit('close')"
                     >
@@ -135,7 +135,7 @@ const emit = defineEmits<{ close: [] }>();
                         type="submit"
                         variant="default"
                         :disabled="processing"
-                        class="h-9 px-4 rounded-lg bg-[#0EA5E9] text-white text-sm font-medium hover:bg-[#0284C7] active:scale-[0.98] transition-all duration-150"
+                        class="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] transition-all duration-150"
                     >
                         حفظ التغييرات
                     </Button>

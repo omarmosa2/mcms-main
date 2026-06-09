@@ -21,15 +21,15 @@ const showAvatar = computed(
 </script>
 
 <template>
-    <Avatar class="h-9 w-9 overflow-hidden rounded-full border border-white/80 shadow-[0_8px_18px_-14px_rgb(14_165_233_/_0.8)]">
+    <Avatar class="h-9 w-9 overflow-hidden rounded-full border border-white/20 shadow-[0_8px_18px_-14px_rgb(14_165_233_/_0.4)] dark:shadow-[0_8px_18px_-14px_rgb(56_189_248_/_0.2)]">
         <AvatarImage v-if="showAvatar && user && user.avatar" :src="user.avatar" :alt="user.name" />
-        <AvatarFallback class="rounded-full bg-[#D7F1FE] text-[#075985] dark:text-white">
+        <AvatarFallback class="rounded-full bg-primary/15 text-primary-foreground">
             {{ user ? getInitials(user.name) : '?' }}
         </AvatarFallback>
     </Avatar>
 
     <div class="grid flex-1 text-start text-sm leading-tight">
-        <span class="truncate font-bold text-[#0F172A]">{{ user?.name ?? 'Guest' }}</span>
+        <span class="truncate font-bold text-foreground">{{ user?.name ?? 'Guest' }}</span>
         <span v-if="showEmail && user" class="truncate text-xs text-muted-foreground">{{
             user.email
         }}</span>

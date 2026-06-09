@@ -179,16 +179,16 @@ const handleClose = () => {
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div class="flex flex-col gap-2">
-                            <Label for="edit_date_of_birth" class="text-[13px] font-medium text-[#374151]">تاريخ الميلاد</Label>
+                            <Label for="edit_date_of_birth" class="text-[13px] font-medium text-foreground">تاريخ الميلاد</Label>
                             <Input id="edit_date_of_birth" v-model="formData.date_of_birth" type="date" class="h-10" />
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <Label for="edit_gender" class="text-[13px] font-medium text-[#374151]">الجنس</Label>
+                            <Label for="edit_gender" class="text-[13px] font-medium text-foreground">الجنس</Label>
                             <select
                                 id="edit_gender"
                                 v-model="formData.gender"
-                                class="h-10 w-full rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-2 text-sm focus:border-[#0EA5E9] focus:outline-none focus:ring-1 focus:ring-[#0EA5E9]/15"
+                                class="h-10 w-full rounded-xl border border-input bg-secondary/50 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/15"
                             >
                                 <option value="">اختر</option>
                                 <option value="male">ذكر</option>
@@ -198,17 +198,17 @@ const handleClose = () => {
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <Label for="edit_national_id" class="text-[13px] font-medium text-[#374151]">رقم الهوية</Label>
+                        <Label for="edit_national_id" class="text-[13px] font-medium text-foreground">رقم الهوية</Label>
                         <Input id="edit_national_id" v-model="formData.national_id" class="h-10" />
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <Label for="edit_notes" class="text-[13px] font-medium text-[#374151]">ملاحظات</Label>
+                        <Label for="edit_notes" class="text-[13px] font-medium text-foreground">ملاحظات</Label>
                         <textarea
                             id="edit_notes"
                             v-model="formData.notes"
                             rows="3"
-                            class="w-full rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-2 text-sm focus:border-[#0EA5E9] focus:outline-none focus:ring-1 focus:ring-[#0EA5E9]/15"
+                            class="w-full rounded-xl border border-input bg-secondary/50 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/15"
                         />
                     </div>
                 </div>

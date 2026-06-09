@@ -110,59 +110,59 @@ const handleCompleteFile = () => {
 </script>
 
 <template>
-    <section class="mb-6 rounded-[1.45rem] border border-dashed border-[#BFE3F5] bg-white/95 p-5 shadow-card-float">
-        <div v-if="lastCreatedPatientId" class="mb-4 flex items-center gap-2 rounded-2xl border border-[#BFE3F5] bg-[#EAF7FE] px-4 py-3">
-            <span class="text-xs font-bold text-[#075985]">تم إضافة: {{ lastCreatedPatientName }}</span>
-            <Button type="button" variant="ghost" size="sm" class="h-8 rounded-xl px-3 text-xs text-[#0EA5E9] hover:bg-[#D6F0FC]" @click="handleCompleteFile">
+    <section class="mb-6 rounded-[1.45rem] border border-dashed border-primary/20 bg-card/95 p-5 shadow-card-float">
+        <div v-if="lastCreatedPatientId" class="mb-4 flex items-center gap-2 rounded-2xl border border-primary/20 bg-accent px-4 py-3">
+            <span class="text-xs font-bold text-accent-foreground">تم إضافة: {{ lastCreatedPatientName }}</span>
+            <Button type="button" variant="ghost" size="sm" class="h-8 rounded-xl px-3 text-xs text-primary hover:bg-accent" @click="handleCompleteFile">
                 إكمال الملف
             </Button>
         </div>
 
         <div class="mb-4 flex items-start gap-2">
-            <h3 class="text-sm font-bold text-[#075985]">إضافة سريعة</h3>
-            <p class="text-xs text-[#9CA3AF]">الحقول الأساسية فقط</p>
+            <h3 class="text-sm font-bold text-accent-foreground">إضافة سريعة</h3>
+            <p class="text-xs text-muted-foreground">الحقول الأساسية فقط</p>
         </div>
 
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             <div class="flex flex-col gap-1 flex-1">
-                <Label for="quick_first_name" class="text-xs font-medium text-[#374151]">الاسم الأول *</Label>
+                <Label for="quick_first_name" class="text-xs font-medium text-foreground">الاسم الأول *</Label>
                 <Input
                     id="quick_first_name"
                     v-model="quickAddFirstName"
                     placeholder="محمد"
-                    class="h-10 rounded-xl border-[#DDE9F3] bg-[#FBFDFF] text-sm focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10"
+                    class="h-10 rounded-xl border-input bg-secondary/50 text-sm focus:border-primary focus:ring-2 focus:ring-primary/10"
                     @keydown="handleQuickAddKeyDown"
                 />
-                <p v-if="quickAddErrors.first_name" class="text-xs text-[#DC2626] mt-0.5">{{ quickAddErrors.first_name[0] }}</p>
+                <p v-if="quickAddErrors.first_name" class="text-xs text-destructive mt-0.5">{{ quickAddErrors.first_name[0] }}</p>
             </div>
             <div class="flex flex-col gap-1 flex-1">
-                <Label for="quick_last_name" class="text-xs font-medium text-[#374151]">اسم العائلة *</Label>
+                <Label for="quick_last_name" class="text-xs font-medium text-foreground">اسم العائلة *</Label>
                 <Input
                     id="quick_last_name"
                     v-model="quickAddLastName"
                     placeholder="أحمد"
-                    class="h-10 rounded-xl border-[#DDE9F3] bg-[#FBFDFF] text-sm focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10"
+                    class="h-10 rounded-xl border-input bg-secondary/50 text-sm focus:border-primary focus:ring-2 focus:ring-primary/10"
                     @keydown="handleQuickAddKeyDown"
                 />
-                <p v-if="quickAddErrors.last_name" class="text-xs text-[#DC2626] mt-0.5">{{ quickAddErrors.last_name[0] }}</p>
+                <p v-if="quickAddErrors.last_name" class="text-xs text-destructive mt-0.5">{{ quickAddErrors.last_name[0] }}</p>
             </div>
             <div class="flex flex-col gap-1 flex-1">
-                <Label for="quick_phone" class="text-xs font-medium text-[#374151]">الهاتف</Label>
+                <Label for="quick_phone" class="text-xs font-medium text-foreground">الهاتف</Label>
                 <Input
                     id="quick_phone"
                     v-model="quickAddPhone"
                     placeholder="0599123456"
-                    class="h-10 rounded-xl border-[#DDE9F3] bg-[#FBFDFF] text-sm focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10"
+                    class="h-10 rounded-xl border-input bg-secondary/50 text-sm focus:border-primary focus:ring-2 focus:ring-primary/10"
                     @keydown="handleQuickAddKeyDown"
                 />
-                <p v-if="quickAddErrors.phone" class="text-xs text-[#DC2626] mt-0.5">{{ quickAddErrors.phone[0] }}</p>
+                <p v-if="quickAddErrors.phone" class="text-xs text-destructive mt-0.5">{{ quickAddErrors.phone[0] }}</p>
             </div>
             <div class="flex flex-col gap-1 flex-1">
-                <Label for="quick_gender" class="text-xs font-medium text-[#374151]">الجنس</Label>
+                <Label for="quick_gender" class="text-xs font-medium text-foreground">الجنس</Label>
                 <select
                     id="quick_gender"
                     v-model="quickAddGender"
-                    class="h-10 cursor-pointer appearance-none rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 text-sm text-[#6B7280] transition-colors focus:border-[#0EA5E9] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/10"
+                    class="h-10 cursor-pointer appearance-none rounded-xl border border-input bg-secondary/50 px-3 text-sm text-muted-foreground transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                     @keydown="handleQuickAddKeyDown"
                 >
                     <option value="">اختر</option>
@@ -171,27 +171,27 @@ const handleCompleteFile = () => {
                 </select>
             </div>
             <div class="flex flex-col gap-1 flex-1">
-                <Label for="quick_dob" class="text-xs font-medium text-[#374151]">تاريخ الميلاد</Label>
+                <Label for="quick_dob" class="text-xs font-medium text-foreground">تاريخ الميلاد</Label>
                 <Input
                     id="quick_dob"
                     v-model="quickAddDateOfBirth"
                     type="date"
-                    class="h-10 rounded-xl border-[#DDE9F3] bg-[#FBFDFF] text-sm focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10"
+                    class="h-10 rounded-xl border-input bg-secondary/50 text-sm focus:border-primary focus:ring-2 focus:ring-primary/10"
                     @keydown="handleQuickAddKeyDown"
                 />
             </div>
         </div>
 
         <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
-            <span class="text-xs text-[#9CA3AF] mr-auto">اضغط Enter للحفظ وإضافة آخر</span>
-            <Button type="button" variant="ghost" size="sm" class="h-9 rounded-xl px-3 text-xs text-[#6B7280] hover:bg-[#EAF7FE] hover:text-[#075985]" @click="resetQuickAdd">
+            <span class="text-xs text-muted-foreground mr-auto">اضغط Enter للحفظ وإضافة آخر</span>
+            <Button type="button" variant="ghost" size="sm" class="h-9 rounded-xl px-3 text-xs text-muted-foreground hover:bg-accent hover:text-accent-foreground" @click="resetQuickAdd">
                 مسح
             </Button>
             <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                class="h-9 rounded-xl border border-[#DDE9F3] bg-white px-4 text-xs text-[#6B7280] transition-all duration-150 hover:bg-[#F7FBFE] hover:text-[#1A1A1A]"
+                class="h-9 rounded-xl border border-input bg-card px-4 text-xs text-muted-foreground transition-all duration-150 hover:bg-secondary hover:text-foreground"
                 :disabled="quickAddProcessing || !quickAddFirstName || !quickAddLastName"
                 @click="handleQuickAdd(false)"
             >
@@ -200,7 +200,7 @@ const handleCompleteFile = () => {
             <Button
                 type="button"
                 size="sm"
-                class="h-9 rounded-xl bg-[#0EA5E9] px-4 text-xs text-white transition-all duration-150 hover:bg-[#0284C7] active:scale-[0.98] disabled:opacity-40"
+                class="h-9 rounded-xl bg-primary px-4 text-xs text-primary-foreground transition-all duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:opacity-40"
                 :disabled="quickAddProcessing || !quickAddFirstName || !quickAddLastName"
                 @click="handleQuickAdd(true)"
             >

@@ -135,18 +135,18 @@ const goTo = (url: string | null): void => {
     <div class="mx-auto w-full max-w-[1680px] space-y-7 p-4 md:p-6" dir="rtl">
         <section class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div class="space-y-2 text-right">
-                <div class="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+                <div class="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
                     <Stethoscope class="size-4" />
                     إدارة الأطباء
                 </div>
-                <h1 class="text-4xl font-extrabold text-slate-900">صفحة الأطباء</h1>
-                <p class="text-lg text-slate-500">إدارة بيانات الأطباء وحساباتهم ودوامهم ونظام الأجر.</p>
+                <h1 class="text-4xl font-extrabold text-foreground">صفحة الأطباء</h1>
+                <p class="text-lg text-muted-foreground">إدارة بيانات الأطباء وحساباتهم ودوامهم ونظام الأجر.</p>
             </div>
 
             <Button
                 v-if="can('doctor_profile.create')"
                 type="button"
-                class="h-12 rounded-lg bg-sky-500 px-6 text-base font-bold text-white shadow-lg shadow-sky-200 hover:bg-sky-600"
+                class="h-12 rounded-lg bg-primary px-6 text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
                 @click="openCreate"
             >
                 <Plus class="size-5" />
@@ -154,10 +154,10 @@ const goTo = (url: string | null): void => {
             </Button>
         </section>
 
-        <section class="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+        <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
             <div class="grid gap-4 md:grid-cols-[1fr_220px_220px]">
                 <div class="relative">
-                    <Search class="absolute right-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                    <Search class="absolute right-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         v-model="search"
                         class="h-12 rounded-lg pr-12"
@@ -165,14 +165,14 @@ const goTo = (url: string | null): void => {
                     />
                 </div>
 
-                <select v-model="status" class="h-12 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm">
+                <select v-model="status" class="h-12 rounded-lg border border-input bg-muted px-4 text-sm">
                     <option value="all">كل الحالات</option>
                     <option value="active">نشط</option>
                     <option value="on_leave">في إجازة</option>
                     <option value="inactive">غير نشط</option>
                 </select>
 
-                <select v-model="departmentId" class="h-12 rounded-lg border border-slate-200 bg-slate-50 px-4 text-sm">
+                <select v-model="departmentId" class="h-12 rounded-lg border border-input bg-muted px-4 text-sm">
                     <option value="all">كل العيادات</option>
                     <option
                         v-for="department in departments"
@@ -192,13 +192,13 @@ const goTo = (url: string | null): void => {
             @delete="deleteProfile($event)"
         />
 
-        <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+        <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
             <p>{{ totalLabel }}</p>
             <div class="flex items-center gap-2">
                 <Button type="button" variant="outline" class="rounded-lg" :disabled="doctor_profiles.links.prev === null" @click="goTo(doctor_profiles.links.prev)">
                     السابق
                 </Button>
-                <span class="font-semibold text-slate-900">
+                <span class="font-semibold text-foreground">
                     صفحة {{ doctor_profiles.meta.current_page }} من {{ doctor_profiles.meta.last_page }}
                 </span>
                 <Button type="button" variant="outline" class="rounded-lg" :disabled="doctor_profiles.links.next === null" @click="goTo(doctor_profiles.links.next)">

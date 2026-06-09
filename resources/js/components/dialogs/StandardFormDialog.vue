@@ -138,7 +138,7 @@ const handleClose = () => {
                                 v-else-if="field.type === 'select'"
                                 :id="field.name"
                                 v-model="formData[field.name]"
-                                class="h-10 w-full rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-2 text-sm focus:border-[#0EA5E9] focus:outline-none focus:ring-1 focus:ring-[#0EA5E9]/15"
+                                class="h-10 w-full rounded-xl border border-input bg-secondary/50 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/15"
                                 :class="{ 'border-[#DC2626]': errors[field.name] }"
                             >
                                 <option value="" disabled>اختر</option>

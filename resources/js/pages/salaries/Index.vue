@@ -111,14 +111,14 @@ const formatMoney = (value: number): string => new Intl.NumberFormat('ar-SY', { 
 const labelFor = (value: string | null): string => (value !== null ? labels[value] ?? value : '-');
 const statusClass = (value: string): string => {
     if (value === 'paid') {
-        return 'bg-emerald-50 text-emerald-700';
+        return 'bg-success/10 text-success';
     }
 
     if (value === 'partially_paid') {
-        return 'bg-amber-50 text-amber-700';
+        return 'bg-warning/10 text-warning';
     }
 
-    return 'bg-slate-100 text-slate-600';
+    return 'bg-muted text-muted-foreground';
 };
 
 const filteredTabs = computed(() => ({
@@ -213,61 +213,61 @@ const doctorCompensationDisplay = (row: DoctorDueRow): string => {
     <div class="mx-auto w-full max-w-[1680px] space-y-6 p-4 md:p-6" dir="rtl">
         <section class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div class="space-y-2 text-right">
-                <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                <div class="inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
                     <Banknote class="size-4" />
                     الرواتب
                 </div>
-                <h1 class="text-3xl font-extrabold text-slate-950">إدارة الرواتب والمستحقات الشهرية</h1>
-                <p class="max-w-3xl text-sm text-slate-500">تسديد رواتب الموظفين ومستحقات الأطباء بشكل شهري مستقل مع تتبع الدفعات.</p>
+                <h1 class="text-3xl font-extrabold text-foreground">إدارة الرواتب والمستحقات الشهرية</h1>
+                <p class="max-w-3xl text-sm text-muted-foreground">تسديد رواتب الموظفين ومستحقات الأطباء بشكل شهري مستقل مع تتبع الدفعات.</p>
             </div>
         </section>
 
         <section class="grid gap-3 md:grid-cols-3 xl:grid-cols-3">
-            <div class="rounded-lg border bg-white p-4 space-y-2">
-                <p class="text-sm font-bold text-slate-700">رواتب الموظفين</p>
+            <div class="rounded-lg border bg-card p-4 space-y-2">
+                <p class="text-sm font-bold text-foreground">رواتب الموظفين</p>
                 <div class="grid grid-cols-3 gap-2 text-center">
-                    <div><p class="text-[10px] text-slate-400">المستحقة</p><p class="text-sm font-bold">{{ formatMoney(summaries.employee_due) }}</p></div>
-                    <div><p class="text-[10px] text-slate-400">المدفوعة</p><p class="text-sm font-bold text-emerald-700">{{ formatMoney(summaries.employee_paid) }}</p></div>
-                    <div><p class="text-[10px] text-slate-400">المتبقية</p><p class="text-sm font-bold text-amber-700">{{ formatMoney(summaries.employee_remaining) }}</p></div>
+                    <div><p class="text-[10px] text-muted-foreground">المستحقة</p><p class="text-sm font-bold text-foreground">{{ formatMoney(summaries.employee_due) }}</p></div>
+                    <div><p class="text-[10px] text-muted-foreground">المدفوعة</p><p class="text-sm font-bold text-success">{{ formatMoney(summaries.employee_paid) }}</p></div>
+                    <div><p class="text-[10px] text-muted-foreground">المتبقية</p><p class="text-sm font-bold text-warning">{{ formatMoney(summaries.employee_remaining) }}</p></div>
                 </div>
             </div>
-            <div class="rounded-lg border bg-white p-4 space-y-2">
-                <p class="text-sm font-bold text-slate-700">مستحقات الأطباء</p>
+            <div class="rounded-lg border bg-card p-4 space-y-2">
+                <p class="text-sm font-bold text-foreground">مستحقات الأطباء</p>
                 <div class="grid grid-cols-3 gap-2 text-center">
-                    <div><p class="text-[10px] text-slate-400">المستحقة</p><p class="text-sm font-bold">{{ formatMoney(summaries.doctor_due) }}</p></div>
-                    <div><p class="text-[10px] text-slate-400">المدفوعة</p><p class="text-sm font-bold text-emerald-700">{{ formatMoney(summaries.doctor_paid) }}</p></div>
-                    <div><p class="text-[10px] text-slate-400">المتبقية</p><p class="text-sm font-bold text-amber-700">{{ formatMoney(summaries.doctor_remaining) }}</p></div>
+                    <div><p class="text-[10px] text-muted-foreground">المستحقة</p><p class="text-sm font-bold text-foreground">{{ formatMoney(summaries.doctor_due) }}</p></div>
+                    <div><p class="text-[10px] text-muted-foreground">المدفوعة</p><p class="text-sm font-bold text-success">{{ formatMoney(summaries.doctor_paid) }}</p></div>
+                    <div><p class="text-[10px] text-muted-foreground">المتبقية</p><p class="text-sm font-bold text-warning">{{ formatMoney(summaries.doctor_remaining) }}</p></div>
                 </div>
             </div>
-            <div class="rounded-lg border bg-white p-4 space-y-2">
-                <p class="text-sm font-bold text-slate-700">الإجمالي</p>
+            <div class="rounded-lg border bg-card p-4 space-y-2">
+                <p class="text-sm font-bold text-foreground">الإجمالي</p>
                 <div class="grid grid-cols-3 gap-2 text-center">
-                    <div><p class="text-[10px] text-slate-400">المستحقة</p><p class="text-sm font-bold">{{ formatMoney(summaries.total_due) }}</p></div>
-                    <div><p class="text-[10px] text-slate-400">المدفوعة</p><p class="text-sm font-bold text-emerald-700">{{ formatMoney(summaries.total_paid) }}</p></div>
-                    <div><p class="text-[10px] text-slate-400">المتبقية</p><p class="text-sm font-bold text-amber-700">{{ formatMoney(summaries.total_remaining) }}</p></div>
+                    <div><p class="text-[10px] text-muted-foreground">المستحقة</p><p class="text-sm font-bold text-foreground">{{ formatMoney(summaries.total_due) }}</p></div>
+                    <div><p class="text-[10px] text-muted-foreground">المدفوعة</p><p class="text-sm font-bold text-success">{{ formatMoney(summaries.total_paid) }}</p></div>
+                    <div><p class="text-[10px] text-muted-foreground">المتبقية</p><p class="text-sm font-bold text-warning">{{ formatMoney(summaries.total_remaining) }}</p></div>
                 </div>
             </div>
         </section>
 
-        <section class="rounded-lg border bg-white p-4">
+        <section class="rounded-lg border bg-card p-4">
             <div class="grid gap-3 md:grid-cols-4">
                 <div class="grid gap-1"><Label>الشهر المالي</Label><Input v-model="month" type="month" class="h-10" /></div>
-                <div class="grid gap-1"><Label>نوع الشخص</Label><select v-model="personType" class="h-10 rounded-md border px-3 text-sm"><option value="">الكل</option><option value="employee">موظف</option><option value="doctor">طبيب</option></select></div>
-                <div class="grid gap-1"><Label>الحالة</Label><select v-model="status" class="h-10 rounded-md border px-3 text-sm"><option value="">كل الحالات</option><option value="unpaid">غير مدفوع</option><option value="partially_paid">مدفوع جزئياً</option><option value="paid">مدفوع بالكامل</option></select></div>
-                <div class="grid gap-1"><Label>القسم / العيادة</Label><select v-model="departmentId" class="h-10 rounded-md border px-3 text-sm"><option value="">الكل</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></div>
+                <div class="grid gap-1"><Label>نوع الشخص</Label><select v-model="personType" class="h-10 rounded-md border border-input bg-muted px-3 text-sm"><option value="">الكل</option><option value="employee">موظف</option><option value="doctor">طبيب</option></select></div>
+                <div class="grid gap-1"><Label>الحالة</Label><select v-model="status" class="h-10 rounded-md border border-input bg-muted px-3 text-sm"><option value="">كل الحالات</option><option value="unpaid">غير مدفوع</option><option value="partially_paid">مدفوع جزئياً</option><option value="paid">مدفوع بالكامل</option></select></div>
+                <div class="grid gap-1"><Label>القسم / العيادة</Label><select v-model="departmentId" class="h-10 rounded-md border border-input bg-muted px-3 text-sm"><option value="">الكل</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></div>
             </div>
         </section>
 
         <section class="space-y-4">
-            <div class="inline-flex rounded-lg border bg-white p-1">
-                <button v-if="filteredTabs.employees" type="button" class="rounded-md px-4 py-2 text-sm font-bold" :class="activeTab === 'employees' ? 'bg-sky-600 text-white' : 'text-slate-600'" @click="activeTab = 'employees'">رواتب الموظفين</button>
-                <button v-if="filteredTabs.doctors" type="button" class="rounded-md px-4 py-2 text-sm font-bold" :class="activeTab === 'doctors' ? 'bg-sky-600 text-white' : 'text-slate-600'" @click="activeTab = 'doctors'">مستحقات الأطباء</button>
+            <div class="inline-flex rounded-lg border bg-card p-1">
+                <button v-if="filteredTabs.employees" type="button" class="rounded-md px-4 py-2 text-sm font-bold" :class="activeTab === 'employees' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'" @click="activeTab = 'employees'">رواتب الموظفين</button>
+                <button v-if="filteredTabs.doctors" type="button" class="rounded-md px-4 py-2 text-sm font-bold" :class="activeTab === 'doctors' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'" @click="activeTab = 'doctors'">مستحقات الأطباء</button>
             </div>
 
-            <div v-if="activeTab === 'employees'" class="overflow-hidden rounded-lg border bg-white">
+            <div v-if="activeTab === 'employees'" class="overflow-hidden rounded-lg border bg-card">
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[1020px] text-right text-sm">
-                        <thead class="bg-slate-50 text-xs text-slate-500">
+                        <thead class="bg-muted text-xs text-muted-foreground">
                             <tr>
                                 <th class="px-4 py-3">اسم الموظف</th>
                                 <th class="px-4 py-3">نوع الموظف</th>
@@ -282,30 +282,30 @@ const doctorCompensationDisplay = (row: DoctorDueRow): string => {
                         </thead>
                         <tbody>
                             <tr v-for="row in employee_salaries" :key="row.id" class="border-t">
-                                <td class="px-4 py-3 font-semibold">{{ row.name }}</td>
-                                <td class="px-4 py-3">{{ labelFor(row.employee_type) }}</td>
-                                <td class="px-4 py-3">{{ row.job_title }}</td>
-                                <td class="px-4 py-3 font-mono">{{ formatMoney(row.base_salary) }}</td>
-                                <td class="px-4 py-3 font-mono">{{ formatMoney(row.due_amount) }}</td>
-                                <td class="px-4 py-3 font-mono text-emerald-700">{{ formatMoney(row.paid_amount) }}</td>
-                                <td class="px-4 py-3 font-mono text-amber-700">{{ formatMoney(row.remaining_amount) }}</td>
+                                <td class="px-4 py-3 font-semibold text-foreground">{{ row.name }}</td>
+                                <td class="px-4 py-3 text-foreground">{{ labelFor(row.employee_type) }}</td>
+                                <td class="px-4 py-3 text-foreground">{{ row.job_title }}</td>
+                                <td class="px-4 py-3 font-mono text-foreground">{{ formatMoney(row.base_salary) }}</td>
+                                <td class="px-4 py-3 font-mono text-foreground">{{ formatMoney(row.due_amount) }}</td>
+                                <td class="px-4 py-3 font-mono text-success">{{ formatMoney(row.paid_amount) }}</td>
+                                <td class="px-4 py-3 font-mono text-warning">{{ formatMoney(row.remaining_amount) }}</td>
                                 <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="statusClass(row.status)">{{ labelFor(row.status) }}</span></td>
                                 <td class="px-4 py-3">
-                                    <Button v-if="can('salaries.pay') && row.remaining_amount > 0" size="sm" class="bg-emerald-600 text-white hover:bg-emerald-700" @click="openEmployeePayment(row)">
+                                    <Button v-if="can('salaries.pay') && row.remaining_amount > 0" size="sm" class="bg-success text-success-foreground hover:bg-success/90" @click="openEmployeePayment(row)">
                                         <HandCoins class="size-4" />تسديد راتب
                                     </Button>
                                 </td>
                             </tr>
-                            <tr v-if="employee_salaries.length === 0"><td colspan="9" class="px-4 py-10 text-center text-slate-500">لا توجد رواتب موظفين لهذا الشهر.</td></tr>
+                            <tr v-if="employee_salaries.length === 0"><td colspan="9" class="px-4 py-10 text-center text-muted-foreground">لا توجد رواتب موظفين لهذا الشهر.</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div v-if="activeTab === 'doctors'" class="overflow-hidden rounded-lg border bg-white">
+            <div v-if="activeTab === 'doctors'" class="overflow-hidden rounded-lg border bg-card">
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[1240px] text-right text-sm">
-                        <thead class="bg-slate-50 text-xs text-slate-500">
+                        <thead class="bg-muted text-xs text-muted-foreground">
                             <tr>
                                 <th class="px-4 py-3">اسم الطبيب</th>
                                 <th class="px-4 py-3">العيادة</th>
@@ -321,22 +321,22 @@ const doctorCompensationDisplay = (row: DoctorDueRow): string => {
                         </thead>
                         <tbody>
                             <tr v-for="row in doctor_dues" :key="row.id" class="border-t">
-                                <td class="px-4 py-3 font-semibold">{{ row.name }}</td>
-                                <td class="px-4 py-3">{{ row.department ?? '-' }}</td>
-                                <td class="px-4 py-3">{{ doctorCompensationDisplay(row) }}</td>
-                                <td class="px-4 py-3 font-mono">{{ formatMoney(row.visits_total_amount) }}</td>
-                                <td class="px-4 py-3 font-mono">{{ formatMoney(row.deductions_amount) }}</td>
-                                <td class="px-4 py-3 font-mono font-bold">{{ formatMoney(row.due_amount) }}</td>
-                                <td class="px-4 py-3 font-mono text-emerald-700">{{ formatMoney(row.paid_amount) }}</td>
-                                <td class="px-4 py-3 font-mono text-amber-700">{{ formatMoney(row.remaining_amount) }}</td>
+                                <td class="px-4 py-3 font-semibold text-foreground">{{ row.name }}</td>
+                                <td class="px-4 py-3 text-foreground">{{ row.department ?? '-' }}</td>
+                                <td class="px-4 py-3 text-foreground">{{ doctorCompensationDisplay(row) }}</td>
+                                <td class="px-4 py-3 font-mono text-foreground">{{ formatMoney(row.visits_total_amount) }}</td>
+                                <td class="px-4 py-3 font-mono text-foreground">{{ formatMoney(row.deductions_amount) }}</td>
+                                <td class="px-4 py-3 font-mono font-bold text-foreground">{{ formatMoney(row.due_amount) }}</td>
+                                <td class="px-4 py-3 font-mono text-success">{{ formatMoney(row.paid_amount) }}</td>
+                                <td class="px-4 py-3 font-mono text-warning">{{ formatMoney(row.remaining_amount) }}</td>
                                 <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="statusClass(row.status)">{{ labelFor(row.status) }}</span></td>
                                 <td class="px-4 py-3">
-                                    <Button v-if="can('salaries.pay') && row.remaining_amount > 0" size="sm" class="bg-emerald-600 text-white hover:bg-emerald-700" @click="openDoctorPayment(row)">
+                                    <Button v-if="can('salaries.pay') && row.remaining_amount > 0" size="sm" class="bg-success text-success-foreground hover:bg-success/90" @click="openDoctorPayment(row)">
                                         <CircleDollarSign class="size-4" />تسديد مستحقات
                                     </Button>
                                 </td>
                             </tr>
-                            <tr v-if="doctor_dues.length === 0"><td colspan="10" class="px-4 py-10 text-center text-slate-500">لا توجد مستحقات أطباء لهذا الشهر.</td></tr>
+                            <tr v-if="doctor_dues.length === 0"><td colspan="10" class="px-4 py-10 text-center text-muted-foreground">لا توجد مستحقات أطباء لهذا الشهر.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -344,12 +344,12 @@ const doctorCompensationDisplay = (row: DoctorDueRow): string => {
         </section>
 
         <Dialog :open="paymentDialogOpen" @update:open="paymentDialogOpen = $event">
-            <DialogContent class="max-w-2xl rounded-lg bg-white" dir="rtl">
-                <DialogHeader class="text-right"><DialogTitle>{{ paymentKind === 'employee' ? 'تسديد راتب موظف' : 'تسديد مستحقات طبيب' }}</DialogTitle></DialogHeader>
+            <DialogContent class="max-w-2xl rounded-lg bg-card" dir="rtl">
+                <DialogHeader class="text-right"><DialogTitle class="text-foreground">{{ paymentKind === 'employee' ? 'تسديد راتب موظف' : 'تسديد مستحقات طبيب' }}</DialogTitle></DialogHeader>
                 <div v-if="paymentTarget" class="space-y-4">
-                    <div class="rounded-lg border bg-slate-50 p-4 text-sm">
-                        <p class="font-bold">{{ paymentTarget.name }}</p>
-                        <p class="text-slate-500">
+                    <div class="rounded-lg border bg-muted p-4 text-sm">
+                        <p class="font-bold text-foreground">{{ paymentTarget.name }}</p>
+                        <p class="text-muted-foreground">
                             الشهر: {{ (paymentTarget as EmployeeSalaryRow).salary_month }} |
                             المستحق: {{ formatMoney(paymentKind === 'employee' ? (paymentTarget as EmployeeSalaryRow).due_amount : (paymentTarget as DoctorDueRow).due_amount) }} |
                             المتبقي: {{ formatMoney(paymentTarget.remaining_amount) }}
@@ -363,7 +363,7 @@ const doctorCompensationDisplay = (row: DoctorDueRow): string => {
                         </div>
                         <div class="grid gap-2">
                             <Label>طريقة الدفع</Label>
-                            <select v-model="paymentForm.payment_method" class="h-10 rounded-md border px-3">
+                            <select v-model="paymentForm.payment_method" class="h-10 rounded-md border border-input bg-muted px-3">
                                 <option value="cash">نقداً</option>
                                 <option value="bank_transfer">حوالة بنكية</option>
                                 <option value="card">بطاقة</option>
@@ -382,7 +382,7 @@ const doctorCompensationDisplay = (row: DoctorDueRow): string => {
                 </div>
                 <DialogFooter>
                     <Button type="button" variant="outline" @click="paymentDialogOpen = false">إلغاء</Button>
-                    <Button type="button" class="bg-emerald-600 text-white hover:bg-emerald-700" :disabled="paymentForm.processing" @click="submitPayment">
+                    <Button type="button" class="bg-success text-success-foreground hover:bg-success/90" :disabled="paymentForm.processing" @click="submitPayment">
                         <CalendarDays class="size-4" />حفظ الدفعة
                     </Button>
                 </DialogFooter>

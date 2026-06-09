@@ -35,68 +35,68 @@ const emit = defineEmits<{ close: [] }>();
 
 <template>
     <Dialog :open="user !== null" @update:open="(open) => !open && emit('close')">
-        <DialogContent class="max-w-[520px] bg-white rounded-xl">
-            <DialogHeader class="p-6 pb-4 border-b border-[#E5E7EB]">
-                <DialogTitle class="text-base font-medium text-[#1A1A1A]">تفاصيل المستخدم</DialogTitle>
-                <DialogDescription class="text-sm text-[#6B7280] mt-0.5">{{ user?.name }} - {{ user?.email }}</DialogDescription>
+        <DialogContent class="max-w-[520px] bg-card rounded-xl">
+            <DialogHeader class="p-6 pb-4 border-b border-border">
+                <DialogTitle class="text-base font-medium text-foreground">تفاصيل المستخدم</DialogTitle>
+                <DialogDescription class="text-sm text-muted-foreground mt-0.5">{{ user?.name }} - {{ user?.email }}</DialogDescription>
             </DialogHeader>
 
             <div v-if="user" class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                <div class="divide-y divide-[#E5E7EB] rounded-xl border border-[#E5E7EB] bg-white">
+                <div class="divide-y divide-border rounded-xl border border-border bg-card">
                     <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">الاسم الكامل</span>
-                        <span class="flex-1 text-sm font-medium text-[#1A1A1A]">{{ user.name }}</span>
+                        <span class="w-1/3 text-sm text-muted-foreground shrink-0">الاسم الكامل</span>
+                        <span class="flex-1 text-sm font-medium text-foreground">{{ user.name }}</span>
                     </div>
                     <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">البريد الإلكتروني</span>
-                        <span class="flex-1 text-sm text-[#6B7280]">{{ user.email }}</span>
+                        <span class="w-1/3 text-sm text-muted-foreground shrink-0">البريد الإلكتروني</span>
+                        <span class="flex-1 text-sm text-muted-foreground">{{ user.email }}</span>
                     </div>
                     <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">الحالة</span>
+                        <span class="w-1/3 text-sm text-muted-foreground shrink-0">الحالة</span>
                         <span class="flex-1">
                             <span
                                 class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold"
-                                :class="user.is_active ? 'bg-[#DBEAFE] text-[#1D4ED8]' : 'bg-[#F4F7FA] text-[#6B7280]'"
+                                :class="user.is_active ? 'bg-accent text-primary' : 'bg-muted text-muted-foreground'"
                             >
                                 {{ user.is_active ? 'نشط' : 'غير نشط' }}
                             </span>
                         </span>
                     </div>
                     <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">مدير النظام</span>
-                        <span class="flex-1 text-sm text-[#6B7280]">{{ user.is_super_admin ? 'نعم' : 'لا' }}</span>
+                        <span class="w-1/3 text-sm text-muted-foreground shrink-0">مدير النظام</span>
+                        <span class="flex-1 text-sm text-muted-foreground">{{ user.is_super_admin ? 'نعم' : 'لا' }}</span>
                     </div>
                     <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">المصادقة الثنائية</span>
-                        <span class="flex-1 text-sm text-[#6B7280]">{{ user.two_factor_enabled ? 'مفعّلة' : 'غير مفعّلة' }}</span>
+                        <span class="w-1/3 text-sm text-muted-foreground shrink-0">المصادقة الثنائية</span>
+                        <span class="flex-1 text-sm text-muted-foreground">{{ user.two_factor_enabled ? 'مفعّلة' : 'غير مفعّلة' }}</span>
                     </div>
                     <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">تاريخ الإنشاء</span>
-                        <span class="flex-1 text-sm text-[#6B7280]">{{ user.created_at ?? '-' }}</span>
+                        <span class="w-1/3 text-sm text-muted-foreground shrink-0">تاريخ الإنشاء</span>
+                        <span class="flex-1 text-sm text-muted-foreground">{{ user.created_at ?? '-' }}</span>
                     </div>
                     <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">الأدوار</span>
+                        <span class="w-1/3 text-sm text-muted-foreground shrink-0">الأدوار</span>
                         <span class="flex-1">
                             <div class="flex flex-wrap gap-1">
                                 <span
                                     v-for="roleName in user.role_names"
                                     :key="roleName"
-                                    class="inline-flex items-center rounded-full bg-[#F4F7FA] px-2.5 py-1 text-xs font-bold text-[#111827]"
+                                    class="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-xs font-bold text-foreground"
                                 >
                                     {{ roleName }}
                                 </span>
-                                <span v-if="user.role_names.length === 0" class="text-sm text-[#9CA3AF]">لا توجد أدوار</span>
+                                <span v-if="user.role_names.length === 0" class="text-sm text-muted-foreground/50">لا توجد أدوار</span>
                             </div>
                         </span>
                     </div>
                 </div>
             </div>
 
-            <DialogFooter class="flex items-center justify-between p-6 pt-4 border-t border-[#E5E7EB]">
+            <DialogFooter class="flex items-center justify-between p-6 pt-4 border-t border-border">
                 <Button
                     type="button"
                     variant="ghost"
-                    class="h-9 px-4 rounded-lg text-[#6B7280] text-sm font-medium hover:bg-[#F9FAFB] hover:text-[#374151] transition-colors duration-150 active:scale-[0.98]"
+                    class="h-9 px-4 rounded-lg text-muted-foreground text-sm font-medium hover:bg-muted hover:text-foreground transition-colors duration-150 active:scale-[0.98]"
                     @click="emit('close')"
                 >
                     إغلاق

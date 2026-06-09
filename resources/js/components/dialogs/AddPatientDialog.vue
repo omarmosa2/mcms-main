@@ -188,11 +188,11 @@ const handleClose = () => {
                         </div>
 
                         <div class="flex flex-col gap-2">
-                            <Label for="gender" class="text-[13px] font-medium text-[#374151]">الجنس</Label>
+                            <Label for="gender" class="text-[13px] font-medium text-foreground">الجنس</Label>
                             <select
                                 id="gender"
                                 v-model="formData.gender"
-                                class="h-10 w-full rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-2 text-sm focus:border-[#0EA5E9] focus:outline-none focus:ring-1 focus:ring-[#0EA5E9]/15"
+                                class="h-10 w-full rounded-xl border border-input bg-secondary/50 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/15"
                             >
                                 <option value="">اختر</option>
                                 <option value="male">ذكر</option>
@@ -202,7 +202,7 @@ const handleClose = () => {
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <Label for="national_id" class="text-[13px] font-medium text-[#374151]">رقم الهوية</Label>
+                        <Label for="national_id" class="text-[13px] font-medium text-foreground">رقم الهوية</Label>
                         <Input
                             id="national_id"
                             v-model="formData.national_id"
@@ -211,12 +211,12 @@ const handleClose = () => {
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <Label for="notes" class="text-[13px] font-medium text-[#374151]">ملاحظات</Label>
+                        <Label for="notes" class="text-[13px] font-medium text-foreground">ملاحظات</Label>
                         <textarea
                             id="notes"
                             v-model="formData.notes"
                             rows="3"
-                            class="w-full rounded-xl border border-[#DDE9F3] bg-[#FBFDFF] px-3 py-2 text-sm focus:border-[#0EA5E9] focus:outline-none focus:ring-1 focus:ring-[#0EA5E9]/15"
+                            class="w-full rounded-xl border border-input bg-secondary/50 px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/15"
                         />
                     </div>
                 </div>

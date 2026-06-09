@@ -86,7 +86,7 @@ defineOptions({
                 </div>
                 <div class="rounded-xl border border-border/50 bg-muted/20 p-3">
                     <p class="text-xs text-muted-foreground">حالة الاتصال</p>
-                    <p class="mt-1 text-sm font-semibold text-emerald-600">نشط</p>
+                    <p class="mt-1 text-sm font-semibold text-success">نشط</p>
                 </div>
             </div>
         </div>

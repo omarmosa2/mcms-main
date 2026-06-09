@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { Activity, CalendarDays, Search } from 'lucide-vue-next';
+import { Activity, CalendarDays, Moon, Search, Sun } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useAppearance } from '@/composables/useAppearance';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
+
+const { appearance, updateAppearance } = useAppearance();
 
 const props = withDefaults(
     defineProps<{
@@ -53,41 +56,41 @@ router.visit(first.href);
 </script>
 
 <template>
-    <header class="sticky top-0 z-30 border-b border-[#E5EEF7]/80 bg-[#F7FAFD]/90 px-4 py-3 backdrop-blur" dir="rtl">
+    <header class="sticky top-0 z-30 border-b border-border/80 bg-background/90 px-4 py-3 backdrop-blur" dir="rtl">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex min-w-0 items-center gap-3">
                 <SidebarTrigger
-                    class="size-9 rounded-xl border border-[#D9EAF6] bg-white/90 text-[#0F5F86] shadow-[0_1px_2px_rgb(15_42_71_/_0.06)] hover:bg-[#EAF7FE]"
+                    class="size-9 rounded-xl border border-border bg-card/90 text-foreground shadow-sm hover:bg-accent"
                 />
 
-                <div class="min-w-0 text-[#6C7F95]">
+                <div class="min-w-0 text-muted-foreground">
                     <Breadcrumbs
                         v-if="props.breadcrumbs.length > 0"
                         :breadcrumbs="props.breadcrumbs"
                     />
-                    <span v-else class="text-sm font-bold text-[#075985]">لوحة التحكم</span>
+                    <span v-else class="text-sm font-bold text-primary">لوحة التحكم</span>
                 </div>
             </div>
 
             <div class="flex w-full flex-col-reverse gap-2 sm:flex-row lg:w-auto lg:items-center">
                 <div class="relative w-full sm:w-72 xl:w-80">
-                    <Search class="pointer-events-none absolute top-1/2 inset-inline-start-3.5 z-10 size-4 -translate-y-1/2 text-[#6C7F95]" />
+                    <Search class="pointer-events-none absolute top-1/2 inset-inline-start-3.5 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         v-model="jumpQuery"
-                        class="h-10 rounded-2xl border-[#DDE9F3] bg-white/90 ps-10 text-sm shadow-[0_1px_2px_rgb(15_42_71_/_0.05)] focus-visible:border-[#0EA5E9] focus-visible:ring-[#0EA5E9]/15"
+                        class="h-10 rounded-2xl border-input bg-card/90 ps-10 text-sm shadow-sm focus-visible:border-primary focus-visible:ring-primary/15"
                         placeholder="بحث سريع..."
                         @keydown.enter.prevent="jumpToFirstMatch"
                     />
 
                     <div
                         v-if="jumpResults.length > 0"
-                        class="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-[#DDE9F3] bg-white shadow-dropdown"
+                        class="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-dropdown"
                     >
                         <Link
                             v-for="item in jumpResults"
                             :key="item.title"
                             :href="item.href"
-                            class="block px-4 py-2.5 text-sm font-medium text-[#1A2B3F] transition hover:bg-[#EAF7FE] hover:text-[#075985]"
+                            class="block px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
                             @click="jumpQuery = ''"
                         >
                             {{ item.title }}
@@ -96,15 +99,23 @@ router.visit(first.href);
                 </div>
 
                 <div class="flex items-center gap-2">
-                    <div class="hidden items-center gap-2 rounded-full border border-[#D9EAF6] bg-white/80 px-3 py-2 text-xs font-semibold text-[#5F7890] sm:flex">
-                        <CalendarDays class="size-4 text-[#0EA5E9]" />
+                    <div class="hidden items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-2 text-xs font-semibold text-muted-foreground sm:flex">
+                        <CalendarDays class="size-4 text-primary" />
                         <span>{{ todayLabel }}</span>
                     </div>
 
-                    <div class="hidden items-center gap-2 rounded-full border border-[#BFE3F5] bg-[#EAF7FE] px-3 py-2 text-xs font-bold text-[#075985] lg:flex">
-                        <Activity class="size-3.5 text-[#0EA5E9]" />
+                    <div class="hidden items-center gap-2 rounded-full border border-primary/20 bg-accent px-3 py-2 text-xs font-bold text-accent-foreground lg:flex">
+                        <Activity class="size-3.5 text-primary" />
                         <span>مباشر</span>
                     </div>
+
+                    <button
+                        class="size-9 rounded-xl border border-border bg-card/90 text-muted-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+                        @click="updateAppearance(appearance === 'dark' ? 'light' : 'dark')"
+                    >
+                        <Sun v-if="appearance === 'dark'" class="mx-auto size-4" />
+                        <Moon v-else class="mx-auto size-4" />
+                    </button>
                 </div>
             </div>
         </div>

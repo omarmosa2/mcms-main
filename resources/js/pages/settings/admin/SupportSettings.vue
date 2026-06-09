@@ -31,8 +31,8 @@ defineOptions({
 
         <div class="space-y-5">
             <div class="glass-panel-soft flex items-center gap-4 p-5">
-                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-[#E8F4FD]">
-                    <Users class="h-6 w-6 text-[#0EA5E9]" />
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
+                    <Users class="h-6 w-6 text-primary" />
                 </div>
                 <div class="flex-1">
                     <p class="text-sm font-semibold text-foreground">اسم الفريق</p>
@@ -42,8 +42,8 @@ defineOptions({
             </div>
 
             <div class="glass-panel-soft flex items-center gap-4 p-5">
-                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-[#E8F4FD]">
-                    <Phone class="h-6 w-6 text-[#0EA5E9]" />
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
+                    <Phone class="h-6 w-6 text-primary" />
                 </div>
                 <div class="flex-1">
                     <p class="text-sm font-semibold text-foreground">رقم التواصل</p>
@@ -62,8 +62,8 @@ defineOptions({
             </div>
 
             <div class="glass-panel-soft flex items-center gap-4 p-5">
-                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-[#E8F4FD]">
-                    <Mail class="h-6 w-6 text-[#0EA5E9]" />
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15">
+                    <Mail class="h-6 w-6 text-primary" />
                 </div>
                 <div class="flex-1">
                     <p class="text-sm font-semibold text-foreground">البريد الإلكتروني</p>
@@ -71,16 +71,16 @@ defineOptions({
                     <p class="text-sm text-muted-foreground">للاستفسارات والدعم الفني</p>
                 </div>
                 <a href="mailto:AgorraCode@gmail.com">
-                    <button class="rounded-full bg-[#2563EB] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1D4ED8]">
+                    <button class="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90">
                         إرسال إيميل
                     </button>
                 </a>
             </div>
 
-            <div class="rounded-2xl border border-[#0EA5E9]/20 bg-[#F0F9FF] p-5 dark:bg-[#0EA5E9]/5">
+            <div class="rounded-2xl border border-primary/20 bg-accent p-5">
                 <div class="flex items-start gap-4">
-                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#E8F4FD]">
-                        <Info class="h-5 w-5 text-[#0EA5E9]" />
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                        <Info class="h-5 w-5 text-primary" />
                     </div>
                     <div>
                         <p class="text-sm font-semibold text-foreground">معلومات إضافية</p>

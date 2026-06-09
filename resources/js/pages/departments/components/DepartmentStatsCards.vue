@@ -11,36 +11,36 @@ defineProps<{
 
 <template>
     <section class="grid gap-4 md:grid-cols-4">
-        <article class="rounded-[1.2rem] border border-[#E2ECF6] bg-white/95 p-5 shadow-card">
+        <article class="rounded-[1.2rem] border border-border bg-card/95 p-5 shadow-card">
             <div class="flex items-center justify-between">
-                <p class="text-sm font-bold text-[#6C7F95]">إجمالي العيادات</p>
-                <Building2 class="size-5 text-[#0EA5E9]" />
+                <p class="text-sm font-bold text-muted-foreground">إجمالي العيادات</p>
+                <Building2 class="size-5 text-primary" />
             </div>
-            <p class="mt-4 text-3xl font-black text-[#111827]">{{ totalDepartments }}</p>
+            <p class="mt-4 text-3xl font-black text-foreground">{{ totalDepartments }}</p>
         </article>
 
-        <article class="rounded-[1.2rem] border border-[#E2ECF6] bg-white/95 p-5 shadow-card">
+        <article class="rounded-[1.2rem] border border-border bg-card/95 p-5 shadow-card">
             <div class="flex items-center justify-between">
-                <p class="text-sm font-bold text-[#6C7F95]">عيادات نشطة</p>
-                <CheckCircle2 class="size-5 text-[#1D4ED8]" />
+                <p class="text-sm font-bold text-muted-foreground">عيادات نشطة</p>
+                <CheckCircle2 class="size-5 text-primary" />
             </div>
-            <p class="mt-4 text-3xl font-black text-[#1D4ED8]">{{ activeCount }}</p>
+            <p class="mt-4 text-3xl font-black text-primary">{{ activeCount }}</p>
         </article>
 
-        <article class="rounded-[1.2rem] border border-[#E2ECF6] bg-white/95 p-5 shadow-card">
+        <article class="rounded-[1.2rem] border border-border bg-card/95 p-5 shadow-card">
             <div class="flex items-center justify-between">
-                <p class="text-sm font-bold text-[#6C7F95]">غير نشطة</p>
-                <XCircle class="size-5 text-[#EF4444]" />
+                <p class="text-sm font-bold text-muted-foreground">غير نشطة</p>
+                <XCircle class="size-5 text-destructive" />
             </div>
-            <p class="mt-4 text-3xl font-black text-[#EF4444]">{{ inactiveCount }}</p>
+            <p class="mt-4 text-3xl font-black text-destructive">{{ inactiveCount }}</p>
         </article>
 
-        <article class="rounded-[1.2rem] border border-[#E2ECF6] bg-white/95 p-5 shadow-card">
+        <article class="rounded-[1.2rem] border border-border bg-card/95 p-5 shadow-card">
             <div class="flex items-center justify-between">
-                <p class="text-sm font-bold text-[#6C7F95]">الأطباء</p>
-                <Users class="size-5 text-[#0EA5E9]" />
+                <p class="text-sm font-bold text-muted-foreground">الأطباء</p>
+                <Users class="size-5 text-primary" />
             </div>
-            <p class="mt-4 text-3xl font-black text-[#0284C7]">{{ totalDoctors }}</p>
+            <p class="mt-4 text-3xl font-black text-primary">{{ totalDoctors }}</p>
         </article>
     </section>
 </template>

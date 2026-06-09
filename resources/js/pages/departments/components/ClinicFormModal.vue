@@ -129,8 +129,8 @@ const submit = () => {
             @interact-outside="close"
         >
             <DialogHeader class="text-right">
-                <DialogTitle class="text-2xl font-bold text-[#111827]">{{ title }}</DialogTitle>
-                <DialogDescription class="text-[#6C7F95]">
+                <DialogTitle class="text-2xl font-bold text-foreground">{{ title }}</DialogTitle>
+                <DialogDescription class="text-muted-foreground">
                     أدخل بيانات العيادة وحدد أيام وساعات الدوام المتاحة للحجز.
                 </DialogDescription>
             </DialogHeader>
@@ -165,21 +165,21 @@ const submit = () => {
                             id="clinic_description"
                             v-model="form.description"
                             rows="3"
-                            class="w-full rounded-2xl border border-[#DDE9F3] bg-white px-4 py-3 text-sm text-[#111827] shadow-[0_10px_22px_-24px_rgb(15_42_71_/_0.4)] focus:border-[#0EA5E9] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/10"
+                            class="w-full rounded-2xl border border-input bg-secondary/50 px-4 py-3 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                             placeholder="وصف مختصر عن العيادة"
                         ></textarea>
                         <InputError :message="form.errors.description" />
                     </div>
 
-                    <label class="flex items-center justify-between rounded-2xl border border-[#E2ECF6] bg-[#F8FCFF] p-4 md:col-span-2">
+                    <label class="flex items-center justify-between rounded-2xl border border-border bg-muted p-4 md:col-span-2">
                         <span>
-                            <span class="block text-sm font-bold text-[#111827]">حالة العيادة</span>
-                            <span class="block text-xs font-medium text-[#6C7F95]">العيادات غير النشطة لا تظهر كخيار عمل فعال.</span>
+                            <span class="block text-sm font-bold text-foreground">حالة العيادة</span>
+                            <span class="block text-xs font-medium text-muted-foreground">العيادات غير النشطة لا تظهر كخيار عمل فعال.</span>
                         </span>
                         <input
                             v-model="form.is_active"
                             type="checkbox"
-                            class="size-5 rounded border-[#CAD8E7] text-[#0EA5E9] focus:ring-[#0EA5E9]/20"
+                            class="size-5 rounded border-input text-primary focus:ring-primary/20"
                         />
                     </label>
                 </section>
@@ -189,7 +189,7 @@ const submit = () => {
                 <DialogFooter class="gap-2 sm:justify-start">
                     <Button
                         type="submit"
-                        class="h-11 rounded-2xl bg-[#0EA5E9] px-6 font-bold text-white hover:bg-[#0284C7]"
+                        class="h-11 rounded-2xl bg-primary px-6 font-bold text-primary-foreground hover:bg-primary/90"
                         :disabled="form.processing"
                     >
                         {{ form.processing ? 'جار الحفظ...' : 'حفظ العيادة' }}

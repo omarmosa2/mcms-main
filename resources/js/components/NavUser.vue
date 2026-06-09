@@ -29,7 +29,7 @@ const { isMobile, state } = useSidebar();
                     <SidebarMenuButton
                         v-if="user"
                         size="lg"
-                        class="h-12 rounded-2xl border border-[#CFE8F7]/80 bg-white/65 text-[#1A2B3F] transition-all duration-200 data-[state=open]:bg-[#BDE9FB] data-[state=open]:text-[#075985]"
+                        class="h-12 rounded-2xl border border-sidebar-border/80 bg-sidebar-accent/30 text-sidebar-foreground transition-all duration-200 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                         data-test="sidebar-menu-button"
                     >
                         <UserInfo :user="user" />
@@ -38,14 +38,14 @@ const { isMobile, state } = useSidebar();
                     <SidebarMenuButton
                         v-else
                         size="lg"
-                        class="h-12 rounded-2xl border border-[#CFE8F7]/80 bg-white/65 text-[#1A2B3F]"
+                        class="h-12 rounded-2xl border border-sidebar-border/80 bg-sidebar-accent/30 text-sidebar-foreground"
                     >
                         <UserInfo />
                         <ChevronsUpDown class="ms-auto size-3.5 opacity-50" />
                     </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                    class="w-(--reka-dropdown-menu-trigger-width) min-w-56 rounded-2xl border-[#DDE9F3] bg-white p-1.5 shadow-dropdown"
+                    class="w-(--reka-dropdown-menu-trigger-width) min-w-56 rounded-2xl border border-border bg-card p-1.5 shadow-dropdown"
                     :side="
                         isMobile
                             ? 'bottom'

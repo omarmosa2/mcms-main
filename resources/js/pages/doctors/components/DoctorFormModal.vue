@@ -254,16 +254,16 @@ const submit = (): void => {
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent
-            class="max-h-[92vh] max-w-4xl overflow-hidden rounded-xl bg-white p-0"
+            class="max-h-[92vh] max-w-4xl overflow-hidden rounded-xl bg-card p-0"
             dir="rtl"
         >
             <DialogHeader
-                class="border-b border-slate-100 px-6 py-5 text-right"
+                class="border-b border-border px-6 py-5 text-right"
             >
-                <DialogTitle class="text-2xl font-bold text-slate-900">
+                <DialogTitle class="text-2xl font-bold text-foreground">
                     {{ isEditing ? 'تعديل بيانات الطبيب' : 'إضافة طبيب جديد' }}
                 </DialogTitle>
-                <DialogDescription class="text-slate-500">
+                <DialogDescription class="text-muted-foreground">
                     إدارة بيانات الطبيب والحساب والدوام ونظام الأجر من نموذج
                     واحد.
                 </DialogDescription>
@@ -274,7 +274,7 @@ const submit = (): void => {
                 @submit.prevent="submit"
             >
                 <section class="space-y-3">
-                    <h3 class="text-sm font-bold text-slate-900">
+                    <h3 class="text-sm font-bold text-foreground">
                         البيانات الأساسية
                     </h3>
                     <div class="grid gap-4 md:grid-cols-2">
@@ -293,7 +293,7 @@ const submit = (): void => {
                             <select
                                 id="doctor_gender"
                                 v-model="form.gender"
-                                class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm"
+                                class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
                             >
                                 <option value="male">ذكر</option>
                                 <option value="female">أنثى</option>
@@ -330,7 +330,7 @@ const submit = (): void => {
                             <select
                                 id="doctor_department"
                                 v-model="form.department_id"
-                                class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm"
+                                class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
                             >
                                 <option value="">يرجى اختيار العيادة</option>
                                 <option
@@ -350,7 +350,7 @@ const submit = (): void => {
                                 id="doctor_clinic"
                                 :model-value="clinic.name ?? '-'"
                                 readonly
-                                class="h-11 rounded-lg bg-slate-100"
+                                class="h-11 rounded-lg bg-muted"
                             />
                         </div>
                     </div>
@@ -366,11 +366,11 @@ const submit = (): void => {
                 />
 
                 <section
-                    class="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+                    class="space-y-3 rounded-lg border border-border bg-card p-4"
                 >
                     <div class="flex items-center gap-2">
-                        <KeyRound class="size-4 text-sky-500" />
-                        <h3 class="text-sm font-bold text-slate-900">
+                        <KeyRound class="size-4 text-primary" />
+                        <h3 class="text-sm font-bold text-foreground">
                             بيانات الحساب
                         </h3>
                     </div>
@@ -403,30 +403,30 @@ const submit = (): void => {
 
                         <label
                             v-if="isEditing"
-                            class="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:col-span-2"
+                            class="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3 py-2 md:col-span-2"
                         >
                             <span>
                                 <span
-                                    class="block text-sm font-semibold text-slate-900"
+                                    class="block text-sm font-semibold text-foreground"
                                     >حالة الحساب</span
                                 >
-                                <span class="block text-xs text-slate-500">{{
+                                <span class="block text-xs text-muted-foreground">{{
                                     form.is_active ? 'نشط' : 'غير نشط'
                                 }}</span>
                             </span>
                             <input
                                 v-model="form.is_active"
                                 type="checkbox"
-                                class="size-5 accent-sky-500"
+                                class="size-5 accent-primary"
                             />
                         </label>
                     </div>
                 </section>
 
                 <section
-                    class="space-y-3 rounded-lg border border-slate-200 bg-white p-4"
+                    class="space-y-3 rounded-lg border border-border bg-card p-4"
                 >
-                    <h3 class="text-sm font-bold text-slate-900">
+                    <h3 class="text-sm font-bold text-foreground">
                         نظام أجر الطبيب
                     </h3>
                     <div class="grid gap-4 md:grid-cols-2">
@@ -437,7 +437,7 @@ const submit = (): void => {
                             <select
                                 id="doctor_compensation_type"
                                 v-model="form.compensation_type"
-                                class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm"
+                                class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
                             >
                                 <option value="percentage">نسبة مئوية</option>
                                 <option value="weekly">أجر أسبوعي</option>
@@ -468,7 +468,7 @@ const submit = (): void => {
                 </section>
             </form>
 
-            <DialogFooter class="border-t border-slate-100 px-6 py-4">
+            <DialogFooter class="border-t border-border px-6 py-4">
                 <Button
                     type="button"
                     variant="outline"
@@ -480,7 +480,7 @@ const submit = (): void => {
                 </Button>
                 <Button
                     type="button"
-                    class="bg-sky-500 text-white hover:bg-sky-600"
+                    class="bg-primary text-primary-foreground hover:bg-primary/90"
                     :disabled="form.processing"
                     @click="submit"
                 >

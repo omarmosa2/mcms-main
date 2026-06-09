@@ -59,11 +59,11 @@ const compensationValueLabel = (profile: DoctorProfile): string => {
 </script>
 
 <template>
-    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div class="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
         <div class="overflow-x-auto">
             <table class="min-w-full table-fixed text-right text-sm" dir="rtl">
                 <thead>
-                    <tr class="border-b border-slate-200 bg-slate-50 text-slate-900">
+                    <tr class="border-b border-border bg-muted text-foreground">
                         <th class="w-[19%] px-5 py-4 font-bold">الاسم</th>
                         <th class="w-[9%] px-4 py-4 font-bold">الجنس</th>
                         <th class="w-[15%] px-4 py-4 font-bold">الاختصاص</th>
@@ -78,45 +78,45 @@ const compensationValueLabel = (profile: DoctorProfile): string => {
                     <tr
                         v-for="profile in doctorProfiles.data"
                         :key="profile.id"
-                        class="border-b border-slate-100 text-slate-900 last:border-b-0 hover:bg-sky-50/35"
+                        class="border-b border-border text-foreground last:border-b-0 hover:bg-muted/50"
                     >
                         <td class="px-5 py-4">
                             <div class="flex items-center gap-3">
-                                <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-sky-500 text-sm font-bold text-white">
+                                <span class="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
                                     {{ (profile.user?.name ?? 'ط').slice(0, 1) }}
                                 </span>
                                 <div class="min-w-0">
                                     <p class="truncate font-semibold">{{ profile.user?.name ?? '-' }}</p>
-                                    <p class="truncate text-xs text-slate-500">{{ profile.user?.email ?? '-' }}</p>
+                                    <p class="truncate text-xs text-muted-foreground">{{ profile.user?.email ?? '-' }}</p>
                                 </div>
                             </div>
                         </td>
                         <td class="px-4 py-4">
-                            <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800">
+                            <span class="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground">
                                 {{ genderLabel(profile) }}
                             </span>
                         </td>
                         <td class="px-4 py-4">{{ profile.specialty }}</td>
-                        <td class="px-4 py-4 text-slate-700">{{ profile.department?.name ?? '-' }}</td>
+                        <td class="px-4 py-4 text-foreground">{{ profile.department?.name ?? '-' }}</td>
                         <td class="px-4 py-4">{{ compensationTypeLabel(profile) }}</td>
                         <td class="px-4 py-4">{{ compensationValueLabel(profile) }}</td>
                         <td class="px-4 py-4">
                             <span
                                 class="inline-flex rounded-full px-3 py-1 text-xs font-bold"
-                                :class="profile.user?.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'"
+                                :class="profile.user?.is_active ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'"
                             >
                                 {{ profile.user?.is_active ? 'نشط' : 'غير نشط' }}
                             </span>
                         </td>
                         <td class="px-4 py-4">
                             <div class="flex items-center justify-end gap-1.5">
-                                <Button type="button" variant="ghost" size="icon" class="size-8 text-sky-500" title="عرض" @click="emit('view', profile)">
+                                <Button type="button" variant="ghost" size="icon" class="size-8 text-primary" title="عرض" @click="emit('view', profile)">
                                     <Eye class="size-4" />
                                 </Button>
-                                <Button v-if="can('doctor_profile.update')" type="button" variant="ghost" size="icon" class="size-8 text-blue-600" title="تعديل" @click="emit('edit', profile)">
+                                <Button v-if="can('doctor_profile.update')" type="button" variant="ghost" size="icon" class="size-8 text-primary" title="تعديل" @click="emit('edit', profile)">
                                     <Edit class="size-4" />
                                 </Button>
-                                <Button v-if="can('doctor_profile.delete')" type="button" variant="ghost" size="icon" class="size-8 text-red-500" title="حذف" @click="emit('delete', profile)">
+                                <Button v-if="can('doctor_profile.delete')" type="button" variant="ghost" size="icon" class="size-8 text-destructive" title="حذف" @click="emit('delete', profile)">
                                     <Trash2 class="size-4" />
                                 </Button>
                             </div>
@@ -124,7 +124,7 @@ const compensationValueLabel = (profile: DoctorProfile): string => {
                     </tr>
 
                     <tr v-if="doctorProfiles.data.length === 0">
-                        <td colspan="8" class="px-5 py-12 text-center text-slate-500">
+                        <td colspan="8" class="px-5 py-12 text-center text-muted-foreground">
                             لا يوجد أطباء مسجلون حالياً.
                         </td>
                     </tr>

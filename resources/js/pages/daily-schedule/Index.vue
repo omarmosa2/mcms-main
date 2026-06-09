@@ -273,45 +273,45 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                     :key="clinic.id"
                     class="overflow-hidden rounded-2xl border-2 border-border bg-card shadow-md"
                 >
-                    <div class="bg-primary p-5">
+                    <div class="bg-primary p-4">
                         <div class="flex items-center gap-3">
-                            <div class="flex size-12 items-center justify-center rounded-xl bg-white/30">
-                                <Stethoscope class="size-6 text-white" />
+                            <div class="flex size-11 items-center justify-center rounded-xl bg-white/30">
+                                <Stethoscope class="size-5 text-white" />
                             </div>
-                            <div class="flex-1">
-                                <h3 class="text-xl font-bold text-white">{{ clinic.name }}</h3>
-                                <span v-if="clinic.clinic_type" class="text-sm text-white/90">{{ clinic.clinic_type }}</span>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-lg font-bold text-white truncate">{{ clinic.name }}</h3>
+                                <span v-if="clinic.clinic_type" class="text-xs text-white/90">{{ clinic.clinic_type }}</span>
                             </div>
                         </div>
-                        <div v-if="clinic.clinic_start_time" class="mt-3 flex items-center gap-2 rounded-lg bg-primary/80 px-4 py-2 text-base text-white">
-                            <Clock class="size-4" />
-                            <span class="tabular-nums font-medium">{{ formatTimeShort(clinic.clinic_start_time) }} - {{ formatTimeShort(clinic.clinic_end_time!) }}</span>
+                        <div v-if="clinic.clinic_start_time" class="mt-2.5 flex items-center gap-2 rounded-lg bg-primary/80 px-3 py-1.5 text-sm text-white">
+                            <Clock class="size-3.5" />
+                            <span class="tabular-nums font-medium whitespace-nowrap">{{ formatTimeShort(clinic.clinic_start_time) }} - {{ formatTimeShort(clinic.clinic_end_time!) }}</span>
                         </div>
                     </div>
 
-                    <div class="p-4">
-                        <div class="space-y-3">
+                    <div class="p-3">
+                        <div class="space-y-2">
                             <div
                                 v-for="doctor in clinic.doctors"
                                 :key="doctor.doctor_id"
-                                class="flex items-center justify-between rounded-xl border border-border bg-muted p-3"
+                                class="flex items-center justify-between rounded-xl border border-border bg-muted p-2.5"
                             >
-                                <div class="flex items-center gap-3">
-                                    <div class="flex size-10 items-center justify-center rounded-full bg-primary">
-                                        <span class="text-base font-bold text-primary-foreground">{{ doctor.doctor_name?.charAt(0) }}</span>
+                                <div class="flex items-center gap-3 min-w-0 flex-1">
+                                    <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary">
+                                        <span class="text-sm font-bold text-primary-foreground">{{ doctor.doctor_name?.charAt(0) }}</span>
                                     </div>
-                                    <div>
-                                        <p class="text-base font-bold text-foreground">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-bold text-foreground truncate">
                                             {{ doctor.doctor_name }}
                                         </p>
-                                        <p v-if="doctor.specialty" class="text-sm text-muted-foreground">
+                                        <p v-if="doctor.specialty" class="text-xs text-muted-foreground truncate">
                                             {{ doctor.specialty }}
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-bold text-accent-foreground">
-                                    <Clock class="size-3.5" />
-                                    <span class="tabular-nums">
+                                <div class="flex items-center gap-1.5 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-bold text-accent-foreground shrink-0">
+                                    <Clock class="size-3" />
+                                    <span class="tabular-nums whitespace-nowrap">
                                         {{ formatTimeShort(doctor.start_time) }} - {{ formatTimeShort(doctor.end_time) }}
                                     </span>
                                 </div>

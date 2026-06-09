@@ -147,20 +147,21 @@ const calculateAge = (dob: string | null) => {
                 >
                     تعديل
                 </Link>
-                <Link
-                    :href="`/doctor/prescriptions/${prescription.id}/print`"
-                    target="_blank"
+                <button
+                    type="button"
                     class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    @click="window.open(`/doctor/prescriptions/${prescription.id}/print`, '_blank')"
                 >
                     <Printer class="size-4" />
                     طباعة
-                </Link>
-                <Link
-                    :href="`/doctor/prescriptions/${prescription.id}/pdf`"
+                </button>
+                <button
+                    type="button"
                     class="inline-flex items-center gap-1.5 rounded-xl bg-[#0EA5E9] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#0284C7]"
+                    @click="window.location.href = `/doctor/prescriptions/${prescription.id}/pdf`"
                 >
                     تصدير PDF
-                </Link>
+                </button>
             </div>
         </section>
 

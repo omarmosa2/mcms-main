@@ -341,7 +341,12 @@ class DoctorPrescriptionController extends Controller
 
         $pdf->setPaper('A4', 'portrait');
 
-        return $pdf->download("وصفة-{$prescription->prescription_number}.pdf");
+        $filename = 'prescription-' . $prescription->prescription_number . '.pdf';
+
+        return $pdf->stream($filename, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     private function generatePrescriptionNumber(int $clinicId): string

@@ -222,20 +222,21 @@ const goToPage = (page: number) => {
                         >
                             تعديل
                         </Link>
-                        <Link
-                            :href="`/doctor/prescriptions/${rx.id}/print`"
-                            target="_blank"
+                        <button
+                            type="button"
                             class="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                            @click="window.open(`/doctor/prescriptions/${rx.id}/print`, '_blank')"
                         >
                             <Printer class="size-3.5" />
                             طباعة
-                        </Link>
-                        <Link
-                            :href="`/doctor/prescriptions/${rx.id}/pdf`"
+                        </button>
+                        <button
+                            type="button"
                             class="inline-flex items-center gap-1 rounded-lg bg-teal-50 px-3 py-1.5 text-xs font-medium text-teal-700 transition hover:bg-teal-100"
+                            @click="window.location.href = `/doctor/prescriptions/${rx.id}/pdf`"
                         >
                             PDF
-                        </Link>
+                        </button>
                     </div>
                 </div>
 

@@ -9,7 +9,7 @@ import {
     RefreshCw,
     Stethoscope,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,11 +79,9 @@ const filterDepartment = ref<string>(props.filters.department_id?.toString() ?? 
 const filterDoctor = ref<string>(props.filters.doctor_id?.toString() ?? '');
 
 function applyFilters() {
-    const params: Record<string, string> = {};
-
-    if (filterDate.value && filterDate.value !== props.scheduleData.date) {
-        params.date = filterDate.value;
-    }
+    const params: Record<string, string> = {
+        date: filterDate.value || props.scheduleData.date,
+    };
 
     if (filterDepartment.value) {
         params.department_id = filterDepartment.value;
@@ -100,14 +98,35 @@ function applyFilters() {
 }
 
 function resetFilters() {
-    filterDate.value = '';
+    filterDate.value = new Date().toISOString().split('T')[0];
     filterDepartment.value = '';
     filterDoctor.value = '';
-    router.get('/daily-schedule', {}, {
+    router.get('/daily-schedule', { date: filterDate.value }, {
         preserveState: true,
         preserveScroll: true,
     });
 }
+
+watch(filterDate, (newDate) => {
+    if (newDate && newDate !== props.scheduleData.date) {
+        const params: Record<string, string> = {
+            date: newDate,
+        };
+
+        if (filterDepartment.value) {
+            params.department_id = filterDepartment.value;
+        }
+
+        if (filterDoctor.value) {
+            params.doctor_id = filterDoctor.value;
+        }
+
+        router.get('/daily-schedule', params, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    }
+});
 
 function refreshData() {
     router.reload({ only: ['scheduleData'] });

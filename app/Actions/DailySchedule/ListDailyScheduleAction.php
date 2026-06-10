@@ -72,18 +72,18 @@ class ListDailyScheduleAction extends BaseAction
                 ->where('is_active', true)
                 ->first();
 
-            $doctors = $this->getDoctorsForDepartment($clinicId, $department->id, $dayOfWeek, $doctorFilter);
-
-            if ($doctors->isEmpty()) {
+            if ($clinicHours === null) {
                 continue;
             }
+
+            $doctors = $this->getDoctorsForDepartment($clinicId, $department->id, $dayOfWeek, $doctorFilter);
 
             $clinicData[$department->id] = [
                 'id' => $department->id,
                 'name' => $department->name,
                 'clinic_type' => $department->clinic_type,
-                'clinic_start_time' => $clinicHours?->start_time,
-                'clinic_end_time' => $clinicHours?->end_time,
+                'clinic_start_time' => $clinicHours->start_time,
+                'clinic_end_time' => $clinicHours->end_time,
                 'doctors' => $doctors->map(fn (DoctorSchedule $schedule) => [
                     'doctor_id' => $schedule->doctor_id,
                     'doctor_name' => $schedule->doctor?->name,

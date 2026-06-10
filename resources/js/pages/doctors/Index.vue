@@ -60,9 +60,9 @@ const reload = (): void => {
     router.get(
         index.url(),
         {
-            search: search.value || undefined,
-            status: status.value === 'all' ? undefined : status.value,
-            department_id: departmentId.value === 'all' ? undefined : departmentId.value,
+            search: search.value,
+            status: status.value === 'all' ? '' : status.value,
+            department_id: departmentId.value === 'all' ? '' : departmentId.value,
             per_page: props.filters.per_page,
         },
         {

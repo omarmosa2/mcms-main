@@ -124,7 +124,6 @@ const roleLabels: Record<string, string> = {
 
 const activeRoleLabel = computed<string>(() => roleLabels[primaryRole.value] ?? roleLabels.staff);
 
-const selectedUserIds = ref<number[]>([]);
 const viewingUser = ref<User | null>(null);
 const editingUser = ref<User | null>(null);
 const isCreateSheetOpen = ref(false);
@@ -215,26 +214,6 @@ const reloadUsers = (
         return;
     }
     executeReload();
-};
-
-const selectableUserIds = computed<number[]>(() =>
-    visibleUsers.value.map((user) => user.id),
-);
-
-const areAllUsersSelected = computed<boolean>(() => {
-    if (selectableUserIds.value.length === 0) return false;
-    return selectableUserIds.value.every((id) =>
-        selectedUserIds.value.includes(id),
-    );
-});
-
-const toggleAllUsersSelection = (event: Event) => {
-    const target = event.target as HTMLInputElement;
-    selectedUserIds.value = target.checked ? [...selectableUserIds.value] : [];
-};
-
-const clearSelectedUsers = () => {
-    selectedUserIds.value = [];
 };
 
 const roleOptions = computed(() =>
@@ -343,10 +322,6 @@ const resetLocalFilters = () => {
         sort_direction: 'asc',
     });
 };
-
-watch(selectableUserIds, (ids) => {
-    selectedUserIds.value = selectedUserIds.value.filter((id) => ids.includes(id));
-});
 </script>
 
 <template>
@@ -383,7 +358,6 @@ watch(selectableUserIds, (ids) => {
             v-model:active-filter="localIsActive"
             v-model:role-name="localRoleName"
             v-model:rows-per-page="localRowsPerPage"
-            v-model:selected-ids="selectedUserIds"
             :users="visibleUsers"
             :page="localPage"
             :total-pages="totalLocalPages"
@@ -392,7 +366,6 @@ watch(selectableUserIds, (ids) => {
             :total="users.meta.total"
             :sort-by="localSortBy"
             :sort-direction="localSortDirection"
-            :are-all-selected="areAllUsersSelected"
             :can-view="can('users.view')"
             :can-update="can('users.update')"
             :can-delete="can('users.delete')"
@@ -401,8 +374,6 @@ watch(selectableUserIds, (ids) => {
             @previous-page="goToPreviousPage"
             @next-page="goToNextPage"
             @reset-filters="resetLocalFilters"
-            @toggle-all-selection="toggleAllUsersSelection"
-            @clear-selection="clearSelectedUsers"
             @view="openViewUser"
             @edit="openEditUser"
             @delete="deleteUser"

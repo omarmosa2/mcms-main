@@ -66,9 +66,18 @@ class PatientController extends Controller
             return $patientsResource;
         }
 
+        $statsQuery = Patient::query()->forClinic($clinicId);
+
+        $stats = [
+            'total' => $statsQuery->count(),
+            'male' => (clone $statsQuery)->where('gender', 'male')->count(),
+            'female' => (clone $statsQuery)->where('gender', 'female')->count(),
+        ];
+
         return Inertia::render('patients/Index', [
             'patients' => $patientsResource->response()->getData(true),
             'filters' => $filters,
+            'stats' => $stats,
         ]);
     }
 

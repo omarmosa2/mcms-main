@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3';
 import {
     ChevronLeft,
     ChevronRight,
@@ -12,8 +11,6 @@ import {
     Trash2,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
-import UserController from '@/actions/App/Http/Controllers/Security/UserController';
-import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch, FilterSelect } from '@/components/ui/filter';
 
 type User = {
@@ -36,7 +33,6 @@ const search = defineModel<string>('search', { default: '' });
 const activeFilter = defineModel<ActiveFilter>('activeFilter', { default: 'all' });
 const roleName = defineModel<string | null>('roleName', { default: null });
 const rowsPerPage = defineModel<number>('rowsPerPage', { default: 15 });
-const selectedIds = defineModel<number[]>('selectedIds', { default: () => [] });
 
 const props = defineProps<{
     users: User[];
@@ -47,7 +43,6 @@ const props = defineProps<{
     total: number;
     sortBy: UserSortField;
     sortDirection: SortDirection;
-    areAllSelected: boolean;
     canView: boolean;
     canUpdate: boolean;
     canDelete: boolean;
@@ -59,8 +54,6 @@ const emit = defineEmits<{
     'previous-page': [];
     'next-page': [];
     'reset-filters': [];
-    'toggle-all-selection': [event: Event];
-    'clear-selection': [];
     'view': [user: User];
     'edit': [user: User];
     'delete': [userId: number];
@@ -122,14 +115,8 @@ const sortMark = (field: UserSortField): string => {
     return props.sortDirection === 'asc' ? '↑' : '↓';
 };
 
-const toggleUserSelection = (userId: number, checked: boolean) => {
-    if (checked) {
-        if (!selectedIds.value.includes(userId)) {
-            selectedIds.value = [...selectedIds.value, userId];
-        }
-    } else {
-        selectedIds.value = selectedIds.value.filter((id) => id !== userId);
-    }
+const serialNumber = (index: number): number => {
+    return props.visibleFrom + index;
 };
 </script>
 
@@ -139,7 +126,7 @@ const toggleUserSelection = (userId: number, checked: boolean) => {
             <div class="grid gap-4 lg:grid-cols-[1fr_14rem_14rem_9rem]">
                 <FilterSearch
                     v-model="search"
-                    placeholder="البحث باسم المستخدم أو البريد..."
+                    placeholder="البحث بالاسم أو البريد..."
                 />
 
                 <FilterSelect
@@ -173,63 +160,22 @@ const toggleUserSelection = (userId: number, checked: boolean) => {
             />
         </section>
 
-        <Form
-            v-if="canDelete && selectedIds.length > 0"
-            v-bind="UserController.bulkDestroy.form()"
-            class="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 shadow-card"
-            v-slot="{ processing }"
-        >
-            <input
-                v-for="userId in selectedIds"
-                :key="`selected-user-${userId}`"
-                type="hidden"
-                name="ids[]"
-                :value="userId"
-            />
-
-            <p class="flex-1 text-sm font-semibold text-destructive">
-                {{ selectedIds.length }} مستخدم محدد
-            </p>
-            <Button
-                type="submit"
-                variant="destructive"
-                size="sm"
-                class="h-9 rounded-xl px-4 text-xs"
-                :disabled="processing"
-            >
-                حذف
-            </Button>
-            <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                class="h-9 rounded-xl px-4 text-xs text-muted-foreground hover:bg-muted"
-                @click="emit('clear-selection')"
-            >
-                إلغاء
-            </Button>
-        </Form>
-
         <section class="overflow-hidden rounded-[1.35rem] border border-border bg-card/95 shadow-card-float">
             <div class="w-full overflow-hidden">
                 <table class="w-full table-fixed border-separate border-spacing-0 [&_td]:align-middle [&_th]:align-middle">
                     <colgroup>
                         <col class="w-[5%]" />
+                        <col class="w-[5%]" />
                         <col class="w-[25%]" />
                         <col class="w-[22%]" />
                         <col class="w-[18%]" />
                         <col class="w-[12%]" />
-                        <col class="w-[18%]" />
+                        <col class="w-[13%]" />
                     </colgroup>
                     <thead>
                         <tr class="h-16 bg-muted">
-                            <th v-if="canDelete" class="px-2 py-3 text-center text-sm font-bold text-foreground">
-                                <input
-                                    type="checkbox"
-                                    class="size-4 rounded border-border"
-                                    :checked="areAllSelected"
-                                    @change="emit('toggle-all-selection', $event)"
-                                />
+                            <th class="px-2 py-3 text-center text-sm font-bold text-foreground">
+                                #
                             </th>
                             <th
                                 class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-foreground transition-colors select-none hover:text-primary"
@@ -264,15 +210,10 @@ const toggleUserSelection = (userId: number, checked: boolean) => {
                         <tr
                             v-for="(user, index) in users"
                             :key="user.id"
-                            class="group h-20 border-b border-border transition-all duration-150 last:border-b-0 hover:bg-muted/50"
+                            class="group border-b border-border transition-all duration-150 last:border-b-0 hover:bg-muted/50"
                         >
-                            <td v-if="canDelete" class="px-2 py-4 text-center">
-                                <input
-                                    type="checkbox"
-                                    class="size-4 rounded border-border"
-                                    :checked="selectedIds.includes(user.id)"
-                                    @change="toggleUserSelection(user.id, ($event.target as HTMLInputElement).checked)"
-                                />
+                            <td class="px-2 py-4 text-center text-sm font-semibold text-muted-foreground">
+                                {{ serialNumber(index) }}
                             </td>
                             <td class="px-3 py-4 text-center">
                                 <div class="flex items-center justify-center gap-3">
@@ -346,7 +287,7 @@ const toggleUserSelection = (userId: number, checked: boolean) => {
                         </tr>
 
                         <tr v-if="users.length === 0">
-                            <td :colspan="canDelete ? 6 : 5" class="px-5">
+                            <td colspan="7" class="px-5">
                                 <div class="py-20 text-center">
                                     <h3 class="mb-2 text-base font-bold text-foreground">
                                         لا يوجد مستخدمين

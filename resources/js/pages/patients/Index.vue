@@ -13,6 +13,7 @@ import PatientCreateSheet from './components/PatientCreateSheet.vue';
 import PatientDeleteDialog from './components/PatientDeleteDialog.vue';
 import PatientEditDialog from './components/PatientEditDialog.vue';
 import PatientQuickAddForm from './components/PatientQuickAddForm.vue';
+import PatientStatsCards from './components/PatientStatsCards.vue';
 import PatientTable from './components/PatientTable.vue';
 import PatientViewDialog from './components/PatientViewDialog.vue';
 import type {
@@ -23,13 +24,18 @@ import type {
     SortDirection,
 } from './components/types';
 
-const { patients, filters } = defineProps<{
+const { patients, filters, stats } = defineProps<{
     patients: PaginatedResponse<Patient>;
     filters: {
         search: string | null;
         per_page: number;
         sort_by: PatientSortField | null;
         sort_direction: SortDirection | null;
+    };
+    stats: {
+        total: number;
+        male: number;
+        female: number;
     };
 }>();
 
@@ -408,6 +414,12 @@ onBeforeUnmount(() => {
                 </Button>
             </div>
         </div>
+
+        <PatientStatsCards
+            :total="stats.total"
+            :male="stats.male"
+            :female="stats.female"
+        />
 
         <PatientQuickAddForm
             v-if="can('patient.create') && isQuickAddOpen"

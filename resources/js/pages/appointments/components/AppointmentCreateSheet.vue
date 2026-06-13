@@ -51,6 +51,7 @@ const emit = defineEmits<{
 
 const selectedDepartmentId = ref('');
 const selectedDoctorId = ref('');
+const formResetKey = ref(0);
 
 const todayAvailableDepartmentIds = computed(
     () => new Set(props.todayAvailability.departments),
@@ -113,6 +114,17 @@ const handleDoctorChange = (value: unknown): void => {
     selectedDoctorId.value = doctorId === '__none__' ? '' : doctorId;
 };
 
+const resetFormState = (): void => {
+    selectedDepartmentId.value = '';
+    selectedDoctorId.value = '';
+    formResetKey.value += 1;
+};
+
+const handleSuccess = (): void => {
+    resetFormState();
+    emit('update:open', false);
+};
+
 const defaultScheduledFor = computed(() => {
     const now = new Date();
     now.setHours(now.getHours() + 1);
@@ -137,11 +149,13 @@ const defaultScheduledFor = computed(() => {
             </DialogHeader>
 
             <Form
+                :key="formResetKey"
                 id="appointment-create-form"
                 v-bind="AppointmentController.store.form()"
                 class="contents"
                 v-slot="{ errors, processing }"
-                @success="emit('update:open', false)"
+                reset-on-success
+                @success="handleSuccess"
             >
                 <DialogBody class="space-y-5">
                     <div class="grid gap-4 sm:grid-cols-2">

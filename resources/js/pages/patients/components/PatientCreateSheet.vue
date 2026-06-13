@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Form } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Dialog,
     DialogContent,
@@ -14,6 +12,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 defineProps<{
     open: boolean;
@@ -34,6 +34,7 @@ const addMedicalItem = (collection: string[]): void => {
 const removeMedicalItem = (collection: string[], index: number): void => {
     if (collection.length <= 1) {
         collection.splice(0, collection.length, '');
+
         return;
     }
 
@@ -63,22 +64,6 @@ const resetCreateMedicalLists = (): void => {
                 @success="resetCreateMedicalLists"
                 v-slot="{ errors, processing }"
             >
-                <div class="flex flex-col gap-1.5">
-                    <Label for="file_number" class="text-sm font-medium text-[#374151]">
-                        رقم الملف
-                        <span class="text-xs text-[#9CA3AF]">(يُولّد تلقائياً إذا ترك فارغاً)</span>
-                    </Label>
-                    <Input
-                        id="file_number"
-                        name="file_number"
-                        type="number"
-                        min="1"
-                        placeholder="1"
-                        class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                    />
-                    <InputError :message="errors.file_number" />
-                </div>
-
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1.5">
                         <Label for="first_name" class="text-sm font-medium text-foreground">

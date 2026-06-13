@@ -56,6 +56,7 @@ const {
     isOpen: isConfirmOpen,
     options: confirmOptions,
     confirm,
+    setLoading: setConfirmLoading,
     handleConfirm: handleConfirmDelete,
     handleCancel: handleConfirmCancel,
 } = useConfirm();
@@ -265,9 +266,11 @@ const handleDeletePatient = async (patient: Patient) => {
         router.delete(PatientController.destroy(patient.id), {
             onSuccess: () => {
                 toast.success('تم حذف المريض بنجاح');
+                handleConfirmCancel();
             },
             onError: () => {
                 toast.error('فشل حذف المريض');
+                setConfirmLoading(false);
             },
         });
     }

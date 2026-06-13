@@ -4,7 +4,6 @@ import {
     Building2,
     Clock,
     FileText,
-    Hash,
     Stethoscope,
     User,
 } from 'lucide-vue-next';
@@ -21,7 +20,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -159,27 +157,6 @@ const handleDoctorChange = (value: unknown): void => {
                     @success="emit('close')"
                 >
                     <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="grid gap-1.5">
-                            <Label
-                                for="edit_appointment_number"
-                                class="flex items-center gap-1.5 text-xs font-medium"
-                            >
-                                <Hash class="size-3.5 text-muted-foreground" />
-                                رقم الموعد
-                            </Label>
-                            <Input
-                                id="edit_appointment_number"
-                                name="appointment_number"
-                                :value="props.appointment.appointment_number"
-                                required
-                                :class="{
-                                    'border-destructive':
-                                        errors.appointment_number,
-                                }"
-                            />
-                            <InputError :message="errors.appointment_number" />
-                        </div>
-
                         <div class="grid gap-1.5">
                             <Label
                                 for="edit_appointment_duration"

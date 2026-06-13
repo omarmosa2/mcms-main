@@ -41,6 +41,7 @@ const emit = defineEmits<{
 
 const selectedDepartmentId = ref('');
 const selectedDoctorId = ref('');
+const formResetKey = ref(0);
 
 const todayAvailableDepartmentIds = computed(
     () => new Set(props.todayAvailability.departments),
@@ -101,6 +102,17 @@ const handleDoctorChange = (value: unknown) => {
     selectedDoctorId.value = strValue === '__none__' ? '' : strValue;
 };
 
+const resetFormState = (): void => {
+    selectedDepartmentId.value = '';
+    selectedDoctorId.value = '';
+    formResetKey.value += 1;
+};
+
+const handleSuccess = (): void => {
+    resetFormState();
+    emit('success');
+};
+
 const handleSubmit = (event: SubmitEvent) => {
     const form = event.target as HTMLFormElement;
     const doctorSelect = form.querySelector(
@@ -150,12 +162,13 @@ const handleSubmit = (event: SubmitEvent) => {
         </div>
 
         <Form
+            :key="formResetKey"
             v-bind="AppointmentController.store.form()"
             class="p-5"
             v-slot="{ errors, processing }"
             reset-on-success
             @submit="handleSubmit"
-            @success="emit('success')"
+            @success="handleSuccess"
             @error="emit('error')"
         >
             <div

@@ -22,6 +22,12 @@ type DoctorSchedule = {
     specialty: string | null;
     start_time: string;
     end_time: string;
+    available_periods: Array<{ start_time: string; end_time: string }>;
+    unavailable_periods: Array<{
+        start_time: string;
+        end_time: string;
+        reason: string | null;
+    }>;
 };
 
 type ClinicData = {
@@ -66,16 +72,30 @@ const page = usePage();
 const isExporting = ref(false);
 const exportRef = ref<HTMLElement | null>(null);
 
-const branding = computed(() => page.props.branding as { company_name: string | null; logo_path: string | null });
+const branding = computed(
+    () =>
+        page.props.branding as {
+            company_name: string | null;
+            logo_path: string | null;
+        },
+);
 const clinicName = computed(
-    () => props.scheduleData.branding.company_name || branding.value.company_name || 'المجمع الطبي',
+    () =>
+        props.scheduleData.branding.company_name ||
+        branding.value.company_name ||
+        'المجمع الطبي',
 );
 const logoPath = computed(
-    () => props.scheduleData.branding.logo_path || props.scheduleData.clinic_settings.logo_path || branding.value.logo_path,
+    () =>
+        props.scheduleData.branding.logo_path ||
+        props.scheduleData.clinic_settings.logo_path ||
+        branding.value.logo_path,
 );
 
 const filterDate = ref(props.filters.date);
-const filterDepartment = ref<string>(props.filters.department_id?.toString() ?? '');
+const filterDepartment = ref<string>(
+    props.filters.department_id?.toString() ?? '',
+);
 const filterDoctor = ref<string>(props.filters.doctor_id?.toString() ?? '');
 
 function applyFilters() {
@@ -101,10 +121,14 @@ function resetFilters() {
     filterDate.value = new Date().toISOString().split('T')[0];
     filterDepartment.value = '';
     filterDoctor.value = '';
-    router.get('/daily-schedule', { date: filterDate.value }, {
-        preserveState: true,
-        preserveScroll: true,
-    });
+    router.get(
+        '/daily-schedule',
+        { date: filterDate.value },
+        {
+            preserveState: true,
+            preserveScroll: true,
+        },
+    );
 }
 
 watch(filterDate, (newDate) => {
@@ -188,28 +212,36 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
     <Head title="العيادات المتوفرة اليوم" />
 
     <div class="space-y-6">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden">
+        <div
+            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden"
+        >
             <div>
                 <h1 class="page-title">
                     {{ clinicName }} - العيادات المتوفرة اليوم
                 </h1>
                 <p class="mt-1 text-sm text-muted-foreground">
-                    {{ scheduleData.day_name }} - {{ scheduleData.formatted_date }}
+                    {{ scheduleData.day_name }} -
+                    {{ scheduleData.formatted_date }}
                 </p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
                 <Button variant="neumorphic" size="sm" @click="refreshData">
-                    <RefreshCw class="size-4 ms-2" />
+                    <RefreshCw class="ms-2 size-4" />
                     تحديث
                 </Button>
-                <Button variant="neumorphic" size="sm" :disabled="isExporting" @click="exportAsPng">
-                    <Download v-if="!isExporting" class="size-4 ms-2" />
-                    <RefreshCw v-else class="size-4 ms-2 animate-spin" />
+                <Button
+                    variant="neumorphic"
+                    size="sm"
+                    :disabled="isExporting"
+                    @click="exportAsPng"
+                >
+                    <Download v-if="!isExporting" class="ms-2 size-4" />
+                    <RefreshCw v-else class="ms-2 size-4 animate-spin" />
                     {{ isExporting ? 'جاري التصدير...' : 'تصدير PNG' }}
                 </Button>
                 <Button variant="clay" size="sm" @click="openDisplayMode">
-                    <Monitor class="size-4 ms-2" />
+                    <Monitor class="ms-2 size-4" />
                     وضع الشاشة
                 </Button>
             </div>
@@ -226,14 +258,25 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                 <div class="flex flex-wrap items-end gap-4">
                     <div class="w-[180px]">
                         <Label>التاريخ</Label>
-                        <Input v-model="filterDate" type="date" class="mt-1 h-9" />
+                        <Input
+                            v-model="filterDate"
+                            type="date"
+                            class="mt-1 h-9"
+                        />
                     </div>
 
                     <div class="w-[200px]">
                         <Label>العيادة</Label>
-                        <select v-model="filterDepartment" class="pattern-field-clay mt-1 h-9 w-full px-3 py-1.5">
+                        <select
+                            v-model="filterDepartment"
+                            class="pattern-field-clay mt-1 h-9 w-full px-3 py-1.5"
+                        >
                             <option value="">جميع العيادات</option>
-                            <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+                            <option
+                                v-for="dept in departments"
+                                :key="dept.id"
+                                :value="dept.id"
+                            >
                                 {{ dept.name }}
                             </option>
                         </select>
@@ -241,9 +284,16 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
 
                     <div class="w-[200px]">
                         <Label>الطبيب</Label>
-                        <select v-model="filterDoctor" class="pattern-field-clay mt-1 h-9 w-full px-3 py-1.5">
+                        <select
+                            v-model="filterDoctor"
+                            class="pattern-field-clay mt-1 h-9 w-full px-3 py-1.5"
+                        >
                             <option value="">جميع الأطباء</option>
-                            <option v-for="doc in doctors" :key="doc.id" :value="doc.id">
+                            <option
+                                v-for="doc in doctors"
+                                :key="doc.id"
+                                :value="doc.id"
+                            >
                                 {{ doc.name }}
                             </option>
                         </select>
@@ -261,32 +311,61 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
             </CardContent>
         </Card>
 
-        <div ref="exportRef" class="bg-card p-8 rounded-2xl shadow-sm" dir="rtl">
-            <div class="flex items-center justify-between border-b-4 border-primary pb-6 mb-8">
+        <div
+            ref="exportRef"
+            class="rounded-2xl bg-card p-8 shadow-sm"
+            dir="rtl"
+        >
+            <div
+                class="mb-8 flex items-center justify-between border-b-4 border-primary pb-6"
+            >
                 <div class="flex items-center gap-5">
-                    <div v-if="logoPath" class="flex size-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-border bg-card">
-                        <img :src="`/storage/${logoPath}`" :alt="clinicName" class="size-full object-contain" />
+                    <div
+                        v-if="logoPath"
+                        class="flex size-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-border bg-card"
+                    >
+                        <img
+                            :src="`/storage/${logoPath}`"
+                            :alt="clinicName"
+                            class="size-full object-contain"
+                        />
                     </div>
-                    <div v-else class="flex size-20 items-center justify-center rounded-2xl bg-primary">
+                    <div
+                        v-else
+                        class="flex size-20 items-center justify-center rounded-2xl bg-primary"
+                    >
                         <Stethoscope class="size-10 text-primary-foreground" />
                     </div>
                     <div>
-                        <h2 class="text-3xl font-bold text-accent-foreground">{{ clinicName }}</h2>
-                        <p class="mt-1 text-xl font-semibold text-foreground">جدول العيادات المتوفرة</p>
+                        <h2 class="text-3xl font-bold text-accent-foreground">
+                            {{ clinicName }}
+                        </h2>
+                        <p class="mt-1 text-xl font-semibold text-foreground">
+                            جدول العيادات المتوفرة
+                        </p>
                     </div>
                 </div>
                 <div class="text-left">
-                    <div class="flex items-center gap-3 rounded-xl bg-primary px-6 py-4 text-primary-foreground">
+                    <div
+                        class="flex items-center gap-3 rounded-xl bg-primary px-6 py-4 text-primary-foreground"
+                    >
                         <CalendarDays class="size-7" />
                         <div>
-                            <p class="text-2xl font-bold">{{ scheduleData.day_name }}</p>
-                            <p class="text-base">{{ scheduleData.formatted_date }}</p>
+                            <p class="text-2xl font-bold">
+                                {{ scheduleData.day_name }}
+                            </p>
+                            <p class="text-base">
+                                {{ scheduleData.formatted_date }}
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div v-if="hasClinics" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div
+                v-if="hasClinics"
+                class="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
+            >
                 <div
                     v-for="clinic in scheduleData.clinics"
                     :key="clinic.id"
@@ -294,17 +373,36 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                 >
                     <div class="bg-primary p-5">
                         <div class="flex items-center gap-3">
-                            <div class="flex size-12 items-center justify-center rounded-xl bg-white/30">
+                            <div
+                                class="flex size-12 items-center justify-center rounded-xl bg-white/30"
+                            >
                                 <Stethoscope class="size-6 text-white" />
                             </div>
                             <div class="flex-1">
-                                <h3 class="text-xl font-bold text-white">{{ clinic.name }}</h3>
-                                <span v-if="clinic.clinic_type" class="text-sm text-white/90">{{ clinic.clinic_type }}</span>
+                                <h3 class="text-xl font-bold text-white">
+                                    {{ clinic.name }}
+                                </h3>
+                                <span
+                                    v-if="clinic.clinic_type"
+                                    class="text-sm text-white/90"
+                                    >{{ clinic.clinic_type }}</span
+                                >
                             </div>
                         </div>
-                        <div v-if="clinic.clinic_start_time" class="mt-3 flex items-center gap-2 rounded-lg bg-primary/80 px-4 py-2 text-base text-white">
+                        <div
+                            v-if="clinic.clinic_start_time"
+                            class="mt-3 flex items-center gap-2 rounded-lg bg-primary/80 px-4 py-2 text-base text-white"
+                        >
                             <Clock class="size-4" />
-                            <span class="tabular-nums font-medium">{{ formatTimeShort(clinic.clinic_start_time) }} - {{ formatTimeShort(clinic.clinic_end_time!) }}</span>
+                            <span class="font-medium tabular-nums"
+                                >{{
+                                    formatTimeShort(clinic.clinic_start_time)
+                                }}
+                                -
+                                {{
+                                    formatTimeShort(clinic.clinic_end_time!)
+                                }}</span
+                            >
                         </div>
                     </div>
 
@@ -313,26 +411,75 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                             <div
                                 v-for="doctor in clinic.doctors"
                                 :key="doctor.doctor_id"
-                                class="flex items-center justify-between rounded-xl border border-border bg-muted p-3"
+                                class="rounded-xl border border-border bg-muted p-3"
                             >
-                                <div class="flex items-center gap-3">
-                                    <div class="flex size-10 items-center justify-center rounded-full bg-primary">
-                                        <span class="text-base font-bold text-primary-foreground">{{ doctor.doctor_name?.charAt(0) }}</span>
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="flex size-10 items-center justify-center rounded-full bg-primary"
+                                        >
+                                            <span
+                                                class="text-base font-bold text-primary-foreground"
+                                                >{{
+                                                    doctor.doctor_name?.charAt(
+                                                        0,
+                                                    )
+                                                }}</span
+                                            >
+                                        </div>
+                                        <div>
+                                            <p
+                                                class="text-base font-bold text-foreground"
+                                            >
+                                                {{ doctor.doctor_name }}
+                                            </p>
+                                            <p
+                                                v-if="doctor.specialty"
+                                                class="text-sm text-muted-foreground"
+                                            >
+                                                {{ doctor.specialty }}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p class="text-base font-bold text-foreground">
-                                            {{ doctor.doctor_name }}
-                                        </p>
-                                        <p v-if="doctor.specialty" class="text-sm text-muted-foreground">
-                                            {{ doctor.specialty }}
-                                        </p>
+                                    <div
+                                        class="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-bold text-accent-foreground"
+                                    >
+                                        <Clock class="size-3.5" />
+                                        <span class="tabular-nums">
+                                            {{
+                                                formatTimeShort(
+                                                    doctor.start_time,
+                                                )
+                                            }}
+                                            -
+                                            {{
+                                                formatTimeShort(doctor.end_time)
+                                            }}
+                                        </span>
                                     </div>
                                 </div>
-                                <div class="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-bold text-accent-foreground">
-                                    <Clock class="size-3.5" />
-                                    <span class="tabular-nums">
-                                        {{ formatTimeShort(doctor.start_time) }} - {{ formatTimeShort(doctor.end_time) }}
-                                    </span>
+                                <div
+                                    v-if="doctor.unavailable_periods.length > 0"
+                                    class="mt-2 space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
+                                >
+                                    <div
+                                        v-for="period in doctor.unavailable_periods"
+                                        :key="`${period.start_time}-${period.end_time}`"
+                                        class="flex items-center justify-between gap-2"
+                                    >
+                                        <span>إجازة ساعية</span>
+                                        <span class="tabular-nums"
+                                            >{{
+                                                formatTimeShort(
+                                                    period.start_time,
+                                                )
+                                            }}
+                                            -
+                                            {{
+                                                formatTimeShort(period.end_time)
+                                            }}</span
+                                        >
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -340,18 +487,34 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                 </div>
             </div>
 
-            <div v-else class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted py-16 text-center">
-                <div class="flex size-20 items-center justify-center rounded-full bg-accent">
+            <div
+                v-else
+                class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted py-16 text-center"
+            >
+                <div
+                    class="flex size-20 items-center justify-center rounded-full bg-accent"
+                >
                     <CalendarDays class="size-10 text-primary" />
                 </div>
-                <h3 class="mt-4 text-xl font-bold text-foreground">لا توجد عيادات متوفرة اليوم</h3>
+                <h3 class="mt-4 text-xl font-bold text-foreground">
+                    لا توجد عيادات متوفرة اليوم
+                </h3>
                 <p class="mt-2 text-base text-muted-foreground">
                     لا توجد عيادات أو أطباء مسجلين للدوام في هذا اليوم.
                 </p>
             </div>
 
-            <div v-if="scheduleData.clinic_settings.phone || scheduleData.clinic_settings.address" class="mt-8 border-t-2 border-border pt-4 text-center text-base text-muted-foreground">
-                <p v-if="scheduleData.clinic_settings.phone" class="font-medium">
+            <div
+                v-if="
+                    scheduleData.clinic_settings.phone ||
+                    scheduleData.clinic_settings.address
+                "
+                class="mt-8 border-t-2 border-border pt-4 text-center text-base text-muted-foreground"
+            >
+                <p
+                    v-if="scheduleData.clinic_settings.phone"
+                    class="font-medium"
+                >
                     هاتف: {{ scheduleData.clinic_settings.phone }}
                 </p>
                 <p v-if="scheduleData.clinic_settings.address">

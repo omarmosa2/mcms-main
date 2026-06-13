@@ -1,0 +1,256 @@
+<?php
+
+namespace App\Http\Controllers\DoctorLeaves;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\DoctorLeaves\StoreDoctorLeaveRequest;
+use App\Http\Requests\DoctorLeaves\UpdateDoctorLeaveRequest;
+use App\Http\Resources\DoctorLeaveResource;
+use App\Models\Department;
+use App\Models\DoctorLeave;
+use App\Models\DoctorProfile;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\Response;
+
+class DoctorLeaveController extends Controller
+{
+    public function index(Request $request): AnonymousResourceCollection|InertiaResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+        $filters = $this->resolveIndexFilters($request);
+
+        $query = DoctorLeave::query()
+            ->forClinic($clinicId)
+            ->with(['doctor', 'department']);
+
+        if ($filters['doctor_id'] !== null) {
+            $query->where('doctor_id', $filters['doctor_id']);
+        }
+
+        if ($filters['department_id'] !== null) {
+            $query->where('department_id', $filters['department_id']);
+        }
+
+        if ($filters['status'] !== null) {
+            $query->where('status', $filters['status']);
+        }
+
+        if ($filters['date_from'] !== null) {
+            $query->whereDate('leave_date', '>=', $filters['date_from']);
+        }
+
+        if ($filters['date_to'] !== null) {
+            $query->whereDate('leave_date', '<=', $filters['date_to']);
+        }
+
+        $leaves = $query
+            ->orderByDesc('leave_date')
+            ->orderBy('start_time')
+            ->paginate($filters['per_page']);
+
+        $leavesResource = DoctorLeaveResource::collection($leaves);
+
+        if ($request->expectsJson()) {
+            return $leavesResource;
+        }
+
+        return Inertia::render('doctor-leaves/Index', [
+            'leaves' => $leavesResource->response()->getData(true),
+            'doctors' => $this->doctorsForSelect($clinicId),
+            'departments' => $this->departmentsForSelect($clinicId),
+            'filters' => $filters,
+            'type_options' => [DoctorLeave::TYPE_FULL_DAY, DoctorLeave::TYPE_HOURLY],
+            'status_options' => [DoctorLeave::STATUS_ACTIVE, DoctorLeave::STATUS_CANCELED],
+        ]);
+    }
+
+    public function store(StoreDoctorLeaveRequest $request): JsonResponse|RedirectResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $leave = DoctorLeave::query()->create([
+            ...$this->normalizedPayload($request->validated()),
+            'clinic_id' => $clinicId,
+            'status' => DoctorLeave::STATUS_ACTIVE,
+        ]);
+
+        if ($request->expectsJson()) {
+            return DoctorLeaveResource::make($leave->load(['doctor', 'department']))
+                ->response()
+                ->setStatusCode(Response::HTTP_CREATED);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'تمت إضافة إجازة الطبيب بنجاح.']);
+
+        return to_route('doctor-leaves.index');
+    }
+
+    public function update(UpdateDoctorLeaveRequest $request, int $doctorLeaveId): DoctorLeaveResource|RedirectResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $leave = DoctorLeave::query()
+            ->forClinic($clinicId)
+            ->findOrFail($doctorLeaveId);
+
+        $leave->fill([
+            ...$this->normalizedPayload($request->validated()),
+            'status' => DoctorLeave::STATUS_ACTIVE,
+        ]);
+        $leave->save();
+
+        if ($request->expectsJson()) {
+            return DoctorLeaveResource::make($leave->load(['doctor', 'department']));
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'تم تعديل إجازة الطبيب بنجاح.']);
+
+        return to_route('doctor-leaves.index');
+    }
+
+    public function cancel(Request $request, int $doctorLeaveId): DoctorLeaveResource|RedirectResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $leave = DoctorLeave::query()
+            ->forClinic($clinicId)
+            ->findOrFail($doctorLeaveId);
+
+        $leave->forceFill(['status' => DoctorLeave::STATUS_CANCELED])->save();
+
+        if ($request->expectsJson()) {
+            return DoctorLeaveResource::make($leave->load(['doctor', 'department']));
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'تم إلغاء إجازة الطبيب بنجاح.']);
+
+        return to_route('doctor-leaves.index');
+    }
+
+    private function resolveClinicId(Request $request): int
+    {
+        $clinicId = $request->user()?->clinic_id;
+
+        if ($clinicId === null) {
+            abort(Response::HTTP_FORBIDDEN, 'Clinic context is required.');
+        }
+
+        return (int) $clinicId;
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string|null, department_id: int|null, department: array{id: int, name: string}|null}>
+     */
+    private function doctorsForSelect(int $clinicId): array
+    {
+        return DoctorProfile::query()
+            ->forClinic($clinicId)
+            ->withoutTrashed()
+            ->where('status', DoctorProfile::STATUS_ACTIVE)
+            ->with(['user:id,clinic_id,name', 'department:id,clinic_id,name'])
+            ->get()
+            ->map(fn (DoctorProfile $profile): array => [
+                'id' => (int) $profile->user_id,
+                'name' => $profile->user?->name,
+                'department_id' => $profile->department_id,
+                'department' => $profile->department === null ? null : [
+                    'id' => $profile->department->id,
+                    'name' => $profile->department->name,
+                ],
+            ])
+            ->filter(fn (array $doctor): bool => $doctor['name'] !== null)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function departmentsForSelect(int $clinicId): array
+    {
+        return Department::query()
+            ->forClinic($clinicId)
+            ->withoutTrashed()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Department $department): array => [
+                'id' => $department->id,
+                'name' => $department->name,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array{
+     *     doctor_id: ?int,
+     *     department_id: ?int,
+     *     status: ?string,
+     *     date_from: ?string,
+     *     date_to: ?string,
+     *     per_page: int
+     * }
+     */
+    private function resolveIndexFilters(Request $request): array
+    {
+        return [
+            'doctor_id' => $this->normalizeNullableInteger($request->query('doctor_id')),
+            'department_id' => $this->normalizeNullableInteger($request->query('department_id')),
+            'status' => $this->normalizeStatus($request->query('status')),
+            'date_from' => $this->normalizeNullableDate($request->query('date_from')),
+            'date_to' => $this->normalizeNullableDate($request->query('date_to')),
+            'per_page' => $this->normalizePerPage($request->query('per_page', 15)),
+        ];
+    }
+
+    private function normalizeNullableInteger(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $integer = (int) $value;
+
+        return $integer > 0 ? $integer : null;
+    }
+
+    private function normalizeNullableDate(mixed $value): ?string
+    {
+        $date = trim((string) ($value ?? ''));
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1 ? $date : null;
+    }
+
+    private function normalizeStatus(mixed $value): ?string
+    {
+        $status = trim((string) ($value ?? ''));
+
+        return in_array($status, [DoctorLeave::STATUS_ACTIVE, DoctorLeave::STATUS_CANCELED], true) ? $status : null;
+    }
+
+    private function normalizePerPage(mixed $value): int
+    {
+        $perPage = (int) $value;
+
+        return in_array($perPage, [10, 15, 25, 50], true) ? $perPage : 15;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function normalizedPayload(array $payload): array
+    {
+        if (($payload['type'] ?? null) === DoctorLeave::TYPE_FULL_DAY) {
+            $payload['start_time'] = null;
+            $payload['end_time'] = null;
+        }
+
+        return $payload;
+    }
+}

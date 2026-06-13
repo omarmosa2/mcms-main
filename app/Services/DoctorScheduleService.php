@@ -3,35 +3,27 @@
 namespace App\Services;
 
 use App\Models\DoctorSchedule;
-use Illuminate\Support\Carbon;
 
 class DoctorScheduleService
 {
+    public function __construct(private DoctorAvailabilityService $doctorAvailabilityService) {}
+
     public function isDoctorAvailable(int $clinicId, int $doctorId, string $scheduledFor, int $durationMinutes): bool
     {
-        $dateTime = Carbon::parse($scheduledFor);
-        $dayOfWeek = $dateTime->dayOfWeek;
-        $time = $dateTime->format('H:i:s');
-
-        $schedule = DoctorSchedule::query()
+        $hasSchedule = DoctorSchedule::query()
             ->where('clinic_id', $clinicId)
             ->where('doctor_id', $doctorId)
-            ->where('day_of_week', $dayOfWeek)
-            ->first();
+            ->exists();
 
-        if (! $schedule) {
+        if (! $hasSchedule) {
             return true;
         }
 
-        if (! $schedule->is_available) {
-            return false;
-        }
-
-        $startTime = $schedule->start_time;
-        $endTime = $schedule->end_time;
-
-        $appointmentEnd = Carbon::parse($scheduledFor)->addMinutes($durationMinutes);
-
-        return $time >= $startTime && $appointmentEnd->format('H:i:s') <= $endTime;
+        return $this->doctorAvailabilityService->isDoctorAvailableForAppointment(
+            $clinicId,
+            $doctorId,
+            $scheduledFor,
+            $durationMinutes,
+        );
     }
 }

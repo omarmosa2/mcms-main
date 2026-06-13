@@ -3,6 +3,7 @@ import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     Building2,
     CalendarClock,
+    CalendarOff,
     Key,
     LayoutGrid,
     CalendarDays,
@@ -42,6 +43,7 @@ import {
 import { usePermissions } from '@/composables/usePermissions';
 import { dashboard, logout } from '@/routes';
 import { clinic as adminSettingsUrl } from '@/routes/admin-settings';
+import { index as doctorLeavesIndex } from '@/routes/doctor-leaves';
 import { index as financialIndex } from '@/routes/financial';
 import type { NavItem, NavSection } from '@/types';
 
@@ -258,6 +260,13 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 permission: 'doctor_schedule.view',
             },
             {
+                title: 'إجازات الأطباء',
+                href: doctorLeavesIndex(),
+                icon: CalendarOff,
+                group: 'clinical',
+                permission: 'doctor_schedule.view',
+            },
+            {
                 title: 'المستخدمون',
                 href: UserController.index(),
                 icon: Shield,
@@ -284,7 +293,11 @@ const mainNavItems = computed<MainNavItem[]>(() => {
             return isDoctor.value;
         }
 
-        if (isDoctor.value && !item.doctorOnly && item.title !== 'لوحة التحكم') {
+        if (
+            isDoctor.value &&
+            !item.doctorOnly &&
+            item.title !== 'لوحة التحكم'
+        ) {
             return false;
         }
 

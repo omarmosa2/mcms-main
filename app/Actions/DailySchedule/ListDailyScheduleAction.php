@@ -9,11 +9,14 @@ use App\Models\ClinicWorkingHour;
 use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
+use App\Services\DoctorAvailabilityService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class ListDailyScheduleAction extends BaseAction
 {
+    public function __construct(private DoctorAvailabilityService $doctorAvailabilityService) {}
+
     private const CARBON_TO_STRING = [
         0 => 'sunday',
         1 => 'monday',
@@ -76,7 +79,11 @@ class ListDailyScheduleAction extends BaseAction
                 continue;
             }
 
-            $doctors = $this->getDoctorsForDepartment($clinicId, $department->id, $dayOfWeek, $doctorFilter);
+            $doctors = $this->getDoctorsForDepartment($clinicId, $department->id, $dayOfWeek, $carbonDate, $doctorFilter);
+
+            if ($doctors->isEmpty()) {
+                continue;
+            }
 
             $clinicData[$department->id] = [
                 'id' => $department->id,
@@ -84,13 +91,7 @@ class ListDailyScheduleAction extends BaseAction
                 'clinic_type' => $department->clinic_type,
                 'clinic_start_time' => $clinicHours->start_time,
                 'clinic_end_time' => $clinicHours->end_time,
-                'doctors' => $doctors->map(fn (DoctorSchedule $schedule) => [
-                    'doctor_id' => $schedule->doctor_id,
-                    'doctor_name' => $schedule->doctor?->name,
-                    'specialty' => $schedule->doctor?->doctorProfile?->specialty,
-                    'start_time' => $schedule->start_time,
-                    'end_time' => $schedule->end_time,
-                ])->values()->all(),
+                'doctors' => $doctors->values()->all(),
             ];
         }
 
@@ -133,8 +134,13 @@ class ListDailyScheduleAction extends BaseAction
     /**
      * @return Collection<int, DoctorSchedule>
      */
-    private function getDoctorsForDepartment(int $clinicId, int $departmentId, int $dayOfWeek, ?int $doctorFilter): Collection
-    {
+    private function getDoctorsForDepartment(
+        int $clinicId,
+        int $departmentId,
+        int $dayOfWeek,
+        Carbon $date,
+        ?int $doctorFilter,
+    ): Collection {
         $doctorIds = DoctorProfile::query()
             ->forClinic($clinicId)
             ->withoutTrashed()
@@ -154,6 +160,32 @@ class ListDailyScheduleAction extends BaseAction
             $query->where('doctor_id', $doctorFilter);
         }
 
-        return $query->orderBy('start_time')->get();
+        return $query
+            ->orderBy('start_time')
+            ->get()
+            ->map(function (DoctorSchedule $schedule) use ($clinicId, $departmentId, $date): ?array {
+                $availability = $this->doctorAvailabilityService->availabilityForDay(
+                    clinicId: $clinicId,
+                    doctorId: (int) $schedule->doctor_id,
+                    date: $date,
+                    departmentId: $departmentId,
+                );
+
+                if ($availability['unavailable_all_day'] || ! $availability['is_available']) {
+                    return null;
+                }
+
+                return [
+                    'doctor_id' => $schedule->doctor_id,
+                    'doctor_name' => $schedule->doctor?->name,
+                    'specialty' => $schedule->doctor?->doctorProfile?->specialty,
+                    'start_time' => $availability['available_periods'][0]['start_time'] ?? substr((string) $schedule->start_time, 0, 5),
+                    'end_time' => $availability['available_periods'][array_key_last($availability['available_periods'])]['end_time'] ?? substr((string) $schedule->end_time, 0, 5),
+                    'available_periods' => $availability['available_periods'],
+                    'unavailable_periods' => $availability['unavailable_periods'],
+                ];
+            })
+            ->filter()
+            ->values();
     }
 }

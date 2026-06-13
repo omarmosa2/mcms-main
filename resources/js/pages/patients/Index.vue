@@ -24,6 +24,8 @@ import type {
     SortDirection,
 } from './components/types';
 
+type ValidationErrors = Record<string, string | string[]>;
+
 const { patients, filters, stats } = defineProps<{
     patients: PaginatedResponse<Patient>;
     filters: {
@@ -69,6 +71,20 @@ const isCreateSheetOpen = ref(false);
 const isQuickAddOpen = ref(false);
 const isDeleteDialogOpen = ref(false);
 const isDeleting = ref(false);
+
+const firstValidationError = (errors: ValidationErrors): string | null => {
+    const firstError = Object.values(errors)[0];
+
+    if (Array.isArray(firstError)) {
+        return firstError[0] ?? null;
+    }
+
+    return firstError ?? null;
+};
+
+const deletePatientErrorMessage = (errors: ValidationErrors): string => {
+    return firstValidationError(errors) ?? 'فشل حذف المريض';
+};
 
 const shouldOpenCreateSheetFromQuery = (): boolean => {
     const queryString = page.url.split('?')[1]?.split('#')[0] ?? '';
@@ -243,8 +259,8 @@ const handleDeleteConfirm = async () => {
                     isDeleteDialogOpen.value = false;
                     deletingPatient.value = null;
                 },
-                onError: () => {
-                    toast.error('فشل حذف المريض');
+                onError: (errors) => {
+                    toast.error(deletePatientErrorMessage(errors));
                 },
             },
         );
@@ -268,8 +284,8 @@ const handleDeletePatient = async (patient: Patient) => {
                 toast.success('تم حذف المريض بنجاح');
                 handleConfirmCancel();
             },
-            onError: () => {
-                toast.error('فشل حذف المريض');
+            onError: (errors) => {
+                toast.error(deletePatientErrorMessage(errors));
                 setConfirmLoading(false);
             },
         });

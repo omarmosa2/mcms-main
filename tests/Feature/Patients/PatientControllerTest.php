@@ -3,9 +3,15 @@
 namespace Tests\Feature\Patients;
 
 use App\Actions\Rbac\AssignUserRoleAction;
+use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\Installment;
+use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Patient;
 use App\Models\PatientAttachment;
+use App\Models\Payment;
+use App\Models\PaymentPlan;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -295,7 +301,9 @@ class PatientControllerTest extends TestCase
         $response = $this->deleteJson(route('patients.destroy', ['patientId' => $patient->id]));
 
         $response->assertNoContent();
-        $this->assertSoftDeleted($patient);
+        $this->assertDatabaseMissing('patients', [
+            'id' => $patient->id,
+        ]);
 
         $this->assertDatabaseHas('audit_logs', [
             'clinic_id' => $clinic->id,
@@ -303,6 +311,77 @@ class PatientControllerTest extends TestCase
             'action' => 'patients.delete',
             'auditable_id' => $patient->id,
         ]);
+    }
+
+    public function test_destroy_deletes_patient_related_records(): void
+    {
+        Storage::fake('local');
+
+        $clinic = Clinic::factory()->create();
+        $user = $this->authenticateForClinic($clinic);
+
+        $patient = Patient::factory()->create([
+            'clinic_id' => $clinic->id,
+        ]);
+
+        $appointment = Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+        ]);
+
+        $invoice = Invoice::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'appointment_id' => $appointment->id,
+        ]);
+
+        $invoiceItem = InvoiceItem::factory()->create([
+            'clinic_id' => $clinic->id,
+            'invoice_id' => $invoice->id,
+        ]);
+
+        $payment = Payment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'invoice_id' => $invoice->id,
+            'received_by' => $user->id,
+        ]);
+
+        $paymentPlan = PaymentPlan::factory()->create([
+            'clinic_id' => $clinic->id,
+            'created_by' => $user->id,
+        ]);
+
+        $installment = Installment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'payment_plan_id' => $paymentPlan->id,
+            'invoice_id' => $invoice->id,
+        ]);
+
+        Storage::disk('local')->put('patients/delete-me/report.pdf', 'report');
+        $attachment = PatientAttachment::query()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'uploaded_by' => $user->id,
+            'disk' => 'local',
+            'path' => 'patients/delete-me/report.pdf',
+            'original_name' => 'report.pdf',
+            'mime_type' => 'application/pdf',
+            'extension' => 'pdf',
+            'size_bytes' => 6,
+            'uploaded_at' => now(),
+        ]);
+
+        $response = $this->deleteJson(route('patients.destroy', ['patientId' => $patient->id]));
+
+        $response->assertNoContent();
+        $this->assertDatabaseMissing('patients', ['id' => $patient->id]);
+        $this->assertDatabaseMissing('appointments', ['id' => $appointment->id]);
+        $this->assertDatabaseMissing('invoices', ['id' => $invoice->id]);
+        $this->assertDatabaseMissing('invoice_items', ['id' => $invoiceItem->id]);
+        $this->assertDatabaseMissing('payments', ['id' => $payment->id]);
+        $this->assertDatabaseMissing('installments', ['id' => $installment->id]);
+        $this->assertDatabaseMissing('patient_attachments', ['id' => $attachment->id]);
+        Storage::disk('local')->assertMissing('patients/delete-me/report.pdf');
     }
 
     public function test_bulk_destroy_deletes_selected_patients(): void
@@ -322,8 +401,8 @@ class PatientControllerTest extends TestCase
         $response->assertJsonPath('data.deleted_count', 2);
         $response->assertJsonPath('data.failed_count', 0);
 
-        $this->assertSoftDeleted($firstPatient);
-        $this->assertSoftDeleted($secondPatient);
+        $this->assertDatabaseMissing('patients', ['id' => $firstPatient->id]);
+        $this->assertDatabaseMissing('patients', ['id' => $secondPatient->id]);
         $this->assertDatabaseHas('patients', ['id' => $thirdPatient->id]);
     }
 

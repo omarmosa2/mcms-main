@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
 import { Form } from '@inertiajs/vue3';
+import { ref, watch } from 'vue';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,7 @@ const emit = defineEmits<{
 const detailedPatient = ref<Patient | null>(null);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
+const editFormKey = ref(0);
 
 const editChronicConditions = ref<string[]>(['']);
 const editAllergies = ref<string[]>(['']);
@@ -50,6 +51,7 @@ const addMedicalItem = (collection: string[]): void => {
 const removeMedicalItem = (collection: string[], index: number): void => {
     if (collection.length <= 1) {
         collection.splice(0, collection.length, '');
+
         return;
     }
 
@@ -97,11 +99,14 @@ watch(
             detailedPatient.value = null;
             isLoading.value = false;
             error.value = null;
+            editFormKey.value += 1;
             resetMedicalLists();
+
             return;
         }
 
         detailedPatient.value = newPatient;
+        editFormKey.value += 1;
         hydrateMedicalLists(newPatient);
         isLoading.value = true;
         error.value = null;
@@ -111,6 +116,7 @@ watch(
 
             if (props.patient?.id === newPatient.id) {
                 detailedPatient.value = fetched;
+                editFormKey.value += 1;
                 hydrateMedicalLists(fetched);
             }
         } catch {
@@ -150,6 +156,7 @@ const handleSuccess = () => {
 
                 <Form
                     v-if="detailedPatient"
+                    :key="editFormKey"
                     v-bind="PatientController.update.form(detailedPatient.id)"
                     class="space-y-4"
                     :options="{ preserveScroll: true }"
@@ -158,36 +165,11 @@ const handleSuccess = () => {
                 >
                 <div class="grid grid-cols-2 gap-4">
                     <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_file_number" class="text-sm font-medium text-foreground">رقم الملف</Label>
-                        <Input
-                            id="edit_patient_file_number"
-                            name="file_number"
-                            type="number"
-                            min="1"
-                            :value="detailedPatient.file_number"
-                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                        />
-                        <InputError :message="errors.file_number" />
-                    </div>
-                    <div class="flex flex-col gap-1.5">
-                        <Label for="edit_patient_national_id" class="text-sm font-medium text-foreground">رقم الهوية</Label>
-                        <Input
-                            id="edit_patient_national_id"
-                            name="national_id"
-                            :value="detailedPatient.national_id ?? ''"
-                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                        />
-                        <InputError :message="errors.national_id" />
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1.5">
                         <Label for="edit_patient_first_name" class="text-sm font-medium text-foreground">الاسم الأول</Label>
                         <Input
                             id="edit_patient_first_name"
                             name="first_name"
-                            :value="detailedPatient.first_name"
+                            :default-value="detailedPatient.first_name"
                             class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.first_name" />
@@ -197,7 +179,7 @@ const handleSuccess = () => {
                         <Input
                             id="edit_patient_last_name"
                             name="last_name"
-                            :value="detailedPatient.last_name"
+                            :default-value="detailedPatient.last_name"
                             class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.last_name" />
@@ -211,7 +193,7 @@ const handleSuccess = () => {
                             id="edit_patient_dob"
                             name="date_of_birth"
                             type="date"
-                            :value="detailedPatient.date_of_birth ?? ''"
+                            :default-value="detailedPatient.date_of_birth ?? ''"
                             class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.date_of_birth" />
@@ -236,7 +218,7 @@ const handleSuccess = () => {
                         <Input
                             id="edit_patient_phone"
                             name="phone"
-                            :value="detailedPatient.phone ?? ''"
+                            :default-value="detailedPatient.phone ?? ''"
                             class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.phone" />
@@ -249,7 +231,7 @@ const handleSuccess = () => {
                         id="edit_patient_email"
                         name="email"
                         type="email"
-                        :value="detailedPatient.email ?? ''"
+                        :default-value="detailedPatient.email ?? ''"
                         class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                     />
                     <InputError :message="errors.email" />
@@ -261,7 +243,7 @@ const handleSuccess = () => {
                         <Input
                             id="edit_patient_emergency_name"
                             name="emergency_contact_name"
-                            :value="detailedPatient.emergency_contact_name ?? ''"
+                            :default-value="detailedPatient.emergency_contact_name ?? ''"
                             class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.emergency_contact_name" />
@@ -271,7 +253,7 @@ const handleSuccess = () => {
                         <Input
                             id="edit_patient_emergency_phone"
                             name="emergency_contact_phone"
-                            :value="detailedPatient.emergency_contact_phone ?? ''"
+                            :default-value="detailedPatient.emergency_contact_phone ?? ''"
                             class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                         />
                         <InputError :message="errors.emergency_contact_phone" />

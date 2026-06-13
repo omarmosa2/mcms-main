@@ -27,6 +27,15 @@ class DoctorLeaveControllerTest extends TestCase
         [$department, $doctor] = $this->createDoctorInDepartment($clinic, $admin);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
 
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 1,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+            'is_available' => true,
+        ]);
+
         Appointment::factory()->create([
             'clinic_id' => $clinic->id,
             'patient_id' => $patient->id,
@@ -62,6 +71,15 @@ class DoctorLeaveControllerTest extends TestCase
         $clinic = Clinic::factory()->create();
         $admin = $this->authenticateForClinic($clinic);
         [$department, $doctor] = $this->createDoctorInDepartment($clinic, $admin);
+
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 2,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+            'is_available' => true,
+        ]);
 
         $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
@@ -223,6 +241,188 @@ class DoctorLeaveControllerTest extends TestCase
             ->where('scheduleData.clinics.0.id', $department->id)
             ->where('scheduleData.clinics.0.doctors.0.doctor_id', $alternativeDoctor->id)
         );
+    }
+
+    public function test_store_rejects_leave_when_doctor_has_no_schedule_on_that_day(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        [$department, $doctor] = $this->createDoctorInDepartment($clinic, $admin);
+
+        $response = $this->postJson(route('doctor-leaves.store'), [
+            'doctor_id' => $doctor->id,
+            'department_id' => $department->id,
+            'type' => DoctorLeave::TYPE_FULL_DAY,
+            'leave_date' => '2026-06-15',
+            'reason' => 'Vacation',
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['doctor_id']);
+
+        $errors = $response->json('errors');
+        $this->assertArrayHasKey('doctor_id', $errors);
+        $this->assertStringContainsString('لا يمكن تسجيل إجازة لهذا الطبيب', $errors['doctor_id'][0]);
+
+        $this->assertDatabaseMissing('doctor_leaves', [
+            'doctor_id' => $doctor->id,
+        ]);
+    }
+
+    public function test_store_rejects_hourly_leave_when_doctor_has_no_schedule_on_that_day(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        [$department, $doctor] = $this->createDoctorInDepartment($clinic, $admin);
+
+        $response = $this->postJson(route('doctor-leaves.store'), [
+            'doctor_id' => $doctor->id,
+            'department_id' => $department->id,
+            'type' => DoctorLeave::TYPE_HOURLY,
+            'leave_date' => '2026-06-16',
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['doctor_id']);
+
+        $errors = $response->json('errors');
+        $this->assertStringContainsString('لا يمكن تسجيل إجازة لهذا الطبيب', $errors['doctor_id'][0]);
+
+        $this->assertDatabaseMissing('doctor_leaves', [
+            'doctor_id' => $doctor->id,
+        ]);
+    }
+
+    public function test_store_rejects_hourly_leave_outside_doctor_schedule_hours(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        [$department, $doctor] = $this->createDoctorInDepartment($clinic, $admin);
+
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 2,
+            'start_time' => '09:00',
+            'end_time' => '14:00',
+            'is_available' => true,
+        ]);
+
+        $response = $this->postJson(route('doctor-leaves.store'), [
+            'doctor_id' => $doctor->id,
+            'department_id' => $department->id,
+            'type' => DoctorLeave::TYPE_HOURLY,
+            'leave_date' => '2026-06-16',
+            'start_time' => '15:00',
+            'end_time' => '16:00',
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['start_time']);
+
+        $errors = $response->json('errors');
+        $this->assertStringContainsString('وقت الإجازة الساعية يجب أن يكون ضمن ساعات دوام الطبيب الأساسية', $errors['start_time'][0]);
+
+        $this->assertDatabaseMissing('doctor_leaves', [
+            'doctor_id' => $doctor->id,
+        ]);
+    }
+
+    public function test_store_rejects_hourly_leave_partially_outside_doctor_schedule(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        [$department, $doctor] = $this->createDoctorInDepartment($clinic, $admin);
+
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 2,
+            'start_time' => '09:00',
+            'end_time' => '14:00',
+            'is_available' => true,
+        ]);
+
+        $response = $this->postJson(route('doctor-leaves.store'), [
+            'doctor_id' => $doctor->id,
+            'department_id' => $department->id,
+            'type' => DoctorLeave::TYPE_HOURLY,
+            'leave_date' => '2026-06-16',
+            'start_time' => '13:00',
+            'end_time' => '15:00',
+        ]);
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['start_time']);
+
+        $errors = $response->json('errors');
+        $this->assertStringContainsString('وقت الإجازة الساعية يجب أن يكون ضمن ساعات دوام الطبيب الأساسية', $errors['start_time'][0]);
+
+        $this->assertDatabaseMissing('doctor_leaves', [
+            'doctor_id' => $doctor->id,
+        ]);
+    }
+
+    public function test_store_allows_hourly_leave_within_doctor_schedule(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        [$department, $doctor] = $this->createDoctorInDepartment($clinic, $admin);
+
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 2,
+            'start_time' => '09:00',
+            'end_time' => '14:00',
+            'is_available' => true,
+        ]);
+
+        $this->postJson(route('doctor-leaves.store'), [
+            'doctor_id' => $doctor->id,
+            'department_id' => $department->id,
+            'type' => DoctorLeave::TYPE_HOURLY,
+            'leave_date' => '2026-06-16',
+            'start_time' => '09:00',
+            'end_time' => '14:00',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('doctor_leaves', [
+            'doctor_id' => $doctor->id,
+            'type' => DoctorLeave::TYPE_HOURLY,
+            'start_time' => '09:00',
+            'end_time' => '14:00',
+        ]);
+    }
+
+    public function test_store_allows_full_day_leave_when_schedule_exists(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        [$department, $doctor] = $this->createDoctorInDepartment($clinic, $admin);
+
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 1,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+            'is_available' => true,
+        ]);
+
+        $this->postJson(route('doctor-leaves.store'), [
+            'doctor_id' => $doctor->id,
+            'department_id' => $department->id,
+            'type' => DoctorLeave::TYPE_FULL_DAY,
+            'leave_date' => '2026-06-15',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('doctor_leaves', [
+            'doctor_id' => $doctor->id,
+            'type' => DoctorLeave::TYPE_FULL_DAY,
+        ]);
     }
 
     private function authenticateForClinic(Clinic $clinic, string $roleName = 'clinic_admin'): User

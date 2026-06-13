@@ -4,7 +4,9 @@ namespace App\Http\Requests\DoctorLeaves;
 
 use App\Models\DoctorLeave;
 use App\Models\DoctorProfile;
+use App\Models\DoctorSchedule;
 use App\Models\User;
+use Carbon\Carbon;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -59,7 +61,25 @@ class StoreDoctorLeaveRequest extends FormRequest
                     return;
                 }
 
-                $conflict = $this->findConflictingLeave((int) $clinicId);
+                $clinicId = (int) $clinicId;
+
+                $scheduleError = $this->validateDoctorHasSchedule($clinicId);
+
+                if ($scheduleError !== null) {
+                    $validator->errors()->add('doctor_id', $scheduleError);
+
+                    return;
+                }
+
+                $timeError = $this->validateHourlyLeaveWithinSchedule($clinicId);
+
+                if ($timeError !== null) {
+                    $validator->errors()->add('start_time', $timeError);
+
+                    return;
+                }
+
+                $conflict = $this->findConflictingLeave($clinicId);
 
                 if ($conflict !== null) {
                     $validator->errors()->add('leave_date', $conflict);
@@ -108,6 +128,52 @@ class StoreDoctorLeaveRequest extends FormRequest
                 $fail('The selected department must match the doctor department.');
             }
         };
+    }
+
+    private function validateDoctorHasSchedule(int $clinicId): ?string
+    {
+        $doctorId = (int) $this->input('doctor_id');
+        $dayOfWeek = Carbon::parse((string) $this->input('leave_date'))->dayOfWeek;
+
+        $hasSchedule = DoctorSchedule::query()
+            ->forClinic($clinicId)
+            ->where('doctor_id', $doctorId)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_available', true)
+            ->exists();
+
+        if (! $hasSchedule) {
+            return 'لا يمكن تسجيل إجازة لهذا الطبيب، لأنه لا يملك دواماً أساسياً في هذا اليوم.';
+        }
+
+        return null;
+    }
+
+    private function validateHourlyLeaveWithinSchedule(int $clinicId): ?string
+    {
+        if ((string) $this->input('type') !== DoctorLeave::TYPE_HOURLY) {
+            return null;
+        }
+
+        $doctorId = (int) $this->input('doctor_id');
+        $dayOfWeek = Carbon::parse((string) $this->input('leave_date'))->dayOfWeek;
+        $startTime = (string) $this->input('start_time');
+        $endTime = (string) $this->input('end_time');
+
+        $coversLeave = DoctorSchedule::query()
+            ->forClinic($clinicId)
+            ->where('doctor_id', $doctorId)
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_available', true)
+            ->where('start_time', '<=', $startTime)
+            ->where('end_time', '>=', $endTime)
+            ->exists();
+
+        if (! $coversLeave) {
+            return 'وقت الإجازة الساعية يجب أن يكون ضمن ساعات دوام الطبيب الأساسية.';
+        }
+
+        return null;
     }
 
     protected function findConflictingLeave(int $clinicId): ?string

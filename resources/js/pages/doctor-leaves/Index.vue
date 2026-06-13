@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
-import { Ban, CalendarOff, Clock, Pencil, Plus, Save } from 'lucide-vue-next';
+import { Ban, CalendarOff, Clock, Pencil, Plus, Save, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import DoctorLeaveController from '@/actions/App/Http/Controllers/DoctorLeaves/DoctorLeaveController';
@@ -122,6 +122,12 @@ function cancelLeave(leave: DoctorLeave): void {
             onSuccess: () => toast.success('تم إلغاء الإجازة بنجاح'),
         },
     );
+}
+
+function deleteLeave(leave: DoctorLeave): void {
+    router.delete(DoctorLeaveController.destroy.url(leave.id), {
+        onSuccess: () => toast.success('تم حذف الإجازة بنجاح'),
+    });
 }
 
 function typeLabel(type: DoctorLeave['type']): string {
@@ -349,6 +355,14 @@ function formatTime(time: string | null): string {
                                             @click="cancelLeave(leave)"
                                         >
                                             <Ban class="size-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="size-8 text-destructive hover:text-destructive"
+                                            @click="deleteLeave(leave)"
+                                        >
+                                            <Trash2 class="size-4" />
                                         </Button>
                                     </div>
                                 </td>

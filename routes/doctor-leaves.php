@@ -11,4 +11,5 @@ Route::middleware(['auth', 'verified'])
         Route::post('/', [DoctorLeaveController::class, 'store'])->middleware('permission:doctor_schedule.create')->name('store');
         Route::match(['put', 'patch'], '/{doctorLeaveId}', [DoctorLeaveController::class, 'update'])->middleware('permission:doctor_schedule.update')->name('update');
         Route::patch('/{doctorLeaveId}/cancel', [DoctorLeaveController::class, 'cancel'])->middleware('permission:doctor_schedule.update')->name('cancel');
+        Route::delete('/{doctorLeaveId}', [DoctorLeaveController::class, 'destroy'])->middleware('permission:doctor_schedule.update')->name('destroy');
     });

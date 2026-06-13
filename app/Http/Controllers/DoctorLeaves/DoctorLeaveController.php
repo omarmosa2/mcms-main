@@ -132,6 +132,27 @@ class DoctorLeaveController extends Controller
         return to_route('doctor-leaves.index');
     }
 
+    public function destroy(Request $request, int $doctorLeaveId): JsonResponse|RedirectResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $leave = DoctorLeave::query()
+            ->forClinic($clinicId)
+            ->findOrFail($doctorLeaveId);
+
+        $leave->delete();
+
+        if ($request->expectsJson()) {
+            return DoctorLeaveResource::make($leave)
+                ->response()
+                ->setStatusCode(Response::HTTP_OK);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'تم حذف إجازة الطبيب بنجاح.']);
+
+        return to_route('doctor-leaves.index');
+    }
+
     private function resolveClinicId(Request $request): int
     {
         $clinicId = $request->user()?->clinic_id;

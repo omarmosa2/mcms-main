@@ -106,14 +106,12 @@ class PatientResource extends JsonResource
                 ->map(fn ($labOrder): array => [
                     'id' => $labOrder->id,
                     'status' => $labOrder->status,
-                    'priority' => $labOrder->priority,
                     'orderer' => $labOrder->orderer !== null ? [
                         'id' => $labOrder->orderer->id,
                         'name' => $labOrder->orderer->name,
                     ] : null,
                     'notes' => $labOrder->notes,
                     'ordered_at' => $labOrder->ordered_at?->toISOString(),
-                    'completed_at' => $labOrder->completed_at?->toISOString(),
                     'created_at' => $labOrder->created_at?->toISOString(),
                 ])
                 ->all()
@@ -126,14 +124,12 @@ class PatientResource extends JsonResource
                 ->map(fn ($radiologyOrder): array => [
                     'id' => $radiologyOrder->id,
                     'status' => $radiologyOrder->status,
-                    'priority' => $radiologyOrder->priority,
                     'orderer' => $radiologyOrder->orderer !== null ? [
                         'id' => $radiologyOrder->orderer->id,
                         'name' => $radiologyOrder->orderer->name,
                     ] : null,
                     'notes' => $radiologyOrder->notes,
                     'ordered_at' => $radiologyOrder->ordered_at?->toISOString(),
-                    'completed_at' => $radiologyOrder->completed_at?->toISOString(),
                     'created_at' => $radiologyOrder->created_at?->toISOString(),
                 ])
                 ->all()

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head, Link, router } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Download, Plus, Upload } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import PatientImportExportController from '@/actions/App/Http/Controllers/Patients/PatientImportExportController';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,7 @@ defineOptions({
 });
 
 const { can } = usePermissions();
+const page = usePage();
 const {
     isOpen: isConfirmOpen,
     options: confirmOptions,
@@ -67,6 +68,13 @@ const isCreateSheetOpen = ref(false);
 const isQuickAddOpen = ref(false);
 const isDeleteDialogOpen = ref(false);
 const isDeleting = ref(false);
+
+const shouldOpenCreateSheetFromQuery = (): boolean => {
+    const queryString = page.url.split('?')[1]?.split('#')[0] ?? '';
+    const searchParams = new URLSearchParams(queryString);
+
+    return searchParams.get('create') === '1';
+};
 
 const localSearch = ref<string>(filters.search ?? '');
 const localRowsPerPage = ref<number>(filters.per_page);
@@ -353,6 +361,12 @@ watch(
         });
     },
 );
+
+onMounted(() => {
+    if (can('patient.create') && shouldOpenCreateSheetFromQuery()) {
+        isCreateSheetOpen.value = true;
+    }
+});
 
 onBeforeUnmount(() => {
     if (patientFiltersDebounceTimeout !== null) {

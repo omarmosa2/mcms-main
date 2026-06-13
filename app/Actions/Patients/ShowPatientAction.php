@@ -93,10 +93,8 @@ class ShowPatientAction extends BaseAction
                             'visit_id',
                             'ordered_by',
                             'status',
-                            'priority',
                             'notes',
                             'ordered_at',
-                            'completed_at',
                             'created_at',
                         ])
                         ->with('orderer:id,name')
@@ -113,10 +111,8 @@ class ShowPatientAction extends BaseAction
                             'visit_id',
                             'ordered_by',
                             'status',
-                            'priority',
                             'notes',
                             'ordered_at',
-                            'completed_at',
                             'created_at',
                         ])
                         ->with('orderer:id,name')

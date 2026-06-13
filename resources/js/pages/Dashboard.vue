@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import {
-    ArrowUpRight,
     BarChart3,
     CalendarClock,
     Clock,
@@ -11,9 +10,7 @@ import {
     Users,
     AlertTriangle,
     ChevronLeft,
-    CalendarDays,
     TrendingUp,
-    Activity,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
@@ -109,7 +106,7 @@ const visibleModuleCards = computed<ModuleCard[]>(() => moduleCards.filter((modu
 
 const quickActions = computed(() => [
     { label: 'موعد جديد', icon: Plus, href: AppointmentController.index(), enabled: can('appointment.create'), primary: true },
-    { label: 'مريض جديد', icon: Users, href: PatientController.index(), enabled: can('patient.create') && !isDoctor.value, primary: false },
+    { label: 'مريض جديد', icon: Users, href: PatientController.index({ query: { create: '1' } }), enabled: can('patient.create') && !isDoctor.value, primary: false },
     { label: 'فاتورة', icon: ReceiptText, href: InvoiceController.index(), enabled: can('billing.create') && !isDoctor.value, primary: false },
     { label: 'تقرير', icon: FileText, href: ReportController.index(), enabled: (can('reports.view') || can('reports.financial')) && !isDoctor.value, primary: false },
 ].filter(action => action.enabled));

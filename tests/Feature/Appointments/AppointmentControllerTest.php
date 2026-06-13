@@ -7,11 +7,14 @@ use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\ClinicWorkingHour;
 use App\Models\Department;
+use App\Models\DoctorLeave;
 use App\Models\DoctorProfile;
+use App\Models\DoctorSchedule;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AppointmentControllerTest extends TestCase
@@ -50,6 +53,81 @@ class AppointmentControllerTest extends TestCase
             'user_id' => $user->id,
             'action' => 'appointments.index',
         ]);
+    }
+
+    public function test_index_passes_only_today_available_departments_and_doctors(): void
+    {
+        Carbon::setTestNow('2026-06-15 08:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        $unavailableDepartment = Department::factory()->create([
+            'clinic_id' => $clinic->id,
+            'is_active' => true,
+            'name' => 'Unavailable Clinic',
+        ]);
+        $availableDepartment = Department::factory()->create([
+            'clinic_id' => $clinic->id,
+            'is_active' => true,
+            'name' => 'Available Clinic',
+        ]);
+        $unavailableDoctor = User::factory()->create(['clinic_id' => $clinic->id]);
+        $availableDoctor = User::factory()->create(['clinic_id' => $clinic->id]);
+
+        app(AssignUserRoleAction::class)->handle($unavailableDoctor, 'doctor', $admin->id);
+        app(AssignUserRoleAction::class)->handle($availableDoctor, 'doctor', $admin->id);
+
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $unavailableDoctor->id,
+            'department_id' => $unavailableDepartment->id,
+            'status' => DoctorProfile::STATUS_ACTIVE,
+        ]);
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $availableDoctor->id,
+            'department_id' => $availableDepartment->id,
+            'status' => DoctorProfile::STATUS_ACTIVE,
+        ]);
+
+        $this->setDepartmentWorkingHours($unavailableDepartment, [
+            'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+        $this->setDepartmentWorkingHours($availableDepartment, [
+            'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+
+        foreach ([$unavailableDoctor, $availableDoctor] as $doctor) {
+            DoctorSchedule::query()->create([
+                'clinic_id' => $clinic->id,
+                'doctor_id' => $doctor->id,
+                'day_of_week' => Carbon::MONDAY,
+                'start_time' => '09:00',
+                'end_time' => '17:00',
+                'is_available' => true,
+            ]);
+        }
+
+        DoctorLeave::factory()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $unavailableDoctor->id,
+            'department_id' => $unavailableDepartment->id,
+            'type' => DoctorLeave::TYPE_FULL_DAY,
+            'leave_date' => '2026-06-15',
+        ]);
+
+        $response = $this->get(route('appointments.index'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('appointments/Index')
+            ->has('today_availability.departments', 1)
+            ->where('today_availability.departments.0', $availableDepartment->id)
+            ->has('today_availability.doctors', 1)
+            ->where('today_availability.doctors.0.id', $availableDoctor->id)
+        );
+
+        Carbon::setTestNow();
     }
 
     public function test_store_creates_scheduled_appointment_with_audit_log(): void

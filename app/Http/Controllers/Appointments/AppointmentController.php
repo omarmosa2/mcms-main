@@ -17,6 +17,7 @@ use App\Models\Appointment;
 use App\Models\Department;
 use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
+use App\Services\DoctorAvailabilityService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -39,6 +40,7 @@ class AppointmentController extends Controller
         private DeleteAppointmentAction $deleteAppointmentAction,
         private CacheService $cacheService,
         private ClinicWorkingHoursService $clinicWorkingHoursService,
+        private DoctorAvailabilityService $doctorAvailabilityService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection|InertiaResponse
@@ -107,6 +109,7 @@ class AppointmentController extends Controller
             ],
             'filters' => $filters,
             'clinic_working_hours' => $this->clinicWorkingHoursService->getForClinic($clinicId),
+            'today_availability' => $this->resolveTodayAvailability($clinicId, $doctors),
             'today_appointments' => AppointmentResource::collection($todayAppointments)->response()->getData(true)['data'],
             'is_doctor' => $doctorScopeUserId !== null,
         ]);
@@ -283,6 +286,91 @@ class AppointmentController extends Controller
         }
 
         return (int) $clinicId;
+    }
+
+    /**
+     * @param  array<int, array{id: int, department_id?: int|null}>  $doctors
+     * @return array{
+     *     date: string,
+     *     departments: array<int, int>,
+     *     doctors: array<int, array{
+     *         id: int,
+     *         department_id: int,
+     *         available_periods: array<int, array{start_time: string, end_time: string}>
+     *     }>,
+     *     department_periods: array<int, array<int, array{start_time: string, end_time: string}>>
+     * }
+     */
+    private function resolveTodayAvailability(int $clinicId, array $doctors): array
+    {
+        $today = now()->toDateString();
+        $availableDoctors = [];
+        $departmentPeriods = [];
+
+        foreach ($doctors as $doctor) {
+            $doctorId = (int) ($doctor['id'] ?? 0);
+            $departmentId = (int) ($doctor['department_id'] ?? 0);
+
+            if ($doctorId <= 0 || $departmentId <= 0) {
+                continue;
+            }
+
+            $availability = $this->doctorAvailabilityService->availabilityForDay(
+                clinicId: $clinicId,
+                doctorId: $doctorId,
+                date: $today,
+                departmentId: $departmentId,
+            );
+
+            if (! $availability['is_available']) {
+                continue;
+            }
+
+            $availableDoctors[] = [
+                'id' => $doctorId,
+                'department_id' => $departmentId,
+                'available_periods' => $availability['available_periods'],
+            ];
+
+            $departmentPeriods[$departmentId] = $this->mergePeriods([
+                ...($departmentPeriods[$departmentId] ?? []),
+                ...$availability['available_periods'],
+            ]);
+        }
+
+        return [
+            'date' => $today,
+            'departments' => array_values(array_unique(array_column($availableDoctors, 'department_id'))),
+            'doctors' => $availableDoctors,
+            'department_periods' => $departmentPeriods,
+        ];
+    }
+
+    /**
+     * @param  array<int, array{start_time: string, end_time: string}>  $periods
+     * @return array<int, array{start_time: string, end_time: string}>
+     */
+    private function mergePeriods(array $periods): array
+    {
+        usort($periods, fn (array $first, array $second): int => $first['start_time'] <=> $second['start_time']);
+
+        $merged = [];
+
+        foreach ($periods as $period) {
+            $lastIndex = count($merged) - 1;
+
+            if ($lastIndex < 0 || $period['start_time'] > $merged[$lastIndex]['end_time']) {
+                $merged[] = $period;
+
+                continue;
+            }
+
+            if ($period['end_time'] > $merged[$lastIndex]['end_time']) {
+                $merged[$lastIndex]['end_time'] = $period['end_time'];
+            }
+        }
+
+        return $merged;
     }
 
     private function resolveDoctorScopeUserId(Request $request): ?int

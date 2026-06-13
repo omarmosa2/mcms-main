@@ -10,16 +10,20 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { ClinicWorkingDay, ClinicWorkingHour } from './types';
+import type { AvailabilityPeriod, ClinicWorkingDay, ClinicWorkingHour } from './types';
 
 const props = withDefaults(
     defineProps<{
         workingHours: ClinicWorkingHour[];
+        availablePeriods?: AvailabilityPeriod[] | null;
+        availabilityDate?: string | null;
         defaultValue?: string | null;
         label?: string;
         name?: string;
     }>(),
     {
+        availablePeriods: null,
+        availabilityDate: null,
         defaultValue: null,
         label: 'موعد',
         name: 'scheduled_for',
@@ -73,6 +77,36 @@ watch(
 
 const configuredHours = computed(() => props.workingHours.length > 0);
 
+const todayDate = computed(() => new Date().toISOString().slice(0, 10));
+
+const minimumTimeForSelectedDate = computed(() => {
+    if (selectedDate.value !== todayDate.value) {
+        return null;
+    }
+
+    const now = new Date();
+    const totalMinutes = now.getHours() * 60 + now.getMinutes();
+    const roundedMinutes = Math.ceil(totalMinutes / 15) * 15;
+    const hour = Math.floor(roundedMinutes / 60);
+    const minute = roundedMinutes % 60;
+
+    if (hour >= 24) {
+        return '23:59';
+    }
+
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+});
+
+const filterPastSlots = (slots: string[]): string[] => {
+    const minimumTime = minimumTimeForSelectedDate.value;
+
+    if (minimumTime === null) {
+        return slots;
+    }
+
+    return slots.filter((slot) => slot >= minimumTime);
+};
+
 const workingHourForSelectedDate = computed(() => {
     const date = new Date(`${selectedDate.value}T00:00:00`);
     const day = jsDayToClinicDay[date.getDay()];
@@ -81,8 +115,19 @@ const workingHourForSelectedDate = computed(() => {
 });
 
 const timeSlots = computed<string[]>(() => {
+    if (
+        props.availabilityDate !== null &&
+        props.availabilityDate === selectedDate.value
+    ) {
+        return filterPastSlots(
+            (props.availablePeriods ?? []).flatMap((period) =>
+                buildSlots(period.start_time, period.end_time),
+            ),
+        );
+    }
+
     if (!configuredHours.value) {
-        return buildSlots('07:00', '22:00');
+        return filterPastSlots(buildSlots('07:00', '22:00'));
     }
 
     const row = workingHourForSelectedDate.value;
@@ -91,7 +136,7 @@ const timeSlots = computed<string[]>(() => {
         return [];
     }
 
-    return buildSlots(row.start_time, row.end_time);
+    return filterPastSlots(buildSlots(row.start_time, row.end_time));
 });
 
 const selectedValue = computed(() => {
@@ -143,6 +188,7 @@ function buildSlots(startTime: string, endTime: string): string[] {
             <Input
                 v-model="selectedDate"
                 type="date"
+                :min="todayDate"
                 required
             />
 

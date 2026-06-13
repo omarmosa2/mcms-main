@@ -34,7 +34,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
-import type { ClinicWorkingHour, DepartmentOption, Option } from './types';
+import type { AvailabilityPeriod, ClinicWorkingHour, DepartmentOption, Option, TodayAvailability } from './types';
 
 const props = defineProps<{
     open: boolean;
@@ -42,6 +42,7 @@ const props = defineProps<{
     doctors: Option[];
     departments: DepartmentOption[];
     clinicWorkingHours: ClinicWorkingHour[];
+    todayAvailability: TodayAvailability;
 }>();
 
 const emit = defineEmits<{
@@ -49,18 +50,68 @@ const emit = defineEmits<{
 }>();
 
 const selectedDepartmentId = ref('');
+const selectedDoctorId = ref('');
+
+const todayAvailableDepartmentIds = computed(
+    () => new Set(props.todayAvailability.departments),
+);
+
+const availableDepartments = computed(() =>
+    props.departments.filter((department) =>
+        todayAvailableDepartmentIds.value.has(department.id),
+    ),
+);
 
 const filteredDoctors = computed(() => {
+    const todayAvailableDoctorIds = new Set(
+        props.todayAvailability.doctors.map((doctor) => doctor.id),
+    );
+    const availableDoctors = props.doctors.filter((doctor) =>
+        todayAvailableDoctorIds.has(doctor.id),
+    );
+
     if (!selectedDepartmentId.value) {
-        return props.doctors;
+        return availableDoctors;
     }
 
     const departmentId = Number(selectedDepartmentId.value);
 
-    return props.doctors.filter(
+    return availableDoctors.filter(
         (doctor) => doctor.department_id === departmentId,
     );
 });
+
+const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
+    const doctorId = Number(selectedDoctorId.value);
+
+    if (Number.isFinite(doctorId) && doctorId > 0) {
+        return (
+            props.todayAvailability.doctors.find((doctor) => doctor.id === doctorId)
+                ?.available_periods ?? []
+        );
+    }
+
+    const departmentId = Number(selectedDepartmentId.value);
+
+    if (Number.isFinite(departmentId) && departmentId > 0) {
+        return props.todayAvailability.department_periods[departmentId] ?? [];
+    }
+
+    return Object.values(props.todayAvailability.department_periods).flat();
+});
+
+const handleDepartmentChange = (value: unknown): void => {
+    const departmentId = String(value ?? '');
+
+    selectedDepartmentId.value = departmentId === '__all__' ? '' : departmentId;
+    selectedDoctorId.value = '';
+};
+
+const handleDoctorChange = (value: unknown): void => {
+    const doctorId = String(value ?? '');
+
+    selectedDoctorId.value = doctorId === '__none__' ? '' : doctorId;
+};
 
 const defaultScheduledFor = computed(() => {
     const now = new Date();
@@ -171,9 +222,7 @@ const defaultScheduledFor = computed(() => {
                             </Label>
                             <Select
                                 :model-value="selectedDepartmentId"
-                                @update:model-value="
-                                    selectedDepartmentId = String($event ?? '')
-                                "
+                                @update:model-value="handleDepartmentChange"
                             >
                                 <SelectTrigger id="department_id">
                                     <SelectValue placeholder="كل العيادات" />
@@ -183,7 +232,7 @@ const defaultScheduledFor = computed(() => {
                                         كل العيادات
                                     </SelectItem>
                                     <SelectItem
-                                        v-for="department in props.departments"
+                                        v-for="department in availableDepartments"
                                         :key="department.id"
                                         :value="String(department.id)"
                                     >
@@ -201,7 +250,11 @@ const defaultScheduledFor = computed(() => {
                                 <Stethoscope class="size-3.5 text-muted-foreground" />
                                 الطبيب
                             </Label>
-                            <Select name="doctor_id">
+                            <Select
+                                name="doctor_id"
+                                :model-value="selectedDoctorId"
+                                @update:model-value="handleDoctorChange"
+                            >
                                 <SelectTrigger
                                     id="doctor_id"
                                     :class="{
@@ -235,6 +288,8 @@ const defaultScheduledFor = computed(() => {
                         <div>
                             <AppointmentWorkingHoursInput
                                 :working-hours="props.clinicWorkingHours"
+                                :available-periods="selectedAvailablePeriods"
+                                :availability-date="props.todayAvailability.date"
                                 :default-value="defaultScheduledFor"
                                 label="التاريخ والوقت"
                             />

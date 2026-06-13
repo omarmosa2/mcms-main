@@ -29,6 +29,7 @@ import type {
     DepartmentOption,
     Option,
     SortDirection,
+    TodayAvailability,
 } from './components/types';
 
 type PaginationLink = {
@@ -67,6 +68,7 @@ const {
     status_options,
     filters,
     clinic_working_hours,
+    today_availability,
     today_appointments,
     is_doctor,
 } = defineProps<{
@@ -76,6 +78,7 @@ const {
     departments: DepartmentOption[];
     status_options: string[];
     clinic_working_hours: ClinicWorkingHour[];
+    today_availability: TodayAvailability;
     filters: {
         status: string | null;
         search: string | null;
@@ -844,6 +847,7 @@ const todaySummary = computed(() => ({
             :doctors="doctors"
             :departments="departments"
             :clinic-working-hours="clinic_working_hours"
+            :today-availability="today_availability"
             @success="handleQuickAddSuccess"
             @reset="resetQuickAdd"
         />
@@ -926,6 +930,7 @@ const todaySummary = computed(() => ({
             :doctors="doctors"
             :departments="departments"
             :clinic-working-hours="clinic_working_hours"
+            :today-availability="today_availability"
             @update:open="isCreateSheetOpen = $event"
         />
 
@@ -940,6 +945,7 @@ const todaySummary = computed(() => ({
             :doctors="doctors"
             :departments="departments"
             :clinic-working-hours="clinic_working_hours"
+            :today-availability="today_availability"
             @close="closeEditAppointment"
         />
 

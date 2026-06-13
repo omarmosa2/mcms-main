@@ -35,6 +35,24 @@ export type ClinicWorkingHour = {
     end_time: string | null;
 };
 
+export type AvailabilityPeriod = {
+    start_time: string;
+    end_time: string;
+};
+
+export type DoctorTodayAvailability = {
+    id: number;
+    department_id: number;
+    available_periods: AvailabilityPeriod[];
+};
+
+export type TodayAvailability = {
+    date: string;
+    departments: number[];
+    doctors: DoctorTodayAvailability[];
+    department_periods: Record<number, AvailabilityPeriod[]>;
+};
+
 export type Appointment = {
     id: number;
     patient_id: number;

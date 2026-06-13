@@ -23,13 +23,14 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
-import type { ClinicWorkingHour, DepartmentOption, Option } from './types';
+import type { AvailabilityPeriod, ClinicWorkingHour, DepartmentOption, Option, TodayAvailability } from './types';
 
 const props = defineProps<{
     patients: Option[];
     doctors: Option[];
     departments: DepartmentOption[];
     clinicWorkingHours: ClinicWorkingHour[];
+    todayAvailability: TodayAvailability;
 }>();
 
 const emit = defineEmits<{
@@ -39,22 +40,65 @@ const emit = defineEmits<{
 }>();
 
 const selectedDepartmentId = ref('');
+const selectedDoctorId = ref('');
+
+const todayAvailableDepartmentIds = computed(
+    () => new Set(props.todayAvailability.departments),
+);
+
+const availableDepartments = computed(() =>
+    props.departments.filter((department) =>
+        todayAvailableDepartmentIds.value.has(department.id),
+    ),
+);
 
 const filteredDoctors = computed(() => {
+    const todayAvailableDoctorIds = new Set(
+        props.todayAvailability.doctors.map((doctor) => doctor.id),
+    );
+    const availableDoctors = props.doctors.filter((doctor) =>
+        todayAvailableDoctorIds.has(doctor.id),
+    );
+
     if (!selectedDepartmentId.value) {
-        return props.doctors;
+        return availableDoctors;
     }
 
     const departmentId = Number(selectedDepartmentId.value);
 
-    return props.doctors.filter(
+    return availableDoctors.filter(
         (doctor) => doctor.department_id === departmentId,
     );
+});
+
+const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
+    const doctorId = Number(selectedDoctorId.value);
+
+    if (Number.isFinite(doctorId) && doctorId > 0) {
+        return (
+            props.todayAvailability.doctors.find((doctor) => doctor.id === doctorId)
+                ?.available_periods ?? []
+        );
+    }
+
+    const departmentId = Number(selectedDepartmentId.value);
+
+    if (Number.isFinite(departmentId) && departmentId > 0) {
+        return props.todayAvailability.department_periods[departmentId] ?? [];
+    }
+
+    return Object.values(props.todayAvailability.department_periods).flat();
 });
 
 const handleDepartmentChange = (value: unknown) => {
     const strValue = String(value ?? '');
     selectedDepartmentId.value = strValue === '__all__' ? '' : strValue;
+    selectedDoctorId.value = '';
+};
+
+const handleDoctorChange = (value: unknown) => {
+    const strValue = String(value ?? '');
+    selectedDoctorId.value = strValue === '__none__' ? '' : strValue;
 };
 
 const handleSubmit = (event: SubmitEvent) => {
@@ -171,7 +215,7 @@ const handleSubmit = (event: SubmitEvent) => {
                         <SelectContent>
                             <SelectItem value="__all__">كل العيادات</SelectItem>
                             <SelectItem
-                                v-for="department in props.departments"
+                                v-for="department in availableDepartments"
                                 :key="department.id"
                                 :value="String(department.id)"
                             >
@@ -189,7 +233,11 @@ const handleSubmit = (event: SubmitEvent) => {
                         <Stethoscope class="size-3.5 text-muted-foreground" />
                         الطبيب
                     </Label>
-                    <Select name="doctor_id">
+                    <Select
+                        name="doctor_id"
+                        :model-value="selectedDoctorId"
+                        @update:model-value="handleDoctorChange"
+                    >
                         <SelectTrigger
                             id="quick_doctor"
                             class="w-full"
@@ -227,6 +275,8 @@ const handleSubmit = (event: SubmitEvent) => {
                     </Label>
                     <AppointmentWorkingHoursInput
                         :working-hours="props.clinicWorkingHours"
+                        :available-periods="selectedAvailablePeriods"
+                        :availability-date="props.todayAvailability.date"
                         label=""
                     />
                     <InputError :message="errors.scheduled_for" />

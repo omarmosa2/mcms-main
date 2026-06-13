@@ -90,9 +90,16 @@ const doctorOptions = computed(() =>
 );
 
 watch(selectedDoctorId, (doctorId) => {
-    const doctor = props.doctors.find((item) => String(item.id) === doctorId);
+    if (!doctorId) {
+        selectedDepartmentId.value = '';
+        return;
+    }
 
-    if (doctor?.department_id !== null && doctor?.department_id !== undefined) {
+    const doctor = props.doctors.find(
+        (item) => String(item.id) === String(doctorId),
+    );
+
+    if (doctor?.department_id != null) {
         selectedDepartmentId.value = String(doctor.department_id);
     }
 });
@@ -189,6 +196,7 @@ function formatTime(time: string | null): string {
                             v-model="selectedDepartmentId"
                             name="department_id"
                             class="pattern-field-clay h-10 w-full px-3"
+                            
                         >
                             <option value="">اختر العيادة</option>
                             <option

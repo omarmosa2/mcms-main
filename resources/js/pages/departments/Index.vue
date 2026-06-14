@@ -47,6 +47,7 @@ const {
     isOpen: isConfirmOpen,
     options: confirmOptions,
     confirm,
+    close: closeConfirm,
     handleConfirm: handleConfirmDelete,
     handleCancel: handleConfirmCancel,
 } = useConfirm();
@@ -389,6 +390,7 @@ const deleteDepartment = async (department: Department) => {
     if (confirmed) {
         router.delete(DepartmentController.destroy(department.id), {
             onSuccess: () => {
+                closeConfirm();
                 toast.success('تم حذف العيادة بنجاح');
             },
             onError: () => {

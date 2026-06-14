@@ -77,7 +77,7 @@ defineOptions({
 
 const { can } = usePermissions();
 const toast = useToast();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const { isOpen: isConfirmOpen, options: confirmOptions, confirm, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 
 const showForm = ref(false);
 const viewing = ref<Employee | null>(null);
@@ -264,7 +264,10 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
 
     router.delete(EmployeeController.destroy.url(employee.id), {
         preserveScroll: true,
-        onSuccess: () => toast.success('تم تنفيذ العملية بنجاح'),
+        onSuccess: () => {
+            closeConfirm();
+            toast.success('تم تنفيذ العملية بنجاح');
+        },
         onError: () => toast.error('تعذر تنفيذ العملية'),
     });
 };

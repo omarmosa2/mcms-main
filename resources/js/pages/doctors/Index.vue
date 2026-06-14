@@ -41,7 +41,7 @@ defineOptions({
 
 const { can } = usePermissions();
 const toast = useToast();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const { isOpen: isConfirmOpen, options: confirmOptions, confirm, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 
 const search = ref(props.filters.search ?? '');
 const status = ref<DoctorProfileStatus | 'all'>(props.filters.status ?? 'all');
@@ -109,6 +109,7 @@ const deleteProfile = async (profile: DoctorProfile): Promise<void> => {
     router.delete(destroy.url(profile.id), {
         preserveScroll: true,
         onSuccess: () => {
+            closeConfirm();
             toast.success('تم تنفيذ العملية بنجاح.');
         },
         onError: () => {

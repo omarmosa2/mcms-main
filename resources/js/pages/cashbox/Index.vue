@@ -103,7 +103,7 @@ defineOptions({
 });
 
 const { can } = usePermissions();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const { isOpen: isConfirmOpen, options: confirmOptions, confirm, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 const toast = useToast();
 const page = usePage();
 
@@ -319,6 +319,7 @@ const handleDeleteBox = async (box: Cashbox) => {
     if (confirmed) {
         router.delete(CashboxController.destroy(box.id), {
             onSuccess: () => {
+                closeConfirm();
                 toast.success('تم حذف الصندوق بنجاح');
             },
             onError: () => {
@@ -341,6 +342,7 @@ const handleBulkDelete = async () => {
         router.delete(CashboxController.bulkDestroy.url(), {
             data: { ids: selectedBoxIds.value },
             onSuccess: () => {
+                closeConfirm();
                 clearSelectedBoxes();
                 toast.success('تم حذف الصناديق المحددة بنجاح');
             },

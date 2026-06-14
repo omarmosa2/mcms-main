@@ -89,7 +89,7 @@ defineOptions({
 });
 
 const { can } = usePermissions();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const { isOpen: isConfirmOpen, options: confirmOptions, confirm, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 const toast = useToast();
 const page = usePage();
 
@@ -298,7 +298,10 @@ const deleteUser = async (userId: number) => {
     });
     if (confirmed) {
         router.delete(UserController.destroy(userId), {
-            onSuccess: () => { toast.success('تم حذف المستخدم بنجاح'); },
+            onSuccess: () => {
+                closeConfirm();
+                toast.success('تم حذف المستخدم بنجاح');
+            },
             onError: () => { toast.error('فشل حذف المستخدم'); },
         });
     }

@@ -56,7 +56,7 @@ const emit = defineEmits<{
 }>();
 
 const { can } = usePermissions();
-const { confirm, isOpen: isConfirmOpen, options: confirmOptions, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const { confirm, isOpen: isConfirmOpen, options: confirmOptions, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 const toast = useToast();
 
 const statusLabels: Record<string, string> = {
@@ -135,6 +135,7 @@ const deleteInvoice = async (invoice: Invoice) => {
     if (confirmed) {
         router.delete(InvoiceController.destroy(invoice.id), {
             onSuccess: () => {
+                closeConfirm();
                 toast.success('تم حذف الفاتورة بنجاح');
             },
             onError: () => {

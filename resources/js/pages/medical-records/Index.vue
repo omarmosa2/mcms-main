@@ -122,7 +122,7 @@ defineOptions({
 });
 
 const { can } = usePermissions();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const { isOpen: isConfirmOpen, options: confirmOptions, confirm, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 const { success: toastSuccess } = useToast();
 
 const deleteRecordId = ref<number | null>(null);
@@ -303,8 +303,8 @@ async function handleDelete(recordId: number) {
         router.delete(`/medical-records/${recordId}`, {
             preserveScroll: true,
             onSuccess: () => {
+                closeConfirm();
                 toastSuccess('تم حذف السجل الطبي بنجاح.');
-                isConfirmOpen.value = false;
             },
             onFinish: () => {
                 deleteRecordId.value = null;

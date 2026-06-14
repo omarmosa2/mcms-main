@@ -100,7 +100,7 @@ defineOptions({
 });
 
 const { can } = usePermissions();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const { isOpen: isConfirmOpen, options: confirmOptions, confirm, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 const toast = useToast();
 const page = usePage();
 
@@ -379,7 +379,10 @@ const deleteExpense = async (expense: Expense) => {
     });
     if (confirmed) {
         router.delete(ExpenseController.destroy(expense.id), {
-            onSuccess: () => { toast.success('تم حذف المصروف بنجاح'); },
+            onSuccess: () => {
+                closeConfirm();
+                toast.success('تم حذف المصروف بنجاح');
+            },
             onError: () => { toast.error('فشل حذف المصروف'); },
         });
     }
@@ -397,6 +400,7 @@ const handleBulkDelete = async () => {
         router.delete(ExpenseController.bulkDestroy.url(), {
             data: { ids: selectedExpenseIds.value },
             onSuccess: () => {
+                closeConfirm();
                 clearSelectedExpenses();
                 toast.success(`تم حذف ${selectedExpenseIds.value.length} مصروف بنجاح`);
             },

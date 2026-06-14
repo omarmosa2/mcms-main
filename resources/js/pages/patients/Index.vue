@@ -58,6 +58,7 @@ const {
     isOpen: isConfirmOpen,
     options: confirmOptions,
     confirm,
+    close: closeConfirm,
     setLoading: setConfirmLoading,
     handleConfirm: handleConfirmDelete,
     handleCancel: handleConfirmCancel,
@@ -281,12 +282,11 @@ const handleDeletePatient = async (patient: Patient) => {
     if (confirmed) {
         router.delete(PatientController.destroy(patient.id), {
             onSuccess: () => {
+                closeConfirm();
                 toast.success('تم حذف المريض بنجاح');
-                handleConfirmCancel();
             },
             onError: (errors) => {
                 toast.error(deletePatientErrorMessage(errors));
-                setConfirmLoading(false);
             },
         });
     }

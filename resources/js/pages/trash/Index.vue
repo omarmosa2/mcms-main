@@ -47,6 +47,7 @@ const {
     isOpen: isConfirmOpen,
     options: confirmOptions,
     confirm,
+    close: closeConfirm,
     handleConfirm: handleConfirmAction,
     handleCancel: handleConfirmCancel,
 } = useConfirm();
@@ -77,6 +78,7 @@ const restoreItem = async (type: string, id: number, name: string) => {
     if (confirmed) {
         router.post(`/trash/${type}/${id}/restore`, {}, {
             onSuccess: () => {
+                closeConfirm();
                 toast.success('تم استرجاع العنصر بنجاح');
             },
             onError: () => {
@@ -98,6 +100,7 @@ const forceDeleteItem = async (type: string, id: number, name: string) => {
     if (confirmed) {
         router.delete(`/trash/${type}/${id}/force`, {
             onSuccess: () => {
+                closeConfirm();
                 toast.success('تم حذف العنصر نهائياً');
             },
             onError: () => {
@@ -119,6 +122,7 @@ const emptyTrash = async (type: string, label: string) => {
     if (confirmed) {
         router.delete(`/trash/${type}/empty`, {
             onSuccess: () => {
+                closeConfirm();
                 toast.success('تم إفراغ سلة المحذوفات');
             },
             onError: () => {

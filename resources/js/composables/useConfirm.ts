@@ -41,6 +41,12 @@ export function useConfirm() {
         isLoading.value = loading;
     };
 
+    const close = () => {
+        isOpen.value = false;
+        isLoading.value = false;
+        resolveRef.value = null;
+    };
+
     const handleConfirm = () => {
         isLoading.value = true;
         resolveRef.value?.(true);
@@ -59,6 +65,7 @@ export function useConfirm() {
         options,
         confirm,
         setLoading,
+        close,
         handleConfirm,
         handleCancel,
     };

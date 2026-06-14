@@ -111,6 +111,7 @@ const {
     isOpen: isConfirmOpen,
     options: confirmOptions,
     confirm,
+    close: closeConfirm,
     handleConfirm: handleConfirmDelete,
     handleCancel: handleConfirmCancel,
 } = useConfirm();
@@ -658,6 +659,7 @@ const deleteAppointment = async (appointment: Appointment) => {
     if (confirmed) {
         router.delete(AppointmentController.destroy(appointment.id), {
             onSuccess: () => {
+                closeConfirm();
                 toast.success('تم حذف الموعد بنجاح');
             },
             onError: () => {
@@ -680,6 +682,7 @@ const handleBulkDelete = async () => {
         router.delete(AppointmentController.bulkDestroy.url(), {
             data: { ids: selectedAppointmentIds.value },
             onSuccess: () => {
+                closeConfirm();
                 clearSelectedAppointments();
                 toast.success(
                     `تم حذف ${selectedAppointmentIds.value.length} موعد بنجاح`,

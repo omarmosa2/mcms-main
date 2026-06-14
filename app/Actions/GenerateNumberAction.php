@@ -50,7 +50,7 @@ class GenerateNumberAction extends BaseAction
                 ->first();
 
             if ($numberRange === null) {
-                $fallback = $this->generateFallbackNumber($entityType);
+                $fallback = $this->generateFallbackNumber($clinicId, $entityType);
 
                 return $entityType === self::ENTITY_PATIENT ? (int) $fallback : $fallback;
             }
@@ -69,10 +69,12 @@ class GenerateNumberAction extends BaseAction
         return $numberRange->formatNumber($sequence);
     }
 
-    private function generateFallbackNumber(string $entityType): string
+    private function generateFallbackNumber(int $clinicId, string $entityType): string
     {
         if ($entityType === self::ENTITY_PATIENT) {
-            $maxFileNumber = (int) Patient::query()->max('file_number');
+            $maxFileNumber = (int) Patient::withTrashed()
+                ->where('clinic_id', $clinicId)
+                ->max('file_number');
 
             return (string) ($maxFileNumber + 1);
         }

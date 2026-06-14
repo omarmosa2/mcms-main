@@ -5,7 +5,7 @@ import { Form } from '@inertiajs/vue3';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DialogOverlay } from '@/components/ui/overlay';
+import { DialogOverlay } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import type { Patient } from './types';
 

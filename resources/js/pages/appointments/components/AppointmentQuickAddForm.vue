@@ -142,7 +142,7 @@ const handleSubmit = (event: SubmitEvent): void => {
 </script>
 
 <template>
-    <section class="glass-panel-soft overflow-hidden">
+    <section class="glass-panel-soft p-5">
         <div
             class="flex flex-col gap-3 border-b border-border/70 bg-secondary/40 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
         >
@@ -178,7 +178,7 @@ const handleSubmit = (event: SubmitEvent): void => {
         <Form
             :key="formResetKey"
             v-bind="AppointmentController.store.form()"
-            class="p-5"
+            class="pt-5"
             v-slot="{ errors, processing }"
             reset-on-success
             @submit="handleSubmit"

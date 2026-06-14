@@ -34,6 +34,7 @@ class CreateAppointmentAction extends BaseAction
     {
         $this->ensurePatientBelongsToClinic($clinicId, (int) $payload['patient_id']);
         $this->ensureDoctorBelongsToClinicIfProvided($clinicId, $payload['doctor_id'] ?? null);
+        $this->ensureScheduledForToday($payload['scheduled_for']);
         $this->checkAppointmentConflicts($clinicId, $payload);
         $this->checkClinicWorkingHours($clinicId, $payload);
         $this->checkDoctorSchedule($clinicId, $payload);
@@ -194,6 +195,18 @@ class CreateAppointmentAction extends BaseAction
         if (! $isAvailable) {
             throw ValidationException::withMessages([
                 'scheduled_for' => 'الوقت المختار خارج دوام الطبيب',
+            ]);
+        }
+    }
+
+    private function ensureScheduledForToday(mixed $scheduledFor): void
+    {
+        $scheduledDate = Carbon::parse($scheduledFor)->toDateString();
+        $today = now()->toDateString();
+
+        if ($scheduledDate !== $today) {
+            throw ValidationException::withMessages([
+                'scheduled_for' => 'يمكن حجز مواعيد لليوم الحالي فقط.',
             ]);
         }
     }

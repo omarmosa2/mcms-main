@@ -142,7 +142,7 @@ class AppointmentControllerTest extends TestCase
             'patient_id' => $patient->id,
             'doctor_id' => $doctor->id,
             'appointment_number' => 'APT-3000',
-            'scheduled_for' => now()->addDay()->toISOString(),
+            'scheduled_for' => now()->addHours(3)->seconds(0)->millisecond(0)->toISOString(),
             'duration_minutes' => 45,
             'appointment_type' => 'first_visit',
             'cost' => 500,
@@ -240,6 +240,8 @@ class AppointmentControllerTest extends TestCase
 
     public function test_store_allows_appointment_inside_clinic_working_hours(): void
     {
+        Carbon::setTestNow(Carbon::parse('2026-06-15 08:00:00'));
+
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
@@ -252,21 +254,21 @@ class AppointmentControllerTest extends TestCase
             'department_id' => $department->id,
         ]);
         $this->setDepartmentWorkingHours($department, [
-            'saturday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+            'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
-
-        $nextSaturday = Carbon::now()->next(Carbon::SATURDAY)->format('Y-m-d');
 
         $response = $this->postJson(route('appointments.store'), [
             'patient_id' => $patient->id,
             'doctor_id' => $doctor->id,
-            'scheduled_for' => "{$nextSaturday}T10:00:00+00:00",
+            'scheduled_for' => '2026-06-15T10:00:00+00:00',
             'duration_minutes' => 30,
             'appointment_type' => 'first_visit',
             'cost' => 100,
         ]);
 
         $response->assertCreated();
+
+        Carbon::setTestNow();
     }
 
     public function test_index_applies_search_filter(): void
@@ -504,6 +506,7 @@ class AppointmentControllerTest extends TestCase
             'patient_id' => $patient->id,
             'status' => Appointment::STATUS_SCHEDULED,
             'duration_minutes' => 30,
+            'scheduled_for' => now()->addHours(2)->seconds(0)->millisecond(0)->toDateTimeString(),
         ]);
 
         $response = $this->putJson(

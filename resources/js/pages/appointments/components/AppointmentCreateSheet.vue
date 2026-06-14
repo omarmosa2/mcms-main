@@ -12,7 +12,7 @@ import {
     Stethoscope,
     User,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import InputError from '@/components/InputError.vue';
@@ -58,7 +58,13 @@ const emit = defineEmits<{
 
 const selectedDepartmentId = ref('');
 const selectedDoctorId = ref('');
+const selectedDuration = ref('30');
 const formResetKey = ref(0);
+
+const noDoctorSelected = computed(() => {
+    const doctorId = Number(selectedDoctorId.value);
+    return !Number.isFinite(doctorId) || doctorId <= 0;
+});
 
 const todayAvailableDepartmentIds = computed(
     () => new Set(props.todayAvailability.departments),
@@ -100,13 +106,7 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
         );
     }
 
-    const departmentId = Number(selectedDepartmentId.value);
-
-    if (Number.isFinite(departmentId) && departmentId > 0) {
-        return props.todayAvailability.department_periods[departmentId] ?? [];
-    }
-
-    return Object.values(props.todayAvailability.department_periods).flat();
+    return [];
 });
 
 const handleDepartmentChange = (value: unknown): void => {
@@ -125,6 +125,7 @@ const handleDoctorChange = (value: unknown): void => {
 const resetFormState = (): void => {
     selectedDepartmentId.value = '';
     selectedDoctorId.value = '';
+    selectedDuration.value = '30';
     formResetKey.value += 1;
 };
 
@@ -135,7 +136,6 @@ const handleSuccess = (): void => {
 
 const defaultScheduledFor = computed(() => {
     const now = new Date();
-    now.setHours(now.getHours() + 1);
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
@@ -396,6 +396,8 @@ const defaultScheduledFor = computed(() => {
                                         props.todayAvailability.date
                                     "
                                     :default-value="defaultScheduledFor"
+                                    :duration-minutes="Number(selectedDuration)"
+                                    :no-doctor-selected="noDoctorSelected"
                                     label="التاريخ والوقت"
                                 />
                                 <InputError :message="errors.scheduled_for" />
@@ -413,7 +415,7 @@ const defaultScheduledFor = computed(() => {
                                         المدة
                                         <span class="text-destructive">*</span>
                                     </Label>
-                                    <Select name="duration_minutes" required>
+                                    <Select name="duration_minutes" required :model-value="selectedDuration" @update:model-value="selectedDuration = String($event ?? '30')">
                                         <SelectTrigger
                                             id="duration_minutes"
                                             class="h-11 rounded-lg bg-background"

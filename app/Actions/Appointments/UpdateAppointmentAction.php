@@ -48,6 +48,8 @@ class UpdateAppointmentAction extends BaseAction
         }
 
         if (array_key_exists('scheduled_for', $payload) || array_key_exists('duration_minutes', $payload) || array_key_exists('doctor_id', $payload)) {
+            $newScheduledFor = $payload['scheduled_for'] ?? $appointment->scheduled_for;
+            $this->ensureScheduledForToday($newScheduledFor);
             $this->checkAppointmentConflicts(
                 $clinicId,
                 $appointmentId,
@@ -225,6 +227,18 @@ class UpdateAppointmentAction extends BaseAction
         if (! $isAvailable) {
             throw ValidationException::withMessages([
                 'scheduled_for' => 'الوقت المختار خارج دوام الطبيب',
+            ]);
+        }
+    }
+
+    private function ensureScheduledForToday(mixed $scheduledFor): void
+    {
+        $scheduledDate = Carbon::parse($scheduledFor)->toDateString();
+        $today = now()->toDateString();
+
+        if ($scheduledDate !== $today) {
+            throw ValidationException::withMessages([
+                'scheduled_for' => 'يمكن تعديل المواعيد لليوم الحالي فقط.',
             ]);
         }
     }

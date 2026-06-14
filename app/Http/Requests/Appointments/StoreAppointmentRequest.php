@@ -71,23 +71,16 @@ class StoreAppointmentRequest extends FormRequest
                 function (string $attribute, mixed $value, Closure $fail): void {
                     $scheduledFor = Carbon::parse($value);
                     $now = now();
-
-                    if ($scheduledFor->isPast()) {
-                        $fail('لا يمكن حجز موعد في وقت سابق.');
-
-                        return;
-                    }
-
                     $today = $now->toDateString();
                     $scheduledDate = $scheduledFor->toDateString();
 
-                    if ($scheduledDate < $today) {
-                        $fail('لا يمكن حجز موعد في تاريخ سابق.');
+                    if ($scheduledDate !== $today) {
+                        $fail('يمكن حجز مواعيد لليوم الحالي فقط.');
 
                         return;
                     }
 
-                    if ($scheduledDate === $today && $scheduledFor->lte($now)) {
+                    if ($scheduledFor->lte($now)) {
                         $fail('الوقت المختار قد مضى بالفعل.');
                     }
                 },

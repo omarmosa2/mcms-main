@@ -50,7 +50,13 @@ const emit = defineEmits<{
 
 const selectedDepartmentId = ref('');
 const selectedDoctorId = ref('');
+const selectedDuration = ref('30');
 const formResetKey = ref(0);
+
+const noDoctorSelected = computed(() => {
+    const doctorId = Number(selectedDoctorId.value);
+    return !Number.isFinite(doctorId) || doctorId <= 0;
+});
 
 const todayAvailableDepartmentIds = computed(
     () => new Set(props.todayAvailability.departments),
@@ -92,13 +98,7 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
         );
     }
 
-    const departmentId = Number(selectedDepartmentId.value);
-
-    if (Number.isFinite(departmentId) && departmentId > 0) {
-        return props.todayAvailability.department_periods[departmentId] ?? [];
-    }
-
-    return Object.values(props.todayAvailability.department_periods).flat();
+    return [];
 });
 
 const handleDepartmentChange = (value: unknown): void => {
@@ -115,6 +115,7 @@ const handleDoctorChange = (value: unknown): void => {
 const resetFormState = (): void => {
     selectedDepartmentId.value = '';
     selectedDoctorId.value = '';
+    selectedDuration.value = '30';
     formResetKey.value += 1;
 };
 
@@ -313,6 +314,8 @@ const handleSubmit = (event: SubmitEvent): void => {
                             :working-hours="props.clinicWorkingHours"
                             :available-periods="selectedAvailablePeriods"
                             :availability-date="props.todayAvailability.date"
+                            :duration-minutes="Number(selectedDuration)"
+                            :no-doctor-selected="noDoctorSelected"
                             label=""
                         />
                         <InputError :message="errors.scheduled_for" class="text-[0.68rem]" />
@@ -327,7 +330,7 @@ const handleSubmit = (event: SubmitEvent): void => {
                             المدة
                             <span class="text-xs text-destructive">*</span>
                         </Label>
-                        <Select name="duration_minutes" required>
+                        <Select name="duration_minutes" required :model-value="selectedDuration" @update:model-value="selectedDuration = String($event ?? '30')">
                             <SelectTrigger
                                 id="quick_duration"
                                 class="h-10 w-full rounded-xl bg-secondary/50"

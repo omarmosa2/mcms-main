@@ -5,6 +5,12 @@ import {
     ArrowUp,
     ArrowUpDown,
     CalendarSearch,
+    Check,
+    Eye,
+    Filter,
+    Pencil,
+    Search,
+    Trash2,
 } from 'lucide-vue-next';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import { Button } from '@/components/ui/button';
@@ -97,18 +103,25 @@ const sortIconFor = (field: AppointmentSortField) => {
 <template>
     <section class="glass-panel-soft overflow-hidden">
         <div
-            class="flex flex-col gap-3 border-b border-border/70 bg-secondary/35 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
+            class="flex flex-col gap-3 border-b border-border/60 bg-secondary/30 px-5 py-3.5 lg:flex-row lg:items-center lg:justify-between"
         >
-            <div>
-                <h2 class="text-base font-bold text-foreground">
-                    جميع المواعيد
-                </h2>
-                <p class="text-xs text-muted-foreground">
-                    بحث وتصفية ومتابعة حالات الحجوزات.
-                </p>
+            <div class="flex items-center gap-3">
+                <div
+                    class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                >
+                    <CalendarSearch class="size-4.5" />
+                </div>
+                <div>
+                    <h2 class="text-sm font-bold text-foreground">
+                        جميع المواعيد
+                    </h2>
+                    <p class="text-[0.72rem] text-muted-foreground">
+                        بحث وتصفية ومتابعة حالات الحجوزات
+                    </p>
+                </div>
             </div>
             <span
-                class="inline-flex w-fit items-center gap-2 rounded-xl border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground"
+                class="inline-flex w-fit items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-[0.72rem] font-medium text-muted-foreground"
             >
                 <CalendarSearch class="size-3.5 text-primary" />
                 الإجمالي: {{ appointments.meta.total }}
@@ -116,71 +129,109 @@ const sortIconFor = (field: AppointmentSortField) => {
         </div>
 
         <div class="space-y-4 p-5">
-            <div class="rounded-2xl border border-border bg-secondary/30 p-4">
+            <div class="rounded-2xl border border-border/60 bg-secondary/20 p-4">
                 <div class="grid gap-3 lg:grid-cols-12 lg:items-end">
-                    <div class="grid gap-2 lg:col-span-4">
-                        <Label for="appointments_search">بحث</Label>
+                    <div class="grid gap-1.5 lg:col-span-4">
+                        <Label
+                            for="appointments_search"
+                            class="flex items-center gap-1 text-xs font-semibold text-foreground"
+                        >
+                            <Search class="size-3.5 text-primary" />
+                            بحث
+                        </Label>
                         <FilterSearch
                             id="appointments_search"
                             :model-value="localSearch"
                             placeholder="رقم الموعد، المريض، رقم الملف، الطبيب"
+                            class="h-10 rounded-xl"
                             @update:model-value="emit('search', $event)"
                         />
                     </div>
 
-                    <div class="grid gap-2 lg:col-span-2">
-                        <Label for="appointments_status">الحالة</Label>
+                    <div class="grid gap-1.5 lg:col-span-2">
+                        <Label
+                            for="appointments_status"
+                            class="flex items-center gap-1 text-xs font-semibold text-foreground"
+                        >
+                            <Filter class="size-3.5 text-primary" />
+                            الحالة
+                        </Label>
                         <FilterSelect
                             id="appointments_status"
                             :model-value="localStatus"
                             :options="statusOptions"
                             placeholder="جميع الحالات"
+                            class="h-10 rounded-xl"
                             @update:model-value="emit('status', $event)"
                         />
                     </div>
 
-                    <div v-if="!isDoctor" class="grid gap-2 lg:col-span-2">
-                        <Label for="appointments_doctor">الطبيب</Label>
+                    <div v-if="!isDoctor" class="grid gap-1.5 lg:col-span-2">
+                        <Label
+                            for="appointments_doctor"
+                            class="flex items-center gap-1 text-xs font-semibold text-foreground"
+                        >
+                            <Filter class="size-3.5 text-primary" />
+                            الطبيب
+                        </Label>
                         <FilterSelect
                             id="appointments_doctor"
                             :model-value="localDoctorId"
                             :options="doctorOptions"
                             placeholder="كل الأطباء"
+                            class="h-10 rounded-xl"
                             @update:model-value="emit('doctor', $event)"
                         />
                     </div>
 
-                    <div v-if="!isDoctor" class="grid gap-2 lg:col-span-2">
-                        <Label for="appointments_department">العيادة</Label>
+                    <div v-if="!isDoctor" class="grid gap-1.5 lg:col-span-2">
+                        <Label
+                            for="appointments_department"
+                            class="flex items-center gap-1 text-xs font-semibold text-foreground"
+                        >
+                            <Filter class="size-3.5 text-primary" />
+                            العيادة
+                        </Label>
                         <FilterSelect
                             id="appointments_department"
                             :model-value="localDepartmentId"
                             :options="departmentOptions"
                             placeholder="كل العيادات"
+                            class="h-10 rounded-xl"
                             @update:model-value="emit('department', $event)"
                         />
                     </div>
 
-                    <div class="grid gap-2 lg:col-span-1">
-                        <Label for="appointments_date_from">من</Label>
+                    <div class="grid gap-1.5 lg:col-span-1">
+                        <Label
+                            for="appointments_date_from"
+                            class="text-xs font-semibold text-foreground"
+                        >
+                            من
+                        </Label>
                         <Input
                             id="appointments_date_from"
                             type="date"
                             :model-value="localDateFrom"
-                            class="pattern-field-clay h-10"
+                            class="pattern-field-clay h-10 rounded-xl"
                             @update:model-value="
                                 emit('date-from', String($event ?? ''))
                             "
                         />
                     </div>
 
-                    <div class="grid gap-2 lg:col-span-1">
-                        <Label for="appointments_date_to">إلى</Label>
+                    <div class="grid gap-1.5 lg:col-span-1">
+                        <Label
+                            for="appointments_date_to"
+                            class="text-xs font-semibold text-foreground"
+                        >
+                            إلى
+                        </Label>
                         <Input
                             id="appointments_date_to"
                             type="date"
                             :model-value="localDateTo"
-                            class="pattern-field-clay h-10"
+                            class="pattern-field-clay h-10 rounded-xl"
                             @update:model-value="
                                 emit('date-to', String($event ?? ''))
                             "
@@ -197,14 +248,17 @@ const sortIconFor = (field: AppointmentSortField) => {
                         @remove="emit('remove-filter', $event)"
                         @clear-all="emit('clear-filters')"
                     />
-                    <div class="grid w-full gap-2 sm:ms-auto sm:w-44">
-                        <Label for="appointments_per_page">
+                    <div class="grid w-full gap-1.5 sm:ms-auto sm:w-40">
+                        <Label
+                            for="appointments_per_page"
+                            class="text-xs font-semibold text-foreground"
+                        >
                             صفوف لكل صفحة
                         </Label>
                         <select
                             id="appointments_per_page"
                             :value="localRowsPerPage"
-                            class="pattern-field-clay h-10 px-3 py-1.5"
+                            class="pattern-field-clay h-10 cursor-pointer rounded-xl px-3 py-1.5"
                             @change="
                                 emit(
                                     'rows-per-page',
@@ -224,14 +278,16 @@ const sortIconFor = (field: AppointmentSortField) => {
                 </div>
             </div>
 
-            <div class="ui-table-shell overflow-hidden">
-                <table class="ui-table">
+            <div class="overflow-hidden rounded-2xl border border-border/60">
+                <table class="w-full">
                     <thead>
-                        <tr>
-                            <th class="px-3 py-3">
+                        <tr class="border-b border-border/60 bg-secondary/40">
+                            <th
+                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                            >
                                 <button
                                     type="button"
-                                    class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
+                                    class="inline-flex items-center gap-1.5 transition hover:text-foreground"
                                     @click="emit('sort', 'scheduled_for')"
                                 >
                                     التاريخ
@@ -241,15 +297,37 @@ const sortIconFor = (field: AppointmentSortField) => {
                                     />
                                 </button>
                             </th>
-                            <th class="px-3 py-3">الوقت</th>
-                            <th class="px-3 py-3">المريض</th>
-                            <th class="px-3 py-3">رقم الملف</th>
-                            <th class="px-3 py-3">العيادة</th>
-                            <th class="px-3 py-3">الطبيب</th>
-                            <th class="px-3 py-3">
+                            <th
+                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                            >
+                                الوقت
+                            </th>
+                            <th
+                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                            >
+                                المريض
+                            </th>
+                            <th
+                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                            >
+                                رقم الملف
+                            </th>
+                            <th
+                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                            >
+                                العيادة
+                            </th>
+                            <th
+                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                            >
+                                الطبيب
+                            </th>
+                            <th
+                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                            >
                                 <button
                                     type="button"
-                                    class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
+                                    class="inline-flex items-center gap-1.5 transition hover:text-foreground"
                                     @click="emit('sort', 'status')"
                                 >
                                     الحالة
@@ -259,51 +337,61 @@ const sortIconFor = (field: AppointmentSortField) => {
                                     />
                                 </button>
                             </th>
-                            <th class="px-3 py-3 text-right">الإجراءات</th>
+                            <th
+                                class="px-4 py-3 text-left text-[0.72rem] font-semibold text-muted-foreground"
+                            >
+                                الإجراءات
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr
                             v-for="appointment in appointments.data"
                             :key="appointment.id"
-                            class="ui-table-row align-top"
+                            class="border-b border-border/40 transition-colors last:border-0 hover:bg-secondary/30"
                         >
-                            <td class="px-3 py-3" data-label="التاريخ">
+                            <td
+                                class="px-4 py-3 text-sm"
+                                data-label="التاريخ"
+                            >
                                 {{ formatDate(appointment.scheduled_for) }}
                             </td>
                             <td
-                                class="px-3 py-3 tabular-nums"
+                                class="px-4 py-3 text-sm tabular-nums"
                                 data-label="الوقت"
                             >
                                 {{ formatTime(appointment.scheduled_for) }}
                             </td>
-                            <td class="px-3 py-3" data-label="المريض">
-                                <div class="font-semibold text-foreground">
+                            <td class="px-4 py-3" data-label="المريض">
+                                <div class="text-sm font-semibold text-foreground">
                                     {{ appointment.patient?.full_name ?? '-' }}
                                 </div>
                             </td>
-                            <td class="px-3 py-3" data-label="رقم الملف">
+                            <td
+                                class="px-4 py-3 text-sm tabular-nums"
+                                data-label="رقم الملف"
+                            >
                                 {{ appointment.patient?.file_number ?? '-' }}
                             </td>
-                            <td class="px-3 py-3" data-label="العيادة">
+                            <td class="px-4 py-3 text-sm" data-label="العيادة">
                                 {{
                                     appointment.doctor?.department?.name ?? '-'
                                 }}
                             </td>
-                            <td class="px-3 py-3" data-label="الطبيب">
-                                <div class="font-semibold text-foreground">
+                            <td class="px-4 py-3" data-label="الطبيب">
+                                <div class="text-sm font-semibold text-foreground">
                                     {{ appointment.doctor?.name ?? '-' }}
                                 </div>
                                 <div
                                     v-if="appointment.doctor?.specialty"
-                                    class="text-xs text-muted-foreground"
+                                    class="text-[0.68rem] text-muted-foreground"
                                 >
                                     {{ appointment.doctor.specialty }}
                                 </div>
                             </td>
-                            <td class="px-3 py-3" data-label="الحالة">
+                            <td class="px-4 py-3" data-label="الحالة">
                                 <span
-                                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
+                                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[0.72rem] font-medium"
                                     :class="
                                         appointmentStatusClass(
                                             appointment.status,
@@ -326,28 +414,32 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 </span>
                             </td>
                             <td
-                                class="table-cell-actions px-3 py-3 md:text-right"
+                                class="px-4 py-3"
                                 data-label="الإجراءات"
                             >
-                                <div class="flex flex-wrap items-center justify-end gap-1">
+                                <div
+                                    class="flex flex-wrap items-center gap-1"
+                                >
                                     <Button
                                         type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        class="h-8 rounded-lg px-2 text-[0.68rem]"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8 rounded-lg"
+                                        aria-label="عرض الموعد"
                                         @click="emit('view', appointment)"
                                     >
-                                        عرض
+                                        <Eye class="size-3.5" />
                                     </Button>
                                     <Button
                                         v-if="canEditAppointment"
                                         type="button"
-                                        variant="default"
-                                        size="sm"
-                                        class="h-8 rounded-lg px-2 text-[0.68rem]"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8 rounded-lg"
+                                        aria-label="تعديل الموعد"
                                         @click="emit('edit', appointment)"
                                     >
-                                        تعديل
+                                        <Pencil class="size-3.5" />
                                     </Button>
                                     <Form
                                         v-if="canUpdateStatus"
@@ -365,7 +457,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                                     >
                                         <select
                                             name="status"
-                                            class="pattern-field-clay h-8 w-24 rounded-lg px-1.5 py-0.5 text-[0.68rem]"
+                                            class="pattern-field-clay h-8 w-24 cursor-pointer rounded-lg px-1.5 py-0.5 text-[0.68rem]"
                                         >
                                             <option value="">
                                                 الحالة
@@ -390,48 +482,49 @@ const sortIconFor = (field: AppointmentSortField) => {
                                         <Button
                                             type="submit"
                                             variant="ghost"
-                                            size="sm"
-                                            class="h-8 rounded-lg px-1.5 text-[0.68rem]"
+                                            size="icon"
+                                            class="size-8 rounded-lg text-success"
+                                            aria-label="تحديث الحالة"
                                             :disabled="processing"
                                         >
-                                            ✓
+                                            <Check class="size-3.5" />
                                         </Button>
                                     </Form>
                                     <Button
                                         v-if="canDeleteAppointment"
                                         type="button"
-                                        size="sm"
+                                        size="icon"
                                         variant="ghost"
-                                        class="h-8 rounded-lg px-1.5 text-[0.68rem] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                        class="size-8 rounded-lg text-destructive hover:bg-destructive/10"
+                                        aria-label="حذف الموعد"
                                         @click="emit('delete', appointment)"
                                     >
-                                        حذف
+                                        <Trash2 class="size-3.5" />
                                     </Button>
                                 </div>
                             </td>
                         </tr>
-                        <tr
-                            v-if="appointments.data.length === 0"
-                            class="table-empty-state"
-                        >
+                        <tr v-if="appointments.data.length === 0">
                             <td
                                 colspan="8"
-                                class="px-3 py-12 text-center"
+                                class="px-4 py-14 text-center"
                             >
                                 <div
                                     class="mx-auto flex max-w-md flex-col items-center gap-2 text-muted-foreground"
                                 >
-                                    <CalendarSearch
-                                        class="size-10 opacity-50"
-                                    />
+                                    <div
+                                        class="flex size-14 items-center justify-center rounded-2xl bg-background shadow-sm"
+                                    >
+                                        <CalendarSearch class="size-7" />
+                                    </div>
                                     <p
-                                        class="text-sm font-semibold text-foreground"
+                                        class="text-sm font-bold text-foreground"
                                     >
                                         لا توجد مواعيد مطابقة
                                     </p>
                                     <p class="text-xs">
                                         جرّب تعديل الفلاتر أو مسحها لعرض نتائج
-                                        أكثر.
+                                        أكثر
                                     </p>
                                 </div>
                             </td>
@@ -441,9 +534,9 @@ const sortIconFor = (field: AppointmentSortField) => {
             </div>
 
             <div
-                class="flex flex-col gap-3 rounded-2xl border border-border bg-secondary/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                class="flex flex-col gap-3 rounded-2xl border border-border/60 bg-secondary/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
-                <p class="text-xs text-muted-foreground">
+                <p class="text-[0.72rem] text-muted-foreground">
                     عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من
                     {{ appointments.meta.total }} سجل
                 </p>
@@ -452,20 +545,22 @@ const sortIconFor = (field: AppointmentSortField) => {
                         type="button"
                         variant="outline"
                         size="sm"
-                        class="h-9 rounded-xl px-3 text-xs"
+                        class="h-8 rounded-lg px-3 text-[0.72rem]"
                         :disabled="localPage === 1"
                         @click="emit('page', localPage - 1)"
                     >
                         السابق
                     </Button>
-                    <span class="text-xs font-semibold text-foreground/85">
+                    <span
+                        class="text-[0.72rem] font-semibold text-foreground/85"
+                    >
                         صفحة {{ localPage }} / {{ totalLocalPages }}
                     </span>
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        class="h-9 rounded-xl px-3 text-xs"
+                        class="h-8 rounded-lg px-3 text-[0.72rem]"
                         :disabled="localPage >= totalLocalPages"
                         @click="emit('page', localPage + 1)"
                     >

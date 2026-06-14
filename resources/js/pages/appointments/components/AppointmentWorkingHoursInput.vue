@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Calendar } from 'lucide-vue-next';
+import { AlertCircle, Calendar, Clock } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -151,11 +151,27 @@ const selectedValue = computed(() => {
     return `${selectedDate.value}T${selectedTime.value}`;
 });
 
+const isToday = computed(() => selectedDate.value === todayDate.value);
+
+const isDayOff = computed(() => {
+    if (!configuredHours.value) {
+        return false;
+    }
+
+    const row = workingHourForSelectedDate.value;
+
+    return row !== null && !row.is_active;
+});
+
 watch(
     () => timeSlots.value,
     (slots) => {
         if (selectedTime.value && !slots.includes(selectedTime.value)) {
             selectedTime.value = '';
+        }
+
+        if (slots.length > 0 && !selectedTime.value) {
+            selectedTime.value = slots[0];
         }
     },
     { immediate: true },
@@ -179,24 +195,32 @@ function buildSlots(startTime: string, endTime: string): string[] {
 
     return slots;
 }
+
+const formatSlotLabel = (slot: string): string => {
+    const [hours, minutes] = slot.split(':').map(Number);
+    const period = hours >= 12 ? 'م' : 'ص';
+    const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+
+    return `${String(displayHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
+};
 </script>
 
 <template>
     <div class="grid gap-1.5">
         <Label
             v-if="label"
-            class="flex items-center gap-1.5 text-xs font-medium"
+            class="flex items-center gap-1.5 text-xs font-semibold text-foreground"
         >
-            <Calendar class="size-3.5 text-muted-foreground" />
+            <Calendar class="size-3.5 text-primary" />
             {{ label }}
-            <span class="text-destructive">*</span>
+            <span class="text-xs text-destructive">*</span>
         </Label>
         <input :name="name" type="hidden" :value="selectedValue" />
 
         <div class="grid gap-2 sm:grid-cols-2">
             <Input
                 v-model="selectedDate"
-                class="h-11 rounded-lg bg-background"
+                class="h-10 rounded-xl bg-background text-sm"
                 type="date"
                 :min="todayDate"
                 required
@@ -207,25 +231,59 @@ function buildSlots(startTime: string, endTime: string): string[] {
                 :disabled="timeSlots.length === 0"
                 @update:model-value="selectedTime = String($event ?? '')"
             >
-                <SelectTrigger class="h-11 rounded-lg bg-background">
+                <SelectTrigger
+                    class="h-10 rounded-xl bg-background"
+                    :class="{
+                        'border-destructive/50 bg-destructive/5':
+                            timeSlots.length === 0,
+                    }"
+                >
                     <SelectValue
                         :placeholder="
                             timeSlots.length === 0
-                                ? 'لا توجد أوقات متاحة'
-                                : 'اختر الوقت'
+                                ? 'لا توجد أوقات'
+                                : formatSlotLabel(selectedTime || timeSlots[0])
                         "
                     />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent class="max-h-64">
                     <SelectItem
                         v-for="slot in timeSlots"
                         :key="slot"
                         :value="slot"
                     >
-                        <span dir="ltr">{{ slot }}</span>
+                        <span class="flex items-center gap-2" dir="ltr">
+                            <Clock class="size-3 text-muted-foreground" />
+                            {{ formatSlotLabel(slot) }}
+                        </span>
                     </SelectItem>
                 </SelectContent>
             </Select>
         </div>
+
+        <div
+            v-if="timeSlots.length === 0"
+            class="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2"
+        >
+            <AlertCircle class="size-4 shrink-0 text-destructive" />
+            <p class="text-[0.72rem] text-destructive">
+                <template v-if="isDayOff">
+                    هذا اليوم إجازة - لا توجد أوقات متاحة
+                </template>
+                <template v-else-if="isToday">
+                    لا توجد أوقات متاحة اليوم - اختر تاريخا آخر
+                </template>
+                <template v-else>
+                    لا توجد أوقات متاحة لهذا التاريخ
+                </template>
+            </p>
+        </div>
+
+        <p
+            v-else-if="isToday && timeSlots.length > 0"
+            class="text-[0.68rem] text-muted-foreground"
+        >
+            الأوقات الماضية مخفية تلقائياً
+        </p>
     </div>
 </template>

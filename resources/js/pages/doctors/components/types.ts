@@ -50,6 +50,7 @@ export type DoctorProfile = {
     department_id: number | null;
     gender: DoctorGender | null;
     phone: string | null;
+    work_start_date: string | null;
     license_number: string | null;
     specialty: string;
     consultation_duration_minutes: number;

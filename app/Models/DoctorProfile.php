@@ -35,6 +35,7 @@ class DoctorProfile extends BaseModel
         return [
             'consultation_duration_minutes' => 'integer',
             'compensation_value' => 'decimal:2',
+            'work_start_date' => 'date',
             'work_schedule' => 'array',
         ];
     }

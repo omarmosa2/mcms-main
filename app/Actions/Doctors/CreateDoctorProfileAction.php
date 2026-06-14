@@ -94,6 +94,7 @@ class CreateDoctorProfileAction extends BaseAction
             'department_id' => $this->normalizeNullableInteger($payload['department_id'] ?? null),
             'gender' => (string) $payload['gender'],
             'phone' => $phone !== '' ? $phone : null,
+            'work_start_date' => $this->normalizeNullableDate($payload['work_start_date'] ?? null),
             'license_number' => $licenseNumber !== '' ? mb_strtoupper($licenseNumber) : null,
             'specialty' => trim((string) $payload['specialty']),
             'consultation_duration_minutes' => (int) ($payload['consultation_duration_minutes'] ?? 30),
@@ -139,6 +140,15 @@ class CreateDoctorProfileAction extends BaseAction
         }
 
         return (int) $value;
+    }
+
+    private function normalizeNullableDate(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (string) $value;
     }
 
     private function ensureDoctorScopeCanManageUser(?int $doctorScopeUserId, int $doctorUserId): void
@@ -201,6 +211,7 @@ class CreateDoctorProfileAction extends BaseAction
             'department_id',
             'gender',
             'phone',
+            'work_start_date',
             'license_number',
             'specialty',
             'consultation_duration_minutes',

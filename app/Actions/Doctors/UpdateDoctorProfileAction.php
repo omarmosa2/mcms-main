@@ -118,6 +118,10 @@ class UpdateDoctorProfileAction extends BaseAction
             $normalized['phone'] = $phone !== '' ? $phone : null;
         }
 
+        if (array_key_exists('work_start_date', $payload)) {
+            $normalized['work_start_date'] = $this->normalizeNullableDate($payload['work_start_date']);
+        }
+
         if (array_key_exists('license_number', $payload)) {
             $licenseNumber = trim((string) ($payload['license_number'] ?? ''));
             $normalized['license_number'] = $licenseNumber !== '' ? mb_strtoupper($licenseNumber) : null;
@@ -215,6 +219,15 @@ class UpdateDoctorProfileAction extends BaseAction
         return (int) $value;
     }
 
+    private function normalizeNullableDate(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (string) $value;
+    }
+
     private function ensureDoctorScopeCanManageUser(?int $doctorScopeUserId, int $doctorUserId): void
     {
         if ($doctorScopeUserId === null) {
@@ -275,6 +288,7 @@ class UpdateDoctorProfileAction extends BaseAction
             'department_id',
             'gender',
             'phone',
+            'work_start_date',
             'license_number',
             'specialty',
             'consultation_duration_minutes',

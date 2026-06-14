@@ -16,6 +16,7 @@ class DoctorProfileResource extends JsonResource
             'department_id' => $this->department_id,
             'gender' => $this->gender,
             'phone' => $this->phone,
+            'work_start_date' => $this->work_start_date?->toDateString(),
             'license_number' => $this->license_number,
             'specialty' => $this->specialty,
             'consultation_duration_minutes' => (int) $this->consultation_duration_minutes,

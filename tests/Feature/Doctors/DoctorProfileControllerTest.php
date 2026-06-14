@@ -3,6 +3,7 @@
 namespace Tests\Feature\Doctors;
 
 use App\Actions\Rbac\AssignUserRoleAction;
+use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\ClinicWorkingHour;
 use App\Models\Department;
@@ -88,6 +89,7 @@ class DoctorProfileControllerTest extends TestCase
             'department_id' => $department->id,
             'gender' => DoctorProfile::GENDER_MALE,
             'phone' => '+963999000111',
+            'work_start_date' => '2026-06-14',
             'license_number' => 'lic-2026-100',
             'specialty' => 'Cardiology',
             'consultation_duration_minutes' => 25,
@@ -111,6 +113,7 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertCreated();
         $response->assertJsonPath('data.department_id', $department->id);
         $response->assertJsonPath('data.license_number', 'LIC-2026-100');
+        $response->assertJsonPath('data.work_start_date', '2026-06-14');
         $response->assertJsonPath('data.specialty', 'Cardiology');
 
         $doctorProfileId = (int) $response->json('data.id');
@@ -127,6 +130,7 @@ class DoctorProfileControllerTest extends TestCase
             'specialty' => 'Cardiology',
             'compensation_type' => DoctorProfile::COMPENSATION_PERCENTAGE,
         ]);
+        $this->assertSame('2026-06-14', DoctorProfile::findOrFail($doctorProfileId)->work_start_date?->toDateString());
 
         $this->assertDatabaseHas('users', [
             'id' => $doctorUserId,
@@ -386,6 +390,7 @@ class DoctorProfileControllerTest extends TestCase
             'department_id' => $department->id,
             'gender' => DoctorProfile::GENDER_FEMALE,
             'phone' => '+963944222333',
+            'work_start_date' => '2026-07-01',
             'specialty' => 'Updated Specialty',
             'consultation_duration_minutes' => 40,
             'status' => DoctorProfile::STATUS_ON_LEAVE,
@@ -409,6 +414,7 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertJsonPath('data.department_id', $department->id);
         $response->assertJsonPath('data.specialty', 'Updated Specialty');
         $response->assertJsonPath('data.status', DoctorProfile::STATUS_ON_LEAVE);
+        $response->assertJsonPath('data.work_start_date', '2026-07-01');
         $response->assertJsonPath('data.license_number', 'UPD-777');
 
         $this->assertDatabaseHas('doctor_profiles', [
@@ -423,6 +429,7 @@ class DoctorProfileControllerTest extends TestCase
             'license_number' => 'UPD-777',
             'compensation_type' => DoctorProfile::COMPENSATION_MONTHLY,
         ]);
+        $this->assertSame('2026-07-01', DoctorProfile::findOrFail($profile->id)->work_start_date?->toDateString());
 
         $this->assertDatabaseHas('users', [
             'id' => $replacementDoctor->id,
@@ -507,6 +514,10 @@ class DoctorProfileControllerTest extends TestCase
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
             'status' => DoctorProfile::STATUS_ACTIVE,
+        ]);
+        Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
         ]);
 
         $response = $this->deleteJson(route('doctors.destroy', ['doctorProfileId' => $profile->id]));

@@ -87,6 +87,7 @@ class DeleteDoctorProfileAction extends BaseAction
             'department_id',
             'gender',
             'phone',
+            'work_start_date',
             'license_number',
             'specialty',
             'consultation_duration_minutes',

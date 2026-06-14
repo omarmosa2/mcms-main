@@ -45,6 +45,7 @@ class StoreDoctorProfileRequest extends FormRequest
             ],
             'gender' => ['required', 'string', Rule::in([DoctorProfile::GENDER_MALE, DoctorProfile::GENDER_FEMALE])],
             'phone' => ['nullable', 'string', 'max:50'],
+            'work_start_date' => ['nullable', 'date'],
             'license_number' => [
                 'nullable',
                 'string',

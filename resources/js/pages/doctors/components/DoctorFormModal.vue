@@ -56,6 +56,7 @@ type DoctorForm = {
     gender: DoctorGender;
     specialty: string;
     phone: string;
+    work_start_date: string;
     department_id: number | '';
     username: string;
     password: string;
@@ -156,6 +157,7 @@ const defaultsFor = (profile: DoctorProfile | null): DoctorForm => ({
     gender: profile?.gender ?? 'male',
     specialty: profile?.specialty ?? '',
     phone: profile?.phone ?? '',
+    work_start_date: profile?.work_start_date ?? '',
     department_id: profile?.department_id ?? '',
     username: profile?.user?.email ?? '',
     password: '',
@@ -257,9 +259,7 @@ const submit = (): void => {
             class="max-h-[92vh] max-w-4xl overflow-hidden rounded-xl bg-card p-0"
             dir="rtl"
         >
-            <DialogHeader
-                class="border-b border-border px-6 py-5 text-right"
-            >
+            <DialogHeader class="border-b border-border px-6 py-5 text-right">
                 <DialogTitle class="text-2xl font-bold text-foreground">
                     {{ isEditing ? 'تعديل بيانات الطبيب' : 'إضافة طبيب جديد' }}
                 </DialogTitle>
@@ -321,6 +321,21 @@ const submit = (): void => {
                                 class="h-11 rounded-lg"
                             />
                             <InputError :message="form.errors.phone" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="doctor_work_start_date"
+                                >تاريخ مباشرة العمل</Label
+                            >
+                            <Input
+                                id="doctor_work_start_date"
+                                v-model="form.work_start_date"
+                                type="date"
+                                class="h-11 rounded-lg"
+                            />
+                            <InputError
+                                :message="form.errors.work_start_date"
+                            />
                         </div>
 
                         <div class="grid gap-2">
@@ -410,9 +425,12 @@ const submit = (): void => {
                                     class="block text-sm font-semibold text-foreground"
                                     >حالة الحساب</span
                                 >
-                                <span class="block text-xs text-muted-foreground">{{
-                                    form.is_active ? 'نشط' : 'غير نشط'
-                                }}</span>
+                                <span
+                                    class="block text-xs text-muted-foreground"
+                                    >{{
+                                        form.is_active ? 'نشط' : 'غير نشط'
+                                    }}</span
+                                >
                             </span>
                             <input
                                 v-model="form.is_active"

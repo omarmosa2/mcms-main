@@ -57,6 +57,7 @@ class UpdateDoctorProfileRequest extends FormRequest
             ],
             'gender' => ['sometimes', 'required', 'string', Rule::in([DoctorProfile::GENDER_MALE, DoctorProfile::GENDER_FEMALE])],
             'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
+            'work_start_date' => ['sometimes', 'nullable', 'date'],
             'license_number' => [
                 'sometimes',
                 'nullable',

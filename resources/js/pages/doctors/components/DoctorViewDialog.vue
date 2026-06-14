@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import type { DoctorProfile } from './types';
 
 defineProps<{
@@ -42,6 +48,13 @@ const compensationTypeLabel = (profile: DoctorProfile): string => {
 
     return profile.compensation_type === 'percentage' ? 'نسبة مئوية' : '-';
 };
+const formatDate = (value: string | null): string => {
+    if (value === null) {
+        return '-';
+    }
+
+    return new Intl.DateTimeFormat('ar-SY').format(new Date(value));
+};
 </script>
 
 <template>
@@ -57,7 +70,9 @@ const compensationTypeLabel = (profile: DoctorProfile): string => {
             </DialogHeader>
 
             <div v-if="profile" class="space-y-4">
-                <div class="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-3">
+                <div
+                    class="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-3"
+                >
                     <div>
                         <p class="text-xs text-slate-500">الجنس</p>
                         <p class="font-semibold">{{ genderLabel(profile) }}</p>
@@ -68,41 +83,65 @@ const compensationTypeLabel = (profile: DoctorProfile): string => {
                     </div>
                     <div>
                         <p class="text-xs text-slate-500">العيادة</p>
-                        <p class="font-semibold">{{ profile.department?.name ?? '-' }}</p>
+                        <p class="font-semibold">
+                            {{ profile.department?.name ?? '-' }}
+                        </p>
                     </div>
                     <div>
                         <p class="text-xs text-slate-500">رقم الهاتف</p>
                         <p class="font-semibold">{{ profile.phone ?? '-' }}</p>
                     </div>
                     <div>
+                        <p class="text-xs text-slate-500">تاريخ مباشرة العمل</p>
+                        <p class="font-semibold">
+                            {{ formatDate(profile.work_start_date) }}
+                        </p>
+                    </div>
+                    <div>
                         <p class="text-xs text-slate-500">اسم المستخدم</p>
-                        <p class="font-semibold">{{ profile.user?.email ?? '-' }}</p>
+                        <p class="font-semibold">
+                            {{ profile.user?.email ?? '-' }}
+                        </p>
                     </div>
                     <div>
                         <p class="text-xs text-slate-500">حالة الحساب</p>
-                        <p class="font-semibold">{{ profile.user?.is_active ? 'نشط' : 'غير نشط' }}</p>
+                        <p class="font-semibold">
+                            {{ profile.user?.is_active ? 'نشط' : 'غير نشط' }}
+                        </p>
                     </div>
                     <div>
                         <p class="text-xs text-slate-500">نوع الأجر</p>
-                        <p class="font-semibold">{{ compensationTypeLabel(profile) }}</p>
+                        <p class="font-semibold">
+                            {{ compensationTypeLabel(profile) }}
+                        </p>
                     </div>
                     <div>
                         <p class="text-xs text-slate-500">قيمة الأجر</p>
-                        <p class="font-semibold">{{ profile.compensation_value ?? '-' }}</p>
+                        <p class="font-semibold">
+                            {{ profile.compensation_value ?? '-' }}
+                        </p>
                     </div>
                 </div>
 
                 <div class="rounded-lg border border-slate-200 bg-white p-4">
-                    <h3 class="mb-3 text-sm font-bold text-slate-900">دوام الطبيب</h3>
+                    <h3 class="mb-3 text-sm font-bold text-slate-900">
+                        دوام الطبيب
+                    </h3>
                     <div class="grid gap-2 md:grid-cols-2">
                         <div
                             v-for="day in profile.working_hours"
                             :key="day.day_of_week"
                             class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50 px-3 py-2"
                         >
-                            <span class="font-semibold">{{ days[day.day_of_week] }}</span>
+                            <span class="font-semibold">{{
+                                days[day.day_of_week]
+                            }}</span>
                             <span class="text-sm text-slate-600">
-                                {{ day.is_active ? `${day.start_time?.slice(0, 5)} - ${day.end_time?.slice(0, 5)}` : 'لا يوجد دوام' }}
+                                {{
+                                    day.is_active
+                                        ? `${day.start_time?.slice(0, 5)} - ${day.end_time?.slice(0, 5)}`
+                                        : 'لا يوجد دوام'
+                                }}
                             </span>
                         </div>
                     </div>
@@ -110,7 +149,9 @@ const compensationTypeLabel = (profile: DoctorProfile): string => {
             </div>
 
             <DialogFooter>
-                <Button type="button" variant="outline" @click="emit('close')">إغلاق</Button>
+                <Button type="button" variant="outline" @click="emit('close')"
+                    >إغلاق</Button
+                >
             </DialogFooter>
         </DialogContent>
     </Dialog>

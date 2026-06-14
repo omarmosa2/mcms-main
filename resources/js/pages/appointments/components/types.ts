@@ -60,6 +60,7 @@ export type Appointment = {
     appointment_number: string;
     scheduled_for: string;
     duration_minutes: number;
+    appointment_type?: 'first_visit' | 'review' | string | null;
     status: string;
     cancel_reason: string | null;
     notes: string | null;

@@ -114,9 +114,23 @@ type Patient = {
     updated_at: string | null;
 };
 
-const { patient } = defineProps<{
+const props = defineProps<{
     patient: Patient;
 }>();
+
+const patient = computed<Patient>(() => ({
+    ...props.patient,
+    chronic_conditions: props.patient.chronic_conditions ?? [],
+    allergies: props.patient.allergies ?? [],
+    current_medications: props.patient.current_medications ?? [],
+    visit_history: props.patient.visit_history ?? [],
+    attachments: props.patient.attachments ?? [],
+    appointments: props.patient.appointments ?? [],
+    invoices: props.patient.invoices ?? [],
+    prescriptions: props.patient.prescriptions ?? [],
+    lab_orders: props.patient.lab_orders ?? [],
+    radiology_orders: props.patient.radiology_orders ?? [],
+}));
 
 defineOptions({
     layout: {
@@ -126,8 +140,8 @@ defineOptions({
                 href: PatientController.index(),
             },
             {
-                title: patient.full_name,
-                href: PatientController.show.url(patient.id),
+                title: 'ملف المريض',
+                href: '#',
             },
         ],
     },
@@ -149,19 +163,25 @@ const tabs = [
 ];
 
 const genderLabel = computed(() => {
-    const labels: Record<string, string> = { male: 'ذكر', female: 'أنثى', other: 'آخر' };
+    const labels: Record<string, string> = {
+        male: 'ذكر',
+        female: 'أنثى',
+        other: 'آخر',
+    };
 
-    return patient.gender ? labels[patient.gender] ?? 'غير محدد' : 'غير محدد';
+    return patient.value.gender
+        ? (labels[patient.value.gender] ?? 'غير محدد')
+        : 'غير محدد';
 });
 
 const genderClass = computed(() => {
-    if (patient.gender === 'male') {
-return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-}
+    if (patient.value.gender === 'male') {
+        return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+    }
 
-    if (patient.gender === 'female') {
-return 'bg-pink-500/10 text-pink-600 border-pink-500/20';
-}
+    if (patient.value.gender === 'female') {
+        return 'bg-pink-500/10 text-pink-600 border-pink-500/20';
+    }
 
     return 'bg-muted/50 text-muted-foreground border-border/40';
 });
@@ -189,7 +209,9 @@ const appointmentStatusClass = (status: string) => {
         no_show: 'bg-gray-500/10 text-gray-600 border-gray-500/20',
     };
 
-    return classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40';
+    return (
+        classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40'
+    );
 };
 
 const invoiceStatusLabel = (status: string) => {
@@ -213,7 +235,9 @@ const invoiceStatusClass = (status: string) => {
         void: 'bg-red-500/10 text-red-600 border-red-500/20',
     };
 
-    return classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40';
+    return (
+        classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40'
+    );
 };
 
 const prescriptionStatusLabel = (status: string) => {
@@ -235,7 +259,9 @@ const prescriptionStatusClass = (status: string) => {
         canceled: 'bg-red-500/10 text-red-600 border-red-500/20',
     };
 
-    return classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40';
+    return (
+        classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40'
+    );
 };
 
 const labOrderStatusLabel = (status: string) => {
@@ -257,25 +283,27 @@ const labOrderStatusClass = (status: string) => {
         canceled: 'bg-red-500/10 text-red-600 border-red-500/20',
     };
 
-    return classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40';
+    return (
+        classes[status] ?? 'bg-muted/50 text-muted-foreground border-border/40'
+    );
 };
 
 const formatFileSize = (bytes: number) => {
     if (bytes < 1024) {
-return bytes + ' B';
-}
+        return bytes + ' B';
+    }
 
     if (bytes < 1024 * 1024) {
-return (bytes / 1024).toFixed(1) + ' KB';
-}
+        return (bytes / 1024).toFixed(1) + ' KB';
+    }
 
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 };
 
 const formatDate = (date: string | null) => {
     if (!date) {
-return 'غير محدد';
-}
+        return 'غير محدد';
+    }
 
     return new Date(date).toLocaleDateString('ar-SA', {
         year: 'numeric',
@@ -288,8 +316,8 @@ return 'غير محدد';
 
 const formatShortDate = (date: string | null) => {
     if (!date) {
-return 'غير محدد';
-}
+        return 'غير محدد';
+    }
 
     return new Date(date).toLocaleDateString('ar-SA', {
         year: 'numeric',
@@ -303,16 +331,24 @@ return 'غير محدد';
     <Head :title="patient.full_name" />
 
     <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6" dir="rtl">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        >
             <div class="flex items-center gap-3">
-                <Link :href="PatientController.index()" class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+                <Link
+                    :href="PatientController.index()"
+                    class="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                >
                     <ArrowLeft class="size-4" />
                     العودة للقائمة
                 </Link>
                 <div>
                     <h1 class="page-title">{{ patient.full_name }}</h1>
                     <p class="mt-1 text-sm text-muted-foreground">
-                        رقم الملف: <span class="font-mono text-foreground">{{ patient.file_number }}</span>
+                        رقم الملف:
+                        <span class="font-mono text-foreground">{{
+                            patient.file_number
+                        }}</span>
                     </p>
                 </div>
             </div>
@@ -321,7 +357,7 @@ return 'غير محدد';
                 <Link
                     v-if="can('patient.update')"
                     :href="PatientController.index()"
-                    class="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background/40 px-4 py-2 text-sm font-medium transition-colors hover:bg-background/60 min-h-[44px]"
+                    class="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-border/60 bg-background/40 px-4 py-2 text-sm font-medium transition-colors hover:bg-background/60"
                 >
                     تعديل
                 </Link>
@@ -338,12 +374,16 @@ return 'غير محدد';
                 <div class="flex items-center gap-2">
                     <Calendar class="size-4 text-muted-foreground" />
                     <span class="text-sm text-muted-foreground">العمر</span>
-                    <span class="text-sm font-semibold">{{ patient.age ? patient.age + ' سنة' : 'غير محدد' }}</span>
+                    <span class="text-sm font-semibold">{{
+                        patient.age ? patient.age + ' سنة' : 'غير محدد'
+                    }}</span>
                 </div>
                 <div class="flex items-center gap-2">
                     <CreditCard class="size-4 text-muted-foreground" />
                     <span class="text-sm text-muted-foreground">الفواتير</span>
-                    <span class="text-sm font-semibold">{{ patient.invoices.length }}</span>
+                    <span class="text-sm font-semibold">{{
+                        patient.invoices.length
+                    }}</span>
                 </div>
             </div>
         </div>
@@ -355,7 +395,11 @@ return 'غير محدد';
                     :key="tab.id"
                     type="button"
                     class="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
-                    :class="activeTab === tab.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'"
+                    :class="
+                        activeTab === tab.id
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    "
                     @click="activeTab = tab.id"
                 >
                     <component :is="tab.icon" class="size-4" />
@@ -364,106 +408,256 @@ return 'غير محدد';
             </div>
 
             <div v-if="activeTab === 'info'" class="space-y-4">
-                <div class="rounded-xl border border-border/70 bg-background/55 p-4">
+                <div
+                    class="rounded-xl border border-border/70 bg-background/55 p-4"
+                >
                     <h3 class="mb-3 text-sm font-semibold">البيانات الشخصية</h3>
                     <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">رقم الملف</dt>
-                            <dd class="font-mono text-sm">{{ patient.file_number }}</dd>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                رقم الملف
+                            </dt>
+                            <dd class="font-mono text-sm">
+                                {{ patient.file_number }}
+                            </dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الاسم الكامل</dt>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                الاسم الكامل
+                            </dt>
                             <dd class="text-sm">{{ patient.full_name }}</dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الجنس</dt>
-                            <dd class="text-sm capitalize">{{ genderLabel }}</dd>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                الجنس
+                            </dt>
+                            <dd class="text-sm capitalize">
+                                {{ genderLabel }}
+                            </dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">تاريخ الميلاد</dt>
-                            <dd class="text-sm">{{ formatShortDate(patient.date_of_birth) }}</dd>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                تاريخ الميلاد
+                            </dt>
+                            <dd class="text-sm">
+                                {{ formatShortDate(patient.date_of_birth) }}
+                            </dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">العمر</dt>
-                            <dd class="text-sm">{{ patient.age ? patient.age + ' سنة' : 'غير محدد' }}</dd>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                العمر
+                            </dt>
+                            <dd class="text-sm">
+                                {{
+                                    patient.age
+                                        ? patient.age + ' سنة'
+                                        : 'غير محدد'
+                                }}
+                            </dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">رقم الهوية</dt>
-                            <dd class="text-sm">{{ patient.national_id ?? 'غير محدد' }}</dd>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                رقم الهوية
+                            </dt>
+                            <dd class="text-sm">
+                                {{ patient.national_id ?? 'غير محدد' }}
+                            </dd>
                         </div>
                     </dl>
                 </div>
 
-                <div class="rounded-xl border border-border/70 bg-background/55 p-4">
+                <div
+                    class="rounded-xl border border-border/70 bg-background/55 p-4"
+                >
                     <h3 class="mb-3 text-sm font-semibold">بيانات الاتصال</h3>
                     <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الهاتف</dt>
-                            <dd class="text-sm" :class="patient.phone ? '' : 'text-muted-foreground'">{{ patient.phone ?? 'غير محدد' }}</dd>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                الهاتف
+                            </dt>
+                            <dd
+                                class="text-sm"
+                                :class="
+                                    patient.phone ? '' : 'text-muted-foreground'
+                                "
+                            >
+                                {{ patient.phone ?? 'غير محدد' }}
+                            </dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">البريد الإلكتروني</dt>
-                            <dd class="text-sm" :class="patient.email ? '' : 'text-muted-foreground'">{{ patient.email ?? 'غير محدد' }}</dd>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                البريد الإلكتروني
+                            </dt>
+                            <dd
+                                class="text-sm"
+                                :class="
+                                    patient.email ? '' : 'text-muted-foreground'
+                                "
+                            >
+                                {{ patient.email ?? 'غير محدد' }}
+                            </dd>
                         </div>
                     </dl>
                 </div>
 
-                <div class="rounded-xl border border-border/70 bg-background/55 p-4">
-                    <h3 class="mb-3 text-sm font-semibold">جهة اتصال للطوارئ</h3>
+                <div
+                    class="rounded-xl border border-border/70 bg-background/55 p-4"
+                >
+                    <h3 class="mb-3 text-sm font-semibold">
+                        جهة اتصال للطوارئ
+                    </h3>
                     <dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الاسم</dt>
-                            <dd class="text-sm" :class="patient.emergency_contact_name ? '' : 'text-muted-foreground'">{{ patient.emergency_contact_name ?? 'غير محدد' }}</dd>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                الاسم
+                            </dt>
+                            <dd
+                                class="text-sm"
+                                :class="
+                                    patient.emergency_contact_name
+                                        ? ''
+                                        : 'text-muted-foreground'
+                                "
+                            >
+                                {{
+                                    patient.emergency_contact_name ?? 'غير محدد'
+                                }}
+                            </dd>
                         </div>
                         <div class="space-y-1">
-                            <dt class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase">الهاتف</dt>
-                            <dd class="text-sm" :class="patient.emergency_contact_phone ? '' : 'text-muted-foreground'">{{ patient.emergency_contact_phone ?? 'غير محدد' }}</dd>
+                            <dt
+                                class="text-[0.65rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                            >
+                                الهاتف
+                            </dt>
+                            <dd
+                                class="text-sm"
+                                :class="
+                                    patient.emergency_contact_phone
+                                        ? ''
+                                        : 'text-muted-foreground'
+                                "
+                            >
+                                {{
+                                    patient.emergency_contact_phone ??
+                                    'غير محدد'
+                                }}
+                            </dd>
                         </div>
                     </dl>
                 </div>
 
-                <div v-if="patient.notes" class="rounded-xl border border-border/70 bg-background/55 p-4">
+                <div
+                    v-if="patient.notes"
+                    class="rounded-xl border border-border/70 bg-background/55 p-4"
+                >
                     <h3 class="mb-3 text-sm font-semibold">ملاحظات</h3>
-                    <p class="text-sm whitespace-pre-wrap">{{ patient.notes }}</p>
+                    <p class="text-sm whitespace-pre-wrap">
+                        {{ patient.notes }}
+                    </p>
                 </div>
             </div>
 
             <div v-if="activeTab === 'medical'" class="space-y-4">
-                <div class="rounded-xl border border-border/70 bg-background/55 p-4">
+                <div
+                    class="rounded-xl border border-border/70 bg-background/55 p-4"
+                >
                     <h3 class="mb-3 text-sm font-semibold">أمراض مزمنة</h3>
-                    <div v-if="patient.chronic_conditions.length > 0" class="flex flex-wrap gap-2">
-                        <Badge v-for="(condition, index) in patient.chronic_conditions" :key="index" variant="outline" class="border-red-500/30 text-red-600 bg-red-500/5">
+                    <div
+                        v-if="patient.chronic_conditions.length > 0"
+                        class="flex flex-wrap gap-2"
+                    >
+                        <Badge
+                            v-for="(
+                                condition, index
+                            ) in patient.chronic_conditions"
+                            :key="index"
+                            variant="outline"
+                            class="border-red-500/30 bg-red-500/5 text-red-600"
+                        >
                             {{ condition }}
                         </Badge>
                     </div>
-                    <p v-else class="text-sm text-muted-foreground">لا توجد أمراض مزمنة مسجلة.</p>
+                    <p v-else class="text-sm text-muted-foreground">
+                        لا توجد أمراض مزمنة مسجلة.
+                    </p>
                 </div>
 
-                <div class="rounded-xl border border-border/70 bg-background/55 p-4">
+                <div
+                    class="rounded-xl border border-border/70 bg-background/55 p-4"
+                >
                     <h3 class="mb-3 text-sm font-semibold">حساسية</h3>
-                    <div v-if="patient.allergies.length > 0" class="flex flex-wrap gap-2">
-                        <Badge v-for="(allergy, index) in patient.allergies" :key="index" variant="outline" class="border-amber-500/30 text-amber-600 bg-amber-500/5">
+                    <div
+                        v-if="patient.allergies.length > 0"
+                        class="flex flex-wrap gap-2"
+                    >
+                        <Badge
+                            v-for="(allergy, index) in patient.allergies"
+                            :key="index"
+                            variant="outline"
+                            class="border-amber-500/30 bg-amber-500/5 text-amber-600"
+                        >
                             {{ allergy }}
                         </Badge>
                     </div>
-                    <p v-else class="text-sm text-muted-foreground">لا توجد حساسية مسجلة.</p>
+                    <p v-else class="text-sm text-muted-foreground">
+                        لا توجد حساسية مسجلة.
+                    </p>
                 </div>
 
-                <div class="rounded-xl border border-border/70 bg-background/55 p-4">
+                <div
+                    class="rounded-xl border border-border/70 bg-background/55 p-4"
+                >
                     <h3 class="mb-3 text-sm font-semibold">أدوية حالية</h3>
-                    <div v-if="patient.current_medications.length > 0" class="flex flex-wrap gap-2">
-                        <Badge v-for="(medication, index) in patient.current_medications" :key="index" variant="outline" class="border-blue-500/30 text-blue-600 bg-blue-500/5">
+                    <div
+                        v-if="patient.current_medications.length > 0"
+                        class="flex flex-wrap gap-2"
+                    >
+                        <Badge
+                            v-for="(
+                                medication, index
+                            ) in patient.current_medications"
+                            :key="index"
+                            variant="outline"
+                            class="border-blue-500/30 bg-blue-500/5 text-blue-600"
+                        >
                             {{ medication }}
                         </Badge>
                     </div>
-                    <p v-else class="text-sm text-muted-foreground">لا توجد أدوية حالية مسجلة.</p>
+                    <p v-else class="text-sm text-muted-foreground">
+                        لا توجد أدوية حالية مسجلة.
+                    </p>
                 </div>
             </div>
 
             <div v-if="activeTab === 'records'" class="space-y-4">
-                <div class="rounded-xl border border-border/70 bg-background/55 p-6 text-center">
-                    <Stethoscope class="mx-auto size-8 text-muted-foreground/50" />
-                    <p class="mt-2 text-sm text-muted-foreground">السجلات الطبية لهذا المريض</p>
+                <div
+                    class="rounded-xl border border-border/70 bg-background/55 p-6 text-center"
+                >
+                    <Stethoscope
+                        class="mx-auto size-8 text-muted-foreground/50"
+                    />
+                    <p class="mt-2 text-sm text-muted-foreground">
+                        السجلات الطبية لهذا المريض
+                    </p>
                     <Link
                         :href="`/medical-records?search=${patient.file_number}`"
                         class="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
@@ -476,137 +670,389 @@ return 'غير محدد';
 
             <div v-if="activeTab === 'appointments'" class="space-y-4">
                 <div v-if="patient.appointments.length > 0" class="space-y-3">
-                    <div v-for="appointment in patient.appointments" :key="appointment.id" class="rounded-xl border border-border/70 bg-background/55 p-4">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div
+                        v-for="appointment in patient.appointments"
+                        :key="appointment.id"
+                        class="rounded-xl border border-border/70 bg-background/55 p-4"
+                    >
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-2"
+                        >
                             <div class="flex items-center gap-3">
-                                <Badge :class="appointmentStatusClass(appointment.status)">{{ appointmentStatusLabel(appointment.status) }}</Badge>
+                                <Badge
+                                    :class="
+                                        appointmentStatusClass(
+                                            appointment.status,
+                                        )
+                                    "
+                                    >{{
+                                        appointmentStatusLabel(
+                                            appointment.status,
+                                        )
+                                    }}</Badge
+                                >
                             </div>
-                            <span class="text-xs text-muted-foreground">{{ formatDate(appointment.scheduled_for) }}</span>
+                            <span class="text-xs text-muted-foreground">{{
+                                formatDate(appointment.scheduled_for)
+                            }}</span>
                         </div>
-                        <div v-if="appointment.doctor" class="mt-2 text-sm text-muted-foreground">
-                            الطبيب: <span class="text-foreground">{{ appointment.doctor.name }}</span>
+                        <div
+                            v-if="appointment.doctor"
+                            class="mt-2 text-sm text-muted-foreground"
+                        >
+                            الطبيب:
+                            <span class="text-foreground">{{
+                                appointment.doctor.name
+                            }}</span>
                         </div>
-                        <div v-if="appointment.duration_minutes" class="mt-1 text-xs text-muted-foreground">
+                        <div
+                            v-if="appointment.duration_minutes"
+                            class="mt-1 text-xs text-muted-foreground"
+                        >
                             المدة: {{ appointment.duration_minutes }} دقيقة
                         </div>
-                        <p v-if="appointment.notes" class="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">{{ appointment.notes }}</p>
+                        <p
+                            v-if="appointment.notes"
+                            class="mt-2 text-sm whitespace-pre-wrap text-muted-foreground"
+                        >
+                            {{ appointment.notes }}
+                        </p>
                     </div>
                 </div>
-                <p v-else class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground">لا توجد مواعيد مسجلة.</p>
+                <p
+                    v-else
+                    class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground"
+                >
+                    لا توجد مواعيد مسجلة.
+                </p>
             </div>
 
             <div v-if="activeTab === 'invoices'" class="space-y-4">
                 <div v-if="patient.invoices.length > 0" class="space-y-3">
-                    <div v-for="invoice in patient.invoices" :key="invoice.id" class="rounded-xl border border-border/70 bg-background/55 p-4">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div
+                        v-for="invoice in patient.invoices"
+                        :key="invoice.id"
+                        class="rounded-xl border border-border/70 bg-background/55 p-4"
+                    >
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-2"
+                        >
                             <div class="flex items-center gap-3">
-                                <Badge :class="invoiceStatusClass(invoice.status)">{{ invoiceStatusLabel(invoice.status) }}</Badge>
+                                <Badge
+                                    :class="invoiceStatusClass(invoice.status)"
+                                    >{{
+                                        invoiceStatusLabel(invoice.status)
+                                    }}</Badge
+                                >
                             </div>
-                            <span class="text-xs text-muted-foreground">{{ formatShortDate(invoice.created_at) }}</span>
+                            <span class="text-xs text-muted-foreground">{{
+                                formatShortDate(invoice.created_at)
+                            }}</span>
                         </div>
-                        <dl class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        <dl
+                            class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"
+                        >
                             <div class="space-y-1">
-                                <dt class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase">المبلغ</dt>
-                                <dd class="text-sm font-semibold">{{ invoice.total_amount }} ر.س</dd>
+                                <dt
+                                    class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                                >
+                                    المبلغ
+                                </dt>
+                                <dd class="text-sm font-semibold">
+                                    {{ invoice.total_amount }} ر.س
+                                </dd>
                             </div>
                             <div class="space-y-1">
-                                <dt class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase">المدفوع</dt>
-                                <dd class="text-sm text-emerald-600">{{ invoice.paid_amount }} ر.س</dd>
+                                <dt
+                                    class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                                >
+                                    المدفوع
+                                </dt>
+                                <dd class="text-sm text-emerald-600">
+                                    {{ invoice.paid_amount }} ر.س
+                                </dd>
                             </div>
                             <div class="space-y-1">
-                                <dt class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase">المتبقي</dt>
-                                <dd class="text-sm" :class="parseFloat(invoice.balance_amount) > 0 ? 'text-red-600' : 'text-muted-foreground'">{{ invoice.balance_amount }} ر.س</dd>
+                                <dt
+                                    class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                                >
+                                    المتبقي
+                                </dt>
+                                <dd
+                                    class="text-sm"
+                                    :class="
+                                        parseFloat(invoice.balance_amount) > 0
+                                            ? 'text-red-600'
+                                            : 'text-muted-foreground'
+                                    "
+                                >
+                                    {{ invoice.balance_amount }} ر.س
+                                </dd>
                             </div>
                             <div class="space-y-1">
-                                <dt class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase">الخصم</dt>
-                                <dd class="text-sm text-muted-foreground">{{ invoice.discount_amount }} ر.س</dd>
+                                <dt
+                                    class="text-[0.6rem] font-semibold tracking-normal text-muted-foreground uppercase"
+                                >
+                                    الخصم
+                                </dt>
+                                <dd class="text-sm text-muted-foreground">
+                                    {{ invoice.discount_amount }} ر.س
+                                </dd>
                             </div>
                         </dl>
                     </div>
                 </div>
-                <p v-else class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground">لا توجد فواتير مسجلة.</p>
+                <p
+                    v-else
+                    class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground"
+                >
+                    لا توجد فواتير مسجلة.
+                </p>
             </div>
 
             <div v-if="activeTab === 'prescriptions'" class="space-y-4">
                 <div v-if="patient.prescriptions.length > 0" class="space-y-3">
-                    <div v-for="prescription in patient.prescriptions" :key="prescription.id" class="rounded-xl border border-border/70 bg-background/55 p-4">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div
+                        v-for="prescription in patient.prescriptions"
+                        :key="prescription.id"
+                        class="rounded-xl border border-border/70 bg-background/55 p-4"
+                    >
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-2"
+                        >
                             <div class="flex items-center gap-3">
-                                <Badge :class="prescriptionStatusClass(prescription.status)">{{ prescriptionStatusLabel(prescription.status) }}</Badge>
+                                <Badge
+                                    :class="
+                                        prescriptionStatusClass(
+                                            prescription.status,
+                                        )
+                                    "
+                                    >{{
+                                        prescriptionStatusLabel(
+                                            prescription.status,
+                                        )
+                                    }}</Badge
+                                >
                             </div>
-                            <span class="text-xs text-muted-foreground">{{ formatShortDate(prescription.created_at) }}</span>
+                            <span class="text-xs text-muted-foreground">{{
+                                formatShortDate(prescription.created_at)
+                            }}</span>
                         </div>
-                        <div v-if="prescription.prescriber" class="mt-2 text-sm text-muted-foreground">
-                            الطبيب: <span class="text-foreground">{{ prescription.prescriber.name }}</span>
+                        <div
+                            v-if="prescription.prescriber"
+                            class="mt-2 text-sm text-muted-foreground"
+                        >
+                            الطبيب:
+                            <span class="text-foreground">{{
+                                prescription.prescriber.name
+                            }}</span>
                         </div>
-                        <p v-if="prescription.notes" class="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">{{ prescription.notes }}</p>
-                        <div v-if="prescription.issued_at" class="mt-2 text-xs text-muted-foreground">
-                            تاريخ الإصدار: {{ formatDate(prescription.issued_at) }}
+                        <p
+                            v-if="prescription.notes"
+                            class="mt-2 text-sm whitespace-pre-wrap text-muted-foreground"
+                        >
+                            {{ prescription.notes }}
+                        </p>
+                        <div
+                            v-if="prescription.issued_at"
+                            class="mt-2 text-xs text-muted-foreground"
+                        >
+                            تاريخ الإصدار:
+                            {{ formatDate(prescription.issued_at) }}
                         </div>
-                        <div v-if="prescription.dispensed_at" class="mt-1 text-xs text-muted-foreground">
-                            تاريخ الصرف: {{ formatDate(prescription.dispensed_at) }}
+                        <div
+                            v-if="prescription.dispensed_at"
+                            class="mt-1 text-xs text-muted-foreground"
+                        >
+                            تاريخ الصرف:
+                            {{ formatDate(prescription.dispensed_at) }}
                         </div>
                     </div>
                 </div>
-                <p v-else class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground">لا توجد وصفات مسجلة.</p>
+                <p
+                    v-else
+                    class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground"
+                >
+                    لا توجد وصفات مسجلة.
+                </p>
             </div>
 
             <div v-if="activeTab === 'lab'" class="space-y-4">
                 <div class="space-y-4">
                     <div>
-                        <h3 class="mb-3 text-sm font-semibold">فحوصات المختبر</h3>
-                        <div v-if="patient.lab_orders.length > 0" class="space-y-3">
-                            <div v-for="lab in patient.lab_orders" :key="lab.id" class="rounded-xl border border-border/70 bg-background/55 p-4">
-                                <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="mb-3 text-sm font-semibold">
+                            فحوصات المختبر
+                        </h3>
+                        <div
+                            v-if="patient.lab_orders.length > 0"
+                            class="space-y-3"
+                        >
+                            <div
+                                v-for="lab in patient.lab_orders"
+                                :key="lab.id"
+                                class="rounded-xl border border-border/70 bg-background/55 p-4"
+                            >
+                                <div
+                                    class="flex flex-wrap items-center justify-between gap-2"
+                                >
                                     <div class="flex items-center gap-3">
-                                        <Badge :class="labOrderStatusClass(lab.status)">{{ labOrderStatusLabel(lab.status) }}</Badge>
-                                        <Badge v-if="lab.priority" variant="outline" class="border-purple-500/30 text-purple-600 bg-purple-500/5">
-                                            {{ lab.priority === 'urgent' ? 'عاجل' : lab.priority === 'routine' ? 'عادي' : lab.priority }}
+                                        <Badge
+                                            :class="
+                                                labOrderStatusClass(lab.status)
+                                            "
+                                            >{{
+                                                labOrderStatusLabel(lab.status)
+                                            }}</Badge
+                                        >
+                                        <Badge
+                                            v-if="lab.priority"
+                                            variant="outline"
+                                            class="border-purple-500/30 bg-purple-500/5 text-purple-600"
+                                        >
+                                            {{
+                                                lab.priority === 'urgent'
+                                                    ? 'عاجل'
+                                                    : lab.priority === 'routine'
+                                                      ? 'عادي'
+                                                      : lab.priority
+                                            }}
                                         </Badge>
                                     </div>
-                                    <span class="text-xs text-muted-foreground">{{ formatShortDate(lab.created_at) }}</span>
+                                    <span
+                                        class="text-xs text-muted-foreground"
+                                        >{{
+                                            formatShortDate(lab.created_at)
+                                        }}</span
+                                    >
                                 </div>
-                                <div v-if="lab.orderer" class="mt-2 text-sm text-muted-foreground">
-                                    الطبيب: <span class="text-foreground">{{ lab.orderer.name }}</span>
+                                <div
+                                    v-if="lab.orderer"
+                                    class="mt-2 text-sm text-muted-foreground"
+                                >
+                                    الطبيب:
+                                    <span class="text-foreground">{{
+                                        lab.orderer.name
+                                    }}</span>
                                 </div>
-                                <p v-if="lab.notes" class="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">{{ lab.notes }}</p>
+                                <p
+                                    v-if="lab.notes"
+                                    class="mt-2 text-sm whitespace-pre-wrap text-muted-foreground"
+                                >
+                                    {{ lab.notes }}
+                                </p>
                             </div>
                         </div>
-                        <p v-else class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground">لا توجد فحوصات مختبر مسجلة.</p>
+                        <p
+                            v-else
+                            class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground"
+                        >
+                            لا توجد فحوصات مختبر مسجلة.
+                        </p>
                     </div>
 
                     <div>
-                        <h3 class="mb-3 text-sm font-semibold">فحوصات الأشعة</h3>
-                        <div v-if="patient.radiology_orders.length > 0" class="space-y-3">
-                            <div v-for="radiology in patient.radiology_orders" :key="radiology.id" class="rounded-xl border border-border/70 bg-background/55 p-4">
-                                <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="mb-3 text-sm font-semibold">
+                            فحوصات الأشعة
+                        </h3>
+                        <div
+                            v-if="patient.radiology_orders.length > 0"
+                            class="space-y-3"
+                        >
+                            <div
+                                v-for="radiology in patient.radiology_orders"
+                                :key="radiology.id"
+                                class="rounded-xl border border-border/70 bg-background/55 p-4"
+                            >
+                                <div
+                                    class="flex flex-wrap items-center justify-between gap-2"
+                                >
                                     <div class="flex items-center gap-3">
-                                        <Badge :class="labOrderStatusClass(radiology.status)">{{ labOrderStatusLabel(radiology.status) }}</Badge>
-                                        <Badge v-if="radiology.priority" variant="outline" class="border-purple-500/30 text-purple-600 bg-purple-500/5">
-                                            {{ radiology.priority === 'urgent' ? 'عاجل' : radiology.priority === 'routine' ? 'عادي' : radiology.priority }}
+                                        <Badge
+                                            :class="
+                                                labOrderStatusClass(
+                                                    radiology.status,
+                                                )
+                                            "
+                                            >{{
+                                                labOrderStatusLabel(
+                                                    radiology.status,
+                                                )
+                                            }}</Badge
+                                        >
+                                        <Badge
+                                            v-if="radiology.priority"
+                                            variant="outline"
+                                            class="border-purple-500/30 bg-purple-500/5 text-purple-600"
+                                        >
+                                            {{
+                                                radiology.priority === 'urgent'
+                                                    ? 'عاجل'
+                                                    : radiology.priority ===
+                                                        'routine'
+                                                      ? 'عادي'
+                                                      : radiology.priority
+                                            }}
                                         </Badge>
                                     </div>
-                                    <span class="text-xs text-muted-foreground">{{ formatShortDate(radiology.created_at) }}</span>
+                                    <span
+                                        class="text-xs text-muted-foreground"
+                                        >{{
+                                            formatShortDate(
+                                                radiology.created_at,
+                                            )
+                                        }}</span
+                                    >
                                 </div>
-                                <div v-if="radiology.orderer" class="mt-2 text-sm text-muted-foreground">
-                                    الطبيب: <span class="text-foreground">{{ radiology.orderer.name }}</span>
+                                <div
+                                    v-if="radiology.orderer"
+                                    class="mt-2 text-sm text-muted-foreground"
+                                >
+                                    الطبيب:
+                                    <span class="text-foreground">{{
+                                        radiology.orderer.name
+                                    }}</span>
                                 </div>
-                                <p v-if="radiology.notes" class="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">{{ radiology.notes }}</p>
+                                <p
+                                    v-if="radiology.notes"
+                                    class="mt-2 text-sm whitespace-pre-wrap text-muted-foreground"
+                                >
+                                    {{ radiology.notes }}
+                                </p>
                             </div>
                         </div>
-                        <p v-else class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground">لا توجد فحوصات أشعة مسجلة.</p>
+                        <p
+                            v-else
+                            class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground"
+                        >
+                            لا توجد فحوصات أشعة مسجلة.
+                        </p>
                     </div>
                 </div>
             </div>
 
             <div v-if="activeTab === 'attachments'" class="space-y-4">
-                <div v-if="patient.attachments.length > 0" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <div v-for="attachment in patient.attachments" :key="attachment.id" class="rounded-xl border border-border/70 bg-background/55 p-4">
+                <div
+                    v-if="patient.attachments.length > 0"
+                    class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                    <div
+                        v-for="attachment in patient.attachments"
+                        :key="attachment.id"
+                        class="rounded-xl border border-border/70 bg-background/55 p-4"
+                    >
                         <div class="flex items-start justify-between gap-2">
                             <div class="min-w-0 flex-1">
-                                <p class="truncate text-sm font-medium">{{ attachment.original_name }}</p>
-                                <p class="mt-1 text-xs text-muted-foreground">{{ formatFileSize(attachment.size_bytes) }}</p>
-                                <p class="mt-1 text-xs text-muted-foreground">{{ formatShortDate(attachment.uploaded_at) }}</p>
+                                <p class="truncate text-sm font-medium">
+                                    {{ attachment.original_name }}
+                                </p>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    {{ formatFileSize(attachment.size_bytes) }}
+                                </p>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    {{
+                                        formatShortDate(attachment.uploaded_at)
+                                    }}
+                                </p>
                             </div>
                             <a
                                 :href="attachment.download_url"
@@ -619,7 +1065,12 @@ return 'غير محدد';
                         </div>
                     </div>
                 </div>
-                <p v-else class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground">لا توجد مرفقات.</p>
+                <p
+                    v-else
+                    class="rounded-xl border border-border/70 bg-background/55 p-8 text-center text-sm text-muted-foreground"
+                >
+                    لا توجد مرفقات.
+                </p>
             </div>
         </div>
     </div>

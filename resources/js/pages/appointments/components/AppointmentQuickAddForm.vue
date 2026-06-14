@@ -5,6 +5,7 @@ import {
     Calculator,
     Clock,
     DollarSign,
+    RotateCcw,
     Stethoscope,
     User,
     Zap,
@@ -23,7 +24,13 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
-import type { AvailabilityPeriod, ClinicWorkingHour, DepartmentOption, Option, TodayAvailability } from './types';
+import type {
+    AvailabilityPeriod,
+    ClinicWorkingHour,
+    DepartmentOption,
+    Option,
+    TodayAvailability,
+} from './types';
 
 const props = defineProps<{
     patients: Option[];
@@ -77,8 +84,9 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
 
     if (Number.isFinite(doctorId) && doctorId > 0) {
         return (
-            props.todayAvailability.doctors.find((doctor) => doctor.id === doctorId)
-                ?.available_periods ?? []
+            props.todayAvailability.doctors.find(
+                (doctor) => doctor.id === doctorId,
+            )?.available_periods ?? []
         );
     }
 
@@ -91,13 +99,13 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
     return Object.values(props.todayAvailability.department_periods).flat();
 });
 
-const handleDepartmentChange = (value: unknown) => {
+const handleDepartmentChange = (value: unknown): void => {
     const strValue = String(value ?? '');
     selectedDepartmentId.value = strValue === '__all__' ? '' : strValue;
     selectedDoctorId.value = '';
 };
 
-const handleDoctorChange = (value: unknown) => {
+const handleDoctorChange = (value: unknown): void => {
     const strValue = String(value ?? '');
     selectedDoctorId.value = strValue === '__none__' ? '' : strValue;
 };
@@ -108,12 +116,17 @@ const resetFormState = (): void => {
     formResetKey.value += 1;
 };
 
+const handleReset = (): void => {
+    resetFormState();
+    emit('reset');
+};
+
 const handleSuccess = (): void => {
     resetFormState();
     emit('success');
 };
 
-const handleSubmit = (event: SubmitEvent) => {
+const handleSubmit = (event: SubmitEvent): void => {
     const form = event.target as HTMLFormElement;
     const doctorSelect = form.querySelector(
         'select[name="doctor_id"]',
@@ -129,36 +142,37 @@ const handleSubmit = (event: SubmitEvent) => {
 </script>
 
 <template>
-    <section
-        class="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm"
-    >
+    <section class="glass-panel-soft overflow-hidden">
         <div
-            class="flex items-center justify-between border-b border-border/50 bg-muted/30 px-5 py-3"
+            class="flex flex-col gap-3 border-b border-border/70 bg-secondary/40 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
         >
-            <div class="flex items-center gap-2.5">
+            <div class="flex items-center gap-3">
                 <div
-                    class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                    class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
                 >
-                    <Zap class="size-4" />
+                    <Zap class="size-5" />
                 </div>
                 <div>
-                    <h3 class="text-sm font-semibold text-foreground">
-                        إضافة سريعة - موعد جديد
-                    </h3>
-                    <p class="text-[0.7rem] text-muted-foreground">
-                        املأ الحقول واضغط Enter للحفظ والإضافة التالية
+                    <h2 class="text-base font-bold text-foreground">
+                        إضافة سريعة لموعد
+                    </h2>
+                    <p class="text-xs text-muted-foreground">
+                        حقول مختصرة للحجز اليومي، التفاصيل الإضافية من زر إضافة
+                        موعد.
                     </p>
                 </div>
             </div>
-            <span
-                class="hidden items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[0.65rem] font-medium text-muted-foreground sm:inline-flex"
+
+            <div
+                class="inline-flex w-fit items-center gap-2 rounded-xl border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground"
             >
                 <kbd
-                    class="rounded border border-border/70 bg-background px-1.5 py-0.5 font-mono text-[0.6rem]"
-                    >Enter</kbd
+                    class="rounded-md border border-border bg-secondary px-2 py-0.5 font-mono text-[0.68rem] text-foreground"
                 >
+                    Enter
+                </kbd>
                 حفظ سريع
-            </span>
+            </div>
         </div>
 
         <Form
@@ -171,10 +185,8 @@ const handleSubmit = (event: SubmitEvent) => {
             @success="handleSuccess"
             @error="emit('error')"
         >
-            <div
-                class="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7"
-            >
-                <div class="grid gap-1.5 xl:col-span-2">
+            <div class="grid gap-4 xl:grid-cols-12 xl:items-start">
+                <div class="grid gap-1.5 xl:col-span-3">
                     <Label
                         for="quick_patient"
                         class="flex items-center gap-1.5 text-xs font-medium"
@@ -186,23 +198,23 @@ const handleSubmit = (event: SubmitEvent) => {
                     <Select name="patient_id" required>
                         <SelectTrigger
                             id="quick_patient"
-                            class="w-full"
+                            class="h-11 w-full rounded-xl bg-secondary/50"
                             :class="{
                                 'border-destructive': errors.patient_id,
                             }"
                         >
-                            <SelectValue placeholder="اختر مريضاً" />
+                            <SelectValue placeholder="اختر مريضا" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem
-                                v-for="p in props.patients"
-                                :key="p.id"
-                                :value="String(p.id)"
+                                v-for="patient in props.patients"
+                                :key="patient.id"
+                                :value="String(patient.id)"
                             >
                                 {{
-                                    p.file_number
-                                        ? `${p.full_name ?? p.name} - ${p.file_number}`
-                                        : (p.full_name ?? p.name)
+                                    patient.file_number
+                                        ? `${patient.full_name ?? patient.name} - ${patient.file_number}`
+                                        : (patient.full_name ?? patient.name)
                                 }}
                             </SelectItem>
                         </SelectContent>
@@ -210,7 +222,7 @@ const handleSubmit = (event: SubmitEvent) => {
                     <InputError :message="errors.patient_id" />
                 </div>
 
-                <div class="grid gap-1.5">
+                <div class="grid gap-1.5 xl:col-span-2">
                     <Label
                         for="quick_department"
                         class="flex items-center gap-1.5 text-xs font-medium"
@@ -222,11 +234,16 @@ const handleSubmit = (event: SubmitEvent) => {
                         :model-value="selectedDepartmentId"
                         @update:model-value="handleDepartmentChange"
                     >
-                        <SelectTrigger id="quick_department" class="w-full">
+                        <SelectTrigger
+                            id="quick_department"
+                            class="h-11 w-full rounded-xl bg-secondary/50"
+                        >
                             <SelectValue placeholder="كل العيادات" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="__all__">كل العيادات</SelectItem>
+                            <SelectItem value="__all__">
+                                كل العيادات
+                            </SelectItem>
                             <SelectItem
                                 v-for="department in availableDepartments"
                                 :key="department.id"
@@ -238,7 +255,7 @@ const handleSubmit = (event: SubmitEvent) => {
                     </Select>
                 </div>
 
-                <div class="grid gap-1.5">
+                <div class="grid gap-1.5 xl:col-span-2">
                     <Label
                         for="quick_doctor"
                         class="flex items-center gap-1.5 text-xs font-medium"
@@ -253,24 +270,26 @@ const handleSubmit = (event: SubmitEvent) => {
                     >
                         <SelectTrigger
                             id="quick_doctor"
-                            class="w-full"
+                            class="h-11 w-full rounded-xl bg-secondary/50"
                             :class="{
                                 'border-destructive': errors.doctor_id,
                             }"
                         >
-                            <SelectValue placeholder="اختر طبيباً" />
+                            <SelectValue placeholder="اختر طبيبا" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="__none__">يُحدد لاحقاً</SelectItem>
+                            <SelectItem value="__none__">
+                                يحدد لاحقا
+                            </SelectItem>
                             <SelectItem
-                                v-for="d in filteredDoctors"
-                                :key="d.id"
-                                :value="String(d.id)"
+                                v-for="doctor in filteredDoctors"
+                                :key="doctor.id"
+                                :value="String(doctor.id)"
                             >
                                 {{
-                                    d.department?.name
-                                        ? `${d.name} - ${d.department.name}`
-                                        : d.name
+                                    doctor.department?.name
+                                        ? `${doctor.name} - ${doctor.department.name}`
+                                        : doctor.name
                                 }}
                             </SelectItem>
                         </SelectContent>
@@ -295,7 +314,7 @@ const handleSubmit = (event: SubmitEvent) => {
                     <InputError :message="errors.scheduled_for" />
                 </div>
 
-                <div class="grid gap-1.5">
+                <div class="grid gap-1.5 xl:col-span-1">
                     <Label
                         for="quick_duration"
                         class="flex items-center gap-1.5 text-xs font-medium"
@@ -307,7 +326,7 @@ const handleSubmit = (event: SubmitEvent) => {
                     <Select name="duration_minutes" required>
                         <SelectTrigger
                             id="quick_duration"
-                            class="w-full"
+                            class="h-11 w-full rounded-xl bg-secondary/50"
                             :class="{
                                 'border-destructive': errors.duration_minutes,
                             }"
@@ -324,7 +343,7 @@ const handleSubmit = (event: SubmitEvent) => {
                     <InputError :message="errors.duration_minutes" />
                 </div>
 
-                <div class="grid gap-1.5">
+                <div class="grid gap-1.5 xl:col-span-1">
                     <Label
                         for="quick_type"
                         class="flex items-center gap-1.5 text-xs font-medium"
@@ -336,7 +355,7 @@ const handleSubmit = (event: SubmitEvent) => {
                     <Select name="appointment_type" required>
                         <SelectTrigger
                             id="quick_type"
-                            class="w-full"
+                            class="h-11 w-full rounded-xl bg-secondary/50"
                             :class="{
                                 'border-destructive': errors.appointment_type,
                             }"
@@ -344,16 +363,16 @@ const handleSubmit = (event: SubmitEvent) => {
                             <SelectValue placeholder="كشفية أولى" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="first_visit"
-                                >كشفية أولى</SelectItem
-                            >
+                            <SelectItem value="first_visit">
+                                كشفية أولى
+                            </SelectItem>
                             <SelectItem value="review">مراجعة</SelectItem>
                         </SelectContent>
                     </Select>
                     <InputError :message="errors.appointment_type" />
                 </div>
 
-                <div class="grid gap-1.5">
+                <div class="grid gap-1.5 xl:col-span-1">
                     <Label
                         for="quick_cost"
                         class="flex items-center gap-1.5 text-xs font-medium"
@@ -369,37 +388,39 @@ const handleSubmit = (event: SubmitEvent) => {
                         min="0"
                         step="0.01"
                         required
+                        class="pattern-field-clay h-11"
                         placeholder="0"
                         :class="{ 'border-destructive': errors.cost }"
                     />
                     <InputError :message="errors.cost" />
                 </div>
+            </div>
 
-                <div class="flex items-end gap-2 xl:col-span-1">
-                    <Button
-                        type="submit"
-                        variant="default"
-                        size="sm"
-                        class="h-9 flex-1 gap-1.5 text-xs"
-                        :disabled="processing"
-                    >
-                        <Zap v-if="!processing" class="size-3.5" />
-                        <span
-                            v-if="processing"
-                            class="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
-                        ></span>
-                        {{ processing ? 'جاري...' : 'حفظ' }}
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        class="h-9 px-3 text-xs"
-                        @click="emit('reset')"
-                    >
-                        مسح
-                    </Button>
-                </div>
+            <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    class="h-10 gap-1.5 rounded-xl px-3 text-xs"
+                    @click="handleReset"
+                >
+                    <RotateCcw class="size-3.5" />
+                    مسح
+                </Button>
+                <Button
+                    type="submit"
+                    variant="default"
+                    size="sm"
+                    class="h-10 min-w-28 gap-1.5 rounded-xl px-4 text-xs"
+                    :disabled="processing"
+                >
+                    <Zap v-if="!processing" class="size-3.5" />
+                    <span
+                        v-if="processing"
+                        class="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"
+                    />
+                    {{ processing ? 'جاري الحفظ...' : 'حفظ سريع' }}
+                </Button>
             </div>
         </Form>
     </section>

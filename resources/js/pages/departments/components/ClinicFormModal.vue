@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { Building2, Save, X } from 'lucide-vue-next';
 import { computed, watch } from 'vue';
 import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
 import InputError from '@/components/InputError.vue';
@@ -66,8 +67,12 @@ const form = useForm({
     working_hours: emptyWorkingHours(),
 });
 
-const isEditing = computed(() => props.department !== null && props.department !== undefined);
-const title = computed(() => (isEditing.value ? 'تعديل العيادة' : 'إضافة عيادة جديدة'));
+const isEditing = computed(
+    () => props.department !== null && props.department !== undefined,
+);
+const title = computed(() =>
+    isEditing.value ? 'تعديل العيادة' : 'إضافة عيادة جديدة',
+);
 
 watch(
     () => [props.open, props.department] as const,
@@ -82,7 +87,9 @@ watch(
             code: props.department?.code ?? '',
             description: props.department?.description ?? '',
             is_active: props.department?.is_active ?? true,
-            working_hours: normalizeWorkingHours(props.department?.working_hours),
+            working_hours: normalizeWorkingHours(
+                props.department?.working_hours,
+            ),
         });
         form.reset();
     },
@@ -102,7 +109,7 @@ const handleOpenChange = (value: boolean): void => {
     emit('update:open', true);
 };
 
-const submit = () => {
+const submit = (): void => {
     const options = {
         preserveScroll: true,
         onSuccess: () => {
@@ -123,84 +130,130 @@ const submit = () => {
 <template>
     <Dialog :open="open" @update:open="handleOpenChange">
         <DialogContent
-            class="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
+            size="2xl"
+            class="max-h-[92vh] bg-card p-0"
             dir="rtl"
             @escape-key-down="close"
             @interact-outside="close"
         >
-            <DialogHeader class="text-right">
-                <DialogTitle class="text-2xl font-bold text-foreground">{{ title }}</DialogTitle>
-                <DialogDescription class="text-muted-foreground">
-                    أدخل بيانات العيادة وحدد أيام وساعات الدوام المتاحة للحجز.
-                </DialogDescription>
+            <DialogHeader class="border-b border-border px-6 py-5 text-right">
+                <div class="flex items-start gap-3 pl-10">
+                    <span
+                        class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <Building2 class="size-6" />
+                    </span>
+                    <div class="min-w-0">
+                        <DialogTitle
+                            class="truncate text-2xl font-black text-foreground"
+                        >
+                            {{ title }}
+                        </DialogTitle>
+                        <DialogDescription
+                            class="mt-1 text-sm text-muted-foreground"
+                        >
+                            أدخل بيانات العيادة وحدد أيام وساعات الدوام المتاحة
+                            للحجز.
+                        </DialogDescription>
+                    </div>
+                </div>
             </DialogHeader>
 
-            <form class="space-y-6" @submit.prevent="submit">
-                <section class="grid gap-4 md:grid-cols-2">
-                    <div class="space-y-2">
-                        <Label for="clinic_name">اسم العيادة</Label>
-                        <Input
-                            id="clinic_name"
-                            v-model="form.name"
-                            class="h-12 rounded-2xl"
-                            placeholder="مثال: عيادة الأسنان"
-                        />
-                        <InputError :message="form.errors.name" />
-                    </div>
-
-                    <div class="space-y-2">
-                        <Label for="clinic_code">الرمز</Label>
-                        <Input
-                            id="clinic_code"
-                            v-model="form.code"
-                            class="h-12 rounded-2xl"
-                            placeholder="مثال: DENT"
-                        />
-                        <InputError :message="form.errors.code" />
-                    </div>
-
-                    <div class="space-y-2 md:col-span-2">
-                        <Label for="clinic_description">الوصف</Label>
-                        <textarea
-                            id="clinic_description"
-                            v-model="form.description"
-                            rows="3"
-                            class="w-full rounded-2xl border border-input bg-secondary/50 px-4 py-3 text-sm text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                            placeholder="وصف مختصر عن العيادة"
-                        ></textarea>
-                        <InputError :message="form.errors.description" />
-                    </div>
-
-                    <label class="flex items-center justify-between rounded-2xl border border-border bg-muted p-4 md:col-span-2">
-                        <span>
-                            <span class="block text-sm font-bold text-foreground">حالة العيادة</span>
-                            <span class="block text-xs font-medium text-muted-foreground">العيادات غير النشطة لا تظهر كخيار عمل فعال.</span>
-                        </span>
-                        <input
-                            v-model="form.is_active"
-                            type="checkbox"
-                            class="size-5 rounded border-input text-primary focus:ring-primary/20"
-                        />
-                    </label>
-                </section>
-
-                <ClinicWorkingHoursSelector v-model="form.working_hours" :errors="form.errors" />
-
-                <DialogFooter class="gap-2 sm:justify-start">
-                    <Button
-                        type="submit"
-                        class="h-11 rounded-2xl bg-primary px-6 font-bold text-primary-foreground hover:bg-primary/90"
-                        :disabled="form.processing"
+            <form @submit.prevent="submit">
+                <div class="max-h-[68vh] space-y-5 overflow-y-auto p-6">
+                    <section
+                        class="rounded-xl border border-border bg-muted/40 p-4"
                     >
-                        {{ form.processing ? 'جار الحفظ...' : 'حفظ العيادة' }}
-                    </Button>
+                        <h3 class="mb-4 text-sm font-black text-foreground">
+                            البيانات الأساسية
+                        </h3>
+
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="grid gap-2">
+                                <Label for="clinic_name">اسم العيادة</Label>
+                                <Input
+                                    id="clinic_name"
+                                    v-model="form.name"
+                                    class="h-11 rounded-lg"
+                                    placeholder="مثال: عيادة الأسنان"
+                                />
+                                <InputError :message="form.errors.name" />
+                            </div>
+
+                            <div class="grid gap-2">
+                                <Label for="clinic_code">الرمز</Label>
+                                <Input
+                                    id="clinic_code"
+                                    v-model="form.code"
+                                    class="h-11 rounded-lg"
+                                    placeholder="مثال: DENT"
+                                />
+                                <InputError :message="form.errors.code" />
+                            </div>
+
+                            <div class="grid gap-2 md:col-span-2">
+                                <Label for="clinic_description">الوصف</Label>
+                                <textarea
+                                    id="clinic_description"
+                                    v-model="form.description"
+                                    rows="3"
+                                    class="w-full resize-y rounded-lg border border-input bg-card px-4 py-3 text-sm text-foreground shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
+                                    placeholder="وصف مختصر عن العيادة"
+                                ></textarea>
+                                <InputError
+                                    :message="form.errors.description"
+                                />
+                            </div>
+
+                            <label
+                                class="flex items-center justify-between gap-4 rounded-lg border border-border/70 bg-card px-4 py-3 md:col-span-2"
+                            >
+                                <span>
+                                    <span
+                                        class="block text-sm font-bold text-foreground"
+                                    >
+                                        حالة العيادة
+                                    </span>
+                                    <span
+                                        class="block text-xs font-medium text-muted-foreground"
+                                    >
+                                        العيادات غير النشطة لا تظهر كخيار عمل
+                                        فعال.
+                                    </span>
+                                </span>
+                                <input
+                                    v-model="form.is_active"
+                                    type="checkbox"
+                                    class="size-5 rounded border-input text-primary focus:ring-primary/20"
+                                />
+                            </label>
+                            <InputError :message="form.errors.is_active" />
+                        </div>
+                    </section>
+
+                    <ClinicWorkingHoursSelector
+                        v-model="form.working_hours"
+                        :errors="form.errors"
+                    />
+                </div>
+
+                <DialogFooter class="border-t border-border px-6 py-4">
                     <Button
                         type="button"
-                        variant="ghost"
-                        class="h-11 rounded-2xl px-5"
+                        variant="outline"
+                        :disabled="form.processing"
                         @click="close"
                     >
+                        <X class="size-4" />
                         إلغاء
+                    </Button>
+                    <Button
+                        type="submit"
+                        class="bg-primary text-primary-foreground hover:bg-primary/90"
+                        :disabled="form.processing"
+                    >
+                        <Save class="size-4" />
+                        {{ form.processing ? 'جار الحفظ...' : 'حفظ العيادة' }}
                     </Button>
                 </DialogFooter>
             </form>

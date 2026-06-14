@@ -3,10 +3,12 @@ import { Form } from '@inertiajs/vue3';
 import {
     Building2,
     Calculator,
+    CalendarPlus,
     Clock,
     DollarSign,
     FileText,
     Hash,
+    Plus,
     Stethoscope,
     User,
 } from 'lucide-vue-next';
@@ -17,7 +19,6 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
-    DialogBody,
     DialogContent,
     DialogDescription,
     DialogFooter,
@@ -34,7 +35,13 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
-import type { AvailabilityPeriod, ClinicWorkingHour, DepartmentOption, Option, TodayAvailability } from './types';
+import type {
+    AvailabilityPeriod,
+    ClinicWorkingHour,
+    DepartmentOption,
+    Option,
+    TodayAvailability,
+} from './types';
 
 const props = defineProps<{
     open: boolean;
@@ -87,8 +94,9 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
 
     if (Number.isFinite(doctorId) && doctorId > 0) {
         return (
-            props.todayAvailability.doctors.find((doctor) => doctor.id === doctorId)
-                ?.available_periods ?? []
+            props.todayAvailability.doctors.find(
+                (doctor) => doctor.id === doctorId,
+            )?.available_periods ?? []
         );
     }
 
@@ -140,12 +148,30 @@ const defaultScheduledFor = computed(() => {
 
 <template>
     <Dialog :open="props.open" @update:open="emit('update:open', $event)">
-        <DialogContent class="max-h-[calc(100vh-2rem)]" size="lg">
-            <DialogHeader>
-                <DialogTitle>إضافة موعد جديد</DialogTitle>
-                <DialogDescription>
-                    أدخل بيانات الموعد الجديد. الحقول المميزة بـ * مطلوبة.
-                </DialogDescription>
+        <DialogContent
+            class="max-h-[92vh] overflow-hidden bg-card p-0"
+            size="2xl"
+        >
+            <DialogHeader
+                class="border-b border-border bg-muted/30 px-6 py-5 text-right"
+            >
+                <div class="flex items-start justify-between gap-4">
+                    <div class="space-y-1">
+                        <DialogTitle class="text-2xl font-bold tracking-normal">
+                            إضافة موعد جديد
+                        </DialogTitle>
+                        <DialogDescription
+                            class="text-sm text-muted-foreground"
+                        >
+                            أدخل بيانات الموعد وحدد المريض والتوقيت المناسب.
+                        </DialogDescription>
+                    </div>
+                    <div
+                        class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    >
+                        <CalendarPlus class="size-6" />
+                    </div>
+                </div>
             </DialogHeader>
 
             <Form
@@ -157,274 +183,382 @@ const defaultScheduledFor = computed(() => {
                 reset-on-success
                 @success="handleSuccess"
             >
-                <DialogBody class="space-y-5">
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="grid gap-1.5">
-                            <Label
-                                for="appointment_number"
-                                class="flex items-center gap-1.5 text-xs font-medium"
-                            >
-                                <Hash class="size-3.5 text-muted-foreground" />
-                                رقم الموعد
-                            </Label>
-                            <Input
-                                id="appointment_number"
-                                name="appointment_number"
-                                placeholder="يُولّد تلقائياً إذا ترك فارغاً"
-                                :class="{
-                                    'border-destructive':
-                                        errors.appointment_number,
-                                }"
-                            />
-                            <InputError
-                                :message="errors.appointment_number"
-                            />
+                <div
+                    class="max-h-[calc(92vh-9.5rem)] space-y-5 overflow-y-auto px-6 py-5"
+                >
+                    <section
+                        class="rounded-xl border border-border bg-muted/20 p-4"
+                    >
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-foreground">
+                                بيانات الموعد
+                            </h3>
+                            <p class="text-xs text-muted-foreground">
+                                رقم الموعد والمريض المرتبط بالحجز.
+                            </p>
                         </div>
 
-                        <div class="grid gap-1.5">
-                            <div class="flex items-center justify-between">
+                        <div class="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+                            <div class="grid gap-1.5">
                                 <Label
-                                    for="patient_id"
+                                    for="appointment_number"
                                     class="flex items-center gap-1.5 text-xs font-medium"
                                 >
-                                    <User class="size-3.5 text-muted-foreground" />
-                                    المريض
+                                    <Hash
+                                        class="size-3.5 text-muted-foreground"
+                                    />
+                                    رقم الموعد
+                                </Label>
+                                <Input
+                                    id="appointment_number"
+                                    name="appointment_number"
+                                    class="h-11 rounded-lg bg-background"
+                                    placeholder="يولد تلقائيا إذا ترك فارغا"
+                                    :class="{
+                                        'border-destructive':
+                                            errors.appointment_number,
+                                    }"
+                                />
+                                <InputError
+                                    :message="errors.appointment_number"
+                                />
+                            </div>
+
+                            <div class="grid gap-1.5">
+                                <div class="flex items-center justify-between">
+                                    <Label
+                                        for="patient_id"
+                                        class="flex items-center gap-1.5 text-xs font-medium"
+                                    >
+                                        <User
+                                            class="size-3.5 text-muted-foreground"
+                                        />
+                                        المريض
+                                        <span class="text-destructive">*</span>
+                                    </Label>
+                                    <a
+                                        :href="PatientController.index.url()"
+                                        class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10"
+                                    >
+                                        <Plus class="size-3.5" />
+                                        إضافة مريض
+                                    </a>
+                                </div>
+                                <Select name="patient_id" required>
+                                    <SelectTrigger
+                                        id="patient_id"
+                                        class="h-11 rounded-lg bg-background"
+                                        :class="{
+                                            'border-destructive':
+                                                errors.patient_id,
+                                        }"
+                                    >
+                                        <SelectValue placeholder="اختر مريضا" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem
+                                            v-for="patient in props.patients"
+                                            :key="patient.id"
+                                            :value="String(patient.id)"
+                                        >
+                                            {{
+                                                patient.file_number
+                                                    ? `${patient.full_name ?? patient.name} - ${patient.file_number}`
+                                                    : (patient.full_name ??
+                                                      patient.name)
+                                            }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError :message="errors.patient_id" />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section
+                        class="rounded-xl border border-border bg-muted/20 p-4"
+                    >
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-foreground">
+                                العيادة والطبيب
+                            </h3>
+                            <p class="text-xs text-muted-foreground">
+                                تظهر الخيارات حسب الدوام المتاح لهذا اليوم.
+                            </p>
+                        </div>
+
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div class="grid gap-1.5">
+                                <Label
+                                    for="department_id"
+                                    class="flex items-center gap-1.5 text-xs font-medium"
+                                >
+                                    <Building2
+                                        class="size-3.5 text-muted-foreground"
+                                    />
+                                    العيادة
+                                </Label>
+                                <Select
+                                    :model-value="selectedDepartmentId"
+                                    @update:model-value="handleDepartmentChange"
+                                >
+                                    <SelectTrigger
+                                        id="department_id"
+                                        class="h-11 rounded-lg bg-background"
+                                    >
+                                        <SelectValue
+                                            placeholder="كل العيادات"
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__all__">
+                                            كل العيادات
+                                        </SelectItem>
+                                        <SelectItem
+                                            v-for="department in availableDepartments"
+                                            :key="department.id"
+                                            :value="String(department.id)"
+                                        >
+                                            {{ department.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div class="grid gap-1.5">
+                                <Label
+                                    for="doctor_id"
+                                    class="flex items-center gap-1.5 text-xs font-medium"
+                                >
+                                    <Stethoscope
+                                        class="size-3.5 text-muted-foreground"
+                                    />
+                                    الطبيب
+                                </Label>
+                                <Select
+                                    name="doctor_id"
+                                    :model-value="selectedDoctorId"
+                                    @update:model-value="handleDoctorChange"
+                                >
+                                    <SelectTrigger
+                                        id="doctor_id"
+                                        class="h-11 rounded-lg bg-background"
+                                        :class="{
+                                            'border-destructive':
+                                                errors.doctor_id,
+                                        }"
+                                    >
+                                        <SelectValue placeholder="اختر طبيبا" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__none__">
+                                            يحدد لاحقا
+                                        </SelectItem>
+                                        <SelectItem
+                                            v-for="doctor in filteredDoctors"
+                                            :key="doctor.id"
+                                            :value="String(doctor.id)"
+                                        >
+                                            {{
+                                                doctor.department?.name
+                                                    ? `${doctor.name} - ${doctor.department.name}`
+                                                    : (doctor.name ??
+                                                      `#${doctor.id}`)
+                                            }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError :message="errors.doctor_id" />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section
+                        class="rounded-xl border border-border bg-muted/20 p-4"
+                    >
+                        <div class="mb-4">
+                            <h3 class="text-base font-bold text-foreground">
+                                التوقيت والتكلفة
+                            </h3>
+                            <p class="text-xs text-muted-foreground">
+                                اختر وقت الحجز ونوع الزيارة وقيمة الموعد.
+                            </p>
+                        </div>
+
+                        <div class="grid gap-4 xl:grid-cols-2">
+                            <div>
+                                <AppointmentWorkingHoursInput
+                                    :working-hours="props.clinicWorkingHours"
+                                    :available-periods="
+                                        selectedAvailablePeriods
+                                    "
+                                    :availability-date="
+                                        props.todayAvailability.date
+                                    "
+                                    :default-value="defaultScheduledFor"
+                                    label="التاريخ والوقت"
+                                />
+                                <InputError :message="errors.scheduled_for" />
+                            </div>
+
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div class="grid gap-1.5">
+                                    <Label
+                                        for="duration_minutes"
+                                        class="flex items-center gap-1.5 text-xs font-medium"
+                                    >
+                                        <Clock
+                                            class="size-3.5 text-muted-foreground"
+                                        />
+                                        المدة
+                                        <span class="text-destructive">*</span>
+                                    </Label>
+                                    <Select name="duration_minutes" required>
+                                        <SelectTrigger
+                                            id="duration_minutes"
+                                            class="h-11 rounded-lg bg-background"
+                                            :class="{
+                                                'border-destructive':
+                                                    errors.duration_minutes,
+                                            }"
+                                        >
+                                            <SelectValue
+                                                placeholder="30 دقيقة"
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="15">
+                                                15 دقيقة
+                                            </SelectItem>
+                                            <SelectItem value="30">
+                                                30 دقيقة
+                                            </SelectItem>
+                                            <SelectItem value="45">
+                                                45 دقيقة
+                                            </SelectItem>
+                                            <SelectItem value="60">
+                                                60 دقيقة
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError
+                                        :message="errors.duration_minutes"
+                                    />
+                                </div>
+
+                                <div class="grid gap-1.5">
+                                    <Label
+                                        for="appointment_type"
+                                        class="flex items-center gap-1.5 text-xs font-medium"
+                                    >
+                                        <Calculator
+                                            class="size-3.5 text-muted-foreground"
+                                        />
+                                        نوع الموعد
+                                        <span class="text-destructive">*</span>
+                                    </Label>
+                                    <Select name="appointment_type" required>
+                                        <SelectTrigger
+                                            id="appointment_type"
+                                            class="h-11 rounded-lg bg-background"
+                                            :class="{
+                                                'border-destructive':
+                                                    errors.appointment_type,
+                                            }"
+                                        >
+                                            <SelectValue
+                                                placeholder="كشفية أولى"
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="first_visit">
+                                                كشفية أولى
+                                            </SelectItem>
+                                            <SelectItem value="review">
+                                                مراجعة
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError
+                                        :message="errors.appointment_type"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="grid gap-1.5 xl:col-span-2">
+                                <Label
+                                    for="cost"
+                                    class="flex items-center gap-1.5 text-xs font-medium"
+                                >
+                                    <DollarSign
+                                        class="size-3.5 text-muted-foreground"
+                                    />
+                                    التكلفة
                                     <span class="text-destructive">*</span>
                                 </Label>
-                                <a
-                                    :href="PatientController.index.url()"
-                                    class="text-xs font-medium text-primary hover:underline"
-                                >
-                                    إضافة مريض
-                                </a>
+                                <Input
+                                    id="cost"
+                                    name="cost"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                    class="h-11 rounded-lg bg-background"
+                                    placeholder="0"
+                                    :class="{
+                                        'border-destructive': errors.cost,
+                                    }"
+                                />
+                                <InputError :message="errors.cost" />
                             </div>
-                            <Select name="patient_id" required>
-                                <SelectTrigger
-                                    id="patient_id"
-                                    :class="{
-                                        'border-destructive': errors.patient_id,
-                                    }"
-                                >
-                                    <SelectValue placeholder="اختر مريضاً" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem
-                                        v-for="patient in props.patients"
-                                        :key="patient.id"
-                                        :value="String(patient.id)"
-                                    >
-                                        {{
-                                            patient.file_number
-                                                ? `${patient.full_name ?? patient.name} - ${patient.file_number}`
-                                                : (patient.full_name ?? patient.name)
-                                        }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <InputError :message="errors.patient_id" />
                         </div>
-                    </div>
+                    </section>
 
-                    <div class="grid gap-4 sm:grid-cols-2">
+                    <section
+                        class="rounded-xl border border-border bg-muted/20 p-4"
+                    >
                         <div class="grid gap-1.5">
                             <Label
-                                for="department_id"
+                                for="notes"
                                 class="flex items-center gap-1.5 text-xs font-medium"
                             >
-                                <Building2 class="size-3.5 text-muted-foreground" />
-                                العيادة
+                                <FileText
+                                    class="size-3.5 text-muted-foreground"
+                                />
+                                ملاحظات
                             </Label>
-                            <Select
-                                :model-value="selectedDepartmentId"
-                                @update:model-value="handleDepartmentChange"
-                            >
-                                <SelectTrigger id="department_id">
-                                    <SelectValue placeholder="كل العيادات" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__all__">
-                                        كل العيادات
-                                    </SelectItem>
-                                    <SelectItem
-                                        v-for="department in availableDepartments"
-                                        :key="department.id"
-                                        :value="String(department.id)"
-                                    >
-                                        {{ department.name }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div class="grid gap-1.5">
-                            <Label
-                                for="doctor_id"
-                                class="flex items-center gap-1.5 text-xs font-medium"
-                            >
-                                <Stethoscope class="size-3.5 text-muted-foreground" />
-                                الطبيب
-                            </Label>
-                            <Select
-                                name="doctor_id"
-                                :model-value="selectedDoctorId"
-                                @update:model-value="handleDoctorChange"
-                            >
-                                <SelectTrigger
-                                    id="doctor_id"
-                                    :class="{
-                                        'border-destructive': errors.doctor_id,
-                                    }"
-                                >
-                                    <SelectValue placeholder="اختر طبيباً" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__none__">
-                                        يُحدد لاحقاً
-                                    </SelectItem>
-                                    <SelectItem
-                                        v-for="doctor in filteredDoctors"
-                                        :key="doctor.id"
-                                        :value="String(doctor.id)"
-                                    >
-                                        {{
-                                            doctor.department?.name
-                                                ? `${doctor.name} - ${doctor.department.name}`
-                                                : (doctor.name ?? `#${doctor.id}`)
-                                        }}
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <InputError :message="errors.doctor_id" />
-                        </div>
-                    </div>
-
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <AppointmentWorkingHoursInput
-                                :working-hours="props.clinicWorkingHours"
-                                :available-periods="selectedAvailablePeriods"
-                                :availability-date="props.todayAvailability.date"
-                                :default-value="defaultScheduledFor"
-                                label="التاريخ والوقت"
+                            <textarea
+                                id="notes"
+                                name="notes"
+                                rows="3"
+                                class="flex min-h-[96px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                                placeholder="أي ملاحظات إضافية حول الموعد..."
                             />
-                            <InputError :message="errors.scheduled_for" />
+                            <InputError :message="errors.notes" />
                         </div>
+                    </section>
+                </div>
 
-                        <div class="grid gap-1.5">
-                            <Label
-                                for="duration_minutes"
-                                class="flex items-center gap-1.5 text-xs font-medium"
-                            >
-                                <Clock class="size-3.5 text-muted-foreground" />
-                                المدة
-                                <span class="text-destructive">*</span>
-                            </Label>
-                            <Select name="duration_minutes" required>
-                                <SelectTrigger
-                                    id="duration_minutes"
-                                    :class="{
-                                        'border-destructive':
-                                            errors.duration_minutes,
-                                    }"
-                                >
-                                    <SelectValue placeholder="30 دقيقة" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="15">15 دقيقة</SelectItem>
-                                    <SelectItem value="30">30 دقيقة</SelectItem>
-                                    <SelectItem value="45">45 دقيقة</SelectItem>
-                                    <SelectItem value="60">60 دقيقة</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <InputError :message="errors.duration_minutes" />
-                        </div>
-                    </div>
-
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="grid gap-1.5">
-                            <Label
-                                for="appointment_type"
-                                class="flex items-center gap-1.5 text-xs font-medium"
-                            >
-                                <Calculator class="size-3.5 text-muted-foreground" />
-                                نوع الموعد
-                                <span class="text-destructive">*</span>
-                            </Label>
-                            <Select name="appointment_type" required>
-                                <SelectTrigger
-                                    id="appointment_type"
-                                    :class="{
-                                        'border-destructive':
-                                            errors.appointment_type,
-                                    }"
-                                >
-                                    <SelectValue placeholder="كشفية أولى" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="first_visit">
-                                        كشفية أولى
-                                    </SelectItem>
-                                    <SelectItem value="review">مراجعة</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <InputError :message="errors.appointment_type" />
-                        </div>
-
-                        <div class="grid gap-1.5">
-                            <Label
-                                for="cost"
-                                class="flex items-center gap-1.5 text-xs font-medium"
-                            >
-                                <DollarSign class="size-3.5 text-muted-foreground" />
-                                التكلفة
-                                <span class="text-destructive">*</span>
-                            </Label>
-                            <Input
-                                id="cost"
-                                name="cost"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                required
-                                placeholder="0"
-                                :class="{ 'border-destructive': errors.cost }"
-                            />
-                            <InputError :message="errors.cost" />
-                        </div>
-                    </div>
-
-                    <div class="grid gap-1.5">
-                        <Label
-                            for="notes"
-                            class="flex items-center gap-1.5 text-xs font-medium"
-                        >
-                            <FileText class="size-3.5 text-muted-foreground" />
-                            ملاحظات
-                        </Label>
-                        <textarea
-                            id="notes"
-                            name="notes"
-                            rows="3"
-                            class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            placeholder="أي ملاحظات إضافية حول الموعد..."
-                        />
-                        <InputError :message="errors.notes" />
-                    </div>
-                </DialogBody>
-
-                <DialogFooter>
+                <DialogFooter
+                    class="border-t border-border bg-background px-6 py-4"
+                >
                     <Button
                         type="button"
                         variant="outline"
+                        class="min-w-24 rounded-lg"
                         @click="emit('update:open', false)"
                     >
                         إلغاء
                     </Button>
-                    <Button type="submit" :disabled="processing">
+                    <Button
+                        type="submit"
+                        class="min-w-36 rounded-lg"
+                        :disabled="processing"
+                    >
                         <span
                             v-if="processing"
                             class="inline-block size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-                        ></span>
+                        />
                         {{ processing ? 'جاري الإنشاء...' : 'إنشاء الموعد' }}
                     </Button>
                 </DialogFooter>

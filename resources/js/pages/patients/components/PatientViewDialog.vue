@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { Form, Link } from '@inertiajs/vue3';
+import {
+    AlertTriangle,
+    FileText,
+    HeartPulse,
+    Paperclip,
+    Pill,
+    ShieldAlert,
+} from 'lucide-vue-next';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
-    DialogBody,
     DialogContent,
     DialogDescription,
     DialogFooter,
@@ -98,12 +105,23 @@ const formatBytes = (sizeBytes: number): string => {
     return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const formatDate = (value: string | null): string => {
+    if (value === null) {
+        return '-';
+    }
+
+    return new Intl.DateTimeFormat('ar-SY').format(new Date(value));
+};
+
 const formatDateTime = (value: string | null): string => {
     if (value === null) {
         return '-';
     }
 
-    return new Date(value).toLocaleString('ar-SA');
+    return new Intl.DateTimeFormat('ar-SY', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(new Date(value));
 };
 
 const patientGenderLabel = (gender: string | null): string => {
@@ -116,177 +134,497 @@ const patientGenderLabel = (gender: string | null): string => {
     return labels[gender ?? ''] ?? 'غير محدد';
 };
 
-const refreshDetails = async () => {
+const patientInitial = (patient: Patient | null): string => {
+    return (patient?.full_name ?? 'م').slice(0, 1);
+};
+
+const emergencyContactLabel = (patient: Patient): string => {
+    if (!patient.emergency_contact_name) {
+        return 'غير محدد';
+    }
+
+    if (!patient.emergency_contact_phone) {
+        return `${patient.emergency_contact_name} (بدون هاتف)`;
+    }
+
+    return `${patient.emergency_contact_name} (${patient.emergency_contact_phone})`;
+};
+
+const refreshDetails = async (): Promise<void> => {
     if (detailedPatient.value !== null) {
         try {
             const fetched = await fetchPatientDetails(detailedPatient.value.id);
             detailedPatient.value = fetched;
         } catch {
-            // Keep existing data on refresh failure
+            // Keep existing data on refresh failure.
         }
     }
 };
 </script>
 
 <template>
-    <Dialog :open="patient !== null" @update:open="(open) => !open && emit('close')">
-        <DialogContent class="max-w-[520px] bg-white rounded-xl">
-            <DialogHeader class="p-6 pb-4 border-b border-[#E5E7EB]">
-                <DialogTitle class="text-base font-medium text-[#1A1A1A]">عرض ملف المريض</DialogTitle>
-                <DialogDescription class="text-sm text-[#6B7280] mt-0.5">عرض ملف المريض الكامل</DialogDescription>
+    <Dialog
+        :open="patient !== null"
+        @update:open="(open) => !open && emit('close')"
+    >
+        <DialogContent size="2xl" class="max-h-[92vh] bg-card p-0" dir="rtl">
+            <DialogHeader class="border-b border-border px-6 py-5 text-right">
+                <div class="flex items-start justify-between gap-4 pl-10">
+                    <div class="flex min-w-0 items-center gap-3">
+                        <span
+                            class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg font-black text-primary"
+                        >
+                            {{ patientInitial(detailedPatient ?? patient) }}
+                        </span>
+                        <div class="min-w-0">
+                            <DialogTitle
+                                class="truncate text-2xl font-black text-foreground"
+                            >
+                                {{
+                                    detailedPatient?.full_name ??
+                                    patient?.full_name ??
+                                    'عرض ملف المريض'
+                                }}
+                            </DialogTitle>
+                            <DialogDescription
+                                class="mt-1 text-sm text-muted-foreground"
+                            >
+                                ملف المريض الكامل، بيانات التواصل، والتنبيهات
+                                الطبية.
+                            </DialogDescription>
+                        </div>
+                    </div>
+
+                    <span
+                        v-if="detailedPatient"
+                        class="mt-1 inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary"
+                    >
+                        <FileText class="size-3.5" />
+                        ملف رقم {{ detailedPatient.file_number }}
+                    </span>
+                </div>
             </DialogHeader>
 
-            <DialogBody class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                <div v-if="isLoading" class="rounded-lg border border-[#E5E7EB]/70 bg-[#F9FAFB] p-4">
-                    <div class="h-3 w-2/3 rounded bg-[#E5E7EB] animate-pulse motion-reduce:animate-none motion-reduce:opacity-30" />
-                    <div class="h-3 w-1/2 rounded bg-[#E5E7EB] animate-pulse motion-reduce:animate-none motion-reduce:opacity-30 mt-2" />
-                    <div class="h-3 w-4/5 rounded bg-[#E5E7EB] animate-pulse motion-reduce:animate-none motion-reduce:opacity-30 mt-2" />
+            <div class="max-h-[68vh] space-y-5 overflow-y-auto p-6">
+                <div
+                    v-if="isLoading"
+                    class="rounded-xl border border-border bg-muted/40 p-4"
+                >
+                    <div
+                        class="h-3 w-2/3 animate-pulse rounded bg-muted-foreground/20 motion-reduce:animate-none"
+                    />
+                    <div
+                        class="mt-2 h-3 w-1/2 animate-pulse rounded bg-muted-foreground/20 motion-reduce:animate-none"
+                    />
+                    <div
+                        class="mt-2 h-3 w-4/5 animate-pulse rounded bg-muted-foreground/20 motion-reduce:animate-none"
+                    />
                 </div>
 
-                <p v-if="error !== null" class="rounded-lg border border-[#DC2626]/35 bg-[#FEF2F2] px-3 py-2 text-sm text-[#DC2626]">
+                <p
+                    v-if="error !== null"
+                    class="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive"
+                >
+                    <AlertTriangle class="size-4" />
                     {{ error }}
                 </p>
 
-                <div v-if="detailedPatient" class="space-y-4">
-                <div class="divide-y divide-[#E5E7EB] rounded-xl border border-[#E5E7EB] bg-white">
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">رقم الملف</span>
-                        <span class="flex-1 text-sm font-medium text-[#1A1A1A] font-mono">{{ detailedPatient.file_number }}</span>
-                    </div>
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">الاسم الكامل</span>
-                        <span class="flex-1 text-sm font-medium text-[#1A1A1A]">{{ detailedPatient.full_name }}</span>
-                    </div>
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">الجنس</span>
-                        <span class="flex-1 text-sm text-[#6B7280] capitalize">{{ patientGenderLabel(detailedPatient.gender) }}</span>
-                    </div>
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">تاريخ الميلاد</span>
-                        <span class="flex-1 text-sm text-[#6B7280]">{{ detailedPatient.date_of_birth ?? 'غير محدد' }}</span>
-                    </div>
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">العمر</span>
-                        <span class="flex-1 text-sm text-[#6B7280]">{{ detailedPatient.age ?? 'غير متوفر' }}</span>
-                    </div>
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">الهاتف</span>
-                        <span class="flex-1 text-sm text-[#6B7280]">{{ detailedPatient.phone ?? 'غير محدد' }}</span>
-                    </div>
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">البريد الإلكتروني</span>
-                        <span class="flex-1 text-sm text-[#6B7280] truncate">{{ detailedPatient.email ?? 'غير محدد' }}</span>
-                    </div>
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">رقم الهوية</span>
-                        <span class="flex-1 text-sm text-[#6B7280]">{{ detailedPatient.national_id ?? 'غير محدد' }}</span>
-                    </div>
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">جهة اتصال الطوارئ</span>
-                        <span class="flex-1 text-sm text-[#6B7280]">
-                            {{ detailedPatient.emergency_contact_name ? `${detailedPatient.emergency_contact_name} (${detailedPatient.emergency_contact_phone ?? 'بدون هاتف'})` : 'غير محدد' }}
-                        </span>
-                    </div>
-                    <div class="flex items-start py-3 px-4">
-                        <span class="w-1/3 text-sm text-[#9CA3AF] shrink-0">ملاحظات</span>
-                        <span class="flex-1 text-sm leading-relaxed text-[#6B7280]">{{ detailedPatient.notes ?? 'لا توجد ملاحظات' }}</span>
-                    </div>
-                </div>
-
-                <div class="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
-                    <div class="flex items-center justify-between gap-2 mb-3">
-                        <h4 class="text-xs font-semibold tracking-wider uppercase text-[#9CA3AF]">أمراض مزمنة</h4>
-                    </div>
-                    <ul v-if="detailedPatient.chronic_conditions.length > 0" class="space-y-1">
-                        <li v-for="(item, index) in detailedPatient.chronic_conditions" :key="`view-chronic-${index}`" class="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-sm text-[#6B7280]">{{ item }}</li>
-                    </ul>
-                    <p v-else class="text-sm text-[#9CA3AF]">غير محددة</p>
-                </div>
-
-                <div class="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
-                    <div class="flex items-center justify-between gap-2 mb-3">
-                        <h4 class="text-xs font-semibold tracking-wider uppercase text-[#9CA3AF]">حساسية</h4>
-                    </div>
-                    <ul v-if="detailedPatient.allergies.length > 0" class="space-y-1">
-                        <li v-for="(item, index) in detailedPatient.allergies" :key="`view-allergy-${index}`" class="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-sm text-[#6B7280]">{{ item }}</li>
-                    </ul>
-                    <p v-else class="text-sm text-[#9CA3AF]">غير محددة</p>
-                </div>
-
-                <div class="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
-                    <div class="flex items-center justify-between gap-2 mb-3">
-                        <h4 class="text-xs font-semibold tracking-wider uppercase text-[#9CA3AF]">أدوية حالية</h4>
-                    </div>
-                    <ul v-if="detailedPatient.current_medications.length > 0" class="space-y-1">
-                        <li v-for="(item, index) in detailedPatient.current_medications" :key="`view-medication-${index}`" class="rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-sm text-[#6B7280]">{{ item }}</li>
-                    </ul>
-                    <p v-else class="text-sm text-[#9CA3AF]">غير محددة</p>
-                </div>
-
-                <div class="rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] p-4">
-                    <div class="flex items-center justify-between gap-2 mb-3">
-                        <h4 class="text-xs font-semibold tracking-wider uppercase text-[#9CA3AF]">المرفقات</h4>
-                    </div>
-
-                    <Form
-                        v-if="can('patient.update')"
-                        v-bind="PatientController.storeAttachment.form(detailedPatient.id)"
-                        class="flex flex-col gap-2 sm:flex-row sm:gap-2"
-                        :options="{ preserveState: true, preserveScroll: true }"
-                        @success="refreshDetails"
-                        #default="{ errors, processing }"
+                <template v-if="detailedPatient">
+                    <section
+                        class="rounded-xl border border-border bg-muted/40 p-4"
                     >
-                        <Input
-                            type="file"
-                            name="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            class="w-full h-10 rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#0EA5E9] focus:ring-2 focus:ring-[#0EA5E9]/10 transition-colors"
-                        />
-                        <Button
-                            type="submit"
-                            variant="default"
-                            class="h-10 px-4 rounded-lg bg-[#0EA5E9] text-white text-sm font-medium hover:bg-[#0284C7] transition-colors duration-150"
-                            :disabled="processing"
-                        >
-                            رفع
-                        </Button>
-                        <InputError :message="errors.file" class="sm:col-span-2" />
-                    </Form>
+                        <h3 class="mb-4 text-sm font-black text-foreground">
+                            البيانات الأساسية
+                        </h3>
 
-                    <div v-if="detailedPatient.attachments.length > 0" class="space-y-2 mt-2">
-                        <div v-for="attachment in detailedPatient.attachments" :key="`view-attachment-${attachment.id}`" class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2">
-                            <div class="space-y-0.5">
-                                <p class="text-sm font-medium text-[#374151]">{{ attachment.original_name }}</p>
-                                <p class="text-xs text-[#9CA3AF]">{{ attachment.mime_type ?? 'نوع غير معروف' }} - {{ formatBytes(attachment.size_bytes) }}</p>
-                                <p class="text-xs text-[#9CA3AF]">تم الرفع: {{ formatDateTime(attachment.uploaded_at) }}</p>
+                        <dl class="grid gap-3 md:grid-cols-3">
+                            <div
+                                class="rounded-lg border border-border/70 bg-card px-4 py-3"
+                            >
+                                <dt
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    رقم الملف
+                                </dt>
+                                <dd
+                                    class="mt-1 font-bold text-foreground tabular-nums"
+                                >
+                                    {{ detailedPatient.file_number }}
+                                </dd>
                             </div>
+                            <div
+                                class="rounded-lg border border-border/70 bg-card px-4 py-3"
+                            >
+                                <dt
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    الجنس
+                                </dt>
+                                <dd class="mt-1 font-bold text-foreground">
+                                    {{
+                                        patientGenderLabel(
+                                            detailedPatient.gender,
+                                        )
+                                    }}
+                                </dd>
+                            </div>
+                            <div
+                                class="rounded-lg border border-border/70 bg-card px-4 py-3"
+                            >
+                                <dt
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    العمر
+                                </dt>
+                                <dd class="mt-1 font-bold text-foreground">
+                                    {{ detailedPatient.age ?? 'غير متوفر' }}
+                                </dd>
+                            </div>
+                            <div
+                                class="rounded-lg border border-border/70 bg-card px-4 py-3"
+                            >
+                                <dt
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    تاريخ الميلاد
+                                </dt>
+                                <dd class="mt-1 font-bold text-foreground">
+                                    {{
+                                        detailedPatient.date_of_birth ??
+                                        'غير محدد'
+                                    }}
+                                </dd>
+                            </div>
+                            <div
+                                class="rounded-lg border border-border/70 bg-card px-4 py-3"
+                            >
+                                <dt
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    رقم الهوية
+                                </dt>
+                                <dd class="mt-1 font-bold text-foreground">
+                                    {{
+                                        detailedPatient.national_id ??
+                                        'غير محدد'
+                                    }}
+                                </dd>
+                            </div>
+                            <div
+                                class="rounded-lg border border-border/70 bg-card px-4 py-3"
+                            >
+                                <dt
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    تاريخ الإنشاء
+                                </dt>
+                                <dd class="mt-1 font-bold text-foreground">
+                                    {{ formatDate(detailedPatient.created_at) }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </section>
+
+                    <section
+                        class="rounded-xl border border-border bg-card p-4"
+                    >
+                        <h3 class="mb-4 text-sm font-black text-foreground">
+                            بيانات التواصل
+                        </h3>
+
+                        <dl class="grid gap-3 md:grid-cols-2">
+                            <div
+                                class="rounded-lg border border-border/70 bg-muted/40 px-4 py-3"
+                            >
+                                <dt
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    الهاتف
+                                </dt>
+                                <dd
+                                    class="mt-1 font-bold text-foreground"
+                                    dir="ltr"
+                                >
+                                    {{ detailedPatient.phone ?? 'غير محدد' }}
+                                </dd>
+                            </div>
+                            <div
+                                class="rounded-lg border border-border/70 bg-muted/40 px-4 py-3"
+                            >
+                                <dt
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    البريد الإلكتروني
+                                </dt>
+                                <dd
+                                    class="mt-1 truncate font-bold text-foreground"
+                                    dir="ltr"
+                                >
+                                    {{ detailedPatient.email ?? 'غير محدد' }}
+                                </dd>
+                            </div>
+                            <div
+                                class="rounded-lg border border-border/70 bg-muted/40 px-4 py-3 md:col-span-2"
+                            >
+                                <dt
+                                    class="text-xs font-semibold text-muted-foreground"
+                                >
+                                    جهة اتصال الطوارئ
+                                </dt>
+                                <dd class="mt-1 font-bold text-foreground">
+                                    {{ emergencyContactLabel(detailedPatient) }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </section>
+
+                    <section class="grid gap-3 md:grid-cols-3">
+                        <div
+                            class="rounded-xl border border-border bg-card p-4"
+                        >
+                            <div class="mb-3 flex items-center gap-2">
+                                <HeartPulse class="size-4 text-primary" />
+                                <h3 class="text-sm font-black text-foreground">
+                                    أمراض مزمنة
+                                </h3>
+                            </div>
+                            <ul
+                                v-if="
+                                    detailedPatient.chronic_conditions.length >
+                                    0
+                                "
+                                class="space-y-2"
+                            >
+                                <li
+                                    v-for="(
+                                        item, index
+                                    ) in detailedPatient.chronic_conditions"
+                                    :key="`view-chronic-${index}`"
+                                    class="rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-sm font-semibold text-foreground"
+                                >
+                                    {{ item }}
+                                </li>
+                            </ul>
+                            <p
+                                v-else
+                                class="text-sm font-semibold text-muted-foreground"
+                            >
+                                غير محددة
+                            </p>
+                        </div>
+
+                        <div
+                            class="rounded-xl border border-border bg-card p-4"
+                        >
+                            <div class="mb-3 flex items-center gap-2">
+                                <ShieldAlert class="size-4 text-warning" />
+                                <h3 class="text-sm font-black text-foreground">
+                                    الحساسية
+                                </h3>
+                            </div>
+                            <ul
+                                v-if="detailedPatient.allergies.length > 0"
+                                class="space-y-2"
+                            >
+                                <li
+                                    v-for="(
+                                        item, index
+                                    ) in detailedPatient.allergies"
+                                    :key="`view-allergy-${index}`"
+                                    class="rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-sm font-semibold text-foreground"
+                                >
+                                    {{ item }}
+                                </li>
+                            </ul>
+                            <p
+                                v-else
+                                class="text-sm font-semibold text-muted-foreground"
+                            >
+                                غير محددة
+                            </p>
+                        </div>
+
+                        <div
+                            class="rounded-xl border border-border bg-card p-4"
+                        >
+                            <div class="mb-3 flex items-center gap-2">
+                                <Pill class="size-4 text-info" />
+                                <h3 class="text-sm font-black text-foreground">
+                                    أدوية حالية
+                                </h3>
+                            </div>
+                            <ul
+                                v-if="
+                                    detailedPatient.current_medications.length >
+                                    0
+                                "
+                                class="space-y-2"
+                            >
+                                <li
+                                    v-for="(
+                                        item, index
+                                    ) in detailedPatient.current_medications"
+                                    :key="`view-medication-${index}`"
+                                    class="rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-sm font-semibold text-foreground"
+                                >
+                                    {{ item }}
+                                </li>
+                            </ul>
+                            <p
+                                v-else
+                                class="text-sm font-semibold text-muted-foreground"
+                            >
+                                غير محددة
+                            </p>
+                        </div>
+                    </section>
+
+                    <section
+                        class="rounded-xl border border-border bg-card p-4"
+                    >
+                        <h3 class="mb-3 text-sm font-black text-foreground">
+                            ملاحظات
+                        </h3>
+                        <p
+                            class="leading-7"
+                            :class="
+                                detailedPatient.notes === null
+                                    ? 'font-semibold text-muted-foreground'
+                                    : 'text-foreground'
+                            "
+                        >
+                            {{ detailedPatient.notes ?? 'لا توجد ملاحظات' }}
+                        </p>
+                    </section>
+
+                    <section
+                        class="rounded-xl border border-border bg-card p-4"
+                    >
+                        <div
+                            class="mb-4 flex items-center justify-between gap-3"
+                        >
                             <div class="flex items-center gap-2">
-                                <a
-                                    :href="attachment.download_url"
-                                    class="inline-flex h-9 items-center rounded-full border border-[#E5E7EB] bg-white px-3 text-xs font-medium text-[#6B7280] transition-colors duration-150 hover:bg-[#F9FAFB] hover:text-[#374151]"
-                                >
-                                    تحميل
-                                </a>
-                                <Link
-                                    v-if="can('patient.update')"
-                                    :href="PatientController.destroyAttachment([detailedPatient.id, attachment.id])"
-                                    method="delete"
-                                    as="button"
-                                    class="inline-flex h-9 items-center rounded-full border border-[#DC2626]/30 bg-[#FEF2F2] px-3 text-xs font-medium text-[#DC2626] transition-colors duration-150 hover:bg-[#FEF2F2]/80"
-                                    @success="refreshDetails"
-                                >
-                                    حذف
-                                </Link>
+                                <Paperclip class="size-4 text-primary" />
+                                <h3 class="text-sm font-black text-foreground">
+                                    المرفقات
+                                </h3>
+                            </div>
+                            <span
+                                class="text-xs font-semibold text-muted-foreground"
+                            >
+                                {{ detailedPatient.attachments.length }} ملف
+                            </span>
+                        </div>
+
+                        <Form
+                            v-if="can('patient.update')"
+                            v-bind="
+                                PatientController.storeAttachment.form(
+                                    detailedPatient.id,
+                                )
+                            "
+                            class="mb-4 grid gap-2 sm:grid-cols-[1fr_auto]"
+                            :options="{
+                                preserveState: true,
+                                preserveScroll: true,
+                            }"
+                            @success="refreshDetails"
+                            #default="{ errors, processing }"
+                        >
+                            <Input
+                                type="file"
+                                name="file"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                class="h-10 rounded-lg"
+                            />
+                            <Button
+                                type="submit"
+                                variant="default"
+                                :disabled="processing"
+                            >
+                                رفع
+                            </Button>
+                            <InputError
+                                :message="errors.file"
+                                class="sm:col-span-2"
+                            />
+                        </Form>
+
+                        <div
+                            v-if="detailedPatient.attachments.length > 0"
+                            class="space-y-2"
+                        >
+                            <div
+                                v-for="attachment in detailedPatient.attachments"
+                                :key="`view-attachment-${attachment.id}`"
+                                class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/40 px-4 py-3"
+                            >
+                                <div class="min-w-0 space-y-1">
+                                    <p
+                                        class="truncate text-sm font-bold text-foreground"
+                                    >
+                                        {{ attachment.original_name }}
+                                    </p>
+                                    <p
+                                        class="text-xs font-semibold text-muted-foreground"
+                                    >
+                                        {{
+                                            attachment.mime_type ??
+                                            'نوع غير معروف'
+                                        }}
+                                        ·
+                                        {{ formatBytes(attachment.size_bytes) }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        تم الرفع:
+                                        {{
+                                            formatDateTime(
+                                                attachment.uploaded_at,
+                                            )
+                                        }}
+                                    </p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <a
+                                        :href="attachment.download_url"
+                                        class="inline-flex h-9 items-center rounded-lg border border-border bg-card px-3 text-xs font-bold text-foreground transition-colors hover:bg-muted"
+                                    >
+                                        تحميل
+                                    </a>
+                                    <Link
+                                        v-if="can('patient.update')"
+                                        :href="
+                                            PatientController.destroyAttachment(
+                                                [
+                                                    detailedPatient.id,
+                                                    attachment.id,
+                                                ],
+                                            )
+                                        "
+                                        method="delete"
+                                        as="button"
+                                        class="inline-flex h-9 items-center rounded-lg border border-destructive/30 bg-destructive/10 px-3 text-xs font-bold text-destructive transition-colors hover:bg-destructive/15"
+                                        @success="refreshDetails"
+                                    >
+                                        حذف
+                                    </Link>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <p v-else class="text-sm text-[#9CA3AF]">لا توجد مرفقات.</p>
-                </div>
-                </div>
-            </DialogBody>
+                        <p
+                            v-else
+                            class="text-sm font-semibold text-muted-foreground"
+                        >
+                            لا توجد مرفقات.
+                        </p>
+                    </section>
+                </template>
+            </div>
 
-            <DialogFooter class="flex items-center justify-between p-6 pt-4 border-t border-[#E5E7EB]">
-                <Button type="button" variant="ghost" class="h-9 px-4 rounded-lg text-[#6B7280] text-sm font-medium hover:bg-[#F9FAFB] hover:text-[#374151] transition-colors duration-150 active:scale-[0.98]" @click="emit('close')">إغلاق</Button>
+            <DialogFooter class="border-t border-border px-6 py-4">
+                <Button type="button" variant="outline" @click="emit('close')">
+                    إغلاق
+                </Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>

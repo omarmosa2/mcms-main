@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { Calendar, CheckCircle2, Clock, UserCheck, XCircle } from 'lucide-vue-next';
+import {
+    Calendar,
+    CheckCircle2,
+    Clock,
+    UserCheck,
+    XCircle,
+} from 'lucide-vue-next';
 
 defineProps<{
     todaySummary: {
@@ -14,104 +20,86 @@ defineProps<{
 </script>
 
 <template>
-    <div
-        class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
-    >
-        <div
-            class="flex items-center gap-3 rounded-xl border border-border/60 bg-card px-4 py-3"
+    <section class="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <article
+            class="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm"
         >
-            <div
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"
-            >
-                <Calendar class="size-4" />
-            </div>
             <div>
-                <p class="text-[0.7rem] text-muted-foreground">اليوم</p>
-                <p class="text-lg font-bold tabular-nums text-foreground">
+                <p class="text-xs text-muted-foreground">اليوم</p>
+                <p class="text-xl font-bold text-foreground tabular-nums">
                     {{ todaySummary.total }}
                 </p>
             </div>
-        </div>
-
-        <div
-            class="flex items-center gap-3 rounded-xl border border-[var(--accent-teal-soft)]/60 bg-[var(--accent-teal-soft)]/30 px-4 py-3"
-        >
             <div
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent-teal)]/15 text-[var(--accent-teal-strong)]"
+                class="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary"
             >
-                <Clock class="size-4" />
+                <Calendar class="size-5" />
             </div>
+        </article>
+
+        <article
+            class="flex items-center justify-between gap-3 rounded-2xl border border-info/20 bg-info/5 px-4 py-3 shadow-sm"
+        >
             <div>
-                <p class="text-[0.7rem] text-[var(--accent-teal-strong)]/70">
-                    مجدول
-                </p>
-                <p
-                    class="text-lg font-bold tabular-nums text-[var(--accent-teal-strong)]"
-                >
+                <p class="text-xs text-muted-foreground">مجدول</p>
+                <p class="text-xl font-bold text-foreground tabular-nums">
                     {{ todaySummary.scheduled }}
                 </p>
             </div>
-        </div>
-
-        <div
-            class="flex items-center gap-3 rounded-xl border border-[var(--accent-mint-soft)]/60 bg-[var(--accent-mint-soft)]/30 px-4 py-3"
-        >
             <div
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent-mint)]/15 text-[var(--accent-mint-strong)]"
+                class="flex size-11 items-center justify-center rounded-xl bg-info/10 text-info"
             >
-                <UserCheck class="size-4" />
+                <Clock class="size-5" />
             </div>
+        </article>
+
+        <article
+            class="flex items-center justify-between gap-3 rounded-2xl border border-success/20 bg-success/5 px-4 py-3 shadow-sm"
+        >
             <div>
-                <p class="text-[0.7rem] text-[var(--accent-mint-strong)]/70">
-                    حاضر
-                </p>
-                <p
-                    class="text-lg font-bold tabular-nums text-[var(--accent-mint-strong)]"
-                >
+                <p class="text-xs text-muted-foreground">حاضر</p>
+                <p class="text-xl font-bold text-foreground tabular-nums">
                     {{ todaySummary.arrived }}
                 </p>
             </div>
-        </div>
-
-        <div
-            class="flex items-center gap-3 rounded-xl border border-[var(--accent-mint-soft)]/60 bg-[var(--accent-mint-soft)]/30 px-4 py-3"
-        >
             <div
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent-mint)]/15 text-[var(--accent-mint-strong)]"
+                class="flex size-11 items-center justify-center rounded-xl bg-success/10 text-success"
             >
-                <CheckCircle2 class="size-4" />
+                <UserCheck class="size-5" />
             </div>
+        </article>
+
+        <article
+            class="flex items-center justify-between gap-3 rounded-2xl border border-success/20 bg-success/5 px-4 py-3 shadow-sm"
+        >
             <div>
-                <p class="text-[0.7rem] text-[var(--accent-mint-strong)]/70">
-                    مكتمل
-                </p>
-                <p
-                    class="text-lg font-bold tabular-nums text-[var(--accent-mint-strong)]"
-                >
+                <p class="text-xs text-muted-foreground">مكتمل</p>
+                <p class="text-xl font-bold text-foreground tabular-nums">
                     {{ todaySummary.completed }}
                 </p>
             </div>
-        </div>
-
-        <div
-            v-if="todaySummary.canceled > 0"
-            class="flex items-center gap-3 rounded-xl border border-[var(--accent-coral-soft)]/60 bg-[var(--accent-coral-soft)]/30 px-4 py-3"
-        >
             <div
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent-coral)]/15 text-[var(--accent-coral-strong)]"
+                class="flex size-11 items-center justify-center rounded-xl bg-success/10 text-success"
             >
-                <XCircle class="size-4" />
+                <CheckCircle2 class="size-5" />
             </div>
+        </article>
+
+        <article
+            class="flex items-center justify-between gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 shadow-sm"
+            :class="{ 'opacity-60': todaySummary.canceled === 0 }"
+        >
             <div>
-                <p class="text-[0.7rem] text-[var(--accent-coral-strong)]/70">
-                    ملغي
-                </p>
-                <p
-                    class="text-lg font-bold tabular-nums text-[var(--accent-coral-strong)]"
-                >
+                <p class="text-xs text-muted-foreground">ملغي</p>
+                <p class="text-xl font-bold text-foreground tabular-nums">
                     {{ todaySummary.canceled }}
                 </p>
             </div>
-        </div>
-    </div>
+            <div
+                class="flex size-11 items-center justify-center rounded-xl bg-destructive/10 text-destructive"
+            >
+                <XCircle class="size-5" />
+            </div>
+        </article>
+    </section>
 </template>

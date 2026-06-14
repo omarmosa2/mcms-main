@@ -1,33 +1,33 @@
 export function appointmentStatusClass(status: string): string {
     if (status === 'completed' || status === 'arrived') {
-        return 'border-[var(--border-soft)] bg-[var(--accent-mint-soft)] text-[var(--accent-mint-strong)]';
+        return 'border-success/25 bg-success/10 text-success';
     }
 
     if (status === 'scheduled' || status === 'confirmed') {
-        return 'border-[var(--border-soft)] bg-[var(--accent-teal-soft)] text-[var(--accent-teal-strong)]';
+        return 'border-info/25 bg-info/10 text-info';
     }
 
     if (status === 'canceled' || status === 'no_show') {
-        return 'border-[var(--border-soft)] bg-[var(--accent-coral-soft)] text-[var(--accent-coral-strong)]';
+        return 'border-destructive/25 bg-destructive/10 text-destructive';
     }
 
-    return 'border-[var(--border-soft)] bg-[var(--surface-secondary)] text-[var(--surface-contrast-soft)]';
+    return 'border-border bg-secondary text-muted-foreground';
 }
 
 export function appointmentStatusDotClass(status: string): string {
     if (status === 'completed' || status === 'arrived') {
-        return 'bg-[var(--accent-mint)]';
+        return 'bg-success';
     }
 
     if (status === 'scheduled' || status === 'confirmed') {
-        return 'bg-[var(--accent-teal)]';
+        return 'bg-info';
     }
 
     if (status === 'canceled' || status === 'no_show') {
-        return 'bg-[var(--accent-coral)]';
+        return 'bg-destructive';
     }
 
-    return 'bg-[var(--surface-contrast-soft)]';
+    return 'bg-muted-foreground';
 }
 
 export function appointmentStatusLabel(status: string): string {

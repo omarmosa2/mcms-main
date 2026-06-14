@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    CalendarSearch,
+    FilterX,
+} from 'lucide-vue-next';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch, FilterSelect } from '@/components/ui/filter';
@@ -14,9 +20,9 @@ import {
 import type {
     Appointment,
     AppointmentSortField,
+    Option,
     PaginatedResponse,
     SortDirection,
-    Option,
 } from './types';
 
 const props = defineProps<{
@@ -99,430 +105,485 @@ const sortIconFor = (field: AppointmentSortField) => {
 </script>
 
 <template>
-    <div class="glass-panel-soft p-5">
+    <section class="glass-panel-soft overflow-hidden">
         <div
-            class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3"
+            class="flex flex-col gap-3 border-b border-border/70 bg-secondary/35 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
         >
-            <h3 class="pattern-typographic-title text-[0.76rem]">
-                جميع المواعيد
-            </h3>
-            <span class="text-xs text-muted-foreground">
+            <div>
+                <h2 class="text-base font-bold text-foreground">
+                    جميع المواعيد
+                </h2>
+                <p class="text-xs text-muted-foreground">
+                    بحث وتصفية ومتابعة حالات الحجوزات.
+                </p>
+            </div>
+            <span
+                class="inline-flex w-fit items-center gap-2 rounded-xl border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground"
+            >
+                <CalendarSearch class="size-3.5 text-primary" />
                 الإجمالي: {{ appointments.meta.total }}
             </span>
         </div>
 
-        <div
-            class="space-y-3 rounded-2xl border border-border/70 bg-background/60 p-4"
-        >
-            <div class="grid gap-3 md:items-end lg:grid-cols-4">
-                <div class="grid gap-2 lg:col-span-2">
-                    <Label for="appointments_search">بحث</Label>
-                    <FilterSearch
-                        id="appointments_search"
-                        :model-value="localSearch"
-                        @update:model-value="emit('search', $event)"
-                        placeholder="رقم الموعد، المريض، رقم الملف، الطبيب"
-                    />
+        <div class="space-y-4 p-5">
+            <div class="rounded-2xl border border-border bg-secondary/30 p-4">
+                <div class="grid gap-3 lg:grid-cols-12 lg:items-end">
+                    <div class="grid gap-2 lg:col-span-4">
+                        <Label for="appointments_search">بحث</Label>
+                        <FilterSearch
+                            id="appointments_search"
+                            :model-value="localSearch"
+                            placeholder="رقم الموعد، المريض، رقم الملف، الطبيب"
+                            @update:model-value="emit('search', $event)"
+                        />
+                    </div>
+
+                    <div class="grid gap-2 lg:col-span-2">
+                        <Label for="appointments_status">الحالة</Label>
+                        <FilterSelect
+                            id="appointments_status"
+                            :model-value="localStatus"
+                            :options="statusOptions"
+                            placeholder="جميع الحالات"
+                            @update:model-value="emit('status', $event)"
+                        />
+                    </div>
+
+                    <div v-if="!isDoctor" class="grid gap-2 lg:col-span-2">
+                        <Label for="appointments_doctor">الطبيب</Label>
+                        <FilterSelect
+                            id="appointments_doctor"
+                            :model-value="localDoctorId"
+                            :options="doctorOptions"
+                            placeholder="كل الأطباء"
+                            @update:model-value="emit('doctor', $event)"
+                        />
+                    </div>
+
+                    <div v-if="!isDoctor" class="grid gap-2 lg:col-span-2">
+                        <Label for="appointments_department">العيادة</Label>
+                        <FilterSelect
+                            id="appointments_department"
+                            :model-value="localDepartmentId"
+                            :options="departmentOptions"
+                            placeholder="كل العيادات"
+                            @update:model-value="emit('department', $event)"
+                        />
+                    </div>
+
+                    <div class="grid gap-2 lg:col-span-1">
+                        <Label for="appointments_date_from">من</Label>
+                        <Input
+                            id="appointments_date_from"
+                            type="date"
+                            :model-value="localDateFrom"
+                            class="pattern-field-clay h-10"
+                            @update:model-value="
+                                emit('date-from', String($event ?? ''))
+                            "
+                        />
+                    </div>
+
+                    <div class="grid gap-2 lg:col-span-1">
+                        <Label for="appointments_date_to">إلى</Label>
+                        <Input
+                            id="appointments_date_to"
+                            type="date"
+                            :model-value="localDateTo"
+                            class="pattern-field-clay h-10"
+                            @update:model-value="
+                                emit('date-to', String($event ?? ''))
+                            "
+                        />
+                    </div>
                 </div>
 
-                <div class="grid gap-2">
-                    <Label for="appointments_status">الحالة</Label>
-                    <FilterSelect
-                        id="appointments_status"
-                        :model-value="localStatus"
-                        @update:model-value="emit('status', $event)"
-                        :options="statusOptions"
-                        placeholder="جميع الحالات"
+                <div
+                    class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+                >
+                    <FilterBar
+                        v-if="activeFilters.length > 0"
+                        :active-filters="activeFilters"
+                        @remove="emit('remove-filter', $event)"
+                        @clear-all="emit('clear-filters')"
                     />
-                </div>
-
-                <div v-if="!isDoctor" class="grid gap-2">
-                    <Label for="appointments_doctor">الطبيب</Label>
-                    <FilterSelect
-                        id="appointments_doctor"
-                        :model-value="localDoctorId"
-                        @update:model-value="emit('doctor', $event)"
-                        :options="doctorOptions"
-                        placeholder="كل الأطباء"
-                    />
+                    <div class="grid w-full gap-2 sm:ms-auto sm:w-44">
+                        <Label for="appointments_per_page">
+                            صفوف لكل صفحة
+                        </Label>
+                        <select
+                            id="appointments_per_page"
+                            :value="localRowsPerPage"
+                            class="pattern-field-clay h-10 px-3 py-1.5"
+                            @change="
+                                emit(
+                                    'rows-per-page',
+                                    Number(
+                                        ($event.target as HTMLSelectElement)
+                                            .value,
+                                    ),
+                                )
+                            "
+                        >
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid gap-3 md:items-end lg:grid-cols-4">
-                <div v-if="!isDoctor" class="grid gap-2">
-                    <Label for="appointments_department">العيادة</Label>
-                    <FilterSelect
-                        id="appointments_department"
-                        :model-value="localDepartmentId"
-                        @update:model-value="emit('department', $event)"
-                        :options="departmentOptions"
-                        placeholder="كل العيادات"
-                    />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="appointments_date_from">من تاريخ</Label>
-                    <Input
-                        id="appointments_date_from"
-                        type="date"
-                        :model-value="localDateFrom"
-                        class="pattern-field-clay"
-                        @update:model-value="
-                            emit('date-from', String($event ?? ''))
-                        "
-                    />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="appointments_date_to">إلى تاريخ</Label>
-                    <Input
-                        id="appointments_date_to"
-                        type="date"
-                        :model-value="localDateTo"
-                        class="pattern-field-clay"
-                        @update:model-value="
-                            emit('date-to', String($event ?? ''))
-                        "
-                    />
-                </div>
-
-                <div class="grid gap-2 md:max-w-44">
-                    <Label for="appointments_per_page">صفوف لكل صفحة</Label>
-                    <select
-                        id="appointments_per_page"
-                        :value="localRowsPerPage"
-                        @change="
-                            emit(
-                                'rows-per-page',
-                                Number(
-                                    ($event.target as HTMLSelectElement).value,
-                                ),
-                            )
-                        "
-                        class="pattern-field-clay h-10 px-3 py-1.5"
+            <div
+                v-if="canDeleteAppointment && selectedAppointmentIds.length > 0"
+                class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-destructive/25 bg-destructive/5 p-3"
+            >
+                <p class="text-xs font-medium text-destructive">
+                    تم تحديد {{ selectedAppointmentIds.length }} موعد للحذف.
+                </p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        class="h-10 gap-1.5 rounded-xl px-3 text-xs"
+                        @click="emit('update:selectedAppointmentIds', [])"
                     >
-                        <option value="10">10</option>
-                        <option value="15">15</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                    </select>
+                        <FilterX class="size-3.5" />
+                        إلغاء التحديد
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        class="h-10 rounded-xl px-3 text-xs"
+                        @click="emit('bulk-delete')"
+                    >
+                        حذف المحدد
+                    </Button>
                 </div>
             </div>
 
-            <FilterBar
-                v-if="activeFilters.length > 0"
-                :active-filters="activeFilters"
-                @remove="emit('remove-filter', $event)"
-                @clear-all="emit('clear-filters')"
-            />
-        </div>
-
-        <div
-            v-if="canDeleteAppointment && selectedAppointmentIds.length > 0"
-            class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
-        >
-            <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                class="min-h-[44px]"
-                @click="emit('bulk-delete')"
-            >
-                حذف المحدد ({{ selectedAppointmentIds.length }})
-            </Button>
-            <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                class="min-h-[44px]"
-                @click="emit('update:selectedAppointmentIds', [])"
-            >
-                إلغاء التحديد
-            </Button>
-        </div>
-
-        <div class="ui-table-shell">
-            <table class="ui-table md:min-w-[1080px]">
-                <thead>
-                    <tr>
-                        <th v-if="canDeleteAppointment" class="px-3 py-2">
-                            <input
-                                type="checkbox"
-                                class="size-4 rounded border-border"
-                                :checked="areAllDeletableAppointmentsSelected"
-                                @change="emit('toggle-select-all', $event)"
-                            />
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('sort', 'appointment_number')"
-                            >
-                                رقم الموعد
-                                <component
-                                    :is="sortIconFor('appointment_number')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('sort', 'scheduled_for')"
-                            >
-                                التاريخ
-                                <component
-                                    :is="sortIconFor('scheduled_for')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2">الوقت</th>
-                        <th class="px-3 py-2">المريض</th>
-                        <th class="px-3 py-2">رقم الملف</th>
-                        <th class="px-3 py-2">العيادة</th>
-                        <th class="px-3 py-2">الطبيب</th>
-                        <th class="px-3 py-2">
-                            <button
-                                type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                @click="emit('sort', 'status')"
-                            >
-                                الحالة
-                                <component
-                                    :is="sortIconFor('status')"
-                                    class="size-3.5"
-                                />
-                            </button>
-                        </th>
-                        <th class="px-3 py-2 text-right">الإجراءات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr
-                        v-for="appointment in appointments.data"
-                        :key="appointment.id"
-                        class="ui-table-row align-top"
-                    >
-                        <td
-                            v-if="canDeleteAppointment"
-                            class="px-3 py-2"
-                            data-label="تحديد"
-                        >
-                            <input
-                                v-if="appointment.status === 'scheduled'"
-                                :checked="
-                                    selectedAppointmentIds.includes(
-                                        appointment.id,
-                                    )
-                                "
-                                type="checkbox"
-                                class="size-4 rounded border-border"
-                                :value="appointment.id"
-                                @change="
-                                    ($event) => {
-                                        const checked = (
-                                            $event.target as HTMLInputElement
-                                        ).checked;
-                                        if (checked) {
-                                            emit(
-                                                'update:selectedAppointmentIds',
-                                                [
-                                                    ...selectedAppointmentIds,
-                                                    appointment.id,
-                                                ],
-                                            );
-                                        } else {
-                                            emit(
-                                                'update:selectedAppointmentIds',
-                                                selectedAppointmentIds.filter(
-                                                    (id) =>
-                                                        id !== appointment.id,
-                                                ),
-                                            );
-                                        }
-                                    }
-                                "
-                            />
-                        </td>
-                        <td
-                            class="px-3 py-2 font-medium"
-                            data-label="رقم الموعد"
-                        >
-                            {{ appointment.appointment_number }}
-                        </td>
-                        <td class="px-3 py-2" data-label="التاريخ">
-                            {{ formatDate(appointment.scheduled_for) }}
-                        </td>
-                        <td class="px-3 py-2" data-label="الوقت">
-                            {{ formatTime(appointment.scheduled_for) }}
-                        </td>
-                        <td class="px-3 py-2" data-label="المريض">
-                            <div class="font-medium text-foreground">
-                                {{ appointment.patient?.full_name ?? '-' }}
-                            </div>
-                        </td>
-                        <td class="px-3 py-2" data-label="رقم الملف">
-                            {{ appointment.patient?.file_number ?? '-' }}
-                        </td>
-                        <td class="px-3 py-2" data-label="العيادة">
-                            {{ appointment.doctor?.department?.name ?? '-' }}
-                        </td>
-                        <td class="px-3 py-2" data-label="الطبيب">
-                            <div class="font-medium text-foreground">
-                                {{ appointment.doctor?.name ?? '-' }}
-                            </div>
-                            <div
-                                v-if="appointment.doctor?.specialty"
-                                class="text-xs text-muted-foreground"
-                            >
-                                {{ appointment.doctor.specialty }}
-                            </div>
-                        </td>
-                        <td class="px-3 py-2" data-label="الحالة">
-                            <span
-                                class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium capitalize"
-                                :class="
-                                    appointmentStatusClass(appointment.status)
-                                "
-                            >
-                                <span
-                                    class="size-1.5 rounded-full"
-                                    :class="
-                                        appointmentStatusDotClass(
-                                            appointment.status,
-                                        )
+            <div class="ui-table-shell overflow-hidden">
+                <table class="ui-table md:min-w-[1080px]">
+                    <thead>
+                        <tr>
+                            <th v-if="canDeleteAppointment" class="px-3 py-3">
+                                <input
+                                    type="checkbox"
+                                    class="size-4 rounded border-border"
+                                    :checked="
+                                        areAllDeletableAppointmentsSelected
                                     "
-                                ></span>
-                                {{ appointmentStatusLabel(appointment.status) }}
-                            </span>
-                        </td>
-                        <td
-                            class="table-cell-actions px-3 py-2 md:text-right"
-                            data-label="الإجراءات"
+                                    @change="emit('toggle-select-all', $event)"
+                                />
+                            </th>
+                            <th class="px-3 py-3">
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
+                                    @click="emit('sort', 'appointment_number')"
+                                >
+                                    رقم الموعد
+                                    <component
+                                        :is="sortIconFor('appointment_number')"
+                                        class="size-3.5"
+                                    />
+                                </button>
+                            </th>
+                            <th class="px-3 py-3">
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
+                                    @click="emit('sort', 'scheduled_for')"
+                                >
+                                    التاريخ
+                                    <component
+                                        :is="sortIconFor('scheduled_for')"
+                                        class="size-3.5"
+                                    />
+                                </button>
+                            </th>
+                            <th class="px-3 py-3">الوقت</th>
+                            <th class="px-3 py-3">المريض</th>
+                            <th class="px-3 py-3">رقم الملف</th>
+                            <th class="px-3 py-3">العيادة</th>
+                            <th class="px-3 py-3">الطبيب</th>
+                            <th class="px-3 py-3">
+                                <button
+                                    type="button"
+                                    class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
+                                    @click="emit('sort', 'status')"
+                                >
+                                    الحالة
+                                    <component
+                                        :is="sortIconFor('status')"
+                                        class="size-3.5"
+                                    />
+                                </button>
+                            </th>
+                            <th class="px-3 py-3 text-right">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="appointment in appointments.data"
+                            :key="appointment.id"
+                            class="ui-table-row align-top"
                         >
-                            <div class="flex flex-wrap justify-end gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    class="h-10 px-3 text-xs"
-                                    @click="emit('view', appointment)"
-                                >
-                                    عرض
-                                </Button>
-                                <Button
-                                    v-if="canEditAppointment"
-                                    type="button"
-                                    variant="default"
-                                    size="sm"
-                                    class="h-10 px-3 text-xs"
-                                    @click="emit('edit', appointment)"
-                                >
-                                    تعديل
-                                </Button>
-                                <Form
-                                    v-if="canUpdateStatus"
-                                    v-bind="
-                                        AppointmentController.transitionStatus.form(
+                            <td
+                                v-if="canDeleteAppointment"
+                                class="px-3 py-3"
+                                data-label="تحديد"
+                            >
+                                <input
+                                    v-if="appointment.status === 'scheduled'"
+                                    :checked="
+                                        selectedAppointmentIds.includes(
                                             appointment.id,
                                         )
                                     "
-                                    class="flex items-center gap-2"
-                                    v-slot="{ processing }"
-                                    @success="emit('status-transition-success')"
-                                    @error="emit('status-transition-error')"
+                                    type="checkbox"
+                                    class="size-4 rounded border-border"
+                                    :value="appointment.id"
+                                    @change="
+                                        ($event) => {
+                                            const checked = (
+                                                $event.target as HTMLInputElement
+                                            ).checked;
+                                            if (checked) {
+                                                emit(
+                                                    'update:selectedAppointmentIds',
+                                                    [
+                                                        ...selectedAppointmentIds,
+                                                        appointment.id,
+                                                    ],
+                                                );
+                                            } else {
+                                                emit(
+                                                    'update:selectedAppointmentIds',
+                                                    selectedAppointmentIds.filter(
+                                                        (id) =>
+                                                            id !==
+                                                            appointment.id,
+                                                    ),
+                                                );
+                                            }
+                                        }
+                                    "
+                                />
+                            </td>
+                            <td
+                                class="px-3 py-3 font-semibold"
+                                data-label="رقم الموعد"
+                            >
+                                {{ appointment.appointment_number }}
+                            </td>
+                            <td class="px-3 py-3" data-label="التاريخ">
+                                {{ formatDate(appointment.scheduled_for) }}
+                            </td>
+                            <td
+                                class="px-3 py-3 tabular-nums"
+                                data-label="الوقت"
+                            >
+                                {{ formatTime(appointment.scheduled_for) }}
+                            </td>
+                            <td class="px-3 py-3" data-label="المريض">
+                                <div class="font-semibold text-foreground">
+                                    {{ appointment.patient?.full_name ?? '-' }}
+                                </div>
+                            </td>
+                            <td class="px-3 py-3" data-label="رقم الملف">
+                                {{ appointment.patient?.file_number ?? '-' }}
+                            </td>
+                            <td class="px-3 py-3" data-label="العيادة">
+                                {{
+                                    appointment.doctor?.department?.name ?? '-'
+                                }}
+                            </td>
+                            <td class="px-3 py-3" data-label="الطبيب">
+                                <div class="font-semibold text-foreground">
+                                    {{ appointment.doctor?.name ?? '-' }}
+                                </div>
+                                <div
+                                    v-if="appointment.doctor?.specialty"
+                                    class="text-xs text-muted-foreground"
                                 >
-                                    <select
-                                        name="status"
-                                        class="pattern-field-clay h-10 px-2 py-1 text-xs"
-                                    >
-                                        <option value="">تغيير الحالة</option>
-                                        <option
-                                            v-for="status in transitionStatuses"
-                                            :key="status"
-                                            :value="status"
-                                        >
-                                            {{ appointmentStatusLabel(status) }}
-                                        </option>
-                                    </select>
-                                    <Input
-                                        name="cancel_reason"
-                                        placeholder="سبب الإلغاء"
-                                        class="pattern-field-clay h-10 w-36 px-2 py-1 text-xs"
+                                    {{ appointment.doctor.specialty }}
+                                </div>
+                            </td>
+                            <td class="px-3 py-3" data-label="الحالة">
+                                <span
+                                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
+                                    :class="
+                                        appointmentStatusClass(
+                                            appointment.status,
+                                        )
+                                    "
+                                >
+                                    <span
+                                        class="size-1.5 rounded-full"
+                                        :class="
+                                            appointmentStatusDotClass(
+                                                appointment.status,
+                                            )
+                                        "
                                     />
+                                    {{
+                                        appointmentStatusLabel(
+                                            appointment.status,
+                                        )
+                                    }}
+                                </span>
+                            </td>
+                            <td
+                                class="table-cell-actions px-3 py-3 md:text-right"
+                                data-label="الإجراءات"
+                            >
+                                <div class="flex flex-wrap justify-end gap-2">
                                     <Button
-                                        type="submit"
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        class="h-9 rounded-xl px-3 text-xs"
+                                        @click="emit('view', appointment)"
+                                    >
+                                        عرض
+                                    </Button>
+                                    <Button
+                                        v-if="canEditAppointment"
+                                        type="button"
                                         variant="default"
                                         size="sm"
-                                        class="h-10 px-2 text-xs"
-                                        :disabled="processing"
+                                        class="h-9 rounded-xl px-3 text-xs"
+                                        @click="emit('edit', appointment)"
                                     >
-                                        تطبيق
+                                        تعديل
                                     </Button>
-                                </Form>
-                                <Button
-                                    v-if="canDeleteAppointment"
-                                    type="button"
-                                    size="sm"
-                                    variant="destructive"
-                                    class="h-10 px-3 text-xs"
-                                    @click="emit('delete', appointment)"
-                                >
-                                    حذف
-                                </Button>
-                            </div>
-                        </td>
-                    </tr>
-                    <tr
-                        v-if="appointments.data.length === 0"
-                        class="table-empty-state"
-                    >
-                        <td
-                            :colspan="canDeleteAppointment ? 10 : 9"
-                            class="px-3 py-10 text-center text-muted-foreground"
+                                    <Form
+                                        v-if="canUpdateStatus"
+                                        v-bind="
+                                            AppointmentController.transitionStatus.form(
+                                                appointment.id,
+                                            )
+                                        "
+                                        class="flex flex-wrap items-center justify-end gap-2"
+                                        v-slot="{ processing }"
+                                        @success="
+                                            emit('status-transition-success')
+                                        "
+                                        @error="emit('status-transition-error')"
+                                    >
+                                        <select
+                                            name="status"
+                                            class="pattern-field-clay h-9 w-32 px-2 py-1 text-xs"
+                                        >
+                                            <option value="">
+                                                تغيير الحالة
+                                            </option>
+                                            <option
+                                                v-for="status in transitionStatuses"
+                                                :key="status"
+                                                :value="status"
+                                            >
+                                                {{
+                                                    appointmentStatusLabel(
+                                                        status,
+                                                    )
+                                                }}
+                                            </option>
+                                        </select>
+                                        <Input
+                                            name="cancel_reason"
+                                            placeholder="سبب الإلغاء"
+                                            class="pattern-field-clay h-9 w-32 px-2 py-1 text-xs"
+                                        />
+                                        <Button
+                                            type="submit"
+                                            variant="default"
+                                            size="sm"
+                                            class="h-9 rounded-xl px-3 text-xs"
+                                            :disabled="processing"
+                                        >
+                                            تطبيق
+                                        </Button>
+                                    </Form>
+                                    <Button
+                                        v-if="canDeleteAppointment"
+                                        type="button"
+                                        size="sm"
+                                        variant="destructive"
+                                        class="h-9 rounded-xl px-3 text-xs"
+                                        @click="emit('delete', appointment)"
+                                    >
+                                        حذف
+                                    </Button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr
+                            v-if="appointments.data.length === 0"
+                            class="table-empty-state"
                         >
-                            لا توجد مواعيد تطابق عوامل التصفية الحالية.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                            <td
+                                :colspan="canDeleteAppointment ? 10 : 9"
+                                class="px-3 py-12 text-center"
+                            >
+                                <div
+                                    class="mx-auto flex max-w-md flex-col items-center gap-2 text-muted-foreground"
+                                >
+                                    <CalendarSearch
+                                        class="size-10 opacity-50"
+                                    />
+                                    <p
+                                        class="text-sm font-semibold text-foreground"
+                                    >
+                                        لا توجد مواعيد مطابقة
+                                    </p>
+                                    <p class="text-xs">
+                                        جرّب تعديل الفلاتر أو مسحها لعرض نتائج
+                                        أكثر.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-        <div
-            class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2"
-        >
-            <p class="text-xs text-muted-foreground">
-                عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من
-                {{ appointments.meta.total }} سجل
-            </p>
-            <div class="flex items-center gap-2">
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    class="h-10 px-3 text-xs"
-                    :disabled="localPage === 1"
-                    @click="emit('page', localPage - 1)"
-                >
-                    السابق
-                </Button>
-                <span class="text-xs font-semibold text-foreground/85">
-                    صفحة {{ localPage }} / {{ totalLocalPages }}
-                </span>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    class="h-10 px-3 text-xs"
-                    :disabled="localPage >= totalLocalPages"
-                    @click="emit('page', localPage + 1)"
-                >
-                    التالي
-                </Button>
+            <div
+                class="flex flex-col gap-3 rounded-2xl border border-border bg-secondary/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+                <p class="text-xs text-muted-foreground">
+                    عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من
+                    {{ appointments.meta.total }} سجل
+                </p>
+                <div class="flex items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        class="h-9 rounded-xl px-3 text-xs"
+                        :disabled="localPage === 1"
+                        @click="emit('page', localPage - 1)"
+                    >
+                        السابق
+                    </Button>
+                    <span class="text-xs font-semibold text-foreground/85">
+                        صفحة {{ localPage }} / {{ totalLocalPages }}
+                    </span>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        class="h-9 rounded-xl px-3 text-xs"
+                        :disabled="localPage >= totalLocalPages"
+                        @click="emit('page', localPage + 1)"
+                    >
+                        التالي
+                    </Button>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
 </template>

@@ -36,20 +36,26 @@ const normalizedWorkingHours = computed<ClinicWorkingHour[]>(() => {
     }));
 });
 
-const workingHours = normalizedWorkingHours;
-
 const labelFor = (day: ClinicWorkingDay): string => {
     return weekDays.find((item) => item.value === day)?.label ?? '';
 };
 
-const updateDay = (day: ClinicWorkingDay, patch: Partial<ClinicWorkingHour>): void => {
-    emit('update:modelValue', normalizedWorkingHours.value.map((row) =>
-        row.day_of_week === day ? { ...row, ...patch } : row,
-    ));
+const updateDay = (
+    day: ClinicWorkingDay,
+    patch: Partial<ClinicWorkingHour>,
+): void => {
+    emit(
+        'update:modelValue',
+        normalizedWorkingHours.value.map((row) =>
+            row.day_of_week === day ? { ...row, ...patch } : row,
+        ),
+    );
 };
 
 const toggleDay = (day: ClinicWorkingDay, isActive: boolean): void => {
-    const current = normalizedWorkingHours.value.find((row) => row.day_of_week === day);
+    const current = normalizedWorkingHours.value.find(
+        (row) => row.day_of_week === day,
+    );
 
     updateDay(day, {
         is_active: isActive,
@@ -58,77 +64,130 @@ const toggleDay = (day: ClinicWorkingDay, isActive: boolean): void => {
     });
 };
 
-const errorFor = (index: number, field: 'start_time' | 'end_time'): string | undefined => {
+const errorFor = (
+    index: number,
+    field: 'start_time' | 'end_time',
+): string | undefined => {
     return props.errors?.[`working_hours.${index}.${field}`];
 };
 </script>
 
 <template>
-    <section class="space-y-3">
-        <div class="flex items-center justify-between gap-3">
+    <section class="rounded-xl border border-border bg-card p-4">
+        <div class="mb-4 flex items-start justify-between gap-3">
             <div>
-                <h3 class="text-base font-bold text-foreground">دوام العيادة</h3>
+                <h3 class="text-sm font-black text-foreground">دوام العيادة</h3>
                 <p class="mt-1 text-sm text-muted-foreground">
-                    فعّل الأيام المتاحة للحجز وحدد وقت البداية والنهاية.
+                    فعّل أيام الحجز وحدد وقت البداية والنهاية.
                 </p>
             </div>
-            <Clock class="size-5 text-primary" />
+            <span
+                class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+            >
+                <Clock class="size-5" />
+            </span>
         </div>
 
-        <div class="space-y-3">
+        <div class="grid gap-2">
             <div
                 v-for="(day, index) in normalizedWorkingHours"
                 :key="day.day_of_week"
-                class="rounded-2xl border border-border bg-muted p-4"
+                class="rounded-lg border border-border/70 bg-muted/40 px-4 py-3"
             >
-                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div class="grid gap-3 md:grid-cols-[minmax(150px,190px)_1fr]">
                     <div class="flex items-center gap-3">
-                        <label class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center">
+                        <label
+                            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center"
+                        >
                             <input
                                 type="checkbox"
                                 class="peer sr-only"
                                 :checked="day.is_active"
-                                @change="toggleDay(day.day_of_week, ($event.target as HTMLInputElement).checked)"
+                                @change="
+                                    toggleDay(
+                                        day.day_of_week,
+                                        ($event.target as HTMLInputElement)
+                                            .checked,
+                                    )
+                                "
                             />
                             <span
-                                class="absolute inset-0 rounded-full bg-muted transition peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/20 peer-focus-visible:ring-offset-2"
+                                class="absolute inset-0 rounded-full bg-border transition peer-checked:bg-primary peer-focus-visible:ring-2 peer-focus-visible:ring-primary/20 peer-focus-visible:ring-offset-2"
                             ></span>
                             <span
-                                class="absolute right-1 size-5 rounded-full bg-card shadow-sm transition-transform peer-checked:-translate-x-5"
+                                class="absolute right-1 size-4 rounded-full bg-card shadow-sm transition-transform peer-checked:-translate-x-5"
                             ></span>
                         </label>
-                        <div>
-                            <p class="text-sm font-bold text-foreground">{{ labelFor(day.day_of_week) }}</p>
-                            <p class="text-xs font-medium text-muted-foreground">
-                                {{ workingHours[index]?.is_active ? 'دوام' : 'لا يوجد دوام' }}
+                        <div class="min-w-0">
+                            <p class="font-bold text-foreground">
+                                {{ labelFor(day.day_of_week) }}
+                            </p>
+                            <p
+                                class="text-xs font-semibold text-muted-foreground"
+                            >
+                                {{
+                                    day.is_active ? 'دوام متاح' : 'لا يوجد دوام'
+                                }}
                             </p>
                         </div>
                     </div>
 
+                    <div v-if="day.is_active" class="grid gap-2 sm:grid-cols-2">
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-semibold text-muted-foreground"
+                            >
+                                بداية الدوام
+                            </label>
+                            <input
+                                :value="day.start_time ?? ''"
+                                type="time"
+                                class="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm font-semibold text-foreground shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
+                                @input="
+                                    (event) =>
+                                        updateDay(day.day_of_week, {
+                                            start_time: (
+                                                event.target as HTMLInputElement
+                                            ).value,
+                                        })
+                                "
+                            />
+                            <InputError
+                                class="mt-1"
+                                :message="errorFor(index, 'start_time')"
+                            />
+                        </div>
+                        <div>
+                            <label
+                                class="mb-1 block text-xs font-semibold text-muted-foreground"
+                            >
+                                نهاية الدوام
+                            </label>
+                            <input
+                                :value="day.end_time ?? ''"
+                                type="time"
+                                class="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm font-semibold text-foreground shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
+                                @input="
+                                    (event) =>
+                                        updateDay(day.day_of_week, {
+                                            end_time: (
+                                                event.target as HTMLInputElement
+                                            ).value,
+                                        })
+                                "
+                            />
+                            <InputError
+                                class="mt-1"
+                                :message="errorFor(index, 'end_time')"
+                            />
+                        </div>
+                    </div>
+
                     <div
-                        v-if="workingHours[index]?.is_active"
-                        class="grid flex-1 gap-3 md:max-w-md md:grid-cols-2"
+                        v-else
+                        class="hidden items-center rounded-lg border border-dashed border-border px-3 text-sm font-semibold text-muted-foreground md:flex"
                     >
-                        <div>
-                            <label class="mb-1 block text-xs font-semibold text-muted-foreground">بداية الدوام</label>
-                            <input
-                                :value="workingHours[index]?.start_time ?? ''"
-                                type="time"
-                                class="h-11 w-full rounded-2xl border border-input bg-card px-4 text-sm font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                                @input="(event) => updateDay(day.day_of_week, { start_time: (event.target as HTMLInputElement).value })"
-                            />
-                            <InputError class="mt-1" :message="errorFor(index, 'start_time')" />
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-semibold text-muted-foreground">نهاية الدوام</label>
-                            <input
-                                :value="workingHours[index]?.end_time ?? ''"
-                                type="time"
-                                class="h-11 w-full rounded-2xl border border-input bg-card px-4 text-sm font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-                                @input="(event) => updateDay(day.day_of_week, { end_time: (event.target as HTMLInputElement).value })"
-                            />
-                            <InputError class="mt-1" :message="errorFor(index, 'end_time')" />
-                        </div>
+                        اليوم غير متاح للحجز.
                     </div>
                 </div>
             </div>

@@ -30,137 +30,191 @@ defineEmits<{
 </script>
 
 <template>
-    <div class="space-y-4">
+    <section class="glass-panel-soft overflow-hidden">
         <div
-            v-if="groupedByHour.length === 0"
-            class="flex flex-col items-center justify-center rounded-2xl border border-border/60 bg-card py-16"
+            class="flex flex-col gap-2 border-b border-border/70 bg-secondary/35 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
         >
-            <div
-                class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted/60"
-            >
-                <CalendarDays class="size-8 text-muted-foreground/50" />
+            <div>
+                <h2 class="text-base font-bold text-foreground">جدول اليوم</h2>
+                <p class="text-xs text-muted-foreground">
+                    ترتيب المواعيد حسب ساعة الحضور لتسهيل متابعة الدور.
+                </p>
             </div>
-            <p class="text-sm font-medium text-muted-foreground">
-                لا توجد مواعيد اليوم
-            </p>
-            <p class="mt-1 text-xs text-muted-foreground/70">
-                ابدأ بإضافة موعد جديد لجدولة يومك
-            </p>
-            <Button
-                v-if="canCreateAppointment"
-                variant="default"
-                size="sm"
-                class="mt-5 gap-1.5"
-                @click="$emit('create')"
+            <span
+                class="inline-flex w-fit items-center gap-2 rounded-xl border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground"
             >
-                <Plus class="size-3.5" />
-                إضافة موعد
-            </Button>
+                <CalendarDays class="size-3.5 text-primary" />
+                {{ todaySummary.total }} موعد
+            </span>
         </div>
 
-        <div v-else class="space-y-5">
-            <div v-for="group in groupedByHour" :key="group.hour">
-                <div class="mb-3 flex items-center gap-2">
-                    <div
-                        class="flex items-center gap-1.5 rounded-lg bg-muted/60 px-2.5 py-1"
-                    >
-                        <Clock class="size-3 text-muted-foreground" />
-                        <span
-                            class="text-xs font-bold tabular-nums text-foreground"
-                        >
-                            {{ group.hour }}
-                        </span>
-                    </div>
-                    <span class="text-xs text-muted-foreground">
-                        {{ group.appointments.length }}
-                        {{ group.appointments.length === 1 ? 'موعد' : 'مواعيد' }}
-                    </span>
-                    <div
-                        class="h-px flex-1 bg-border/50"
-                        aria-hidden="true"
-                    ></div>
+        <div class="p-5">
+            <div
+                v-if="groupedByHour.length === 0"
+                class="flex min-h-[320px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-secondary/25 px-4 py-14 text-center"
+            >
+                <div
+                    class="mb-4 flex size-16 items-center justify-center rounded-2xl bg-background text-muted-foreground shadow-sm"
+                >
+                    <CalendarDays class="size-8" />
                 </div>
+                <p class="text-sm font-bold text-foreground">
+                    لا توجد مواعيد اليوم
+                </p>
+                <p class="mt-1 max-w-md text-xs text-muted-foreground">
+                    عند إضافة أول موعد سيظهر هنا ضمن الساعة المناسبة مع حالته
+                    وإجراءات العرض والتعديل.
+                </p>
+                <Button
+                    v-if="canCreateAppointment"
+                    variant="default"
+                    size="sm"
+                    class="mt-5 gap-1.5 rounded-xl"
+                    @click="$emit('create')"
+                >
+                    <Plus class="size-3.5" />
+                    إضافة موعد
+                </Button>
+            </div>
 
-                <div class="space-y-2">
-                    <div
-                        v-for="apt in group.appointments"
-                        :key="apt.id"
-                        class="group flex flex-col gap-3 rounded-xl border border-border/60 bg-card p-3.5 transition-all hover:border-primary/20 hover:shadow-sm sm:flex-row sm:items-center sm:justify-between"
-                    >
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/5 text-xs font-bold tabular-nums text-primary"
-                            >
-                                {{ formatTime(apt.scheduled_for).split(' ')[0] }}
-                            </div>
-                            <div>
-                                <p class="text-sm font-semibold text-foreground">
-                                    {{ apt.patient?.full_name ?? '-' }}
-                                </p>
-                                <p class="mt-0.5 text-xs text-muted-foreground">
-                                    {{ apt.doctor?.name ?? 'بدون طبيب' }}
-                                    <span
-                                        v-if="apt.doctor?.specialty"
-                                        class="text-muted-foreground/60"
-                                    >
-                                        · {{ apt.doctor.specialty }}
-                                    </span>
-                                </p>
-                                <p class="mt-0.5 text-[0.65rem] text-muted-foreground/60">
-                                    {{ apt.duration_minutes }} دقيقة
-                                    <span
-                                        v-if="apt.appointment_type"
-                                    >
-                                        ·
-                                        {{
-                                            apt.appointment_type === 'first_visit'
-                                                ? 'كشفية أولى'
-                                                : 'مراجعة'
-                                        }}
-                                    </span>
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-2 sm:gap-3">
+            <div v-else class="space-y-5">
+                <div v-for="group in groupedByHour" :key="group.hour">
+                    <div class="mb-3 flex items-center gap-2">
+                        <div
+                            class="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-1.5"
+                        >
+                            <Clock class="size-3.5 text-primary" />
                             <span
-                                class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
-                                :class="appointmentStatusClass(apt.status)"
+                                class="text-xs font-bold text-foreground tabular-nums"
+                                dir="ltr"
+                            >
+                                {{ group.hour }}
+                            </span>
+                        </div>
+                        <span class="text-xs text-muted-foreground">
+                            {{ group.appointments.length }}
+                            {{
+                                group.appointments.length === 1
+                                    ? 'موعد'
+                                    : 'مواعيد'
+                            }}
+                        </span>
+                        <div class="h-px flex-1 bg-border" aria-hidden="true" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <article
+                            v-for="appointment in group.appointments"
+                            :key="appointment.id"
+                            class="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm transition-all hover:border-primary/30 hover:shadow-card-hover lg:flex-row lg:items-center lg:justify-between"
+                        >
+                            <div class="flex min-w-0 items-center gap-3">
+                                <div
+                                    class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary tabular-nums"
+                                    dir="ltr"
+                                >
+                                    {{
+                                        formatTime(
+                                            appointment.scheduled_for,
+                                        ).split(' ')[0]
+                                    }}
+                                </div>
+
+                                <div class="min-w-0">
+                                    <p
+                                        class="truncate text-sm font-bold text-foreground"
+                                    >
+                                        {{
+                                            appointment.patient?.full_name ??
+                                            '-'
+                                        }}
+                                    </p>
+                                    <p
+                                        class="mt-0.5 truncate text-xs text-muted-foreground"
+                                    >
+                                        {{
+                                            appointment.doctor?.name ??
+                                            'بدون طبيب'
+                                        }}
+                                        <span
+                                            v-if="appointment.doctor?.specialty"
+                                        >
+                                            · {{ appointment.doctor.specialty }}
+                                        </span>
+                                    </p>
+                                    <p
+                                        class="mt-0.5 text-[0.72rem] text-muted-foreground"
+                                    >
+                                        {{ appointment.duration_minutes }} دقيقة
+                                        <span
+                                            v-if="appointment.appointment_type"
+                                        >
+                                            ·
+                                            {{
+                                                appointment.appointment_type ===
+                                                'first_visit'
+                                                    ? 'كشفية أولى'
+                                                    : 'مراجعة'
+                                            }}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                class="flex flex-wrap items-center justify-between gap-2 lg:justify-end"
                             >
                                 <span
-                                    class="size-1.5 rounded-full"
-                                    :class="appointmentStatusDotClass(apt.status)"
-                                ></span>
-                                {{ appointmentStatusLabel(apt.status) }}
-                            </span>
+                                    class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium"
+                                    :class="
+                                        appointmentStatusClass(
+                                            appointment.status,
+                                        )
+                                    "
+                                >
+                                    <span
+                                        class="size-1.5 rounded-full"
+                                        :class="
+                                            appointmentStatusDotClass(
+                                                appointment.status,
+                                            )
+                                        "
+                                    />
+                                    {{
+                                        appointmentStatusLabel(
+                                            appointment.status,
+                                        )
+                                    }}
+                                </span>
 
-                            <div class="flex items-center gap-1">
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    class="h-8 w-8"
-                                    @click="$emit('view', apt)"
-                                    aria-label="عرض الموعد"
-                                >
-                                    <Eye class="size-3.5" />
-                                </Button>
-                                <Button
-                                    v-if="canEditAppointment"
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    class="h-8 w-8"
-                                    @click="$emit('edit', apt)"
-                                    aria-label="تعديل الموعد"
-                                >
-                                    <Pencil class="size-3.5" />
-                                </Button>
+                                <div class="flex items-center gap-1">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-9 rounded-xl"
+                                        aria-label="عرض الموعد"
+                                        @click="$emit('view', appointment)"
+                                    >
+                                        <Eye class="size-4" />
+                                    </Button>
+                                    <Button
+                                        v-if="canEditAppointment"
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-9 rounded-xl"
+                                        aria-label="تعديل الموعد"
+                                        @click="$emit('edit', appointment)"
+                                    >
+                                        <Pencil class="size-4" />
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
+                        </article>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 </template>

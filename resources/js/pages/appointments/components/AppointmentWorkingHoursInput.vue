@@ -10,7 +10,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { AvailabilityPeriod, ClinicWorkingDay, ClinicWorkingHour } from './types';
+import type {
+    AvailabilityPeriod,
+    ClinicWorkingDay,
+    ClinicWorkingHour,
+} from './types';
 
 const props = withDefaults(
     defineProps<{
@@ -167,7 +171,9 @@ function buildSlots(startTime: string, endTime: string): string[] {
     while (current < end) {
         const hour = Math.floor(current / 60);
         const minute = current % 60;
-        slots.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+        slots.push(
+            `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`,
+        );
         current += 15;
     }
 
@@ -177,16 +183,20 @@ function buildSlots(startTime: string, endTime: string): string[] {
 
 <template>
     <div class="grid gap-1.5">
-        <Label v-if="label" class="flex items-center gap-1.5 text-xs font-medium">
+        <Label
+            v-if="label"
+            class="flex items-center gap-1.5 text-xs font-medium"
+        >
             <Calendar class="size-3.5 text-muted-foreground" />
             {{ label }}
             <span class="text-destructive">*</span>
         </Label>
         <input :name="name" type="hidden" :value="selectedValue" />
 
-        <div class="grid gap-2 md:grid-cols-2">
+        <div class="grid gap-2 sm:grid-cols-2">
             <Input
                 v-model="selectedDate"
+                class="h-11 rounded-lg bg-background"
                 type="date"
                 :min="todayDate"
                 required
@@ -194,10 +204,10 @@ function buildSlots(startTime: string, endTime: string): string[] {
 
             <Select
                 :model-value="selectedTime"
-                @update:model-value="selectedTime = String($event ?? '')"
                 :disabled="timeSlots.length === 0"
+                @update:model-value="selectedTime = String($event ?? '')"
             >
-                <SelectTrigger>
+                <SelectTrigger class="h-11 rounded-lg bg-background">
                     <SelectValue
                         :placeholder="
                             timeSlots.length === 0
@@ -212,7 +222,7 @@ function buildSlots(startTime: string, endTime: string): string[] {
                         :key="slot"
                         :value="slot"
                     >
-                        {{ slot }}
+                        <span dir="ltr">{{ slot }}</span>
                     </SelectItem>
                 </SelectContent>
             </Select>

@@ -2,10 +2,11 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     CalendarDays,
-    Plus,
-    Table2,
     Download,
     FileText,
+    ListFilter,
+    Plus,
+    Table2,
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
@@ -755,30 +756,37 @@ const todaySummary = computed(() => ({
     <Head title="المواعيد" />
 
     <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6" dir="rtl">
-        <div
-            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        <section
+            class="glass-panel-soft flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between"
         >
-            <div class="flex items-center gap-3">
-                <div>
-                    <h1 class="page-title">المواعيد</h1>
+            <div class="flex items-center gap-4">
+                <div
+                    class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+                >
+                    <CalendarDays class="size-7" />
+                </div>
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="page-title leading-tight">المواعيد</h1>
+                        <span
+                            class="inline-flex items-center rounded-full border border-border bg-secondary px-2.5 py-1 text-[0.72rem] font-medium text-muted-foreground"
+                        >
+                            {{ activeRoleLabel }}
+                        </span>
+                    </div>
                     <p class="mt-1 text-sm text-muted-foreground">
                         {{ formatArabicDate(today.toISOString()) }}
                     </p>
                 </div>
-                <span
-                    class="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-[0.7rem] font-medium text-muted-foreground"
-                >
-                    {{ activeRoleLabel }}
-                </span>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <div
-                    class="inline-flex rounded-lg border border-border/60 bg-background/60 p-0.5"
+                    class="inline-flex rounded-xl border border-border bg-secondary/60 p-1"
                 >
                     <button
                         type="button"
-                        class="inline-flex min-h-[44px] items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all"
+                        class="inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all"
                         :class="
                             viewMode === 'day'
                                 ? 'bg-primary text-primary-foreground shadow-sm'
@@ -806,14 +814,14 @@ const todaySummary = computed(() => ({
 
                 <a
                     :href="AppointmentExportController.export.url()"
-                    class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                    class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
                 >
                     <Download class="size-3.5" />
                     تصدير Excel
                 </a>
                 <a
                     :href="AppointmentExportController.exportPdf.url()"
-                    class="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                    class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
                 >
                     <FileText class="size-3.5" />
                     تصدير PDF
@@ -823,23 +831,24 @@ const todaySummary = computed(() => ({
                     v-if="can('appointment.create')"
                     variant="ghost"
                     size="sm"
-                    class="h-10 rounded-lg px-3 text-xs"
+                    class="h-10 gap-1.5 rounded-xl px-3 text-xs"
                     @click="isQuickAddOpen = !isQuickAddOpen"
                 >
+                    <ListFilter class="size-3.5" />
                     {{ isQuickAddOpen ? 'إخفاء السريع' : 'إضافة سريعة' }}
                 </Button>
                 <Button
                     v-if="can('appointment.create')"
                     variant="default"
                     size="sm"
-                    class="h-10 rounded-lg gap-1.5 px-4 text-xs"
+                    class="h-10 gap-1.5 rounded-xl px-4 text-xs"
                     @click="isCreateSheetOpen = true"
                 >
                     <Plus class="size-3.5" />
                     إضافة موعد
                 </Button>
             </div>
-        </div>
+        </section>
 
         <AppointmentQuickAddForm
             v-if="can('appointment.create') && isQuickAddOpen"

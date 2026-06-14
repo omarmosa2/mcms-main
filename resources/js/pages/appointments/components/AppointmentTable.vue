@@ -5,7 +5,6 @@ import {
     ArrowUp,
     ArrowUpDown,
     CalendarSearch,
-    FilterX,
 } from 'lucide-vue-next';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import { Button } from '@/components/ui/button';
@@ -44,9 +43,6 @@ const props = defineProps<{
     doctorOptions: { label: string; value: string }[];
     departmentOptions: { label: string; value: string }[];
     activeFilters: { key: string; label: string; value: string | null }[];
-    selectedAppointmentIds: number[];
-    deletableAppointmentIds: number[];
-    areAllDeletableAppointmentsSelected: boolean;
     canEditAppointment: boolean;
     canDeleteAppointment: boolean;
     canUpdateStatus: boolean;
@@ -65,18 +61,12 @@ const emit = defineEmits([
     'date-to',
     'rows-per-page',
     'page',
-    'update:selectedAppointmentIds',
     'remove-filter',
     'clear-filters',
-    'clear-selection',
-    'toggle-select-all',
-    'previous-page',
-    'next-page',
     'sort',
     'view',
     'edit',
     'delete',
-    'bulk-delete',
     'status-transition-success',
     'status-transition-error',
 ]);
@@ -234,63 +224,10 @@ const sortIconFor = (field: AppointmentSortField) => {
                 </div>
             </div>
 
-            <div
-                v-if="canDeleteAppointment && selectedAppointmentIds.length > 0"
-                class="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-destructive/25 bg-destructive/5 p-3"
-            >
-                <p class="text-xs font-medium text-destructive">
-                    تم تحديد {{ selectedAppointmentIds.length }} موعد للحذف.
-                </p>
-                <div class="flex flex-wrap items-center gap-2">
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        class="h-10 gap-1.5 rounded-xl px-3 text-xs"
-                        @click="emit('update:selectedAppointmentIds', [])"
-                    >
-                        <FilterX class="size-3.5" />
-                        إلغاء التحديد
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        class="h-10 rounded-xl px-3 text-xs"
-                        @click="emit('bulk-delete')"
-                    >
-                        حذف المحدد
-                    </Button>
-                </div>
-            </div>
-
             <div class="ui-table-shell overflow-hidden">
-                <table class="ui-table md:min-w-[1080px]">
+                <table class="ui-table">
                     <thead>
                         <tr>
-                            <th v-if="canDeleteAppointment" class="px-3 py-3">
-                                <input
-                                    type="checkbox"
-                                    class="size-4 rounded border-border"
-                                    :checked="
-                                        areAllDeletableAppointmentsSelected
-                                    "
-                                    @change="emit('toggle-select-all', $event)"
-                                />
-                            </th>
-                            <th class="px-3 py-3">
-                                <button
-                                    type="button"
-                                    class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
-                                    @click="emit('sort', 'appointment_number')"
-                                >
-                                    رقم الموعد
-                                    <component
-                                        :is="sortIconFor('appointment_number')"
-                                        class="size-3.5"
-                                    />
-                                </button>
-                            </th>
                             <th class="px-3 py-3">
                                 <button
                                     type="button"
@@ -331,54 +268,6 @@ const sortIconFor = (field: AppointmentSortField) => {
                             :key="appointment.id"
                             class="ui-table-row align-top"
                         >
-                            <td
-                                v-if="canDeleteAppointment"
-                                class="px-3 py-3"
-                                data-label="تحديد"
-                            >
-                                <input
-                                    v-if="appointment.status === 'scheduled'"
-                                    :checked="
-                                        selectedAppointmentIds.includes(
-                                            appointment.id,
-                                        )
-                                    "
-                                    type="checkbox"
-                                    class="size-4 rounded border-border"
-                                    :value="appointment.id"
-                                    @change="
-                                        ($event) => {
-                                            const checked = (
-                                                $event.target as HTMLInputElement
-                                            ).checked;
-                                            if (checked) {
-                                                emit(
-                                                    'update:selectedAppointmentIds',
-                                                    [
-                                                        ...selectedAppointmentIds,
-                                                        appointment.id,
-                                                    ],
-                                                );
-                                            } else {
-                                                emit(
-                                                    'update:selectedAppointmentIds',
-                                                    selectedAppointmentIds.filter(
-                                                        (id) =>
-                                                            id !==
-                                                            appointment.id,
-                                                    ),
-                                                );
-                                            }
-                                        }
-                                    "
-                                />
-                            </td>
-                            <td
-                                class="px-3 py-3 font-semibold"
-                                data-label="رقم الموعد"
-                            >
-                                {{ appointment.appointment_number }}
-                            </td>
                             <td class="px-3 py-3" data-label="التاريخ">
                                 {{ formatDate(appointment.scheduled_for) }}
                             </td>
@@ -440,12 +329,12 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 class="table-cell-actions px-3 py-3 md:text-right"
                                 data-label="الإجراءات"
                             >
-                                <div class="flex flex-wrap justify-end gap-2">
+                                <div class="flex flex-wrap items-center justify-end gap-1">
                                     <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
-                                        class="h-9 rounded-xl px-3 text-xs"
+                                        class="h-8 rounded-lg px-2 text-[0.68rem]"
                                         @click="emit('view', appointment)"
                                     >
                                         عرض
@@ -455,7 +344,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                                         type="button"
                                         variant="default"
                                         size="sm"
-                                        class="h-9 rounded-xl px-3 text-xs"
+                                        class="h-8 rounded-lg px-2 text-[0.68rem]"
                                         @click="emit('edit', appointment)"
                                     >
                                         تعديل
@@ -467,7 +356,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                                                 appointment.id,
                                             )
                                         "
-                                        class="flex flex-wrap items-center justify-end gap-2"
+                                        class="inline-flex"
                                         v-slot="{ processing }"
                                         @success="
                                             emit('status-transition-success')
@@ -476,10 +365,10 @@ const sortIconFor = (field: AppointmentSortField) => {
                                     >
                                         <select
                                             name="status"
-                                            class="pattern-field-clay h-9 w-32 px-2 py-1 text-xs"
+                                            class="pattern-field-clay h-8 w-24 rounded-lg px-1.5 py-0.5 text-[0.68rem]"
                                         >
                                             <option value="">
-                                                تغيير الحالة
+                                                الحالة
                                             </option>
                                             <option
                                                 v-for="status in transitionStatuses"
@@ -493,27 +382,27 @@ const sortIconFor = (field: AppointmentSortField) => {
                                                 }}
                                             </option>
                                         </select>
-                                        <Input
+                                        <input
+                                            type="hidden"
                                             name="cancel_reason"
-                                            placeholder="سبب الإلغاء"
-                                            class="pattern-field-clay h-9 w-32 px-2 py-1 text-xs"
+                                            value=""
                                         />
                                         <Button
                                             type="submit"
-                                            variant="default"
+                                            variant="ghost"
                                             size="sm"
-                                            class="h-9 rounded-xl px-3 text-xs"
+                                            class="h-8 rounded-lg px-1.5 text-[0.68rem]"
                                             :disabled="processing"
                                         >
-                                            تطبيق
+                                            ✓
                                         </Button>
                                     </Form>
                                     <Button
                                         v-if="canDeleteAppointment"
                                         type="button"
                                         size="sm"
-                                        variant="destructive"
-                                        class="h-9 rounded-xl px-3 text-xs"
+                                        variant="ghost"
+                                        class="h-8 rounded-lg px-1.5 text-[0.68rem] text-destructive hover:bg-destructive/10 hover:text-destructive"
                                         @click="emit('delete', appointment)"
                                     >
                                         حذف
@@ -526,7 +415,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                             class="table-empty-state"
                         >
                             <td
-                                :colspan="canDeleteAppointment ? 10 : 9"
+                                colspan="8"
                                 class="px-3 py-12 text-center"
                             >
                                 <div

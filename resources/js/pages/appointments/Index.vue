@@ -872,8 +872,10 @@ const todaySummary = computed(() => ({
             :today-summary="todaySummary"
             :can-edit-appointment="canEditAppointment"
             :can-create-appointment="can('appointment.create')"
+            :can-delete-appointment="can('appointment.delete')"
             @view="openViewAppointment"
             @edit="openEditAppointment"
+            @delete="deleteAppointment"
             @create="isCreateSheetOpen = true"
         />
 

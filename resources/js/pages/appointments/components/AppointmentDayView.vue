@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarDays, Clock, Eye, Pencil, Plus } from 'lucide-vue-next';
+import { CalendarDays, Clock, Eye, Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import {
     appointmentStatusClass,
@@ -20,11 +20,13 @@ defineProps<{
     };
     canEditAppointment: boolean;
     canCreateAppointment: boolean;
+    canDeleteAppointment: boolean;
 }>();
 
 defineEmits<{
     view: [appointment: Appointment];
     edit: [appointment: Appointment];
+    delete: [appointment: Appointment];
     create: [];
 }>();
 </script>
@@ -208,6 +210,17 @@ defineEmits<{
                                         @click="$emit('edit', appointment)"
                                     >
                                         <Pencil class="size-4" />
+                                    </Button>
+                                    <Button
+                                        v-if="canDeleteAppointment && appointment.status === 'scheduled'"
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-9 rounded-xl text-destructive hover:bg-destructive/10"
+                                        aria-label="حذف الموعد"
+                                        @click="$emit('delete', appointment)"
+                                    >
+                                        <Trash2 class="size-4" />
                                     </Button>
                                 </div>
                             </div>

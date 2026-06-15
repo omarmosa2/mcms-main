@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, setLayoutProps, useForm } from '@inertiajs/vue3';
 import {
     ArrowLeft,
     CalendarClock,
@@ -11,7 +11,7 @@ import {
     Trash2,
     User,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -108,8 +108,8 @@ const { record } = defineProps<{
     record: MedicalRecord;
 }>();
 
-defineOptions({
-    layout: {
+watchEffect(() => {
+    setLayoutProps({
         breadcrumbs: [
             {
                 title: 'السجلات الطبية',
@@ -120,7 +120,7 @@ defineOptions({
                 href: `/medical-records/${record.id}`,
             },
         ],
-    },
+    });
 });
 
 const { can } = usePermissions();

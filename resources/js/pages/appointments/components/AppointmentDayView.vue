@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { CalendarDays, Clock, Eye, Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { CalendarDays, Clock, Eye, IdCard, Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { Link } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import {
     appointmentStatusClass,
@@ -198,6 +199,14 @@ defineEmits<{
                                 </span>
 
                                 <div class="flex items-center gap-0.5">
+                                    <Link
+                                        v-if="appointment.patient?.id"
+                                        :href="`/patients/${appointment.patient.id}/card`"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+                                        title="بطاقة المريض"
+                                    >
+                                        <IdCard class="size-3.5" />
+                                    </Link>
                                     <Button
                                         type="button"
                                         variant="ghost"

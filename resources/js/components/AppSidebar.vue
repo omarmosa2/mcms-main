@@ -17,7 +17,6 @@ import {
     Wallet,
     BadgeDollarSign,
     FileText,
-    ClipboardList,
     UserCircle,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -62,7 +61,6 @@ const roleItemOrder: Record<string, string[]> = {
         'مواعيد اليوم',
         'السجلات الطبية',
         'الوصفات الطبية',
-        'المتابعات',
         'ملفي الشخصي',
     ],
     receptionist: [
@@ -204,13 +202,6 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 title: 'الوصفات الطبية',
                 href: '/doctor/prescriptions',
                 icon: FileText,
-                group: 'clinical',
-                doctorOnly: true,
-            },
-            {
-                title: 'المتابعات',
-                href: '/doctor/follow-ups',
-                icon: ClipboardList,
                 group: 'clinical',
                 doctorOnly: true,
             },

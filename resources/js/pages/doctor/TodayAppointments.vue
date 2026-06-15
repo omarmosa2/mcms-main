@@ -4,6 +4,7 @@ import {
     CalendarClock,
     Clock,
     FileText,
+    IdCard,
     Search,
     Stethoscope,
 } from 'lucide-vue-next';
@@ -278,6 +279,13 @@ const stats = computed(() => ({
                                     >
                                         <component :is="apt.status === 'completed' ? FileText : Stethoscope" class="size-3.5" />
                                         {{ apt.status === 'completed' ? 'عرض السجل' : 'فتح السجل' }}
+                                    </Link>
+                                    <Link
+                                        :href="`/patients/${apt.patient.id}/card`"
+                                        class="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
+                                    >
+                                        <IdCard class="size-3.5" />
+                                        بطاقة المريض
                                     </Link>
                                 </div>
                             </td>

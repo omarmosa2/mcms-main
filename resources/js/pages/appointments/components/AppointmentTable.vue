@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3';
+import { Form, Link } from '@inertiajs/vue3';
 import {
     ArrowDown,
     ArrowUp,
@@ -8,6 +8,7 @@ import {
     Check,
     Eye,
     Filter,
+    IdCard,
     Pencil,
     Search,
     Stethoscope,
@@ -432,6 +433,14 @@ const sortIconFor = (field: AppointmentSortField) => {
                                     >
                                         <Stethoscope class="size-3.5" />
                                     </Button>
+                                    <Link
+                                        v-if="appointment.patient?.id"
+                                        :href="`/patients/${appointment.patient.id}/card`"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+                                        title="بطاقة المريض"
+                                    >
+                                        <IdCard class="size-3.5" />
+                                    </Link>
                                     <Button
                                         type="button"
                                         variant="ghost"

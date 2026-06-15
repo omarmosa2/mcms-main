@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link, router, setLayoutProps, useForm } from '@inertiajs/vue3';
-import { destroy as destroyFollowUp, store as storeFollowUp, update as updateFollowUp } from '@/actions/App/Http/Controllers/MedicalRecords/FollowUpController';
 import { index as medicalRecordsIndex, show as showMedicalRecord, update as updateMedicalRecord } from '@/actions/App/Http/Controllers/MedicalRecords/MedicalRecordController';
 import { exportMethod as exportMedicalRecord } from '@/actions/App/Http/Controllers/MedicalRecords/MedicalRecordExportController';
 import { destroy as destroyTreatmentPlan, store as storeTreatmentPlan, update as updateTreatmentPlan } from '@/actions/App/Http/Controllers/MedicalRecords/TreatmentPlanController';
@@ -15,7 +14,6 @@ import { useToast } from '@/composables/useToast';
 import {
     AlertTriangle,
     ArrowLeft,
-    CalendarClock,
     ClipboardCheck,
     ClipboardList,
     Download,
@@ -233,7 +231,6 @@ const { success: toastSuccess } = useToast();
 
 const activeTab = ref('overview');
 const showTreatmentPlanDialog = ref(false);
-const showFollowUpDialog = ref(false);
 const autosaveState = ref<'idle' | 'saving' | 'saved'>('idle');
 let autosaveTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -289,15 +286,6 @@ const treatmentPlanForm = useForm({
     status: 'new',
 });
 
-const followUpForm = useForm({
-    medical_record_id: record.id,
-    patient_id: record.patient_id,
-    follow_up_date: '',
-    notes: '',
-    recommended_action: '',
-    status: 'scheduled',
-});
-
 const tabs = [
     { id: 'overview', label: 'Overview', arabic: 'نظرة عامة', icon: ClipboardList },
     { id: 'history', label: 'History', arabic: 'التاريخ المرضي', icon: History },
@@ -308,7 +296,6 @@ const tabs = [
     { id: 'prescriptions', label: 'Prescriptions', arabic: 'الوصفات', icon: Pill },
     { id: 'labs', label: 'Labs', arabic: 'المخبر', icon: FlaskConical },
     { id: 'imaging', label: 'Imaging', arabic: 'الأشعة', icon: Image },
-    { id: 'followups', label: 'Follow-ups', arabic: 'المتابعات', icon: CalendarClock },
     { id: 'attachments', label: 'Attachments', arabic: 'المرفقات', icon: Paperclip },
     { id: 'audit', label: 'Audit Log', arabic: 'التدقيق', icon: FileClock },
 ];
@@ -367,9 +354,6 @@ const completionAlerts = computed(() => {
     if (record.patient?.allergies?.length === 0) {
         alerts.push('لم يتم توثيق الحساسية أو نفيها.');
     }
-    if (record.follow_ups?.some((followUp) => followUp.status === 'scheduled')) {
-        alerts.push('يوجد موعد متابعة مجدول يحتاج مراقبة.');
-    }
 
     return alerts;
 });
@@ -382,14 +366,6 @@ const timelineItems = computed(() => [
         description: plan.description,
         status: plan.status,
         type: 'خطة علاج',
-    })),
-    ...record.follow_ups.map((followUp) => ({
-        id: `follow-${followUp.id}`,
-        date: followUp.follow_up_date ?? followUp.created_at,
-        title: followUp.recommended_action ?? 'متابعة',
-        description: followUp.notes,
-        status: followUp.status,
-        type: 'متابعة',
     })),
 ].sort((a, b) => new Date(a.date ?? '').getTime() - new Date(b.date ?? '').getTime()));
 
@@ -407,18 +383,6 @@ function submitTreatmentPlan() {
     });
 }
 
-function submitFollowUp() {
-    followUpForm.post(storeFollowUp.url(), {
-        preserveScroll: true,
-        onSuccess: () => {
-            showFollowUpDialog.value = false;
-            followUpForm.reset();
-            toastSuccess('تم إضافة المتابعة بنجاح.');
-            router.reload();
-        },
-    });
-}
-
 function deleteTreatmentPlan(planId: number) {
     router.delete(destroyTreatmentPlan.url({ planId }), {
         preserveScroll: true,
@@ -429,31 +393,11 @@ function deleteTreatmentPlan(planId: number) {
     });
 }
 
-function deleteFollowUp(followUpId: number) {
-    router.delete(destroyFollowUp.url({ followUpId }), {
-        preserveScroll: true,
-        onSuccess: () => {
-            toastSuccess('تم حذف المتابعة.');
-            router.reload();
-        },
-    });
-}
-
 function updateTreatmentPlanStatus(planId: number, status: string) {
     router.put(updateTreatmentPlan.url({ planId }), { status }, {
         preserveScroll: true,
         onSuccess: () => {
             toastSuccess('تم تحديث حالة خطة العلاج.');
-            router.reload();
-        },
-    });
-}
-
-function updateFollowUpStatus(followUpId: number, status: string) {
-    router.put(updateFollowUp.url({ followUpId }), { status }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            toastSuccess('تم تحديث حالة المتابعة.');
             router.reload();
         },
     });
@@ -997,38 +941,6 @@ function fileSize(size: number): string {
                     </div>
                 </section>
 
-                <section v-show="activeTab === 'followups'" class="rounded-lg border border-border bg-card p-4">
-                    <div class="mb-3 flex items-center justify-between border-b border-border pb-3">
-                        <h2 class="text-sm font-semibold">المتابعات</h2>
-                        <Button v-if="can('medical_record.update')" size="sm" variant="outline" @click="showFollowUpDialog = true">
-                            <Plus class="me-1 size-3.5" />
-                            إضافة
-                        </Button>
-                    </div>
-                    <div class="space-y-3">
-                        <div v-for="followUp in record.follow_ups" :key="followUp.id" class="rounded-lg border border-border p-4">
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                    <p class="font-medium">{{ formatDate(followUp.follow_up_date) }}</p>
-                                    <p class="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{{ followUp.notes ?? 'بدون ملاحظات' }}</p>
-                                    <p v-if="followUp.recommended_action" class="mt-1 text-sm text-cyan-700 dark:text-cyan-300">الإجراء: {{ followUp.recommended_action }}</p>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <Badge :class="statusClass(followUp.status)" class="border">{{ statusLabel(followUp.status) }}</Badge>
-                                    <button v-if="can('medical_record.delete')" type="button" class="text-rose-600" @click="deleteFollowUp(followUp.id)">
-                                        <Trash2 class="size-4" />
-                                    </button>
-                                </div>
-                            </div>
-                            <div v-if="followUp.status === 'scheduled'" class="mt-3 flex gap-2">
-                                <button v-if="can('medical_record.update')" type="button" class="text-xs text-emerald-700 hover:underline" @click="updateFollowUpStatus(followUp.id, 'completed')">تمّت</button>
-                                <button v-if="can('medical_record.update')" type="button" class="text-xs text-rose-700 hover:underline" @click="updateFollowUpStatus(followUp.id, 'missed')">فائتة</button>
-                            </div>
-                        </div>
-                        <p v-if="record.follow_ups.length === 0" class="py-8 text-center text-sm text-muted-foreground">لا توجد متابعات.</p>
-                    </div>
-                </section>
-
                 <section v-show="activeTab === 'attachments'" class="rounded-lg border border-border bg-card p-4">
                     <h2 class="mb-3 border-b border-border pb-3 text-sm font-semibold">الملفات والمرفقات</h2>
                     <div class="overflow-x-auto">
@@ -1144,36 +1056,6 @@ function fileSize(size: number): string {
                     <Button type="button" variant="outline" @click="showTreatmentPlanDialog = false">إلغاء</Button>
                     <Button type="submit" :disabled="treatmentPlanForm.processing">
                         {{ treatmentPlanForm.processing ? 'جارٍ الحفظ...' : 'حفظ' }}
-                    </Button>
-                </DialogFooter>
-            </form>
-        </DialogContent>
-    </Dialog>
-
-    <Dialog v-model:open="showFollowUpDialog">
-        <DialogContent>
-            <DialogHeader>
-                <DialogTitle>إضافة متابعة</DialogTitle>
-                <DialogDescription>أضف متابعة جديدة لهذا السجل الطبي</DialogDescription>
-            </DialogHeader>
-            <form class="space-y-4" @submit.prevent="submitFollowUp">
-                <div class="flex flex-col gap-1.5">
-                    <Label>تاريخ المتابعة *</Label>
-                    <Input v-model="followUpForm.follow_up_date" type="date" />
-                    <InputError :message="followUpForm.errors.follow_up_date" />
-                </div>
-                <div class="flex flex-col gap-1.5">
-                    <Label>سبب المتابعة / الملاحظات</Label>
-                    <textarea v-model="followUpForm.notes" rows="3" class="flex w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-                </div>
-                <div class="flex flex-col gap-1.5">
-                    <Label>التوصيات</Label>
-                    <Input v-model="followUpForm.recommended_action" placeholder="الإجراء الموصى به..." />
-                </div>
-                <DialogFooter>
-                    <Button type="button" variant="outline" @click="showFollowUpDialog = false">إلغاء</Button>
-                    <Button type="submit" :disabled="followUpForm.processing">
-                        {{ followUpForm.processing ? 'جارٍ الحفظ...' : 'حفظ' }}
                     </Button>
                 </DialogFooter>
             </form>

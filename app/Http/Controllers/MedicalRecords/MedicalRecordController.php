@@ -168,9 +168,27 @@ class MedicalRecordController extends Controller
             ->forClinic($clinicId)
             ->with([
                 'patient:id,clinic_id,first_name,last_name,file_number,phone,date_of_birth,gender',
+                'patient.allergies:id,clinic_id,patient_id,allergy,created_at',
+                'patient.attachments:id,clinic_id,patient_id,uploaded_by,original_name,mime_type,extension,size_bytes,uploaded_at,created_at',
+                'patient.attachments.uploader:id,clinic_id,name,email',
+                'patient.chronicConditions:id,clinic_id,patient_id,condition,created_at',
+                'patient.labOrders:id,clinic_id,visit_id,patient_id,ordered_by,test_code,test_name,status,ordered_at,notes',
+                'patient.labOrders.orderer:id,clinic_id,name',
+                'patient.labOrders.results:id,clinic_id,lab_order_id,resulted_by,result_value,reference_range,unit,resulted_at,notes',
+                'patient.medications:id,clinic_id,patient_id,medication,created_at',
+                'patient.radiologyOrders:id,clinic_id,visit_id,patient_id,ordered_by,study_code,study_name,modality,status,ordered_at,notes',
+                'patient.radiologyOrders.orderer:id,clinic_id,name',
+                'patient.radiologyOrders.reports:id,clinic_id,radiology_order_id,reported_by,report_text,reported_at',
                 'department:id,clinic_id,name,clinic_type',
                 'doctor:id,clinic_id,name',
                 'creator:id,clinic_id,name',
+                'auditLogs' => fn ($query) => $query
+                    ->with('user:id,clinic_id,name')
+                    ->latest('occurred_at')
+                    ->limit(20),
+                'prescriptions:id,clinic_id,visit_id,medical_record_id,patient_id,prescribed_by,prescription_number,status,issued_at,dispensed_at,notes,diagnosis,created_at',
+                'prescriptions.items:id,clinic_id,prescription_id,medication_name,dosage,frequency,duration,quantity,instructions',
+                'prescriptions.prescriber:id,clinic_id,name',
                 'treatmentPlans',
                 'treatmentPlans.doctor:id,clinic_id,name',
                 'followUps',

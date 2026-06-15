@@ -10,6 +10,7 @@ import {
     Filter,
     Pencil,
     Search,
+    Stethoscope,
     Trash2,
 } from 'lucide-vue-next';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
@@ -73,6 +74,7 @@ const emit = defineEmits([
     'view',
     'edit',
     'delete',
+    'start-visit',
     'status-transition-success',
     'status-transition-error',
 ]);
@@ -420,6 +422,16 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 <div
                                     class="flex flex-wrap items-center gap-1"
                                 >
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8 rounded-lg text-success"
+                                        title="بدء الزيارة"
+                                        @click="emit('start-visit', appointment)"
+                                    >
+                                        <Stethoscope class="size-3.5" />
+                                    </Button>
                                     <Button
                                         type="button"
                                         variant="ghost"

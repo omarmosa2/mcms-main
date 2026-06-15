@@ -7,6 +7,7 @@ use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Appointment extends BaseModel
@@ -86,5 +87,10 @@ class Appointment extends BaseModel
     public function medicalRecords(): HasMany
     {
         return $this->hasMany(MedicalRecord::class, 'appointment_id');
+    }
+
+    public function patientCardVisit(): HasOne
+    {
+        return $this->hasOne(PatientCardVisit::class, 'appointment_id');
     }
 }

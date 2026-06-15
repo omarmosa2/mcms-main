@@ -13,5 +13,6 @@ Route::middleware(['auth', 'verified'])->prefix('appointments')->name('appointme
     Route::get('/{appointmentId}', [AppointmentController::class, 'show'])->middleware('permission:appointment.view')->name('show');
     Route::match(['put', 'patch'], '/{appointmentId}', [AppointmentController::class, 'update'])->middleware('permission:appointment.update')->name('update');
     Route::patch('/{appointmentId}/status', [AppointmentController::class, 'transitionStatus'])->middleware('permission:appointment.update,appointment.arrival')->name('transition-status');
+    Route::get('/{appointmentId}/start-visit', [AppointmentController::class, 'startVisit'])->middleware('permission:appointment.view,medical_record.update,patient_card.update')->name('start-visit');
     Route::delete('/{appointmentId}', [AppointmentController::class, 'destroy'])->middleware('permission:appointment.delete')->name('destroy');
 });

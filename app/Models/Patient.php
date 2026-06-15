@@ -137,4 +137,9 @@ class Patient extends BaseModel
     {
         return $this->hasMany(FollowUp::class);
     }
+
+    public function cardVisits(): HasMany
+    {
+        return $this->hasMany(PatientCardVisit::class);
+    }
 }

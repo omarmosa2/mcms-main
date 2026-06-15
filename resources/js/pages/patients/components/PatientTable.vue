@@ -7,10 +7,12 @@ import {
     ChevronsRight,
     Eye,
     Filter,
+    IdCard,
     Pencil,
     Trash2,
     Users,
 } from 'lucide-vue-next';
+import PatientCardController from '@/actions/App/Http/Controllers/Patients/PatientCardController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch } from '@/components/ui/filter';
@@ -329,6 +331,20 @@ const formatDate = (value: string | null): string => {
                                     >
                                         <Pencil class="size-3.5" />
                                     </button>
+                                    <Link
+                                        v-if="can('patient.view')"
+                                        :href="
+                                            PatientCardController.show.url(
+                                                patient.id,
+                                            )
+                                        "
+                                        class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+                                        :aria-label="`بطاقة مريض ${patient.full_name}`"
+                                        :title="'بطاقة مريض'"
+                                    >
+                                        <IdCard class="size-3.5" />
+                                        بطاقة مريض
+                                    </Link>
                                     <Link
                                         v-if="can('patient.view')"
                                         :href="

@@ -15,6 +15,7 @@ use App\Http\Requests\Appointments\UpdateAppointmentRequest;
 use App\Http\Resources\AppointmentResource;
 use App\Models\Appointment;
 use App\Models\Department;
+use App\Models\PatientCardVisit;
 use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
 use App\Services\DoctorAvailabilityService;
@@ -209,6 +210,48 @@ class AppointmentController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Appointment deleted successfully.']);
 
         return to_route('appointments.index');
+    }
+
+    public function startVisit(Request $request, int $appointmentId): RedirectResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+        $userId = (int) $request->user()->id;
+
+        $appointment = Appointment::query()
+            ->forClinic($clinicId)
+            ->with(['patient:id,clinic_id', 'doctor:id,clinic_id,name', 'doctor.doctorProfile:id,clinic_id,user_id,department_id'])
+            ->whereKey($appointmentId)
+            ->firstOrFail();
+
+        $existingVisit = PatientCardVisit::query()
+            ->forClinic($clinicId)
+            ->where('appointment_id', $appointment->id)
+            ->first();
+
+        if ($existingVisit !== null) {
+            Inertia::flash('toast', ['type' => 'info', 'message' => 'تم فتح الزيارة الطبية المرتبطة بهذا الموعد.']);
+
+            return to_route('patients.card.show', $appointment->patient_id, ['appointment_id' => $appointment->id]);
+        }
+
+        $doctorId = $appointment->doctor_id;
+        $departmentId = $appointment->doctor?->doctorProfile?->department_id;
+        $scheduledFor = $appointment->scheduled_for;
+
+        PatientCardVisit::query()->create([
+            'clinic_id' => $clinicId,
+            'patient_id' => $appointment->patient_id,
+            'appointment_id' => $appointment->id,
+            'doctor_id' => $doctorId,
+            'department_id' => $departmentId,
+            'visit_date' => $scheduledFor->toDateString(),
+            'visit_time' => $scheduledFor->format('H:i'),
+            'created_by' => $userId,
+        ]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'تم إنشاء الزيارة الطبية من الموعد.']);
+
+        return to_route('patients.card.show', $appointment->patient_id, ['appointment_id' => $appointment->id]);
     }
 
     public function bulkDestroy(Request $request): JsonResponse|RedirectResponse

@@ -129,6 +129,11 @@ class User extends Authenticatable
         return $this->hasMany(PatientPortalToken::class, 'created_by');
     }
 
+    public function patientCardVisits(): HasMany
+    {
+        return $this->hasMany(PatientCardVisit::class, 'doctor_id');
+    }
+
     public function uploadedRadiologyImages(): HasMany
     {
         return $this->hasMany(RadiologyImage::class, 'uploaded_by');

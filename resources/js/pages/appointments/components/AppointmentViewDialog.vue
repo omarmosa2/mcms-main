@@ -11,6 +11,7 @@ import {
     User,
     UserCircle,
 } from 'lucide-vue-next';
+import { router } from '@inertiajs/vue3';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -21,6 +22,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import {
     appointmentStatusClass,
     appointmentStatusDotClass,
@@ -52,6 +54,11 @@ const formatTime = (iso: string): string => {
         hour12: true,
     });
 };
+
+function startVisit(): void {
+    if (!props.appointment) return;
+    router.visit(AppointmentController.startVisit.url(props.appointment.id));
+}
 </script>
 
 <template>
@@ -258,6 +265,15 @@ const formatTime = (iso: string): string => {
             </DialogBody>
 
             <DialogFooter>
+                <Button
+                    type="button"
+                    variant="default"
+                    class="gap-1.5"
+                    @click="startVisit"
+                >
+                    <Stethoscope class="size-4" />
+                    بدء الزيارة
+                </Button>
                 <Button
                     type="button"
                     variant="outline"

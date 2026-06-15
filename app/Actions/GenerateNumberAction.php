@@ -25,6 +25,8 @@ class GenerateNumberAction extends BaseAction
 
     public const ENTITY_SALARY = 'salary';
 
+    public const ENTITY_VISIT = 'visit';
+
     /**
      * Generate a unique number for the given entity type.
      * Uses database locking to ensure thread-safety.
@@ -120,8 +122,10 @@ class GenerateNumberAction extends BaseAction
             default => 'number',
         };
 
-        return (int) $model::query()
-            ->where('created_at', '>=', $date)
-            ->count() + 1;
+        $latest = (int) $model::withTrashed()
+            ->where($column, 'like', '%'.str_replace('-', '', $date).'%')
+            ->max(DB::raw("CAST(SUBSTRING_INDEX($column, '-', -1) AS UNSIGNED)"));
+
+        return $latest + 1;
     }
 }

@@ -513,6 +513,10 @@ const openEditAppointment = (appointment: Appointment): void => {
     editingAppointment.value = appointment;
 };
 
+const startVisit = (appointment: Appointment): void => {
+    router.visit(AppointmentController.startVisit.url(appointment.id));
+};
+
 const closeEditAppointment = (): void => {
     editingAppointment.value = null;
 };
@@ -928,6 +932,7 @@ const todaySummary = computed(() => ({
             @delete="deleteAppointment"
             @edit="openEditAppointment"
             @view="openViewAppointment"
+            @start-visit="startVisit"
             @status-transition-success="() => reloadAppointments({ page: 1 })"
             @status-transition-error="handleQuickAddError"
         />

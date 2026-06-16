@@ -20,106 +20,68 @@ defineProps<{
 </script>
 
 <template>
-    <section class="grid grid-cols-2 gap-3 lg:grid-cols-5">
+    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <article
-            class="group flex items-center justify-between gap-3 rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            class="rounded-[1.2rem] border border-border bg-card/95 p-5 shadow-card"
         >
-            <div class="min-w-0">
-                <p class="text-[0.72rem] font-medium text-muted-foreground">
-                    اليوم
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-bold text-muted-foreground">
+                    مواعيد اليوم
                 </p>
-                <p
-                    class="mt-0.5 text-2xl font-bold text-foreground tabular-nums"
-                >
-                    {{ todaySummary.total }}
-                </p>
+                <CalendarCheck class="size-5 text-primary" />
             </div>
-            <div
-                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform duration-200 group-hover:scale-105"
-            >
-                <CalendarCheck class="size-5" />
-            </div>
+            <p class="mt-4 text-3xl font-black text-foreground tabular-nums">
+                {{ todaySummary.total }}
+            </p>
         </article>
 
         <article
-            class="group flex items-center justify-between gap-3 rounded-2xl border border-info/15 bg-info/5 px-4 py-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            class="rounded-[1.2rem] border border-border bg-card/95 p-5 shadow-card"
         >
-            <div class="min-w-0">
-                <p class="text-[0.72rem] font-medium text-muted-foreground">
-                    مجدول
-                </p>
-                <p
-                    class="mt-0.5 text-2xl font-bold text-foreground tabular-nums"
-                >
-                    {{ todaySummary.scheduled }}
-                </p>
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-bold text-muted-foreground">مجدولة</p>
+                <Clock class="size-5 text-sky-600" />
             </div>
-            <div
-                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-info/10 text-info transition-transform duration-200 group-hover:scale-105"
-            >
-                <Clock class="size-5" />
-            </div>
+            <p class="mt-4 text-3xl font-black text-sky-700 tabular-nums">
+                {{ todaySummary.scheduled }}
+            </p>
         </article>
 
         <article
-            class="group flex items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-sky-800/40 dark:bg-sky-950/30"
+            class="rounded-[1.2rem] border border-border bg-card/95 p-5 shadow-card"
         >
-            <div class="min-w-0">
-                <p class="text-[0.72rem] font-medium text-muted-foreground">
-                    حاضر
-                </p>
-                <p
-                    class="mt-0.5 text-2xl font-bold text-foreground tabular-nums"
-                >
-                    {{ todaySummary.arrived }}
-                </p>
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-bold text-muted-foreground">حضروا</p>
+                <UserCheck class="size-5 text-primary" />
             </div>
-            <div
-                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-900/40 dark:text-sky-400 transition-transform duration-200 group-hover:scale-105"
-            >
-                <UserCheck class="size-5" />
-            </div>
+            <p class="mt-4 text-3xl font-black text-primary tabular-nums">
+                {{ todaySummary.arrived }}
+            </p>
         </article>
 
         <article
-            class="group flex items-center justify-between gap-3 rounded-2xl border border-success/15 bg-success/5 px-4 py-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            class="rounded-[1.2rem] border border-border bg-card/95 p-5 shadow-card"
         >
-            <div class="min-w-0">
-                <p class="text-[0.72rem] font-medium text-muted-foreground">
-                    مكتمل
-                </p>
-                <p
-                    class="mt-0.5 text-2xl font-bold text-foreground tabular-nums"
-                >
-                    {{ todaySummary.completed }}
-                </p>
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-bold text-muted-foreground">مكتملة</p>
+                <CheckCircle2 class="size-5 text-primary" />
             </div>
-            <div
-                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-success/10 text-success transition-transform duration-200 group-hover:scale-105"
-            >
-                <CheckCircle2 class="size-5" />
-            </div>
+            <p class="mt-4 text-3xl font-black text-primary tabular-nums">
+                {{ todaySummary.completed }}
+            </p>
         </article>
 
         <article
-            class="group flex items-center justify-between gap-3 rounded-2xl border border-destructive/15 bg-destructive/5 px-4 py-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            class="rounded-[1.2rem] border border-border bg-card/95 p-5 shadow-card"
             :class="{ 'opacity-50': todaySummary.canceled === 0 }"
         >
-            <div class="min-w-0">
-                <p class="text-[0.72rem] font-medium text-muted-foreground">
-                    ملغي
-                </p>
-                <p
-                    class="mt-0.5 text-2xl font-bold text-foreground tabular-nums"
-                >
-                    {{ todaySummary.canceled }}
-                </p>
+            <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-bold text-muted-foreground">ملغية</p>
+                <XCircle class="size-5 text-destructive" />
             </div>
-            <div
-                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive transition-transform duration-200 group-hover:scale-105"
-            >
-                <XCircle class="size-5" />
-            </div>
+            <p class="mt-4 text-3xl font-black text-destructive tabular-nums">
+                {{ todaySummary.canceled }}
+            </p>
         </article>
     </section>
 </template>

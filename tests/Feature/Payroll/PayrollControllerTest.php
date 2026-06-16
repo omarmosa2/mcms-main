@@ -43,6 +43,9 @@ class PayrollControllerTest extends TestCase
             ->where('employee_salaries.0.remaining_amount', 1500)
             ->where('summaries.employee_due', 1500)
             ->where('summaries.employee_remaining', 1500)
+            ->where('summaries.employee_count', 1)
+            ->where('summaries.employee_unpaid_count', 1)
+            ->where('summaries.total_count', 1)
         );
 
         $this->assertDatabaseHas('employee_monthly_salaries', [
@@ -61,7 +64,7 @@ class PayrollControllerTest extends TestCase
         $this->get(route('salaries.index'))->assertForbidden();
     }
 
-    public function test_employee_salary_payment_records_partial_payment_and_updates_monthly_record(): void
+    public function test_employee_salary_payment_must_pay_the_full_monthly_amount_once(): void
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
@@ -78,12 +81,21 @@ class PayrollControllerTest extends TestCase
             ->where('salary_month', '2026-06')
             ->first();
 
-        $response = $this->postJson(route('salaries.employee-payments.store'), [
+        $this->postJson(route('salaries.employee-payments.store'), [
             'employee_monthly_salary_id' => $monthlySalary->id,
             'amount' => 400,
             'payment_method' => 'cash',
             'payment_date' => '2026-06-05',
             'notes' => 'First installment',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('amount');
+
+        $response = $this->postJson(route('salaries.employee-payments.store'), [
+            'employee_monthly_salary_id' => $monthlySalary->id,
+            'amount' => 1000,
+            'payment_method' => 'cash',
+            'payment_date' => '2026-06-05',
+            'notes' => 'Monthly salary payment',
         ]);
 
         $response->assertCreated();
@@ -92,13 +104,13 @@ class PayrollControllerTest extends TestCase
             'employee_monthly_salary_id' => $monthlySalary->id,
             'employee_id' => $employee->id,
             'salary_month' => '2026-06',
-            'amount' => 400,
+            'amount' => 1000,
         ]);
 
         $monthlySalary->refresh();
-        $this->assertEquals(400, $monthlySalary->paid_amount);
-        $this->assertEquals(600, $monthlySalary->remaining_amount);
-        $this->assertEquals('partially_paid', $monthlySalary->status);
+        $this->assertEquals(1000, $monthlySalary->paid_amount);
+        $this->assertEquals(0, $monthlySalary->remaining_amount);
+        $this->assertEquals('paid', $monthlySalary->status);
     }
 
     public function test_employee_full_payment_updates_status_to_paid(): void
@@ -240,7 +252,7 @@ class PayrollControllerTest extends TestCase
         $this->assertEquals('partially_paid', $monthlyDue->status);
     }
 
-    public function test_employee_payment_cannot_exceed_remaining_amount(): void
+    public function test_employee_salary_payment_cannot_be_recorded_twice_for_the_same_month(): void
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
@@ -259,18 +271,18 @@ class PayrollControllerTest extends TestCase
 
         $this->postJson(route('salaries.employee-payments.store'), [
             'employee_monthly_salary_id' => $monthlySalary->id,
-            'amount' => 900,
+            'amount' => 1000,
             'payment_method' => 'cash',
             'payment_date' => '2026-06-05',
         ])->assertCreated();
 
         $this->postJson(route('salaries.employee-payments.store'), [
             'employee_monthly_salary_id' => $monthlySalary->id,
-            'amount' => 200,
+            'amount' => 1000,
             'payment_method' => 'cash',
             'payment_date' => '2026-06-06',
         ])->assertUnprocessable()
-            ->assertJsonValidationErrors('amount');
+            ->assertJsonValidationErrors('employee_monthly_salary_id');
     }
 
     public function test_monthly_records_are_independent_per_month(): void

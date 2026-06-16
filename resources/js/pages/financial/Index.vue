@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { Banknote, CalendarCheck, CircleDollarSign, FileText, TrendingDown, TrendingUp } from 'lucide-vue-next';
+import { Banknote } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { index as financialIndex } from '@/routes/financial';
+import FinancialStatsCards from './components/FinancialStatsCards.vue';
 
 type DepartmentOption = { id: number; name: string };
 type FinancialRow = {
@@ -42,7 +43,9 @@ defineOptions({
     },
 });
 
-const month = ref(String(props.filters.month ?? new Date().toISOString().slice(0, 7)));
+const month = ref(
+    String(props.filters.month ?? new Date().toISOString().slice(0, 7)),
+);
 const dateFrom = ref(String(props.filters.date_from ?? ''));
 const dateTo = ref(String(props.filters.date_to ?? ''));
 const status = ref(String(props.filters.status ?? ''));
@@ -62,8 +65,10 @@ const labels: Record<string, string> = {
     online: 'إلكتروني',
 };
 
-const formatMoney = (value: number): string => new Intl.NumberFormat('ar-SY', { maximumFractionDigits: 0 }).format(value);
-const labelFor = (value: string | null): string => (value !== null ? labels[value] ?? value : '-');
+const formatMoney = (value: number): string =>
+    new Intl.NumberFormat('ar-SY', { maximumFractionDigits: 0 }).format(value);
+const labelFor = (value: string | null): string =>
+    value !== null ? (labels[value] ?? value) : '-';
 const statusClass = (value: string): string => {
     if (value === 'paid') {
         return 'bg-success/10 text-success';
@@ -98,52 +103,80 @@ watch([month, dateFrom, dateTo, status, departmentId, appointmentType], () => {
 
 <template>
     <div class="mx-auto w-full max-w-[1680px] space-y-6 p-4 md:p-6" dir="rtl">
-        <section class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <section
+            class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between"
+        >
             <div class="space-y-2 text-right">
-                <div class="inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+                <div
+                    class="inline-flex items-center gap-2 rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success"
+                >
                     <Banknote class="size-4" />
                     المالية
                 </div>
-                <h1 class="text-3xl font-extrabold text-foreground">إدارة الدخل المالي للمجمع</h1>
-                <p class="max-w-3xl text-sm text-muted-foreground">متابعة إيرادات المواعيد والدفعات وحالة السداد لكل موعد.</p>
+                <h1 class="text-3xl font-extrabold text-foreground">
+                    إدارة الدخل المالي للمجمع
+                </h1>
+                <p class="max-w-3xl text-sm text-muted-foreground">
+                    متابعة إيرادات المواعيد والدفعات وحالة السداد لكل موعد.
+                </p>
             </div>
         </section>
 
-        <section class="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
-            <div class="rounded-lg border bg-card p-4">
-                <div class="flex items-center gap-2 text-muted-foreground"><TrendingUp class="size-4" /><p class="text-xs">إجمالي تكاليف المواعيد</p></div>
-                <p class="mt-1 text-xl font-bold text-foreground">{{ formatMoney(summaries.total_cost) }}</p>
-            </div>
-            <div class="rounded-lg border bg-card p-4">
-                <div class="flex items-center gap-2 text-success"><CircleDollarSign class="size-4" /><p class="text-xs">إجمالي المبالغ المدفوعة</p></div>
-                <p class="mt-1 text-xl font-bold text-success">{{ formatMoney(summaries.total_paid) }}</p>
-            </div>
-            <div class="rounded-lg border bg-card p-4">
-                <div class="flex items-center gap-2 text-warning"><TrendingDown class="size-4" /><p class="text-xs">إجمالي المبالغ المتبقية</p></div>
-                <p class="mt-1 text-xl font-bold text-warning">{{ formatMoney(summaries.total_remaining) }}</p>
-            </div>
-            <div class="rounded-lg border bg-card p-4">
-                <div class="flex items-center gap-2 text-success"><CalendarCheck class="size-4" /><p class="text-xs">مواعيد مدفوعة</p></div>
-                <p class="mt-1 text-xl font-bold text-foreground">{{ summaries.paid_count }}</p>
-            </div>
-            <div class="rounded-lg border bg-card p-4">
-                <div class="flex items-center gap-2 text-muted-foreground"><FileText class="size-4" /><p class="text-xs">مواعيد غير مدفوعة</p></div>
-                <p class="mt-1 text-xl font-bold text-foreground">{{ summaries.unpaid_count }}</p>
-            </div>
-            <div class="rounded-lg border bg-card p-4">
-                <div class="flex items-center gap-2 text-warning"><FileText class="size-4" /><p class="text-xs">مدفوعة جزئياً</p></div>
-                <p class="mt-1 text-xl font-bold text-foreground">{{ summaries.partially_paid_count }}</p>
-            </div>
-        </section>
+        <FinancialStatsCards :summaries="summaries" />
 
         <section class="rounded-lg border bg-card p-4">
             <div class="grid gap-3 md:grid-cols-6">
-                <div class="grid gap-1"><Label>الشهر</Label><Input v-model="month" type="month" class="h-10" /></div>
-                <div class="grid gap-1"><Label>من تاريخ</Label><Input v-model="dateFrom" type="date" class="h-10" /></div>
-                <div class="grid gap-1"><Label>إلى تاريخ</Label><Input v-model="dateTo" type="date" class="h-10" /></div>
-                <div class="grid gap-1"><Label>الحالة</Label><select v-model="status" class="h-10 rounded-md border border-input bg-muted px-3 text-sm"><option value="">كل الحالات</option><option value="unpaid">غير مدفوع</option><option value="partially_paid">مدفوع جزئياً</option><option value="paid">مدفوع</option></select></div>
-                <div class="grid gap-1"><Label>نوع الموعد</Label><select v-model="appointmentType" class="h-10 rounded-md border border-input bg-muted px-3 text-sm"><option value="">الكل</option><option value="first_visit">كشفية أولى</option><option value="review">مراجعة</option></select></div>
-                <div class="grid gap-1"><Label>العيادة</Label><select v-model="departmentId" class="h-10 rounded-md border border-input bg-muted px-3 text-sm"><option value="">الكل</option><option v-for="department in departments" :key="department.id" :value="department.id">{{ department.name }}</option></select></div>
+                <div class="grid gap-1">
+                    <Label>الشهر</Label
+                    ><Input v-model="month" type="month" class="h-10" />
+                </div>
+                <div class="grid gap-1">
+                    <Label>من تاريخ</Label
+                    ><Input v-model="dateFrom" type="date" class="h-10" />
+                </div>
+                <div class="grid gap-1">
+                    <Label>إلى تاريخ</Label
+                    ><Input v-model="dateTo" type="date" class="h-10" />
+                </div>
+                <div class="grid gap-1">
+                    <Label>الحالة</Label
+                    ><select
+                        v-model="status"
+                        class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
+                    >
+                        <option value="">كل الحالات</option>
+                        <option value="unpaid">غير مدفوع</option>
+                        <option value="partially_paid">مدفوع جزئياً</option>
+                        <option value="paid">مدفوع</option>
+                    </select>
+                </div>
+                <div class="grid gap-1">
+                    <Label>نوع الموعد</Label
+                    ><select
+                        v-model="appointmentType"
+                        class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
+                    >
+                        <option value="">الكل</option>
+                        <option value="first_visit">كشفية أولى</option>
+                        <option value="review">مراجعة</option>
+                    </select>
+                </div>
+                <div class="grid gap-1">
+                    <Label>العيادة</Label
+                    ><select
+                        v-model="departmentId"
+                        class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
+                    >
+                        <option value="">الكل</option>
+                        <option
+                            v-for="department in departments"
+                            :key="department.id"
+                            :value="department.id"
+                        >
+                            {{ department.name }}
+                        </option>
+                    </select>
+                </div>
             </div>
         </section>
 
@@ -166,21 +199,56 @@ watch([month, dateFrom, dateTo, status, departmentId, appointmentType], () => {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="row in financial_rows" :key="row.appointment_id" class="border-t">
-                            <td class="px-4 py-3 font-semibold text-foreground">{{ row.patient_name }}</td>
-                            <td class="px-4 py-3 font-mono text-foreground">{{ row.file_number ?? '-' }}</td>
-                            <td class="px-4 py-3 text-foreground">{{ row.doctor_name }}</td>
-                            <td class="px-4 py-3 text-foreground">{{ row.department }}</td>
-                            <td class="px-4 py-3 text-foreground">{{ labelFor(row.appointment_type) }}</td>
-                            <td class="px-4 py-3 font-mono text-foreground">{{ formatMoney(row.cost) }}</td>
-                            <td class="px-4 py-3 font-mono text-success">{{ formatMoney(row.paid_amount) }}</td>
-                            <td class="px-4 py-3 font-mono text-warning">{{ formatMoney(row.remaining_amount) }}</td>
-                            <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-bold" :class="statusClass(row.payment_status)">{{ labelFor(row.payment_status) }}</span></td>
-                            <td class="px-4 py-3 text-foreground">{{ row.appointment_date ?? '-' }}</td>
-                            <td class="px-4 py-3 text-foreground">{{ labelFor(row.payment_method) }}</td>
+                        <tr
+                            v-for="row in financial_rows"
+                            :key="row.appointment_id"
+                            class="border-t"
+                        >
+                            <td class="px-4 py-3 font-semibold text-foreground">
+                                {{ row.patient_name }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-foreground">
+                                {{ row.file_number ?? '-' }}
+                            </td>
+                            <td class="px-4 py-3 text-foreground">
+                                {{ row.doctor_name }}
+                            </td>
+                            <td class="px-4 py-3 text-foreground">
+                                {{ row.department }}
+                            </td>
+                            <td class="px-4 py-3 text-foreground">
+                                {{ labelFor(row.appointment_type) }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-foreground">
+                                {{ formatMoney(row.cost) }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-success">
+                                {{ formatMoney(row.paid_amount) }}
+                            </td>
+                            <td class="px-4 py-3 font-mono text-warning">
+                                {{ formatMoney(row.remaining_amount) }}
+                            </td>
+                            <td class="px-4 py-3">
+                                <span
+                                    class="rounded-full px-2.5 py-1 text-xs font-bold"
+                                    :class="statusClass(row.payment_status)"
+                                    >{{ labelFor(row.payment_status) }}</span
+                                >
+                            </td>
+                            <td class="px-4 py-3 text-foreground">
+                                {{ row.appointment_date ?? '-' }}
+                            </td>
+                            <td class="px-4 py-3 text-foreground">
+                                {{ labelFor(row.payment_method) }}
+                            </td>
                         </tr>
                         <tr v-if="financial_rows.length === 0">
-                            <td colspan="11" class="px-4 py-10 text-center text-muted-foreground">لا توجد بيانات مالية ضمن الفلاتر الحالية.</td>
+                            <td
+                                colspan="11"
+                                class="px-4 py-10 text-center text-muted-foreground"
+                            >
+                                لا توجد بيانات مالية ضمن الفلاتر الحالية.
+                            </td>
                         </tr>
                     </tbody>
                 </table>

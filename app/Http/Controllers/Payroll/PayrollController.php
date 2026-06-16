@@ -70,9 +70,21 @@ class PayrollController extends Controller
 
         $remaining = (float) $monthlySalary->remaining_amount;
 
+        if ($monthlySalary->payments()->exists()) {
+            throw ValidationException::withMessages([
+                'employee_monthly_salary_id' => 'تم تسديد راتب هذا الموظف لهذا الشهر مسبقاً.',
+            ]);
+        }
+
         if ((float) $validated['amount'] > $remaining) {
             throw ValidationException::withMessages([
                 'amount' => 'المبلغ المدفوع لا يمكن أن يتجاوز المبلغ المتبقي.',
+            ]);
+        }
+
+        if (abs((float) $validated['amount'] - $remaining) > 0.009) {
+            throw ValidationException::withMessages([
+                'amount' => 'يجب تسديد راتب الموظف كاملاً مرة واحدة خلال الشهر.',
             ]);
         }
 
@@ -263,6 +275,7 @@ class PayrollController extends Controller
             ->forClinic($clinicId)
             ->where('salary_month', $month)
             ->with(['employee:id,full_name,employee_type,job_title,department_id', 'employee.department:id,name'])
+            ->withCount('payments')
             ->when($filters['department_id'] !== null, function ($query) use ($filters) {
                 $query->whereHas('employee', fn ($q) => $q->where('department_id', $filters['department_id']));
             })
@@ -283,6 +296,8 @@ class PayrollController extends Controller
                 'paid_amount' => (float) $record->paid_amount,
                 'remaining_amount' => (float) $record->remaining_amount,
                 'status' => $record->status,
+                'payments_count' => (int) ($record->payments_count ?? 0),
+                'can_pay' => $record->status !== EmployeeMonthlySalary::STATUS_PAID && (int) ($record->payments_count ?? 0) === 0,
             ]);
     }
 
@@ -383,12 +398,19 @@ class PayrollController extends Controller
             'employee_due' => $employeeDue,
             'employee_paid' => $employeePaid,
             'employee_remaining' => $employeeRemaining,
+            'employee_count' => $employeeRows->count(),
+            'employee_paid_count' => $employeeRows->where('status', EmployeeMonthlySalary::STATUS_PAID)->count(),
+            'employee_unpaid_count' => $employeeRows->where('status', EmployeeMonthlySalary::STATUS_UNPAID)->count(),
             'doctor_due' => $doctorDue,
             'doctor_paid' => $doctorPaid,
             'doctor_remaining' => $doctorRemaining,
+            'doctor_count' => $doctorRows->count(),
+            'doctor_paid_count' => $doctorRows->where('status', DoctorMonthlyDue::STATUS_PAID)->count(),
+            'doctor_unpaid_count' => $doctorRows->where('status', DoctorMonthlyDue::STATUS_UNPAID)->count(),
             'total_due' => $employeeDue + $doctorDue,
             'total_paid' => $employeePaid + $doctorPaid,
             'total_remaining' => $employeeRemaining + $doctorRemaining,
+            'total_count' => $employeeRows->count() + $doctorRows->count(),
         ];
     }
 

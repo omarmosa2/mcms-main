@@ -6,22 +6,13 @@ use App\Models\ClinicWorkingHour;
 use App\Models\DoctorLeave;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
+use App\Support\WeekDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class DoctorAvailabilityService
 {
-    private const CARBON_TO_DAY = [
-        0 => 'sunday',
-        1 => 'monday',
-        2 => 'tuesday',
-        3 => 'wednesday',
-        4 => 'thursday',
-        5 => 'friday',
-        6 => 'saturday',
-    ];
-
     /**
      * @return array{
      *     is_available: bool,
@@ -39,11 +30,13 @@ class DoctorAvailabilityService
             return $this->emptyAvailability();
         }
 
+        $day = WeekDay::fromCarbonDay((int) $carbonDate->dayOfWeek);
+
         $doctorSchedule = DoctorSchedule::query()
             ->forClinic($clinicId)
             ->withoutTrashed()
             ->where('doctor_id', $doctorId)
-            ->where('day_of_week', $carbonDate->dayOfWeek)
+            ->whereIn('day_of_week', [$day, (string) $carbonDate->dayOfWeek])
             ->where('is_available', true)
             ->first();
 
@@ -53,7 +46,7 @@ class DoctorAvailabilityService
 
         $clinicHours = ClinicWorkingHour::query()
             ->where('department_id', $departmentId)
-            ->where('day_of_week', self::CARBON_TO_DAY[$carbonDate->dayOfWeek])
+            ->where('day_of_week', $day)
             ->where('is_active', true)
             ->first();
 

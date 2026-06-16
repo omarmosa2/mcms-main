@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Shared\Models\BaseModel;
+use App\Support\WeekDay;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -10,20 +11,11 @@ class DoctorSchedule extends BaseModel
 {
     use SoftDeletes;
 
-    public const DAYS = [
-        0 => 'الأحد',
-        1 => 'الإثنين',
-        2 => 'الثلاثاء',
-        3 => 'الأربعاء',
-        4 => 'الخميس',
-        5 => 'الجمعة',
-        6 => 'السبت',
-    ];
+    public const DAYS = WeekDay::DAYS;
 
     protected function casts(): array
     {
         return [
-            'day_of_week' => 'integer',
             'is_available' => 'boolean',
         ];
     }
@@ -40,6 +32,6 @@ class DoctorSchedule extends BaseModel
 
     public function getDayNameAttribute(): string
     {
-        return self::DAYS[$this->day_of_week] ?? '';
+        return WeekDay::arabicName((string) $this->day_of_week);
     }
 }

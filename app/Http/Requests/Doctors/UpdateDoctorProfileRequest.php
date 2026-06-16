@@ -4,6 +4,7 @@ namespace App\Http\Requests\Doctors;
 
 use App\Models\ClinicWorkingHour;
 use App\Models\DoctorProfile;
+use App\Support\WeekDay;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -92,7 +93,7 @@ class UpdateDoctorProfileRequest extends FormRequest
             ],
             'compensation_value' => ['sometimes', 'required', 'numeric', 'min:0'],
             'working_hours' => ['sometimes', 'array'],
-            'working_hours.*.day_of_week' => ['required_with:working_hours', 'integer', 'between:0,6', 'distinct'],
+            'working_hours.*.day_of_week' => ['required_with:working_hours', Rule::in([...WeekDay::DAYS, 0, 1, 2, 3, 4, 5, 6, '0', '1', '2', '3', '4', '5', '6']), 'distinct'],
             'working_hours.*.is_active' => ['required_with:working_hours', 'boolean'],
             'working_hours.*.start_time' => ['nullable', 'date_format:H:i'],
             'working_hours.*.end_time' => ['nullable', 'date_format:H:i'],
@@ -131,8 +132,8 @@ class UpdateDoctorProfileRequest extends FormRequest
             $isActive = filter_var($day['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
             $startTime = $day['start_time'] ?? null;
             $endTime = $day['end_time'] ?? null;
-            $dayOfWeek = isset($day['day_of_week']) && is_numeric($day['day_of_week'])
-                ? (int) $day['day_of_week']
+            $dayOfWeek = isset($day['day_of_week'])
+                ? WeekDay::normalize($day['day_of_week'])
                 : null;
 
             if (! $isActive) {
@@ -193,7 +194,7 @@ class UpdateDoctorProfileRequest extends FormRequest
             ->whereNotNull('end_time')
             ->get()
             ->mapWithKeys(fn (ClinicWorkingHour $workingHour): array => [
-                $this->clinicDayToDoctorDay((string) $workingHour->day_of_week) => [
+                WeekDay::normalize($workingHour->day_of_week) => [
                     'start_time' => $this->formatTime($workingHour->start_time),
                     'end_time' => $this->formatTime($workingHour->end_time),
                 ],
@@ -212,19 +213,6 @@ class UpdateDoctorProfileRequest extends FormRequest
         return ClinicWorkingHour::query()
             ->where('department_id', $departmentId)
             ->exists();
-    }
-
-    private function clinicDayToDoctorDay(string $day): int
-    {
-        return match ($day) {
-            'sunday' => 0,
-            'monday' => 1,
-            'tuesday' => 2,
-            'wednesday' => 3,
-            'thursday' => 4,
-            'friday' => 5,
-            default => 6,
-        };
     }
 
     private function formatTime(mixed $time): string

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ClinicWorkingHour;
+use App\Support\WeekDay;
 use Illuminate\Support\Carbon;
 
 class ClinicWorkingHoursService
@@ -104,7 +105,7 @@ class ClinicWorkingHoursService
 
         $start = Carbon::parse($scheduledFor);
         $end = $start->copy()->addMinutes($durationMinutes);
-        $day = strtolower($start->format('l'));
+        $day = WeekDay::fromDate($start);
 
         $workingHour = ClinicWorkingHour::query()
             ->where('department_id', $departmentId)

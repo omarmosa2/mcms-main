@@ -9,6 +9,7 @@ use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\User;
+use App\Support\WeekDay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -125,7 +126,7 @@ class CreateDoctorProfileAction extends BaseAction
             DoctorSchedule::query()->create([
                 'clinic_id' => $clinicId,
                 'doctor_id' => $doctorUserId,
-                'day_of_week' => (int) $day['day_of_week'],
+                'day_of_week' => WeekDay::toIndex($day['day_of_week']),
                 'start_time' => (string) $day['start_time'],
                 'end_time' => (string) $day['end_time'],
                 'is_available' => true,

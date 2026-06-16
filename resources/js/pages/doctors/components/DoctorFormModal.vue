@@ -246,6 +246,7 @@ const submit = (): void => {
 
     if (props.profile !== null) {
         form.put(update.url(props.profile.id), options);
+
         return;
     }
 
@@ -256,10 +257,12 @@ const submit = (): void => {
 <template>
     <Dialog :open="open" @update:open="emit('update:open', $event)">
         <DialogContent
-            class="max-h-[92vh] max-w-4xl overflow-hidden rounded-xl bg-card p-0"
+            class="flex max-h-[90vh] max-w-4xl flex-col overflow-hidden rounded-xl bg-card p-0"
             dir="rtl"
         >
-            <DialogHeader class="border-b border-border px-6 py-5 text-right">
+            <DialogHeader
+                class="shrink-0 border-b border-border px-4 py-4 text-right sm:px-6 sm:py-5"
+            >
                 <DialogTitle class="text-2xl font-bold text-foreground">
                     {{ isEditing ? 'تعديل بيانات الطبيب' : 'إضافة طبيب جديد' }}
                 </DialogTitle>
@@ -270,7 +273,7 @@ const submit = (): void => {
             </DialogHeader>
 
             <form
-                class="max-h-[68vh] space-y-5 overflow-y-auto px-6 py-5"
+                class="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 pb-28 sm:px-6"
                 @submit.prevent="submit"
             >
                 <section class="space-y-3">
@@ -486,10 +489,13 @@ const submit = (): void => {
                 </section>
             </form>
 
-            <DialogFooter class="border-t border-border px-6 py-4">
+            <DialogFooter
+                class="sticky bottom-0 z-10 shrink-0 border-t border-border bg-card px-4 py-3 shadow-[0_-12px_24px_rgba(15,23,42,0.06)] sm:px-6 sm:py-4"
+            >
                 <Button
                     type="button"
                     variant="outline"
+                    class="h-10 w-full sm:w-auto"
                     :disabled="form.processing"
                     @click="close"
                 >
@@ -498,7 +504,7 @@ const submit = (): void => {
                 </Button>
                 <Button
                     type="button"
-                    class="bg-primary text-primary-foreground hover:bg-primary/90"
+                    class="h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
                     :disabled="form.processing"
                     @click="submit"
                 >

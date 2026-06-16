@@ -3,6 +3,7 @@ import { Clock } from 'lucide-vue-next';
 import InputError from '@/components/InputError.vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import type { ClinicWorkingHour, WorkingHour } from './types';
 
 const props = defineProps<{
@@ -88,18 +89,20 @@ const toggleDay = (index: number, isActive: boolean): void => {
 </script>
 
 <template>
-    <div class="space-y-3 rounded-lg border border-sky-100 bg-sky-50/35 p-3">
+    <section
+        class="space-y-3 rounded-lg border border-sky-100 bg-sky-50/35 p-3"
+    >
         <div class="flex items-center justify-between gap-3">
-            <div>
+            <div class="min-w-0">
                 <h4 class="text-sm font-bold text-slate-900">بيانات الدوام</h4>
-                <p class="text-xs text-slate-500">
-                    فعّل الأيام المطلوبة وحدد وقت البداية والنهاية.
+                <p class="text-xs leading-5 text-slate-500">
+                    فعّل الأيام المطلوبة وحدد وقت بداية ونهاية دوام الطبيب.
                 </p>
             </div>
-            <Clock class="size-5 text-sky-500" />
+            <Clock class="size-5 shrink-0 text-sky-500" />
         </div>
 
-        <div class="space-y-2">
+        <div class="grid gap-2">
             <div
                 v-if="!hasSelectedDepartment"
                 class="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-4 text-sm font-medium text-slate-500"
@@ -113,15 +116,16 @@ const toggleDay = (index: number, isActive: boolean): void => {
                 لا توجد أيام دوام مفعّلة لهذه العيادة.
             </div>
             <template v-else>
-                <div
+                <article
                     v-for="(day, index) in modelValue"
                     :key="day.day_of_week"
-                    class="rounded-lg border border-slate-200 bg-white px-3 py-3"
+                    class="rounded-lg border border-slate-200 px-3 py-3 transition-colors duration-200"
+                    :class="
+                        day.is_active ? 'bg-white shadow-sm' : 'bg-slate-50/80'
+                    "
                 >
-                    <div
-                        class="flex flex-wrap items-center justify-between gap-3"
-                    >
-                        <div class="min-w-24">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
                             <p class="text-sm font-semibold text-slate-900">
                                 {{ labelForDay(day.day_of_week) }}
                             </p>
@@ -140,43 +144,34 @@ const toggleDay = (index: number, isActive: boolean): void => {
                             </p>
                         </div>
 
-                        <label
-                            class="inline-flex cursor-pointer items-center gap-2"
-                        >
-                            <input
-                                type="checkbox"
-                                class="peer sr-only"
-                                :checked="day.is_active"
-                                @change="
-                                    toggleDay(
-                                        index,
-                                        ($event.target as HTMLInputElement)
-                                            .checked,
-                                    )
-                                "
-                            />
-                            <span
-                                class="relative h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-sky-500"
-                            >
-                                <span
-                                    class="absolute top-1 right-1 size-4 rounded-full bg-white shadow-sm transition peer-checked:-translate-x-5"
-                                ></span>
-                            </span>
-                        </label>
+                        <Switch
+                            class="h-6 w-11 data-[state=checked]:bg-sky-500"
+                            :model-value="day.is_active"
+                            @update:model-value="
+                                toggleDay(index, Boolean($event))
+                            "
+                        />
                     </div>
+
+                    <p
+                        v-if="!day.is_active"
+                        class="mt-3 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-500"
+                    >
+                        لا يوجد دوام
+                    </p>
 
                     <div
                         v-if="day.is_active"
-                        class="mt-3 grid gap-3 sm:grid-cols-2"
+                        class="mt-3 grid gap-3 overflow-hidden transition-all duration-200 ease-out sm:grid-cols-2"
                     >
-                        <div class="grid gap-1.5">
-                            <Label :for="`doctor_start_${day.day_of_week}`"
-                                >وقت بداية الدوام</Label
-                            >
+                        <div class="grid min-w-0 gap-1.5">
+                            <Label :for="`doctor_start_${day.day_of_week}`">
+                                بداية الدوام
+                            </Label>
                             <Input
                                 :id="`doctor_start_${day.day_of_week}`"
                                 type="time"
-                                class="h-10 rounded-lg border-slate-200 bg-slate-50"
+                                class="h-10 w-full min-w-0 rounded-lg border-slate-200 bg-slate-50"
                                 :min="
                                     clinicHoursForDay(day.day_of_week)
                                         ?.start_time ?? undefined
@@ -202,14 +197,14 @@ const toggleDay = (index: number, isActive: boolean): void => {
                             />
                         </div>
 
-                        <div class="grid gap-1.5">
-                            <Label :for="`doctor_end_${day.day_of_week}`"
-                                >وقت نهاية الدوام</Label
-                            >
+                        <div class="grid min-w-0 gap-1.5">
+                            <Label :for="`doctor_end_${day.day_of_week}`">
+                                نهاية الدوام
+                            </Label>
                             <Input
                                 :id="`doctor_end_${day.day_of_week}`"
                                 type="time"
-                                class="h-10 rounded-lg border-slate-200 bg-slate-50"
+                                class="h-10 w-full min-w-0 rounded-lg border-slate-200 bg-slate-50"
                                 :min="
                                     clinicHoursForDay(day.day_of_week)
                                         ?.start_time ?? undefined
@@ -235,8 +230,8 @@ const toggleDay = (index: number, isActive: boolean): void => {
                             />
                         </div>
                     </div>
-                </div>
+                </article>
             </template>
         </div>
-    </div>
+    </section>
 </template>

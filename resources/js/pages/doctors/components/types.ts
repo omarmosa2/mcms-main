@@ -66,6 +66,14 @@ export type DoctorProfile = {
     updated_at: string | null;
 };
 
+export type DoctorProfileStats = {
+    total_doctors: number;
+    active_doctors: number;
+    on_leave_doctors: number;
+    inactive_doctors: number;
+    departments_with_doctors: number;
+};
+
 export type PaginationMeta = {
     current_page: number;
     last_page: number;

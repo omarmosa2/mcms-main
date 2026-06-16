@@ -2,7 +2,10 @@
 import { Head, router } from '@inertiajs/vue3';
 import { Plus, Search, Stethoscope } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import { destroy, index } from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
+import {
+    destroy,
+    index,
+} from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
 import { Button } from '@/components/ui/button';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
 import { Input } from '@/components/ui/input';
@@ -10,12 +13,21 @@ import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
 import DoctorFormModal from './components/DoctorFormModal.vue';
+import DoctorStatsCards from './components/DoctorStatsCards.vue';
 import DoctorTable from './components/DoctorTable.vue';
 import DoctorViewDialog from './components/DoctorViewDialog.vue';
-import type { ClinicOption, DepartmentOption, DoctorProfile, DoctorProfileStatus, PaginatedResponse } from './components/types';
+import type {
+    ClinicOption,
+    DepartmentOption,
+    DoctorProfile,
+    DoctorProfileStats,
+    DoctorProfileStatus,
+    PaginatedResponse,
+} from './components/types';
 
 const props = defineProps<{
     doctor_profiles: PaginatedResponse<DoctorProfile>;
+    stats: DoctorProfileStats;
     clinic: ClinicOption;
     departments: DepartmentOption[];
     filters: {
@@ -41,7 +53,14 @@ defineOptions({
 
 const { can } = usePermissions();
 const toast = useToast();
-const { isOpen: isConfirmOpen, options: confirmOptions, confirm, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
+const {
+    isOpen: isConfirmOpen,
+    options: confirmOptions,
+    confirm,
+    close: closeConfirm,
+    handleConfirm: handleConfirmDelete,
+    handleCancel: handleConfirmCancel,
+} = useConfirm();
 
 const search = ref(props.filters.search ?? '');
 const status = ref<DoctorProfileStatus | 'all'>(props.filters.status ?? 'all');
@@ -62,7 +81,8 @@ const reload = (): void => {
         {
             search: search.value,
             status: status.value === 'all' ? '' : status.value,
-            department_id: departmentId.value === 'all' ? '' : departmentId.value,
+            department_id:
+                departmentId.value === 'all' ? '' : departmentId.value,
             per_page: props.filters.per_page,
         },
         {
@@ -96,13 +116,14 @@ const openEdit = (profile: DoctorProfile): void => {
 const deleteProfile = async (profile: DoctorProfile): Promise<void> => {
     const accepted = await confirm({
         title: 'حذف الطبيب',
-        description: 'إذا كان للطبيب زيارات أو سجلات مالية سيتم تعطيل حسابه وأرشفته بدلاً من الحذف.',
+        description:
+            'إذا كان للطبيب زيارات أو سجلات مالية سيتم تعطيل حسابه وأرشفته بدلاً من الحذف.',
         confirmText: 'تأكيد الحذف',
         cancelText: 'إلغاء',
         variant: 'destructive',
     });
 
-    if (! accepted) {
+    if (!accepted) {
         return;
     }
 
@@ -134,14 +155,22 @@ const goTo = (url: string | null): void => {
     <Head title="الأطباء" />
 
     <div class="mx-auto w-full max-w-[1680px] space-y-7 p-4 md:p-6" dir="rtl">
-        <section class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <section
+            class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+        >
             <div class="space-y-2 text-right">
-                <div class="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                <div
+                    class="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground"
+                >
                     <Stethoscope class="size-4" />
                     إدارة الأطباء
                 </div>
-                <h1 class="text-4xl font-extrabold text-foreground">صفحة الأطباء</h1>
-                <p class="text-lg text-muted-foreground">إدارة بيانات الأطباء وحساباتهم ودوامهم ونظام الأجر.</p>
+                <h1 class="text-4xl font-extrabold text-foreground">
+                    صفحة الأطباء
+                </h1>
+                <p class="text-lg text-muted-foreground">
+                    إدارة بيانات الأطباء وحساباتهم ودوامهم ونظام الأجر.
+                </p>
             </div>
 
             <Button
@@ -155,10 +184,14 @@ const goTo = (url: string | null): void => {
             </Button>
         </section>
 
+        <DoctorStatsCards :stats="stats" />
+
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
             <div class="grid gap-4 md:grid-cols-[1fr_220px_220px]">
                 <div class="relative">
-                    <Search class="absolute right-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+                    <Search
+                        class="absolute top-1/2 right-4 size-5 -translate-y-1/2 text-muted-foreground"
+                    />
                     <Input
                         v-model="search"
                         class="h-12 rounded-lg pr-12"
@@ -166,14 +199,20 @@ const goTo = (url: string | null): void => {
                     />
                 </div>
 
-                <select v-model="status" class="h-12 rounded-lg border border-input bg-muted px-4 text-sm">
+                <select
+                    v-model="status"
+                    class="h-12 rounded-lg border border-input bg-muted px-4 text-sm"
+                >
                     <option value="all">كل الحالات</option>
                     <option value="active">نشط</option>
                     <option value="on_leave">في إجازة</option>
                     <option value="inactive">غير نشط</option>
                 </select>
 
-                <select v-model="departmentId" class="h-12 rounded-lg border border-input bg-muted px-4 text-sm">
+                <select
+                    v-model="departmentId"
+                    class="h-12 rounded-lg border border-input bg-muted px-4 text-sm"
+                >
                     <option value="all">كل العيادات</option>
                     <option
                         v-for="department in departments"
@@ -193,16 +232,31 @@ const goTo = (url: string | null): void => {
             @delete="deleteProfile($event)"
         />
 
-        <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+        <div
+            class="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground"
+        >
             <p>{{ totalLabel }}</p>
             <div class="flex items-center gap-2">
-                <Button type="button" variant="outline" class="rounded-lg" :disabled="doctor_profiles.links.prev === null" @click="goTo(doctor_profiles.links.prev)">
+                <Button
+                    type="button"
+                    variant="outline"
+                    class="rounded-lg"
+                    :disabled="doctor_profiles.links.prev === null"
+                    @click="goTo(doctor_profiles.links.prev)"
+                >
                     السابق
                 </Button>
                 <span class="font-semibold text-foreground">
-                    صفحة {{ doctor_profiles.meta.current_page }} من {{ doctor_profiles.meta.last_page }}
+                    صفحة {{ doctor_profiles.meta.current_page }} من
+                    {{ doctor_profiles.meta.last_page }}
                 </span>
-                <Button type="button" variant="outline" class="rounded-lg" :disabled="doctor_profiles.links.next === null" @click="goTo(doctor_profiles.links.next)">
+                <Button
+                    type="button"
+                    variant="outline"
+                    class="rounded-lg"
+                    :disabled="doctor_profiles.links.next === null"
+                    @click="goTo(doctor_profiles.links.next)"
+                >
                     التالي
                 </Button>
             </div>

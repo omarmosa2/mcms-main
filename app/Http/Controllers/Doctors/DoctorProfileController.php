@@ -64,6 +64,7 @@ class DoctorProfileController extends Controller
 
         return Inertia::render('doctors/Index', [
             'doctor_profiles' => $doctorProfilesResource->response()->getData(true),
+            'stats' => $this->resolveStats($clinicId, $doctorScopeUserId),
             'clinic' => $this->resolveClinicOption($clinicId),
             'doctors' => $this->resolveDoctorOptions($clinicId, $doctorScopeUserId),
             'departments' => $this->resolveDepartmentOptions($clinicId),
@@ -386,6 +387,39 @@ class DoctorProfileController extends Controller
             DoctorProfile::STATUS_ACTIVE,
             DoctorProfile::STATUS_ON_LEAVE,
             DoctorProfile::STATUS_INACTIVE,
+        ];
+    }
+
+    /**
+     * @return array{
+     *     total_doctors: int,
+     *     active_doctors: int,
+     *     on_leave_doctors: int,
+     *     inactive_doctors: int,
+     *     departments_with_doctors: int
+     * }
+     */
+    private function resolveStats(int $clinicId, ?int $doctorScopeUserId): array
+    {
+        $stats = DoctorProfile::query()
+            ->forClinic($clinicId)
+            ->withoutTrashed()
+            ->when($doctorScopeUserId !== null, function (Builder $builder) use ($doctorScopeUserId): void {
+                $builder->where('user_id', $doctorScopeUserId);
+            })
+            ->selectRaw('COUNT(*) as total_doctors')
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_doctors', [DoctorProfile::STATUS_ACTIVE])
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as on_leave_doctors', [DoctorProfile::STATUS_ON_LEAVE])
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as inactive_doctors', [DoctorProfile::STATUS_INACTIVE])
+            ->selectRaw('COUNT(DISTINCT department_id) as departments_with_doctors')
+            ->first();
+
+        return [
+            'total_doctors' => (int) ($stats?->total_doctors ?? 0),
+            'active_doctors' => (int) ($stats?->active_doctors ?? 0),
+            'on_leave_doctors' => (int) ($stats?->on_leave_doctors ?? 0),
+            'inactive_doctors' => (int) ($stats?->inactive_doctors ?? 0),
+            'departments_with_doctors' => (int) ($stats?->departments_with_doctors ?? 0),
         ];
     }
 

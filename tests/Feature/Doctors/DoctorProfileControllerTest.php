@@ -70,6 +70,62 @@ class DoctorProfileControllerTest extends TestCase
         );
     }
 
+    public function test_index_passes_doctor_stats_for_the_current_clinic(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $otherClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
+        $otherDepartment = Department::factory()->create(['clinic_id' => $clinic->id]);
+
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $this->createDoctorUser($clinic)->id,
+            'department_id' => $department->id,
+            'status' => DoctorProfile::STATUS_ACTIVE,
+        ]);
+
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $this->createDoctorUser($clinic)->id,
+            'department_id' => $department->id,
+            'status' => DoctorProfile::STATUS_ON_LEAVE,
+        ]);
+
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $this->createDoctorUser($clinic)->id,
+            'department_id' => $otherDepartment->id,
+            'status' => DoctorProfile::STATUS_INACTIVE,
+        ]);
+
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $this->createDoctorUser($clinic)->id,
+            'department_id' => $otherDepartment->id,
+            'status' => DoctorProfile::STATUS_ACTIVE,
+        ])->delete();
+
+        DoctorProfile::factory()->create([
+            'clinic_id' => $otherClinic->id,
+            'user_id' => $this->createDoctorUser($otherClinic)->id,
+            'status' => DoctorProfile::STATUS_ACTIVE,
+        ]);
+
+        $response = $this->get(route('doctors.index'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('doctors/Index')
+            ->where('stats.total_doctors', 3)
+            ->where('stats.active_doctors', 1)
+            ->where('stats.on_leave_doctors', 1)
+            ->where('stats.inactive_doctors', 1)
+            ->where('stats.departments_with_doctors', 2)
+        );
+    }
+
     public function test_store_creates_doctor_profile_with_audit_log(): void
     {
         $clinic = Clinic::factory()->create();

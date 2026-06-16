@@ -310,6 +310,16 @@ class PayrollController extends Controller
             return collect();
         }
 
+        $carbonMonth = CarbonImmutable::createFromFormat('Y-m', $month)?->startOfMonth() ?? CarbonImmutable::now()->startOfMonth();
+        $periodStart = $carbonMonth->toDateString();
+        $periodEnd = $carbonMonth->endOfMonth()->toDateString();
+        $visitCounts = DoctorAppointmentEntitlement::query()
+            ->forClinic($clinicId)
+            ->whereBetween('appointment_date', [$periodStart, $periodEnd])
+            ->selectRaw('doctor_profile_id, COUNT(*) as visits_count')
+            ->groupBy('doctor_profile_id')
+            ->pluck('visits_count', 'doctor_profile_id');
+
         return DoctorMonthlyDue::query()
             ->forClinic($clinicId)
             ->where('salary_month', $month)
@@ -330,6 +340,7 @@ class PayrollController extends Controller
                 'percentage' => $record->percentage !== null ? (float) $record->percentage : null,
                 'fixed_weekly_amount' => $record->fixed_weekly_amount !== null ? (float) $record->fixed_weekly_amount : null,
                 'fixed_monthly_amount' => $record->fixed_monthly_amount !== null ? (float) $record->fixed_monthly_amount : null,
+                'visits_count' => (int) ($visitCounts[$record->doctor_id] ?? 0),
                 'visits_total_amount' => (float) $record->visits_total_amount,
                 'deductions_amount' => (float) $record->deductions_amount,
                 'due_amount' => (float) $record->due_amount,

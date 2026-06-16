@@ -213,7 +213,9 @@ const defaults = (employee: Employee | null = null): EmployeeForm => ({
 const form = useForm<EmployeeForm>(defaults());
 const isEditing = computed(() => editing.value !== null);
 const formatMoney = (value: number): string =>
-    new Intl.NumberFormat('ar-SY', { maximumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat('en-US-u-nu-latn', {
+        maximumFractionDigits: 0,
+    }).format(value);
 const labelFor = (value: string | null): string =>
     value !== null ? (labels[value] ?? value) : '-';
 

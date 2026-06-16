@@ -66,7 +66,9 @@ const labels: Record<string, string> = {
 };
 
 const formatMoney = (value: number): string =>
-    new Intl.NumberFormat('ar-SY', { maximumFractionDigits: 0 }).format(value);
+    new Intl.NumberFormat('en-US-u-nu-latn', {
+        maximumFractionDigits: 0,
+    }).format(value);
 const labelFor = (value: string | null): string =>
     value !== null ? (labels[value] ?? value) : '-';
 const statusClass = (value: string): string => {

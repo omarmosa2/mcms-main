@@ -180,6 +180,7 @@ class PayrollControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('doctor_dues.0.due_amount', 400);
         $response->assertJsonPath('doctor_dues.0.payment_type', 'percentage');
+        $response->assertJsonPath('doctor_dues.0.visits_count', 1);
 
         $this->assertDatabaseHas('doctor_monthly_dues', [
             'clinic_id' => $clinic->id,

@@ -148,7 +148,7 @@ const defaultsFor = (profile: DoctorProfile | null): DoctorForm => ({
     specialty: profile?.specialty ?? '',
     phone: profile?.phone ?? '',
     work_start_date: profile?.work_start_date ?? '',
-    clinic_id: profile?.clinic_id ?? props.clinic.id,
+    clinic_id: profile?.clinic_id ?? '',
     username: profile?.user?.email ?? '',
     password: '',
     status: profile?.status ?? 'active',

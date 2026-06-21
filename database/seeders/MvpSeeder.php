@@ -15,13 +15,9 @@ class MvpSeeder extends Seeder
         $clinic = Clinic::query()->firstOrCreate(
             ['code' => 'MVP001'],
             [
-                'name' => 'Main MVP Clinic',
-                'legal_name' => 'Main MVP Clinic LLC',
+                'name' => 'Demo Clinic',
                 'timezone' => 'Asia/Riyadh',
                 'currency' => 'SAR',
-                'phone' => '000-000-0000',
-                'email' => 'clinic@example.com',
-                'address' => 'Localhost',
                 'is_active' => true,
             ],
         );

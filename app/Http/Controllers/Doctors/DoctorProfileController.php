@@ -74,7 +74,7 @@ class DoctorProfileController extends Controller
 
     public function store(StoreDoctorProfileRequest $request): JsonResponse|RedirectResponse
     {
-        $clinicId = $this->resolveClinicId($request);
+        $clinicId = (int) $request->validated('clinic_id');
         $doctorScopeUserId = $this->resolveDoctorScopeUserId($request);
 
         $doctorProfile = $this->createDoctorProfileAction->handle(

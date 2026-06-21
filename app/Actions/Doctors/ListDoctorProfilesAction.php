@@ -30,6 +30,7 @@ class ListDoctorProfilesAction extends BaseAction
                 'user:id,clinic_id,name,email,is_active',
                 'user.doctorSchedules:id,clinic_id,doctor_id,day_of_week,start_time,end_time,is_available',
                 'clinic:id,name,code,is_active',
+                'clinic.workingHours:id,clinic_id,day_of_week,is_active,start_time,end_time',
             ])
             ->orderByDesc('created_at');
 

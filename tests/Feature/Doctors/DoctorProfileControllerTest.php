@@ -8,6 +8,7 @@ use App\Models\Clinic;
 use App\Models\ClinicWorkingHour;
 use App\Models\Department;
 use App\Models\DoctorProfile;
+use App\Models\DoctorSchedule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -415,6 +416,59 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertNotFound();
     }
 
+    public function test_show_returns_clinic_days_and_doctor_schedules_using_numeric_weekdays(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $doctor = $this->createDoctorUser($clinic);
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+        ]);
+
+        ClinicWorkingHour::query()->create([
+            'clinic_id' => $clinic->id,
+            'day_of_week' => 3,
+            'is_active' => true,
+            'start_time' => '09:00',
+            'end_time' => '18:00',
+        ]);
+        ClinicWorkingHour::query()->create([
+            'clinic_id' => $clinic->id,
+            'day_of_week' => 4,
+            'is_active' => false,
+            'start_time' => null,
+            'end_time' => null,
+        ]);
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 3,
+            'is_available' => true,
+            'start_time' => '11:00',
+            'end_time' => '17:00',
+        ]);
+
+        $indexResponse = $this->getJson(route('doctors.index'));
+
+        $indexResponse->assertOk();
+        $indexResponse->assertJsonPath('data.0.clinic_working_days.0.day_of_week', 3);
+        $indexResponse->assertJsonPath('data.0.doctor_schedules.0.start_time', '11:00');
+
+        $response = $this->getJson(route('doctors.show', ['doctorProfileId' => $profile->id]));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.clinic_working_days.0.day_of_week', 3);
+        $response->assertJsonPath('data.clinic_working_days.0.start_time', '09:00');
+        $response->assertJsonPath('data.doctor_schedules.0.day_of_week', 3);
+        $response->assertJsonPath('data.doctor_schedules.0.start_time', '11:00');
+        $response->assertJsonPath('data.working_hours.0.day_of_week', 3);
+        $response->assertJsonPath('data.working_hours.0.is_active', true);
+        $response->assertJsonPath('data.working_hours.0.start_time', '11:00');
+        $response->assertJsonPath('data.working_hours.0.end_time', '17:00');
+    }
+
     public function test_update_updates_doctor_profile_and_writes_audit_log(): void
     {
         $clinic = Clinic::factory()->create();
@@ -525,6 +579,116 @@ class DoctorProfileControllerTest extends TestCase
 
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['working_hours.0.start_time']);
+    }
+
+    public function test_update_replaces_doctor_schedules_with_only_active_days(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $doctor = $this->createDoctorUser($clinic);
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+        ]);
+
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 2,
+            'is_available' => true,
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+        ]);
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 3,
+            'is_available' => true,
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+        ]);
+
+        $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'working_hours' => [
+                ['day_of_week' => 2, 'is_active' => false, 'start_time' => null, 'end_time' => null],
+                ['day_of_week' => 3, 'is_active' => true, 'start_time' => '11:00', 'end_time' => '17:00'],
+            ],
+        ]);
+
+        $response->assertOk();
+        $this->assertSoftDeleted('doctor_schedules', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 2,
+        ]);
+        $this->assertDatabaseHas('doctor_schedules', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 3,
+            'start_time' => '11:00',
+            'end_time' => '17:00',
+            'is_available' => true,
+        ]);
+        $this->assertSame(1, DoctorSchedule::query()->count());
+    }
+
+    public function test_update_allows_the_doctors_current_email_but_rejects_another_doctors_email(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $doctor = $this->createDoctorUser($clinic);
+        $doctor->forceFill(['email' => 'lena@example.com'])->save();
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+        ]);
+
+        $otherDoctor = $this->createDoctorUser($clinic);
+        $otherDoctor->forceFill(['email' => 'other-doctor@example.com'])->save();
+
+        $sameEmailResponse = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'username' => 'lena@example.com',
+        ]);
+
+        $sameEmailResponse->assertOk();
+        $sameEmailResponse->assertJsonMissingValidationErrors('username');
+        $this->assertDatabaseHas('users', [
+            'id' => $doctor->id,
+            'email' => 'lena@example.com',
+        ]);
+
+        $duplicateEmailResponse = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'username' => 'other-doctor@example.com',
+        ]);
+
+        $duplicateEmailResponse->assertUnprocessable();
+        $duplicateEmailResponse->assertJsonValidationErrors('username');
+    }
+
+    public function test_update_uses_the_doctor_profiles_clinic_when_updating_its_account(): void
+    {
+        $adminClinic = Clinic::factory()->create();
+        $doctorClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($adminClinic);
+
+        $doctor = $this->createDoctorUser($doctorClinic);
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $doctorClinic->id,
+            'user_id' => $doctor->id,
+        ]);
+
+        $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'name' => 'Updated Doctor',
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('users', [
+            'id' => $doctor->id,
+            'clinic_id' => $doctorClinic->id,
+            'name' => 'Updated Doctor',
+        ]);
     }
 
     public function test_destroy_deletes_doctor_profile_and_writes_audit_log(): void

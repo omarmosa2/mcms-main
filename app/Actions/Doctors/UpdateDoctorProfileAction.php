@@ -44,11 +44,12 @@ class UpdateDoctorProfileAction extends BaseAction
             }
 
             $doctorProfile = $query->findOrFail($doctorProfileId);
+            $doctorClinicId = (int) $doctorProfile->clinic_id;
 
             if (array_key_exists('user_id', $payload) && ! empty($payload['user_id'])) {
                 $doctorUserId = (int) $payload['user_id'];
                 $this->ensureDoctorScopeCanManageUser($doctorScopeUserId, $doctorUserId);
-                $this->ensureDoctorBelongsToClinic($clinicId, $doctorUserId);
+                $this->ensureDoctorBelongsToClinic($doctorClinicId, $doctorUserId);
             }
 
             $oldValues = $doctorProfile->only($this->auditedProfileFields());
@@ -58,17 +59,17 @@ class UpdateDoctorProfileAction extends BaseAction
             $doctorProfile->save();
 
             $doctorUser = User::query()
-                ->where('clinic_id', $clinicId)
+                ->where('clinic_id', $doctorClinicId)
                 ->findOrFail((int) $doctorProfile->user_id);
 
             $this->updateDoctorUser($doctorUser, $payload);
             $this->assignUserRoleAction->handle($doctorUser, 'doctor', $userId);
 
             if (array_key_exists('working_hours', $payload)) {
-                $this->syncWorkingHours($clinicId, (int) $doctorProfile->user_id, $payload['working_hours']);
+                $this->syncWorkingHours($doctorClinicId, (int) $doctorProfile->user_id, $payload['working_hours']);
 
                 if ($oldUserId !== (int) $doctorProfile->user_id) {
-                    $this->syncWorkingHours($clinicId, $oldUserId, []);
+                    $this->syncWorkingHours($doctorClinicId, $oldUserId, []);
                 }
             }
 

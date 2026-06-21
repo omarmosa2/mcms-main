@@ -25,9 +25,11 @@ class UpdateDoctorProfileRequest extends FormRequest
     {
         $clinicId = $this->user()?->clinic_id;
         $doctorProfileId = (int) $this->route('doctorProfileId');
-        $doctorUserId = DoctorProfile::query()
-            ->whereKey($doctorProfileId)
-            ->value('user_id');
+        $doctorProfile = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
+            ->select(['id', 'user_id'])
+            ->find($doctorProfileId);
+        $doctorUserId = $doctorProfile?->user_id;
 
         return [
             'user_id' => [
@@ -46,7 +48,7 @@ class UpdateDoctorProfileRequest extends FormRequest
                 'required',
                 'email',
                 'max:255',
-                Rule::unique('users', 'email')->ignore($doctorUserId),
+                Rule::unique('users', 'email')->ignore($doctorUserId, 'id'),
             ],
             'password' => ['sometimes', 'nullable', 'string', 'min:8', 'max:255'],
             'clinic_id' => [

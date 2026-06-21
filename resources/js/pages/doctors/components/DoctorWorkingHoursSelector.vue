@@ -58,7 +58,6 @@ const updateDay = (index: number, updates: Partial<WorkingHour>): void => {
         return { ...day, ...updates };
     });
 
-    console.log('[DoctorWorkingHoursSelector] updated day:', { index, updates, next });
     emit('update:modelValue', next);
 };
 

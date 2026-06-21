@@ -84,39 +84,46 @@ const ALL_DAYS = [6, 0, 1, 2, 3, 4, 5] as const;
 const buildWorkingHoursFromProfile = (
     profile: DoctorProfile | null,
 ): WorkingHour[] => {
-    const empty = ALL_DAYS.map((dayOfWeek) => ({
-        day_of_week: dayOfWeek,
-        is_active: false,
-        start_time: null,
-        end_time: null,
-    }));
-
     if (profile === null) {
-        return empty;
+        return ALL_DAYS.map((dayOfWeek) => ({
+            day_of_week: dayOfWeek,
+            is_active: false,
+            start_time: null,
+            end_time: null,
+        }));
     }
 
-    const result = ALL_DAYS.map((dayOfWeek) => {
-        const schedule = profile.working_hours.find(
-            (item) => item.day_of_week === dayOfWeek,
-        );
+    const clinicWorkingDays = profile.clinic_working_days ??
+        clinicForId(profile.clinic_id)?.working_hours ?? [];
+    const doctorSchedules = new Map(
+        (profile.doctor_schedules ?? profile.working_hours).map((schedule) => [
+            Number(schedule.day_of_week),
+            schedule,
+        ]),
+    );
 
-        const isActive = schedule?.is_active ?? false;
-        const startTime = isActive
-            ? normalizeTime(schedule?.start_time ?? null)
-            : null;
-        const endTime = isActive
-            ? normalizeTime(schedule?.end_time ?? null)
-            : null;
+    return clinicWorkingDays
+        .filter((day) => day.is_active)
+        .map((clinicDay) => {
+            const dayOfWeek = Number(clinicDay.day_of_week);
+            const schedule = doctorSchedules.get(dayOfWeek);
+            const isAvailable = schedule !== undefined && (
+                'is_available' in schedule
+                    ? schedule.is_available
+                    : schedule.is_active
+            );
 
-        return {
-            day_of_week: dayOfWeek,
-            is_active: isActive,
-            start_time: startTime,
-            end_time: endTime,
-        };
-    });
-
-    return result;
+            return {
+                day_of_week: dayOfWeek,
+                is_active: isAvailable,
+                start_time: isAvailable
+                    ? normalizeTime(schedule?.start_time ?? null)
+                    : null,
+                end_time: isAvailable
+                    ? normalizeTime(schedule?.end_time ?? null)
+                    : null,
+            };
+        });
 };
 
 const defaultsFor = (profile: DoctorProfile | null): DoctorForm => ({
@@ -181,7 +188,14 @@ watch(
             return;
         }
 
-        form.working_hours = buildWorkingHoursFromProfile(props.profile);
+        form.working_hours = selectedClinic.value?.working_hours
+            .filter((day) => day.is_active)
+            .map((day) => ({
+                day_of_week: day.day_of_week,
+                is_active: false,
+                start_time: null,
+                end_time: null,
+            })) ?? [];
         form.clearErrors();
     },
 );
@@ -373,6 +387,7 @@ const submit = (): void => {
                                 id="doctor_password"
                                 v-model="form.password"
                                 type="password"
+                                autocomplete="new-password"
                                 class="h-11 rounded-lg"
                                 :placeholder="
                                     isEditing ? 'اتركها فارغة بدون تغيير' : ''

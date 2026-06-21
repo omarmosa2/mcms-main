@@ -29,6 +29,13 @@ export type WorkingHour = {
     end_time: string | null;
 };
 
+export type DoctorSchedule = {
+    day_of_week: number;
+    is_available: boolean;
+    start_time: string | null;
+    end_time: string | null;
+};
+
 export type ClinicWorkingHour = {
     day_of_week: number;
     is_active: boolean;
@@ -51,6 +58,8 @@ export type DoctorProfile = {
     compensation_value: string | number | null;
     work_schedule: Record<string, unknown> | null;
     working_hours: WorkingHour[];
+    doctor_schedules?: DoctorSchedule[];
+    clinic_working_days?: ClinicWorkingHour[];
     bio: string | null;
     user?: DoctorUser | null;
     clinic?: ClinicSelectOption | null;

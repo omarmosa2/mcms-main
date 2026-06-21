@@ -10,12 +10,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class DoctorSchedule extends BaseModel
 {
     use SoftDeletes;
+
     public const DAYS = WeekDay::DAYS;
 
     protected function casts(): array
     {
         return [
             'is_available' => 'boolean',
+            'day_of_week' => 'integer',
         ];
     }
 

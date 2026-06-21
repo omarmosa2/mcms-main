@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue';
 import {
     destroy,
     index,
+    show,
 } from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
 import { Button } from '@/components/ui/button';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
@@ -108,9 +109,50 @@ const openCreate = (): void => {
     formOpen.value = true;
 };
 
-const openEdit = (profile: DoctorProfile): void => {
-    editingProfile.value = profile;
+const openEdit = async (profile: DoctorProfile): Promise<void> => {
+    const doctorProfile = await loadDoctorProfile(profile);
+
+    if (doctorProfile === null) {
+        return;
+    }
+
+    editingProfile.value = doctorProfile;
     formOpen.value = true;
+};
+
+const openView = async (profile: DoctorProfile): Promise<void> => {
+    const doctorProfile = await loadDoctorProfile(profile);
+
+    if (doctorProfile === null) {
+        return;
+    }
+
+    viewingProfile.value = doctorProfile;
+};
+
+const loadDoctorProfile = async (
+    profile: DoctorProfile,
+): Promise<DoctorProfile | null> => {
+    try {
+        const response = await window.fetch(show.url(profile.id), {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error('Unable to load doctor profile.');
+        }
+
+        const payload = await response.json() as { data: DoctorProfile };
+
+        return payload.data;
+    } catch {
+        toast.error('تعذر تحميل بيانات الطبيب الكاملة.');
+
+        return null;
+    }
 };
 
 const deleteProfile = async (profile: DoctorProfile): Promise<void> => {
@@ -227,7 +269,7 @@ const goTo = (url: string | null): void => {
 
         <DoctorTable
             :doctor-profiles="doctor_profiles"
-            @view="viewingProfile = $event"
+            @view="openView($event)"
             @edit="openEdit($event)"
             @delete="deleteProfile($event)"
         />

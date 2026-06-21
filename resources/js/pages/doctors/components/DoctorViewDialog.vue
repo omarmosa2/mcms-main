@@ -264,22 +264,22 @@ const scheduleTimeLabel = (
 
                     <div class="grid gap-2 md:grid-cols-2">
                         <div
-                            v-for="day in profile.working_hours"
-                            :key="day.day_of_week"
+                            v-for="schedule in profile.doctor_schedules"
+                            :key="schedule.day_of_week"
                             class="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/40 px-4 py-3"
                         >
                             <span class="font-bold text-foreground">
-                                {{ days[day.day_of_week] }}
+                                {{ days[schedule.day_of_week] }}
                             </span>
                             <span
-                                v-if="day.is_active"
+                                v-if="schedule.is_available"
                                 class="rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary tabular-nums"
                                 dir="ltr"
                             >
                                 {{
                                     scheduleTimeLabel(
-                                        day.start_time,
-                                        day.end_time,
+                                        schedule.start_time,
+                                        schedule.end_time,
                                     )
                                 }}
                             </span>
@@ -290,6 +290,12 @@ const scheduleTimeLabel = (
                                 لا يوجد دوام
                             </span>
                         </div>
+                        <p
+                            v-if="profile.doctor_schedules.length === 0"
+                            class="rounded-lg border border-dashed border-border px-4 py-5 text-center text-sm font-medium text-muted-foreground md:col-span-2"
+                        >
+                            لا يوجد دوام محفوظ للطبيب.
+                        </p>
                     </div>
                 </section>
             </div>

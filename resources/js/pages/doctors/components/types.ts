@@ -57,8 +57,7 @@ export type DoctorProfile = {
     compensation_type: CompensationType | null;
     compensation_value: string | number | null;
     work_schedule: Record<string, unknown> | null;
-    working_hours: WorkingHour[];
-    doctor_schedules?: DoctorSchedule[];
+    doctor_schedules: DoctorSchedule[];
     clinic_working_days?: ClinicWorkingHour[];
     bio: string | null;
     user?: DoctorUser | null;

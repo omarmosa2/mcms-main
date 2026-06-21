@@ -38,6 +38,10 @@ class ListDoctorProfilesAction extends BaseAction
             $query->where('user_id', $doctorScopeUserId);
         }
 
+        if (! $allClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
+
         if ($status !== null) {
             $query->where('status', $status);
         }

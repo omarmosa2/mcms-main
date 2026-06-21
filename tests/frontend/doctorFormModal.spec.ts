@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
+import { nextTick } from 'vue';
 import DoctorFormModal from '@/pages/doctors/components/DoctorFormModal.vue';
 import type { DoctorProfile, WorkingHour } from '@/pages/doctors/components/types';
 
@@ -15,7 +16,9 @@ vi.mock('@inertiajs/vue3', async () => {
                 errors: {},
                 processing: false,
                 clearErrors: vi.fn(),
-                defaults: vi.fn(),
+                defaults: vi.fn((nextDefaults: Record<string, unknown>) => {
+                    Object.assign(form, nextDefaults);
+                }),
                 reset: vi.fn(),
                 post: vi.fn(),
                 put: vi.fn(),
@@ -57,10 +60,9 @@ const profile: DoctorProfile = {
     compensation_type: 'percentage',
     compensation_value: 30,
     work_schedule: null,
-    working_hours: [],
     clinic_working_days: [
         {
-            day_of_week: 3,
+            day_of_week: 'saturday' as unknown as number,
             is_active: true,
             start_time: '09:00',
             end_time: '18:00',
@@ -68,7 +70,7 @@ const profile: DoctorProfile = {
     ],
     doctor_schedules: [
         {
-            day_of_week: 3,
+            day_of_week: 'saturday' as unknown as number,
             is_available: true,
             start_time: '11:00:00',
             end_time: '17:00:00',
@@ -85,8 +87,8 @@ describe('DoctorFormModal', () => {
 
         const wrapper = mount(DoctorFormModal, {
             props: {
-                open: true,
-                profile,
+                open: false,
+                profile: null,
                 clinic: { id: 6, name: 'العيادة' },
                 clinics: [
                     {
@@ -115,9 +117,12 @@ describe('DoctorFormModal', () => {
             },
         });
 
+        await wrapper.setProps({ open: true, profile });
+        await nextTick();
+
         expect((capturedForms[0].working_hours as WorkingHour[])).toEqual([
             {
-                day_of_week: 3,
+                day_of_week: 6,
                 is_active: true,
                 start_time: '11:00',
                 end_time: '17:00',

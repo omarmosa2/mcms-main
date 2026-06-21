@@ -5,11 +5,14 @@ namespace App\Actions\DoctorSchedules;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\DoctorSchedule;
-use Illuminate\Validation\ValidationException;
+use App\Services\DoctorScheduleValidationService;
 
 class UpdateDoctorScheduleAction extends BaseAction
 {
-    public function __construct(private LogAuditAction $logAuditAction) {}
+    public function __construct(
+        private LogAuditAction $logAuditAction,
+        private DoctorScheduleValidationService $doctorScheduleValidationService,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $payload
@@ -20,20 +23,15 @@ class UpdateDoctorScheduleAction extends BaseAction
             ->forClinic($clinicId)
             ->findOrFail($scheduleId);
 
-        if (array_key_exists('day_of_week', $payload)) {
-            $existing = DoctorSchedule::query()
-                ->where('clinic_id', $clinicId)
-                ->where('doctor_id', $schedule->doctor_id)
-                ->where('day_of_week', $payload['day_of_week'])
-                ->where('id', '!=', $scheduleId)
-                ->exists();
-
-            if ($existing) {
-                throw ValidationException::withMessages([
-                    'day_of_week' => 'جدول دوام هذا الطبيب لهذا اليوم موجود مسبقاً',
-                ]);
-            }
-        }
+        $this->doctorScheduleValidationService->validate(
+            clinicId: $clinicId,
+            doctorId: (int) $schedule->doctor_id,
+            dayOfWeek: (int) ($payload['day_of_week'] ?? $schedule->day_of_week),
+            startTime: (string) ($payload['start_time'] ?? $schedule->start_time),
+            endTime: (string) ($payload['end_time'] ?? $schedule->end_time),
+            isAvailable: (bool) ($payload['is_available'] ?? $schedule->is_available),
+            ignoreScheduleId: $schedule->id,
+        );
 
         $oldValues = $schedule->only([
             'day_of_week',

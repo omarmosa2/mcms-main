@@ -22,12 +22,13 @@ class DeleteDoctorProfileAction extends BaseAction
     ): void {
         DB::transaction(function () use ($clinicId, $doctorProfileId, $userId, $doctorScopeUserId): void {
             $query = DoctorProfile::query()
-                ->withoutGlobalScope('clinic')
                 ->with('user:id,clinic_id,is_active');
 
             if ($doctorScopeUserId !== null) {
                 $query->where('user_id', $doctorScopeUserId);
             }
+
+            $query->where('clinic_id', $clinicId);
 
             $doctorProfile = $query->findOrFail($doctorProfileId);
             $oldValues = $doctorProfile->only($this->auditedProfileFields());

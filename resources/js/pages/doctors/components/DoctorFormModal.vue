@@ -81,6 +81,26 @@ const clinicForId = (
 
 const ALL_DAYS = [6, 0, 1, 2, 3, 4, 5] as const;
 
+const normalizeDayOfWeek = (value: unknown): number => {
+    const numericValue = Number(value);
+
+    if (Number.isInteger(numericValue) && numericValue >= 0 && numericValue <= 6) {
+        return numericValue;
+    }
+
+    const dayIndexes: Record<string, number> = {
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6,
+    };
+
+    return dayIndexes[String(value).trim().toLowerCase()] ?? 0;
+};
+
 const buildWorkingHoursFromProfile = (
     profile: DoctorProfile | null,
 ): WorkingHour[] => {
@@ -96,8 +116,8 @@ const buildWorkingHoursFromProfile = (
     const clinicWorkingDays = profile.clinic_working_days ??
         clinicForId(profile.clinic_id)?.working_hours ?? [];
     const doctorSchedules = new Map(
-        (profile.doctor_schedules ?? profile.working_hours).map((schedule) => [
-            Number(schedule.day_of_week),
+        profile.doctor_schedules.map((schedule) => [
+            normalizeDayOfWeek(schedule.day_of_week),
             schedule,
         ]),
     );
@@ -105,7 +125,7 @@ const buildWorkingHoursFromProfile = (
     return clinicWorkingDays
         .filter((day) => day.is_active)
         .map((clinicDay) => {
-            const dayOfWeek = Number(clinicDay.day_of_week);
+            const dayOfWeek = normalizeDayOfWeek(clinicDay.day_of_week);
             const schedule = doctorSchedules.get(dayOfWeek);
             const isAvailable = schedule !== undefined && (
                 'is_available' in schedule
@@ -181,24 +201,17 @@ watch(
     },
 );
 
-watch(
-    () => form.clinic_id,
-    () => {
-        if (!props.open || isHydratingForm.value) {
-            return;
-        }
-
-        form.working_hours = selectedClinic.value?.working_hours
-            .filter((day) => day.is_active)
-            .map((day) => ({
-                day_of_week: day.day_of_week,
-                is_active: false,
-                start_time: null,
-                end_time: null,
-            })) ?? [];
-        form.clearErrors();
-    },
-);
+const resetWorkingHoursForSelectedClinic = (): void => {
+    form.working_hours = selectedClinic.value?.working_hours
+        .filter((day) => day.is_active)
+        .map((day) => ({
+            day_of_week: normalizeDayOfWeek(day.day_of_week),
+            is_active: false,
+            start_time: null,
+            end_time: null,
+        })) ?? [];
+    form.clearErrors();
+};
 
 watch(
     () => form.compensation_type,
@@ -325,6 +338,7 @@ const submit = (): void => {
                                 id="doctor_clinic_select"
                                 v-model="form.clinic_id"
                                 class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
+                                @change="resetWorkingHoursForSelectedClinic"
                             >
                                 <option value="">يرجى اختيار العيادة</option>
                                 <option

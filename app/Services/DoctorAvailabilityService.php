@@ -24,15 +24,15 @@ class DoctorAvailabilityService
         $carbonDate = CarbonImmutable::parse($date);
         $day = (int) $carbonDate->dayOfWeek;
 
-        $doctorSchedule = DoctorSchedule::query()
+        $doctorSchedules = DoctorSchedule::query()
             ->forClinic($clinicId)
-            ->withoutTrashed()
             ->where('doctor_id', $doctorId)
             ->where('day_of_week', $day)
             ->where('is_available', true)
-            ->first();
+            ->orderBy('start_time')
+            ->get();
 
-        if ($doctorSchedule === null) {
+        if ($doctorSchedules->isEmpty()) {
             return $this->emptyAvailability();
         }
 
@@ -46,10 +46,15 @@ class DoctorAvailabilityService
             return $this->emptyAvailability();
         }
 
-        $baseStart = max($this->formatTime($doctorSchedule->start_time), $this->formatTime($clinicHours->start_time));
-        $baseEnd = min($this->formatTime($doctorSchedule->end_time), $this->formatTime($clinicHours->end_time));
+        $basePeriods = $doctorSchedules
+            ->map(fn (DoctorSchedule $schedule): array => [
+                'start_time' => max($this->formatTime($schedule->start_time), $this->formatTime($clinicHours->start_time)),
+                'end_time' => min($this->formatTime($schedule->end_time), $this->formatTime($clinicHours->end_time)),
+            ])
+            ->filter(fn (array $period): bool => $period['start_time'] < $period['end_time'])
+            ->values();
 
-        if ($baseStart >= $baseEnd) {
+        if ($basePeriods->isEmpty()) {
             return $this->emptyAvailability();
         }
 
@@ -67,15 +72,21 @@ class DoctorAvailabilityService
         $blockedPeriods = $leaves
             ->filter(fn (DoctorLeave $leave): bool => $leave->type === DoctorLeave::TYPE_HOURLY)
             ->map(fn (DoctorLeave $leave): array => [
-                'start_time' => max($baseStart, $this->formatTime($leave->start_time)),
-                'end_time' => min($baseEnd, $this->formatTime($leave->end_time)),
+                'start_time' => $this->formatTime($leave->start_time),
+                'end_time' => $this->formatTime($leave->end_time),
                 'reason' => $leave->reason,
             ])
-            ->filter(fn (array $period): bool => $period['start_time'] < $period['end_time'])
             ->sortBy('start_time')
             ->values();
 
-        $availablePeriods = $this->subtractBlockedPeriods($baseStart, $baseEnd, $blockedPeriods);
+        $availablePeriods = $basePeriods
+            ->flatMap(fn (array $period): array => $this->subtractBlockedPeriods(
+                $period['start_time'],
+                $period['end_time'],
+                $blockedPeriods,
+            ))
+            ->values()
+            ->all();
 
         return [
             'is_available' => $availablePeriods !== [],

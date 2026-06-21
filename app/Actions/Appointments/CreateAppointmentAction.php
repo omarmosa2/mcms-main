@@ -148,21 +148,6 @@ class CreateAppointmentAction extends BaseAction
      */
     private function checkClinicWorkingHours(int $clinicId, array $payload): void
     {
-        $doctorId = $payload['doctor_id'] ?? null;
-
-        if ($doctorId === null) {
-            return;
-        }
-
-        $doctorProfile = DoctorProfile::query()
-            ->forClinic($clinicId)
-            ->where('user_id', $doctorId)
-            ->first();
-
-        if ($doctorProfile === null) {
-            return;
-        }
-
         $isAvailable = $this->clinicWorkingHoursService->isAppointmentWithinWorkingHours(
             $clinicId,
             $payload['scheduled_for'],

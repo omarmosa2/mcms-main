@@ -37,14 +37,14 @@ class UpdateDoctorProfileAction extends BaseAction
             $payload,
             $doctorScopeUserId
         ): DoctorProfile {
-            $query = DoctorProfile::query()->withoutGlobalScope('clinic');
+            $query = DoctorProfile::query()->where('clinic_id', $clinicId);
 
             if ($doctorScopeUserId !== null) {
                 $query->where('user_id', $doctorScopeUserId);
             }
 
             $doctorProfile = $query->findOrFail($doctorProfileId);
-            $doctorClinicId = (int) $doctorProfile->clinic_id;
+            $doctorClinicId = $clinicId;
 
             if (array_key_exists('user_id', $payload) && ! empty($payload['user_id'])) {
                 $doctorUserId = (int) $payload['user_id'];

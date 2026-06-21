@@ -55,8 +55,7 @@ class UpdateDoctorProfileRequest extends FormRequest
                 'sometimes',
                 'required',
                 'integer',
-                Rule::exists('clinics', 'id')
-                    ->where('is_active', true),
+                Rule::exists('clinics', 'id'),
             ],
             'gender' => ['sometimes', 'required', 'string', Rule::in([DoctorProfile::GENDER_MALE, DoctorProfile::GENDER_FEMALE])],
             'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
@@ -183,7 +182,7 @@ class UpdateDoctorProfileRequest extends FormRequest
      */
     private function activeClinicWorkingHoursByDoctorDay(): array
     {
-        $clinicId = $this->input('clinic_id');
+        $clinicId = $this->input('clinic_id', $this->user()?->clinic_id);
 
         if ($clinicId === null) {
             return [];
@@ -206,7 +205,7 @@ class UpdateDoctorProfileRequest extends FormRequest
 
     private function hasClinicWorkingHoursConfigured(): bool
     {
-        $clinicId = $this->input('clinic_id');
+        $clinicId = $this->input('clinic_id', $this->user()?->clinic_id);
 
         if ($clinicId === null) {
             return false;

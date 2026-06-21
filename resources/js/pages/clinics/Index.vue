@@ -20,8 +20,8 @@ import type {
     SortDirection,
 } from './components/types';
 
-const { departments: clinics, filters } = defineProps<{
-    departments: PaginatedResponse<Clinic>;
+const { clinics, filters } = defineProps<{
+    clinics: PaginatedResponse<Clinic>;
     filters: {
         search: string | null;
         is_active: boolean | null;
@@ -217,7 +217,7 @@ const reloadClinics = (
     const executeReload = (): void => {
         router.cancelAll();
         router.get(ClinicController.index.url(), buildIndexQuery(overrides), {
-            only: ['departments', 'filters'],
+            only: ['clinics', 'filters'],
             preserveState: true,
             preserveScroll: true,
             replace: true,

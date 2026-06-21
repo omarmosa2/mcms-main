@@ -22,6 +22,7 @@ class DoctorProfileControllerTest extends TestCase
     {
         $clinic = Clinic::factory()->create();
         $otherClinic = Clinic::factory()->create();
+        $clinic3 = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
 
         $doctor = $this->createDoctorUser($clinic);
@@ -44,6 +45,7 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', $doctorProfile->id);
+        $response->assertJsonPath('clinics', '[]');
     }
 
     public function test_index_passes_department_options_without_working_hours(): void
@@ -61,6 +63,16 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('doctors/Index')
             ->has('doctor_profiles')
+            ->has('clinics')
+            ->where('clinics', fn (Assert $clinics) => $clinics
+                ->count(3)
+                ->has('id', 1)
+                ->has('name', 'Test Clinic 1')
+                ->has('id', 2)
+                ->has('name', 'Test Clinic 2')
+                ->has('id', 3)
+                ->has('name', 'Test Clinic 3')
+            )
         );
     }
 
@@ -463,10 +475,7 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertJsonPath('data.clinic_working_days.0.start_time', '09:00');
         $response->assertJsonPath('data.doctor_schedules.0.day_of_week', 3);
         $response->assertJsonPath('data.doctor_schedules.0.start_time', '11:00');
-        $response->assertJsonPath('data.working_hours.0.day_of_week', 3);
-        $response->assertJsonPath('data.working_hours.0.is_active', true);
-        $response->assertJsonPath('data.working_hours.0.start_time', '11:00');
-        $response->assertJsonPath('data.working_hours.0.end_time', '17:00');
+        $response->assertJsonMissingPath('data.working_hours');
     }
 
     public function test_update_updates_doctor_profile_and_writes_audit_log(): void

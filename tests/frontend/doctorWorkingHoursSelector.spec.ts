@@ -14,13 +14,13 @@ vi.mock('lucide-vue-next', () => ({
 
 const clinicWorkingHours: ClinicWorkingHour[] = [
     {
-        day_of_week: 'sunday',
+        day_of_week: 0,
         is_active: true,
         start_time: '09:00',
         end_time: '17:00',
     },
     {
-        day_of_week: 'tuesday',
+        day_of_week: 2,
         is_active: true,
         start_time: '10:00',
         end_time: '16:00',
@@ -35,13 +35,13 @@ const availableDoctorDays = (): WorkingHour[] => [
 const mountSelector = (props: {
     modelValue: WorkingHour[];
     clinicWorkingHours?: ClinicWorkingHour[];
-    hasSelectedDepartment?: boolean;
+    hasSelectedClinic?: boolean;
 }) =>
     mount(DoctorWorkingHoursSelector, {
         props: {
             errors: {},
             clinicWorkingHours: props.clinicWorkingHours ?? clinicWorkingHours,
-            hasSelectedDepartment: props.hasSelectedDepartment ?? true,
+            hasSelectedClinic: props.hasSelectedClinic ?? true,
             modelValue: props.modelValue,
         },
         global: {
@@ -58,6 +58,12 @@ const mountSelector = (props: {
                 Label: {
                     template: '<label><slot /></label>',
                 },
+                Switch: {
+                    emits: ['update:modelValue'],
+                    props: ['modelValue'],
+                    template:
+                        '<input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
+                },
             },
         },
     });
@@ -67,7 +73,7 @@ describe('DoctorWorkingHoursSelector', () => {
         const wrapper = mountSelector({
             modelValue: [],
             clinicWorkingHours: [],
-            hasSelectedDepartment: false,
+            hasSelectedClinic: false,
         });
 
         expect(wrapper.text()).toContain(

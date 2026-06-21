@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\WeekDay;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -32,7 +33,6 @@ class DoctorProfileResource extends JsonResource
             ] : null),
             'doctor_schedules' => $this->whenLoaded('user', fn () => $this->doctorSchedules()),
             'clinic_working_days' => $this->whenLoaded('clinic', fn () => $this->clinicWorkingDays()),
-            'working_hours' => $this->whenLoaded('user', fn () => $this->formatWorkingHours()),
             'clinic' => $this->whenLoaded('clinic', fn () => $this->clinic !== null ? [
                 'id' => $this->clinic->id,
                 'name' => $this->clinic->name,
@@ -56,9 +56,9 @@ class DoctorProfileResource extends JsonResource
 
         return $this->user->doctorSchedules
             ->where('clinic_id', $this->clinic_id)
-            ->sortBy('day_of_week')
+            ->sortBy(fn ($schedule): int => $this->dayOfWeekIndex($schedule))
             ->map(fn ($schedule): array => [
-                'day_of_week' => (int) $schedule->day_of_week,
+                'day_of_week' => $this->dayOfWeekIndex($schedule),
                 'is_available' => (bool) $schedule->is_available,
                 'start_time' => $this->formatTime($schedule->start_time),
                 'end_time' => $this->formatTime($schedule->end_time),
@@ -78,35 +78,13 @@ class DoctorProfileResource extends JsonResource
 
         return $this->clinic->workingHours
             ->where('is_active', true)
-            ->sortBy('day_of_week')
+            ->sortBy(fn ($workingHour): int => $this->dayOfWeekIndex($workingHour))
             ->map(fn ($workingHour): array => [
-                'day_of_week' => (int) $workingHour->day_of_week,
+                'day_of_week' => $this->dayOfWeekIndex($workingHour),
                 'is_active' => true,
                 'start_time' => $this->formatTime($workingHour->start_time),
                 'end_time' => $this->formatTime($workingHour->end_time),
             ])
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @return array<int, array{day_of_week: int, is_active: bool, start_time: string|null, end_time: string|null}>
-     */
-    private function formatWorkingHours(): array
-    {
-        $schedules = collect($this->doctorSchedules())->keyBy('day_of_week');
-
-        return collect($this->clinicWorkingDays())
-            ->map(function (array $clinicWorkingDay) use ($schedules): array {
-                $schedule = $schedules->get($clinicWorkingDay['day_of_week']);
-
-                return [
-                    'day_of_week' => $clinicWorkingDay['day_of_week'],
-                    'is_active' => $schedule !== null && $schedule['is_available'],
-                    'start_time' => $schedule !== null && $schedule['is_available'] ? $schedule['start_time'] : null,
-                    'end_time' => $schedule !== null && $schedule['is_available'] ? $schedule['end_time'] : null,
-                ];
-            })
             ->values()
             ->all();
     }
@@ -118,5 +96,10 @@ class DoctorProfileResource extends JsonResource
         }
 
         return substr((string) $time, 0, 5);
+    }
+
+    private function dayOfWeekIndex(object $schedule): int
+    {
+        return WeekDay::toIndex($schedule->getRawOriginal('day_of_week'));
     }
 }

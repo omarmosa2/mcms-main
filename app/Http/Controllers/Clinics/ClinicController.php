@@ -56,7 +56,7 @@ class ClinicController extends Controller
         }
 
         return Inertia::render('clinics/Index', [
-            'departments' => $clinicsResource->response()->getData(true),
+            'clinics' => $clinicsResource->response()->getData(true),
             'filters' => $filters,
         ]);
     }

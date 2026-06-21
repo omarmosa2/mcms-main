@@ -14,6 +14,7 @@ use App\Http\Resources\DoctorProfileResource;
 use App\Models\Clinic;
 use App\Models\DoctorProfile;
 use App\Models\User;
+use App\Support\WeekDay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -50,7 +51,7 @@ class DoctorProfileController extends Controller
             sortBy: $filters['sort_by'],
             sortDirection: $filters['sort_direction'],
             doctorScopeUserId: $doctorScopeUserId,
-            allClinics: true,
+            allClinics: false,
         );
 
         $doctorProfilesResource = DoctorProfileResource::collection($doctorProfiles);
@@ -73,7 +74,7 @@ class DoctorProfileController extends Controller
 
     public function store(StoreDoctorProfileRequest $request): JsonResponse|RedirectResponse
     {
-        $clinicId = (int) $request->validated('clinic_id');
+        $clinicId = $this->resolveClinicId($request);
         $doctorScopeUserId = $this->resolveDoctorScopeUserId($request);
 
         $doctorProfile = $this->createDoctorProfileAction->handle(
@@ -377,8 +378,8 @@ class DoctorProfileController extends Controller
     private function resolveStats(int $clinicId, ?int $doctorScopeUserId): array
     {
         $stats = DoctorProfile::query()
-            ->withoutGlobalScope('clinic')
             ->withoutTrashed()
+            ->where('clinic_id', $clinicId)
             ->when($doctorScopeUserId !== null, function (Builder $builder) use ($doctorScopeUserId): void {
                 $builder->where('user_id', $doctorScopeUserId);
             })
@@ -460,7 +461,7 @@ class DoctorProfileController extends Controller
                 'is_active' => (bool) $clinic->is_active,
                 'working_hours' => $clinic->workingHours
                     ->map(fn ($workingHour): array => [
-                        'day_of_week' => (int) $workingHour->day_of_week,
+                        'day_of_week' => WeekDay::toIndex($workingHour->getRawOriginal('day_of_week')),
                         'is_active' => (bool) $workingHour->is_active,
                         'start_time' => $this->formatTime($workingHour->start_time),
                         'end_time' => $this->formatTime($workingHour->end_time),

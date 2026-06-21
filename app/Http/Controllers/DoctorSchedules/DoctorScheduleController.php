@@ -115,7 +115,7 @@ class DoctorScheduleController extends Controller
     public function clinicHours(Request $request): JsonResponse
     {
         $dayOfWeek = (int) $request->query('day_of_week', 0);
-        $clinicId = (int) $request->query('clinic_id', 0);
+        $clinicId = $this->resolveClinicId($request);
 
         $clinicHour = ClinicWorkingHour::query()
             ->where('clinic_id', $clinicId)

@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import ClinicWorkingHoursSelector from '@/pages/departments/components/ClinicWorkingHoursSelector.vue';
-import type { ClinicWorkingDay, ClinicWorkingHour } from '@/pages/departments/components/types';
+import ClinicWorkingHoursSelector from '@/pages/clinics/components/ClinicWorkingHoursSelector.vue';
+import type { ClinicWorkingDay, ClinicWorkingHour } from '@/pages/clinics/components/types';
 
 vi.mock('lucide-vue-next', () => ({
     Clock: {

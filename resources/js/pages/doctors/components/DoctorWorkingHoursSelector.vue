@@ -27,13 +27,17 @@ const days = [
     { value: 5, label: 'الجمعة' },
 ];
 
+const dayIndex = (day: ClinicWorkingHour['day_of_week']): number => {
+    return Number(day);
+};
+
 const clinicHoursForDay = (
     dayOfWeek: number,
 ): ClinicWorkingHour | undefined => {
     return props.clinicWorkingHours.find(
         (clinicDay) =>
             clinicDay.is_active &&
-            clinicDay.day_of_week === dayOfWeek,
+            dayIndex(clinicDay.day_of_week) === dayOfWeek,
     );
 };
 

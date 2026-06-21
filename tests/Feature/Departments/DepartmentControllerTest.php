@@ -149,6 +149,21 @@ class DepartmentControllerTest extends TestCase
         $this->assertDatabaseHas('clinics', ['id' => $clinic->id]);
     }
 
+    public function test_destroy_rejects_clinic_with_assigned_users(): void
+    {
+        $adminClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($adminClinic);
+
+        $clinic = Clinic::factory()->create();
+        User::factory()->create(['clinic_id' => $clinic->id]);
+
+        $response = $this->deleteJson(route('clinics.destroy', ['clinicId' => $clinic->id]));
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('clinic');
+        $this->assertDatabaseHas('clinics', ['id' => $clinic->id]);
+    }
+
     public function test_bulk_destroy_deletes_only_empty_clinics(): void
     {
         $clinic = Clinic::factory()->create();

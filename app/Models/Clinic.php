@@ -60,6 +60,11 @@ class Clinic extends Model
         return $this->hasMany(Employee::class);
     }
 
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
     public function workingHours(): HasMany
     {
         return $this->hasMany(ClinicWorkingHour::class);

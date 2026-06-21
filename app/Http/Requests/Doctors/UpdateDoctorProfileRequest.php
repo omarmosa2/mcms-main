@@ -52,7 +52,6 @@ class UpdateDoctorProfileRequest extends FormRequest
             ],
             'password' => ['sometimes', 'nullable', 'string', 'min:8', 'max:255'],
             'clinic_id' => [
-                'sometimes',
                 'required',
                 'integer',
                 Rule::exists('clinics', 'id'),
@@ -107,10 +106,31 @@ class UpdateDoctorProfileRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
+                $this->validateClinicMove($validator);
                 $this->validateCompensationValue($validator);
                 $this->validateWorkingHours($validator);
             },
         ];
+    }
+
+    private function validateClinicMove(Validator $validator): void
+    {
+        if (! $this->has('clinic_id')) {
+            return;
+        }
+
+        $doctorProfile = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
+            ->select(['id', 'clinic_id'])
+            ->find($this->route('doctorProfileId'));
+
+        if ($doctorProfile === null || (int) $doctorProfile->clinic_id === (int) $this->input('clinic_id')) {
+            return;
+        }
+
+        if (! $this->has('working_hours')) {
+            $validator->errors()->add('working_hours', 'Working hours must be reviewed when changing the doctor clinic.');
+        }
     }
 
     private function validateCompensationValue(Validator $validator): void

@@ -41,6 +41,7 @@ class DoctorProfileController extends Controller
         $clinicId = $this->resolveClinicId($request);
         $filters = $this->resolveIndexFilters($request);
         $doctorScopeUserId = $this->resolveDoctorScopeUserId($request);
+        $allClinics = $this->resolveAllClinics($request);
 
         $doctorProfiles = $this->listDoctorProfilesAction->handle(
             clinicId: $clinicId,
@@ -51,7 +52,8 @@ class DoctorProfileController extends Controller
             sortBy: $filters['sort_by'],
             sortDirection: $filters['sort_direction'],
             doctorScopeUserId: $doctorScopeUserId,
-            allClinics: false,
+            allClinics: $allClinics,
+            filterClinicId: $filters['clinic_id'],
         );
 
         $doctorProfilesResource = DoctorProfileResource::collection($doctorProfiles);
@@ -62,13 +64,14 @@ class DoctorProfileController extends Controller
 
         return Inertia::render('doctors/Index', [
             'doctor_profiles' => $doctorProfilesResource->response()->getData(true),
-            'stats' => $this->resolveStats($clinicId, $doctorScopeUserId),
+            'doctors' => $doctorProfilesResource->response()->getData(true),
+            'stats' => $this->resolveStats($clinicId, $allClinics ? null : $doctorScopeUserId, $allClinics),
             'clinic' => $this->resolveClinicOption($clinicId),
-            'doctors' => $this->resolveDoctorOptions($clinicId, $doctorScopeUserId),
             'clinics' => $this->resolveClinicOptions($clinicId),
             'status_options' => $this->statusOptions(),
             'filters' => $filters,
             'is_doctor_scope' => $doctorScopeUserId !== null,
+            'all_clinics' => $allClinics,
         ]);
     }
 
@@ -98,12 +101,14 @@ class DoctorProfileController extends Controller
     public function show(Request $request, int $doctorProfileId): DoctorProfileResource
     {
         $clinicId = $this->resolveClinicId($request);
+        $allClinics = $this->resolveAllClinics($request);
 
         $doctorProfile = $this->showDoctorProfileAction->handle(
             clinicId: $clinicId,
             doctorProfileId: $doctorProfileId,
             userId: (int) $request->user()->id,
             doctorScopeUserId: $this->resolveDoctorScopeUserId($request),
+            allClinics: $allClinics,
         );
 
         return DoctorProfileResource::make($doctorProfile);
@@ -242,6 +247,17 @@ class DoctorProfileController extends Controller
         return null;
     }
 
+    private function resolveAllClinics(Request $request): bool
+    {
+        $user = $request->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        return $user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('clinic_admin');
+    }
+
     /**
      * @return array{
      *     status: ?string,
@@ -296,7 +312,7 @@ class DoctorProfileController extends Controller
         $filters = [
             'status' => $status,
             'search' => $search,
-            'clinic_id' => $this->resolveClinicId($request),
+            'clinic_id' => $this->normalizeClinicId($request->query('clinic_id')),
             'per_page' => $perPage,
             'sort_by' => $sortBy,
             'sort_direction' => $sortDirection,
@@ -316,6 +332,17 @@ class DoctorProfileController extends Controller
         }
 
         return in_array($status, $this->statusOptions(), true) ? $status : null;
+    }
+
+    private function normalizeClinicId(mixed $value): ?int
+    {
+        $clinicId = filter_var($value, FILTER_VALIDATE_INT);
+
+        if ($clinicId === false || $clinicId < 1) {
+            return null;
+        }
+
+        return Clinic::query()->whereKey($clinicId)->exists() ? $clinicId : null;
     }
 
     private function normalizeNullableString(mixed $value): ?string
@@ -375,11 +402,14 @@ class DoctorProfileController extends Controller
      *     clinics_with_doctors: int
      * }
      */
-    private function resolveStats(int $clinicId, ?int $doctorScopeUserId): array
+    private function resolveStats(int $clinicId, ?int $doctorScopeUserId, bool $allClinics = false): array
     {
         $stats = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
             ->withoutTrashed()
-            ->where('clinic_id', $clinicId)
+            ->when(! $allClinics, function (Builder $builder) use ($clinicId): void {
+                $builder->where('clinic_id', $clinicId);
+            })
             ->when($doctorScopeUserId !== null, function (Builder $builder) use ($doctorScopeUserId): void {
                 $builder->where('user_id', $doctorScopeUserId);
             })

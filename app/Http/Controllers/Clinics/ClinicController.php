@@ -135,11 +135,12 @@ class ClinicController extends Controller
             ->withCount(['employees' => function ($query) {
                 $query->withoutGlobalScope('clinic');
             }])
+            ->withCount('users')
             ->findOrFail($clinicId);
 
-        if ($clinic->employees_count > 0) {
+        if ($clinic->employees_count > 0 || $clinic->users_count > 0) {
             throw ValidationException::withMessages([
-                'clinic' => 'لا يمكن حذف العيادة بينما يوجد موظفون مرتبطون بها.',
+                'clinic' => 'لا يمكن حذف العيادة بينما يوجد مستخدمون أو موظفون مرتبطون بها.',
             ]);
         }
 
@@ -175,9 +176,10 @@ class ClinicController extends Controller
                     ->withCount(['employees' => function ($query) {
                         $query->withoutGlobalScope('clinic');
                     }])
+                    ->withCount('users')
                     ->findOrFail($clinicId);
 
-                if ($clinic->employees_count > 0) {
+                if ($clinic->employees_count > 0 || $clinic->users_count > 0) {
                     $failedIds[] = $clinicId;
 
                     continue;

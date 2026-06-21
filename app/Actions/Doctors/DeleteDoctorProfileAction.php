@@ -20,25 +20,25 @@ class DeleteDoctorProfileAction extends BaseAction
         int $userId,
         ?int $doctorScopeUserId = null,
     ): void {
-        DB::transaction(function () use ($clinicId, $doctorProfileId, $userId, $doctorScopeUserId): void {
+        DB::transaction(function () use ($doctorProfileId, $userId, $doctorScopeUserId): void {
             $query = DoctorProfile::query()
+                ->withoutGlobalScope('clinic')
                 ->with('user:id,clinic_id,is_active');
 
             if ($doctorScopeUserId !== null) {
                 $query->where('user_id', $doctorScopeUserId);
             }
 
-            $query->where('clinic_id', $clinicId);
-
             $doctorProfile = $query->findOrFail($doctorProfileId);
+            $doctorClinicId = (int) $doctorProfile->clinic_id;
             $oldValues = $doctorProfile->only($this->auditedProfileFields());
 
-            if ($this->hasOperationalHistory($clinicId, (int) $doctorProfile->user_id)) {
+            if ($this->hasOperationalHistory($doctorClinicId, (int) $doctorProfile->user_id)) {
                 $doctorProfile->forceFill(['status' => DoctorProfile::STATUS_INACTIVE])->save();
                 $doctorProfile->user?->forceFill(['is_active' => false])->save();
 
                 $this->logAuditAction->handle(
-                    clinicId: $clinicId,
+                    clinicId: $doctorClinicId,
                     userId: $userId,
                     action: 'doctor_profiles.archive',
                     auditable: $doctorProfile,
@@ -53,7 +53,7 @@ class DeleteDoctorProfileAction extends BaseAction
             $doctorProfile->user?->forceFill(['is_active' => false])->save();
 
             $this->logAuditAction->handle(
-                clinicId: $clinicId,
+                clinicId: $doctorClinicId,
                 userId: $userId,
                 action: 'doctor_profiles.delete',
                 auditable: $doctorProfile,

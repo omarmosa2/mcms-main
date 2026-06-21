@@ -190,8 +190,11 @@ watch(
         }
 
         isHydratingForm.value = true;
-        form.defaults(defaultsFor(props.profile));
+        const nextDefaults = defaultsFor(props.profile);
+
+        form.defaults(nextDefaults);
         form.reset();
+        Object.assign(form, nextDefaults);
         form.clearErrors();
         isHydratingForm.value = false;
     },

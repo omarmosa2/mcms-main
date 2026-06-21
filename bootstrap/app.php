@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\ApplyClinicBranding;
 use App\Http\Middleware\EnforceSecurityPolicy;
+use App\Http\Middleware\EnsureDoctorManagementAdministrator;
 use App\Http\Middleware\EnsureDoctorRole;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\HandleAppearance;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => EnsureUserHasPermission::class,
             'doctor' => EnsureDoctorRole::class,
+            'doctor-management-admin' => EnsureDoctorManagementAdministrator::class,
         ]);
 
         $middleware->web(append: [

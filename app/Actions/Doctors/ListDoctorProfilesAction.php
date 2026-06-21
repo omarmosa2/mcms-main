@@ -22,6 +22,7 @@ class ListDoctorProfilesAction extends BaseAction
         string $sortDirection = 'desc',
         ?int $doctorScopeUserId = null,
         bool $allClinics = false,
+        ?int $filterClinicId = null,
     ): LengthAwarePaginator {
         $query = DoctorProfile::query()
             ->withoutGlobalScope('clinic')
@@ -40,6 +41,10 @@ class ListDoctorProfilesAction extends BaseAction
 
         if (! $allClinics) {
             $query->where('clinic_id', $clinicId);
+        }
+
+        if ($filterClinicId !== null) {
+            $query->where('clinic_id', $filterClinicId);
         }
 
         if ($status !== null) {

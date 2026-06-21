@@ -5,6 +5,7 @@ namespace App\Actions\Doctors;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Actions\Rbac\AssignUserRoleAction;
+use App\Models\Appointment;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\User;
@@ -37,14 +38,17 @@ class UpdateDoctorProfileAction extends BaseAction
             $payload,
             $doctorScopeUserId
         ): DoctorProfile {
-            $query = DoctorProfile::query()->where('clinic_id', $clinicId);
+            $query = DoctorProfile::query()->withoutGlobalScope('clinic');
 
             if ($doctorScopeUserId !== null) {
                 $query->where('user_id', $doctorScopeUserId);
             }
 
             $doctorProfile = $query->findOrFail($doctorProfileId);
-            $doctorClinicId = $clinicId;
+            $previousClinicId = (int) $doctorProfile->clinic_id;
+            $doctorClinicId = array_key_exists('clinic_id', $payload)
+                ? (int) $payload['clinic_id']
+                : $previousClinicId;
 
             if (array_key_exists('user_id', $payload) && ! empty($payload['user_id'])) {
                 $doctorUserId = (int) $payload['user_id'];
@@ -55,17 +59,32 @@ class UpdateDoctorProfileAction extends BaseAction
             $oldValues = $doctorProfile->only($this->auditedProfileFields());
             $oldUserId = (int) $doctorProfile->user_id;
 
+            if ($previousClinicId !== $doctorClinicId) {
+                $this->ensureDoctorCanMoveClinics($previousClinicId, (int) $doctorProfile->user_id);
+                $doctorProfile->clinic_id = $doctorClinicId;
+            }
+
             $doctorProfile->fill($this->normalizeProfilePayload($payload));
             $doctorProfile->save();
 
             $doctorUser = User::query()
-                ->where('clinic_id', $doctorClinicId)
                 ->findOrFail((int) $doctorProfile->user_id);
+
+            if ($previousClinicId !== $doctorClinicId) {
+                $doctorUser->forceFill(['clinic_id' => $doctorClinicId])->save();
+            }
 
             $this->updateDoctorUser($doctorUser, $payload);
             $this->assignUserRoleAction->handle($doctorUser, 'doctor', $userId);
 
-            if (array_key_exists('working_hours', $payload)) {
+            if ($previousClinicId !== $doctorClinicId) {
+                $this->moveSchedulesToClinic(
+                    previousClinicId: $previousClinicId,
+                    clinicId: $doctorClinicId,
+                    doctorUserId: (int) $doctorProfile->user_id,
+                    workingHours: $payload['working_hours'],
+                );
+            } elseif (array_key_exists('working_hours', $payload)) {
                 $this->syncWorkingHours($doctorClinicId, (int) $doctorProfile->user_id, $payload['working_hours']);
 
                 if ($oldUserId !== (int) $doctorProfile->user_id) {
@@ -198,6 +217,33 @@ class UpdateDoctorProfileAction extends BaseAction
                 'start_time' => (string) $day['start_time'],
                 'end_time' => (string) $day['end_time'],
                 'is_available' => true,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $workingHours
+     */
+    private function moveSchedulesToClinic(int $previousClinicId, int $clinicId, int $doctorUserId, array $workingHours): void
+    {
+        DoctorSchedule::query()
+            ->where('clinic_id', $previousClinicId)
+            ->where('doctor_id', $doctorUserId)
+            ->forceDelete();
+
+        $this->syncWorkingHours($clinicId, $doctorUserId, $workingHours);
+    }
+
+    private function ensureDoctorCanMoveClinics(int $previousClinicId, int $doctorUserId): void
+    {
+        $hasAppointments = Appointment::query()
+            ->where('clinic_id', $previousClinicId)
+            ->where('doctor_id', $doctorUserId)
+            ->exists();
+
+        if ($hasAppointments) {
+            throw ValidationException::withMessages([
+                'clinic_id' => 'Doctors with appointment history cannot be moved to another clinic.',
             ]);
         }
     }

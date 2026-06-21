@@ -28,6 +28,7 @@ import type {
 
 const props = defineProps<{
     doctor_profiles: PaginatedResponse<DoctorProfile>;
+    doctors: PaginatedResponse<DoctorProfile>;
     stats: DoctorProfileStats;
     clinic: ClinicOption;
     clinics: ClinicSelectOption[];
@@ -39,6 +40,7 @@ const props = defineProps<{
         sort_by: string | null;
         sort_direction: string | null;
     };
+    all_clinics: boolean;
 }>();
 
 defineOptions({
@@ -71,7 +73,7 @@ const editingProfile = ref<DoctorProfile | null>(null);
 const viewingProfile = ref<DoctorProfile | null>(null);
 
 const totalLabel = computed(() => {
-    return `عرض ${props.doctor_profiles.meta.from ?? 0} إلى ${props.doctor_profiles.meta.to ?? 0} من ${props.doctor_profiles.meta.total} طبيب`;
+    return `عرض ${props.doctors.meta.from ?? 0} إلى ${props.doctors.meta.to ?? 0} من ${props.doctors.meta.total} طبيب`;
 });
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -268,7 +270,7 @@ const goTo = (url: string | null): void => {
         </section>
 
         <DoctorTable
-            :doctor-profiles="doctor_profiles"
+            :doctor-profiles="doctors"
             @view="openView($event)"
             @edit="openEdit($event)"
             @delete="deleteProfile($event)"
@@ -283,21 +285,21 @@ const goTo = (url: string | null): void => {
                     type="button"
                     variant="outline"
                     class="rounded-lg"
-                    :disabled="doctor_profiles.links.prev === null"
-                    @click="goTo(doctor_profiles.links.prev)"
+                    :disabled="doctors.links.prev === null"
+                    @click="goTo(doctors.links.prev)"
                 >
                     السابق
                 </Button>
                 <span class="font-semibold text-foreground">
-                    صفحة {{ doctor_profiles.meta.current_page }} من
-                    {{ doctor_profiles.meta.last_page }}
+                    صفحة {{ doctors.meta.current_page }} من
+                    {{ doctors.meta.last_page }}
                 </span>
                 <Button
                     type="button"
                     variant="outline"
                     class="rounded-lg"
-                    :disabled="doctor_profiles.links.next === null"
-                    @click="goTo(doctor_profiles.links.next)"
+                    :disabled="doctors.links.next === null"
+                    @click="goTo(doctors.links.next)"
                 >
                     التالي
                 </Button>

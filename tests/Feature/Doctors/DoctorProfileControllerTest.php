@@ -6,7 +6,6 @@ use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\ClinicWorkingHour;
-use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\User;
@@ -18,7 +17,7 @@ class DoctorProfileControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_index_returns_only_clinic_doctor_profiles(): void
+    public function test_index_returns_all_doctor_profiles_for_admin(): void
     {
         $clinic = Clinic::factory()->create();
         $otherClinic = Clinic::factory()->create();
@@ -26,12 +25,35 @@ class DoctorProfileControllerTest extends TestCase
         $this->authenticateForClinic($clinic);
 
         $doctor = $this->createDoctorUser($clinic);
-        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
 
         $doctorProfile = DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
+        ]);
+
+        $otherDoctor = $this->createDoctorUser($otherClinic);
+        $otherDoctorProfile = DoctorProfile::factory()->create([
+            'clinic_id' => $otherClinic->id,
+            'user_id' => $otherDoctor->id,
+        ]);
+
+        $response = $this->getJson(route('doctors.index'));
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data');
+    }
+
+    public function test_index_returns_only_own_doctor_for_doctor_role(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $otherClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'doctor');
+
+        $doctor = $this->createDoctorUser($clinic);
+
+        $doctorProfile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
         ]);
 
         $otherDoctor = $this->createDoctorUser($otherClinic);
@@ -42,20 +64,13 @@ class DoctorProfileControllerTest extends TestCase
 
         $response = $this->getJson(route('doctors.index'));
 
-        $response->assertOk();
-        $response->assertJsonCount(1, 'data');
-        $response->assertJsonPath('data.0.id', $doctorProfile->id);
-        $response->assertJsonPath('clinics', '[]');
+        $response->assertForbidden();
     }
 
-    public function test_index_passes_department_options_without_working_hours(): void
+    public function test_index_passes_clinic_options_without_working_hours(): void
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
-        Department::factory()->create([
-            'clinic_id' => $clinic->id,
-            'name' => 'Cardiology',
-        ]);
 
         $response = $this->get(route('doctors.index'));
 
@@ -63,53 +78,38 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('doctors/Index')
             ->has('doctor_profiles')
+            ->has('doctors')
             ->has('clinics')
-            ->where('clinics', fn (Assert $clinics) => $clinics
-                ->count(3)
-                ->has('id', 1)
-                ->has('name', 'Test Clinic 1')
-                ->has('id', 2)
-                ->has('name', 'Test Clinic 2')
-                ->has('id', 3)
-                ->has('name', 'Test Clinic 3')
-            )
         );
     }
 
-    public function test_index_passes_doctor_stats_for_the_current_clinic(): void
+    public function test_index_passes_doctor_stats_for_all_clinics_to_an_administrator(): void
     {
         $clinic = Clinic::factory()->create();
         $otherClinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
 
-        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
-        $otherDepartment = Department::factory()->create(['clinic_id' => $clinic->id]);
-
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $this->createDoctorUser($clinic)->id,
-            'department_id' => $department->id,
             'status' => DoctorProfile::STATUS_ACTIVE,
         ]);
 
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $this->createDoctorUser($clinic)->id,
-            'department_id' => $department->id,
             'status' => DoctorProfile::STATUS_ON_LEAVE,
         ]);
 
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $this->createDoctorUser($clinic)->id,
-            'department_id' => $otherDepartment->id,
             'status' => DoctorProfile::STATUS_INACTIVE,
         ]);
 
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $this->createDoctorUser($clinic)->id,
-            'department_id' => $otherDepartment->id,
             'status' => DoctorProfile::STATUS_ACTIVE,
         ])->delete();
 
@@ -124,8 +124,8 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('doctors/Index')
-            ->where('stats.total_doctors', 3)
-            ->where('stats.active_doctors', 1)
+            ->where('stats.total_doctors', 4)
+            ->where('stats.active_doctors', 2)
             ->where('stats.on_leave_doctors', 1)
             ->where('stats.inactive_doctors', 1)
         );
@@ -137,18 +137,12 @@ class DoctorProfileControllerTest extends TestCase
         $user = $this->authenticateForClinic($clinic);
 
         $doctor = $this->createDoctorUser($clinic);
-        $department = Department::factory()->create([
-            'clinic_id' => $clinic->id,
-            'name' => 'Cardiology',
-            'code' => 'CARD',
-        ]);
 
         $payload = [
             'clinic_id' => $clinic->id,
             'name' => 'Dr New Account',
             'username' => 'doctor-new@example.com',
             'password' => 'password-123',
-            'department_id' => $department->id,
             'gender' => DoctorProfile::GENDER_MALE,
             'phone' => '+963999000111',
             'work_start_date' => '2026-06-14',
@@ -219,7 +213,6 @@ class DoctorProfileControllerTest extends TestCase
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
-        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
 
         $this->setClinicWorkingHours($clinic, [
             'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
@@ -231,7 +224,6 @@ class DoctorProfileControllerTest extends TestCase
             'name' => 'Dr Outside Hours',
             'username' => 'doctor-outside-hours@example.com',
             'password' => 'password-123',
-            'department_id' => $department->id,
             'gender' => DoctorProfile::GENDER_MALE,
             'specialty' => 'Cardiology',
             'status' => DoctorProfile::STATUS_ACTIVE,
@@ -289,15 +281,10 @@ class DoctorProfileControllerTest extends TestCase
         $this->authenticateForClinic($clinic);
 
         $doctor = $this->createDoctorUser($clinic);
-        $department = Department::factory()->create([
-            'clinic_id' => $clinic->id,
-            'name' => 'Search Department',
-        ]);
 
         $matchingProfile = DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
             'specialty' => 'Search Specialty',
             'license_number' => 'SEARCH-100',
         ]);
@@ -323,13 +310,10 @@ class DoctorProfileControllerTest extends TestCase
         $this->authenticateForClinic($clinic);
 
         $doctor = $this->createDoctorUser($clinic);
-        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
-        $otherDepartment = Department::factory()->create(['clinic_id' => $clinic->id]);
 
         $activeProfile = DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
             'status' => DoctorProfile::STATUS_ACTIVE,
         ]);
 
@@ -337,13 +321,11 @@ class DoctorProfileControllerTest extends TestCase
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $otherDoctor->id,
-            'department_id' => $otherDepartment->id,
             'status' => DoctorProfile::STATUS_ON_LEAVE,
         ]);
 
         $response = $this->getJson(route('doctors.index', [
             'status' => DoctorProfile::STATUS_ACTIVE,
-            'department_id' => $department->id,
         ]));
 
         $response->assertOk();
@@ -411,7 +393,7 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_show_returns_404_for_profile_from_another_clinic(): void
+    public function test_show_returns_profile_for_admin_across_clinics(): void
     {
         $clinic = Clinic::factory()->create();
         $otherClinic = Clinic::factory()->create();
@@ -425,7 +407,8 @@ class DoctorProfileControllerTest extends TestCase
 
         $response = $this->getJson(route('doctors.show', ['doctorProfileId' => $profile->id]));
 
-        $response->assertNotFound();
+        $response->assertOk();
+        $response->assertJsonPath('data.id', $profile->id);
     }
 
     public function test_show_returns_clinic_days_and_doctor_schedules_using_numeric_weekdays(): void
@@ -485,7 +468,6 @@ class DoctorProfileControllerTest extends TestCase
 
         $doctor = $this->createDoctorUser($clinic);
         $replacementDoctor = $this->createDoctorUser($clinic);
-        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
 
         $profile = DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
@@ -495,11 +477,11 @@ class DoctorProfileControllerTest extends TestCase
         ]);
 
         $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'clinic_id' => $clinic->id,
             'user_id' => $replacementDoctor->id,
             'name' => 'Updated Doctor Name',
             'username' => 'updated-doctor@example.com',
             'password' => '',
-            'department_id' => $department->id,
             'gender' => DoctorProfile::GENDER_FEMALE,
             'phone' => '+963944222333',
             'work_start_date' => '2026-07-01',
@@ -568,11 +550,9 @@ class DoctorProfileControllerTest extends TestCase
         $this->authenticateForClinic($clinic);
 
         $doctor = $this->createDoctorUser($clinic);
-        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
         $profile = DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
         ]);
 
         $this->setClinicWorkingHours($clinic, [
@@ -580,7 +560,7 @@ class DoctorProfileControllerTest extends TestCase
         ]);
 
         $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
-            'department_id' => $department->id,
+            'clinic_id' => $clinic->id,
             'working_hours' => [
                 ['day_of_week' => 0, 'is_active' => true, 'start_time' => '07:00', 'end_time' => '13:00'],
             ],
@@ -619,6 +599,7 @@ class DoctorProfileControllerTest extends TestCase
         ]);
 
         $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'clinic_id' => $clinic->id,
             'working_hours' => [
                 ['day_of_week' => 2, 'is_active' => false, 'start_time' => null, 'end_time' => null],
                 ['day_of_week' => 3, 'is_active' => true, 'start_time' => '11:00', 'end_time' => '17:00'],
@@ -626,7 +607,7 @@ class DoctorProfileControllerTest extends TestCase
         ]);
 
         $response->assertOk();
-        $this->assertSoftDeleted('doctor_schedules', [
+        $this->assertDatabaseMissing('doctor_schedules', [
             'clinic_id' => $clinic->id,
             'doctor_id' => $doctor->id,
             'day_of_week' => 2,
@@ -658,6 +639,7 @@ class DoctorProfileControllerTest extends TestCase
         $otherDoctor->forceFill(['email' => 'other-doctor@example.com'])->save();
 
         $sameEmailResponse = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'clinic_id' => $clinic->id,
             'username' => 'lena@example.com',
         ]);
 
@@ -669,6 +651,7 @@ class DoctorProfileControllerTest extends TestCase
         ]);
 
         $duplicateEmailResponse = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'clinic_id' => $clinic->id,
             'username' => 'other-doctor@example.com',
         ]);
 
@@ -678,13 +661,36 @@ class DoctorProfileControllerTest extends TestCase
 
     public function test_update_uses_the_doctor_profiles_clinic_when_updating_its_account(): void
     {
-        $adminClinic = Clinic::factory()->create();
-        $doctorClinic = Clinic::factory()->create();
-        $this->authenticateForClinic($adminClinic);
+        $clinic = Clinic::factory()->create();
+        $user = $this->authenticateForClinic($clinic);
 
-        $doctor = $this->createDoctorUser($doctorClinic);
+        $doctor = $this->createDoctorUser($clinic);
         $profile = DoctorProfile::factory()->create([
-            'clinic_id' => $doctorClinic->id,
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+        ]);
+
+        $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'clinic_id' => $clinic->id,
+            'name' => 'Updated Doctor',
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('users', [
+            'id' => $doctor->id,
+            'clinic_id' => $clinic->id,
+            'name' => 'Updated Doctor',
+        ]);
+    }
+
+    public function test_update_requires_a_clinic_id(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $doctor = $this->createDoctorUser($clinic);
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
         ]);
 
@@ -692,12 +698,73 @@ class DoctorProfileControllerTest extends TestCase
             'name' => 'Updated Doctor',
         ]);
 
-        $response->assertOk();
-        $this->assertDatabaseHas('users', [
-            'id' => $doctor->id,
-            'clinic_id' => $doctorClinic->id,
-            'name' => 'Updated Doctor',
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('clinic_id');
+    }
+
+    public function test_update_moves_the_doctor_and_replaces_schedules_for_the_selected_clinic(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $targetClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $doctor = $this->createDoctorUser($clinic);
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
         ]);
+
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 1,
+            'is_available' => true,
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+        ]);
+
+        $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'clinic_id' => $targetClinic->id,
+            'working_hours' => [
+                ['day_of_week' => 2, 'is_active' => true, 'start_time' => '10:00', 'end_time' => '15:00'],
+            ],
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('doctor_profiles', ['id' => $profile->id, 'clinic_id' => $targetClinic->id]);
+        $this->assertDatabaseHas('users', ['id' => $doctor->id, 'clinic_id' => $targetClinic->id]);
+        $this->assertDatabaseMissing('doctor_schedules', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+        ]);
+        $this->assertDatabaseHas('doctor_schedules', [
+            'clinic_id' => $targetClinic->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => 2,
+        ]);
+    }
+
+    public function test_update_does_not_move_a_doctor_with_appointment_history_to_another_clinic(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $targetClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $doctor = $this->createDoctorUser($clinic);
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+        ]);
+        Appointment::factory()->create(['clinic_id' => $clinic->id, 'doctor_id' => $doctor->id]);
+
+        $response = $this->putJson(route('doctors.update', ['doctorProfileId' => $profile->id]), [
+            'clinic_id' => $targetClinic->id,
+            'working_hours' => [],
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('clinic_id');
+        $this->assertDatabaseHas('doctor_profiles', ['id' => $profile->id, 'clinic_id' => $clinic->id]);
     }
 
     public function test_destroy_deletes_doctor_profile_and_writes_audit_log(): void
@@ -760,7 +827,7 @@ class DoctorProfileControllerTest extends TestCase
         ]);
     }
 
-    public function test_bulk_destroy_deletes_only_profiles_within_clinic_scope(): void
+    public function test_bulk_destroy_deletes_selected_profiles_for_an_administrator(): void
     {
         $clinic = Clinic::factory()->create();
         $otherClinic = Clinic::factory()->create();
@@ -783,11 +850,11 @@ class DoctorProfileControllerTest extends TestCase
         ]);
 
         $response->assertOk();
-        $response->assertJsonPath('data.deleted_count', 1);
-        $response->assertJsonPath('data.failed_count', 1);
+        $response->assertJsonPath('data.deleted_count', 2);
+        $response->assertJsonPath('data.failed_count', 0);
 
         $this->assertSoftDeleted($deletableProfile);
-        $this->assertDatabaseHas('doctor_profiles', ['id' => $otherClinicProfile->id]);
+        $this->assertSoftDeleted($otherClinicProfile);
     }
 
     private function authenticateForClinic(Clinic $clinic, string $roleName = 'clinic_admin'): User

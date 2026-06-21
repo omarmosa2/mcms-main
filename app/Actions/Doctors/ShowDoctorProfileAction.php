@@ -15,8 +15,10 @@ class ShowDoctorProfileAction extends BaseAction
         int $doctorProfileId,
         int $userId,
         ?int $doctorScopeUserId = null,
+        bool $allClinics = false,
     ): DoctorProfile {
         $query = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
             ->with([
                 'user:id,clinic_id,name,email,is_active',
                 'user.doctorSchedules:id,clinic_id,doctor_id,day_of_week,start_time,end_time,is_available',
@@ -28,7 +30,9 @@ class ShowDoctorProfileAction extends BaseAction
             $query->where('user_id', $doctorScopeUserId);
         }
 
-        $query->where('clinic_id', $clinicId);
+        if (! $allClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
 
         $doctorProfile = $query->findOrFail($doctorProfileId);
 

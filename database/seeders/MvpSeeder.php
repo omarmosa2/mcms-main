@@ -7,53 +7,30 @@ use App\Actions\Rbac\SyncClinicRbacAction;
 use App\Models\Clinic;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class MvpSeeder extends Seeder
 {
     public function run(): void
     {
         $clinic = Clinic::query()->firstOrCreate(
-            ['code' => 'MVP001'],
+            ['code' => 'ADMIN001'],
             [
-                'name' => 'Demo Clinic',
-                'timezone' => 'Asia/Riyadh',
-                'currency' => 'SAR',
+                'name' => 'Administration Clinic',
+                'timezone' => 'Asia/Damascus',
+                'currency' => 'SYP',
                 'is_active' => true,
             ],
         );
 
         app(SyncClinicRbacAction::class)->handle($clinic->id);
 
-        $admin = $this->seedUser(
+        $this->seedUser(
             clinic: $clinic,
             name: 'Demo Admin',
             email: 'demo.admin@example.com',
             roleName: 'clinic_admin',
             assignedBy: null,
-        );
-
-        $this->seedUser(
-            clinic: $clinic,
-            name: 'Demo Doctor',
-            email: 'demo.doctor@example.com',
-            roleName: 'doctor',
-            assignedBy: $admin->id,
-        );
-
-        $this->seedUser(
-            clinic: $clinic,
-            name: 'Demo Receptionist',
-            email: 'demo.receptionist@example.com',
-            roleName: 'receptionist',
-            assignedBy: $admin->id,
-        );
-
-        $this->seedUser(
-            clinic: $clinic,
-            name: 'Demo Accountant',
-            email: 'demo.accountant@example.com',
-            roleName: 'accountant',
-            assignedBy: $admin->id,
         );
     }
 
@@ -74,7 +51,18 @@ class MvpSeeder extends Seeder
             ],
         );
 
-        app(AssignUserRoleAction::class)->handle($user, $roleName, $assignedBy);
+        $role = app(AssignUserRoleAction::class)->handle($user, $roleName, $assignedBy);
+
+        DB::table('role_user')
+            ->where('user_id', $user->id)
+            ->where('clinic_id', '!=', $clinic->id)
+            ->delete();
+        $user->roles()->detach($role->id);
+        $user->roles()->attach($role->id, [
+            'clinic_id' => $clinic->id,
+            'assigned_by' => $assignedBy,
+        ]);
+        $user->invalidatePermissionCache();
 
         return $user;
     }

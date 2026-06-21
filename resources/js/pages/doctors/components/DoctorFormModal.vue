@@ -347,16 +347,6 @@ const submit = (): void => {
                             </select>
                             <InputError :message="form.errors.clinic_id" />
                         </div>
-
-                        <div class="grid gap-2">
-                            <Label for="doctor_clinic">العيادة الرئيسية</Label>
-                            <Input
-                                id="doctor_clinic"
-                                :model-value="clinic.name ?? '-'"
-                                readonly
-                                class="h-11 rounded-lg bg-muted"
-                            />
-                        </div>
                     </div>
                 </section>
 

@@ -34,7 +34,7 @@ import type {
     AvailabilityPeriod,
     Appointment,
     ClinicWorkingHour,
-    DepartmentOption,
+    ClinicOption,
     Option,
     TodayAvailability,
 } from './types';
@@ -43,7 +43,7 @@ const props = defineProps<{
     appointment: Appointment | null;
     patients: Option[];
     doctors: Option[];
-    departments: DepartmentOption[];
+    clinics: ClinicOption[];
     clinicWorkingHours: ClinicWorkingHour[];
     todayAvailability: TodayAvailability;
 }>();
@@ -52,15 +52,15 @@ const emit = defineEmits<{
     close: [];
 }>();
 
-const selectedDepartmentId = ref('');
+const selectedClinicId = ref('');
 const selectedDoctorId = ref('');
 
 watch(
     () => props.appointment,
     (appointment) => {
-        selectedDepartmentId.value =
-            appointment?.doctor?.department?.id !== undefined
-                ? String(appointment.doctor.department.id)
+        selectedClinicId.value =
+            appointment?.doctor?.clinic?.id !== undefined
+                ? String(appointment.doctor.clinic.id)
                 : '';
         selectedDoctorId.value =
             appointment?.doctor_id !== null && appointment?.doctor_id !== undefined
@@ -70,13 +70,13 @@ watch(
     { immediate: true },
 );
 
-const todayAvailableDepartmentIds = computed(
-    () => new Set(props.todayAvailability.departments),
+const todayAvailableClinicIds = computed(
+    () => new Set(props.todayAvailability.clinics),
 );
 
-const availableDepartments = computed(() =>
-    props.departments.filter((department) =>
-        todayAvailableDepartmentIds.value.has(department.id),
+const availableClinics = computed(() =>
+    props.clinics.filter((clinic) =>
+        todayAvailableClinicIds.value.has(clinic.id),
     ),
 );
 
@@ -88,14 +88,14 @@ const filteredDoctors = computed(() => {
         todayAvailableDoctorIds.has(doctor.id),
     );
 
-    if (!selectedDepartmentId.value) {
+    if (!selectedClinicId.value) {
         return availableDoctors;
     }
 
-    const departmentId = Number(selectedDepartmentId.value);
+    const clinicId = Number(selectedClinicId.value);
 
     return availableDoctors.filter(
-        (doctor) => doctor.department_id === departmentId,
+        (doctor) => doctor.clinic_id === clinicId,
     );
 });
 
@@ -109,19 +109,19 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
         );
     }
 
-    const departmentId = Number(selectedDepartmentId.value);
+    const clinicId = Number(selectedClinicId.value);
 
-    if (Number.isFinite(departmentId) && departmentId > 0) {
-        return props.todayAvailability.department_periods[departmentId] ?? [];
+    if (Number.isFinite(clinicId) && clinicId > 0) {
+        return props.todayAvailability.clinic_periods[clinicId] ?? [];
     }
 
-    return Object.values(props.todayAvailability.department_periods).flat();
+    return Object.values(props.todayAvailability.clinic_periods).flat();
 });
 
-const handleDepartmentChange = (value: unknown): void => {
-    const departmentId = String(value ?? '');
+const handleClinicChange = (value: unknown): void => {
+    const clinicId = String(value ?? '');
 
-    selectedDepartmentId.value = departmentId === '__all__' ? '' : departmentId;
+    selectedClinicId.value = clinicId === '__all__' ? '' : clinicId;
     selectedDoctorId.value = '';
 };
 
@@ -256,17 +256,17 @@ const handleDoctorChange = (value: unknown): void => {
 
                         <div class="grid gap-1.5">
                             <Label
-                                for="edit_appointment_department"
+                                for="edit_appointment_clinic"
                                 class="flex items-center gap-1.5 text-xs font-medium"
                             >
                                 <Building2 class="size-3.5 text-muted-foreground" />
                                 العيادة
                             </Label>
                             <Select
-                                :model-value="selectedDepartmentId"
-                                @update:model-value="handleDepartmentChange"
+                                :model-value="selectedClinicId"
+                                @update:model-value="handleClinicChange"
                             >
-                                <SelectTrigger id="edit_appointment_department">
+                                <SelectTrigger id="edit_appointment_clinic">
                                     <SelectValue placeholder="كل العيادات" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -274,11 +274,11 @@ const handleDoctorChange = (value: unknown): void => {
                                         كل العيادات
                                     </SelectItem>
                                     <SelectItem
-                                        v-for="department in availableDepartments"
-                                        :key="department.id"
-                                        :value="String(department.id)"
+                                        v-for="clinic in availableClinics"
+                                        :key="clinic.id"
+                                        :value="String(clinic.id)"
                                     >
-                                        {{ department.name }}
+                                        {{ clinic.name }}
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
@@ -314,8 +314,8 @@ const handleDoctorChange = (value: unknown): void => {
                                         :value="String(doctor.id)"
                                     >
                                         {{
-                                            doctor.department?.name
-                                                ? `${doctor.name} - ${doctor.department.name}`
+                                            doctor.clinic?.name
+                                                ? `${doctor.name} - ${doctor.clinic.name}`
                                                 : (doctor.name ?? `#${doctor.id}`)
                                         }}
                                     </SelectItem>

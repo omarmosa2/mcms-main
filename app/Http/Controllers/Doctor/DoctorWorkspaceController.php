@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\FollowUp;
-use App\Models\Prescription;
 use App\Models\TreatmentPlan;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,7 +21,6 @@ class DoctorWorkspaceController extends Controller
 
         $clinic = Clinic::query()->find($clinicId);
         $doctorProfile = $user->doctorProfile;
-        $department = $doctorProfile?->department;
 
         $today = now()->toDateString();
 
@@ -92,8 +90,7 @@ class DoctorWorkspaceController extends Controller
         return Inertia::render('doctor/Workspace', [
             'clinic' => [
                 'name' => $clinic?->name,
-                'department_name' => $department?->name,
-                'clinic_type' => $department?->clinic_type,
+                'specialty' => $doctorProfile?->specialty,
             ],
             'doctor' => [
                 'name' => $user->name,
@@ -177,7 +174,6 @@ class DoctorWorkspaceController extends Controller
     {
         $user = $request->user();
         $doctorProfile = $user->doctorProfile;
-        $department = $doctorProfile?->department;
         $clinic = $user->clinic;
 
         return Inertia::render('doctor/Profile', [
@@ -194,8 +190,7 @@ class DoctorWorkspaceController extends Controller
             ],
             'clinic' => [
                 'name' => $clinic?->name,
-                'department_name' => $department?->name,
-                'clinic_type' => $department?->clinic_type,
+                'specialty' => $doctorProfile?->specialty,
             ],
             'work_schedule' => $doctorProfile?->work_schedule ?? [],
         ]);

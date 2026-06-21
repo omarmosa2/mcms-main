@@ -9,7 +9,7 @@ use App\Http\Resources\AppointmentResource;
 use App\Http\Resources\PatientCardVisitResource;
 use App\Http\Resources\PatientResource;
 use App\Models\Appointment;
-use App\Models\Department;
+use App\Models\Clinic;
 use App\Models\Patient;
 use App\Models\PatientCardVisit;
 use App\Models\User;
@@ -45,8 +45,8 @@ class PatientCardController extends Controller
                 ->forClinic($clinicId)
                 ->with([
                     'doctor:id,clinic_id,name',
-                    'doctor.doctorProfile:id,clinic_id,user_id,department_id,specialty',
-                    'doctor.doctorProfile.department:id,clinic_id,name,clinic_type',
+                    'doctor.doctorProfile:id,clinic_id,user_id,specialty',
+                    'doctor.doctorProfile.clinic:id,name',
                 ])
                 ->whereKey((int) $appointmentId)
                 ->first();
@@ -60,7 +60,7 @@ class PatientCardController extends Controller
             'patient' => PatientResource::make($patient)->response()->getData(true),
             'visits' => PatientCardVisitResource::collection($visits)->response()->getData(true),
             'doctors' => $this->doctorOptions($clinicId, $user),
-            'departments' => $this->departmentOptions($clinicId, $user),
+            'clinics' => $this->clinicOptions($clinicId, $user),
             'card' => $this->cardMeta($request, $patient, $visits->first()),
             'permissions' => [
                 'can_manage_visits' => $this->canManageVisits($request),
@@ -95,13 +95,12 @@ class PatientCardController extends Controller
 
             $appointment = Appointment::query()
                 ->forClinic($clinicId)
-                ->with(['doctor:id,clinic_id,name', 'doctor.doctorProfile:id,clinic_id,user_id,department_id'])
+                ->with(['doctor:id,clinic_id,name', 'doctor.doctorProfile:id,clinic_id,user_id'])
                 ->whereKey($appointmentId)
                 ->first();
 
             if ($appointment !== null) {
                 $payload['doctor_id'] = $payload['doctor_id'] ?? $appointment->doctor_id;
-                $payload['department_id'] = $payload['department_id'] ?? $appointment->doctor?->doctorProfile?->department_id;
                 $payload['visit_date'] = $payload['visit_date'] ?? $appointment->scheduled_for->toDateString();
                 $payload['visit_time'] = $payload['visit_time'] ?? $appointment->scheduled_for->format('H:i');
             }
@@ -232,8 +231,8 @@ class PatientCardController extends Controller
                 'appointments' => fn ($query) => $query
                     ->with([
                         'doctor:id,clinic_id,name',
-                        'doctor.doctorProfile:id,clinic_id,user_id,department_id,specialty',
-                        'doctor.doctorProfile.department:id,clinic_id,name,clinic_type',
+                        'doctor.doctorProfile:id,clinic_id,user_id,specialty',
+                        'doctor.doctorProfile.clinic:id,name',
                     ])
                     ->latest('scheduled_for')
                     ->limit(1),
@@ -245,7 +244,7 @@ class PatientCardController extends Controller
         return PatientCardVisit::query()
             ->forClinic($clinicId)
             ->where('patient_id', $patientId)
-            ->with(['doctor:id,clinic_id,name', 'department:id,clinic_id,name,clinic_type', 'appointment:id,clinic_id,patient_id,doctor_id,scheduled_for,appointment_number,status'])
+            ->with(['doctor:id,clinic_id,name', 'clinic:id,name', 'appointment:id,clinic_id,patient_id,doctor_id,scheduled_for,appointment_number,status'])
             ->orderByDesc('visit_date')
             ->orderByDesc('id');
     }
@@ -261,13 +260,10 @@ class PatientCardController extends Controller
             ? (int) $user->id
             : ($payload['doctor_id'] ?? null);
 
-        $departmentId = $payload['department_id'] ?? $this->departmentIdForDoctor($request, $doctorId);
-
         return [
             'visit_date' => $payload['visit_date'],
             'visit_time' => $payload['visit_time'] ?? null,
             'doctor_id' => $doctorId,
-            'department_id' => $departmentId,
             'visit_reason' => $payload['visit_reason'] ?? null,
             'chief_complaint' => $payload['chief_complaint'] ?? null,
             'general_notes' => $payload['general_notes'] ?? null,
@@ -280,26 +276,11 @@ class PatientCardController extends Controller
         ];
     }
 
-    private function departmentIdForDoctor(Request $request, mixed $doctorId): ?int
-    {
-        if ($doctorId === null) {
-            return null;
-        }
-
-        return User::query()
-            ->forClinic($this->resolveClinicId($request))
-            ->with('doctorProfile:id,clinic_id,user_id,department_id')
-            ->whereKey((int) $doctorId)
-            ->first()
-            ?->doctorProfile
-            ?->department_id;
-    }
-
     private function doctorOptions(int $clinicId, ?User $user): array
     {
         return User::query()
             ->forClinic($clinicId)
-            ->with(['doctorProfile:id,clinic_id,user_id,department_id,specialty'])
+            ->with(['doctorProfile:id,clinic_id,user_id,specialty'])
             ->whereHas('roles', function ($query) use ($clinicId): void {
                 $query->where('roles.clinic_id', $clinicId)
                     ->where('roles.name', 'doctor');
@@ -310,26 +291,22 @@ class PatientCardController extends Controller
             ->map(fn (User $doctor): array => [
                 'id' => $doctor->id,
                 'name' => $doctor->name,
-                'department_id' => $doctor->doctorProfile?->department_id,
+                'clinic_id' => $doctor->doctorProfile?->clinic_id,
                 'specialty' => $doctor->doctorProfile?->specialty,
             ])
             ->all();
     }
 
-    private function departmentOptions(int $clinicId, ?User $user): array
+    private function clinicOptions(int $clinicId, ?User $user): array
     {
-        return Department::query()
-            ->forClinic($clinicId)
-            ->when($user?->hasRole('doctor') === true, function ($query) use ($user): void {
-                $query->whereKey($user->doctorProfile?->department_id ?? 0);
-            })
+        return Clinic::query()
+            ->whereKey($clinicId)
             ->where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'clinic_type'])
-            ->map(fn (Department $department): array => [
-                'id' => $department->id,
-                'name' => $department->name,
-                'clinic_type' => $department->clinic_type,
+            ->get(['id', 'name'])
+            ->map(fn (Clinic $clinic): array => [
+                'id' => $clinic->id,
+                'name' => $clinic->name,
             ])
             ->all();
     }
@@ -338,7 +315,7 @@ class PatientCardController extends Controller
     {
         $latestAppointment = $patient->appointments->first();
         $doctor = $latestVisit?->doctor ?? $latestAppointment?->doctor;
-        $department = $latestVisit?->department ?? $doctor?->doctorProfile?->department;
+        $clinic = $latestVisit?->clinic ?? $doctor?->doctorProfile?->clinic;
 
         return [
             'clinic_name' => $request->attributes->get('clinic_name') ?? $request->user()?->clinic?->name ?? config('app.name'),
@@ -346,7 +323,7 @@ class PatientCardController extends Controller
             'page_number' => '1',
             'date' => now()->toDateString(),
             'doctor' => $doctor?->name,
-            'department' => $department?->name,
+            'clinic' => $clinic?->name,
         ];
     }
 
@@ -356,14 +333,14 @@ class PatientCardController extends Controller
             return null;
         }
 
-        $user->loadMissing('doctorProfile:id,clinic_id,user_id,department_id,specialty');
+        $user->loadMissing('doctorProfile:id,clinic_id,user_id,specialty');
 
         return [
             'id' => $user->id,
             'name' => $user->name,
             'is_doctor' => $user->hasRole('doctor'),
             'doctor_id' => $user->hasRole('doctor') ? $user->id : null,
-            'department_id' => $user->doctorProfile?->department_id,
+            'clinic_id' => $user->doctorProfile?->clinic_id,
         ];
     }
 }

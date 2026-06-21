@@ -49,12 +49,12 @@ class UpdateDoctorProfileRequest extends FormRequest
                 Rule::unique('users', 'email')->ignore($doctorUserId),
             ],
             'password' => ['sometimes', 'nullable', 'string', 'min:8', 'max:255'],
-            'department_id' => [
+            'clinic_id' => [
                 'sometimes',
-                'nullable',
+                'required',
                 'integer',
-                Rule::exists('departments', 'id')
-                    ->where(fn ($query) => $query->where('clinic_id', $clinicId)),
+                Rule::exists('clinics', 'id')
+                    ->where('is_active', true),
             ],
             'gender' => ['sometimes', 'required', 'string', Rule::in([DoctorProfile::GENDER_MALE, DoctorProfile::GENDER_FEMALE])],
             'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
@@ -181,14 +181,14 @@ class UpdateDoctorProfileRequest extends FormRequest
      */
     private function activeClinicWorkingHoursByDoctorDay(): array
     {
-        $departmentId = $this->input('department_id');
+        $clinicId = $this->input('clinic_id');
 
-        if ($departmentId === null) {
+        if ($clinicId === null) {
             return [];
         }
 
         return ClinicWorkingHour::query()
-            ->where('department_id', $departmentId)
+            ->where('clinic_id', $clinicId)
             ->where('is_active', true)
             ->whereNotNull('start_time')
             ->whereNotNull('end_time')
@@ -204,14 +204,14 @@ class UpdateDoctorProfileRequest extends FormRequest
 
     private function hasClinicWorkingHoursConfigured(): bool
     {
-        $departmentId = $this->input('department_id');
+        $clinicId = $this->input('clinic_id');
 
-        if ($departmentId === null) {
+        if ($clinicId === null) {
             return false;
         }
 
         return ClinicWorkingHour::query()
-            ->where('department_id', $departmentId)
+            ->where('clinic_id', $clinicId)
             ->exists();
     }
 

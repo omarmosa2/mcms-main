@@ -2,7 +2,7 @@
 import { useForm } from '@inertiajs/vue3';
 import { Building2, Save, X } from 'lucide-vue-next';
 import { computed, watch } from 'vue';
-import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
+import ClinicController from '@/actions/App/Http/Controllers/Clinics/ClinicController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,11 +16,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ClinicWorkingHoursSelector from './ClinicWorkingHoursSelector.vue';
-import type { ClinicWorkingDay, ClinicWorkingHour, Department } from './types';
+import type { Clinic, ClinicWorkingDay, ClinicWorkingHour } from './types';
 
 const props = defineProps<{
     open: boolean;
-    department?: Department | null;
+    department?: Clinic | null;
 }>();
 
 const emit = defineEmits<{
@@ -46,10 +46,29 @@ const emptyWorkingHours = (): ClinicWorkingHour[] =>
         end_time: null,
     }));
 
+const indexToDay: Record<number, ClinicWorkingDay> = {
+    6: 'saturday',
+    0: 'sunday',
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+};
+
 const normalizeWorkingHours = (
     rows: ClinicWorkingHour[] | undefined,
 ): ClinicWorkingHour[] => {
-    const rowMap = new Map((rows ?? []).map((row) => [row.day_of_week, row]));
+    const rowMap = new Map<string, ClinicWorkingHour>();
+
+    for (const row of rows ?? []) {
+        const key =
+            typeof row.day_of_week === 'number'
+                ? (indexToDay[row.day_of_week] ?? String(row.day_of_week))
+                : String(row.day_of_week);
+
+        rowMap.set(key, row);
+    }
 
     return weekDays.map((day) => ({
         day_of_week: day,
@@ -119,11 +138,11 @@ const submit = (): void => {
     };
 
     if (props.department) {
-        form.put(DepartmentController.update.url(props.department.id), options);
+        form.put(ClinicController.update.url(props.department.id), options);
         return;
     }
 
-    form.post(DepartmentController.store.url(), options);
+    form.post(ClinicController.store.url(), options);
 };
 </script>
 

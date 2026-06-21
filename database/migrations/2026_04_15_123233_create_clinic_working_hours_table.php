@@ -6,15 +6,12 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('clinic_working_hours', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('clinic_id')->constrained()->cascadeOnDelete();
-            $table->string('day_of_week', 16);
+            $table->foreignId('clinic_id')->constrained('clinics')->cascadeOnDelete();
+            $table->string('day_of_week');
             $table->boolean('is_active')->default(false);
             $table->time('start_time')->nullable();
             $table->time('end_time')->nullable();
@@ -25,9 +22,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('clinic_working_hours');

@@ -5,7 +5,6 @@ namespace App\Actions\Doctors;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Actions\Rbac\AssignUserRoleAction;
-use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\User;
@@ -38,7 +37,7 @@ class UpdateDoctorProfileAction extends BaseAction
             $payload,
             $doctorScopeUserId
         ): DoctorProfile {
-            $query = DoctorProfile::query()->forClinic($clinicId);
+            $query = DoctorProfile::query()->withoutGlobalScope('clinic');
 
             if ($doctorScopeUserId !== null) {
                 $query->where('user_id', $doctorScopeUserId);
@@ -50,10 +49,6 @@ class UpdateDoctorProfileAction extends BaseAction
                 $doctorUserId = (int) $payload['user_id'];
                 $this->ensureDoctorScopeCanManageUser($doctorScopeUserId, $doctorUserId);
                 $this->ensureDoctorBelongsToClinic($clinicId, $doctorUserId);
-            }
-
-            if (array_key_exists('department_id', $payload)) {
-                $this->ensureDepartmentBelongsToClinicIfProvided($clinicId, $payload['department_id']);
             }
 
             $oldValues = $doctorProfile->only($this->auditedProfileFields());
@@ -89,7 +84,7 @@ class UpdateDoctorProfileAction extends BaseAction
             return $doctorProfile->load([
                 'user:id,clinic_id,name,email,is_active',
                 'user.doctorSchedules:id,clinic_id,doctor_id,day_of_week,start_time,end_time,is_available',
-                'department:id,clinic_id,name,code,is_active',
+                'clinic:id,name,code,is_active',
             ]);
         });
     }
@@ -104,10 +99,6 @@ class UpdateDoctorProfileAction extends BaseAction
 
         if (array_key_exists('user_id', $payload) && ! empty($payload['user_id'])) {
             $normalized['user_id'] = (int) $payload['user_id'];
-        }
-
-        if (array_key_exists('department_id', $payload)) {
-            $normalized['department_id'] = $this->normalizeNullableInteger($payload['department_id']);
         }
 
         if (array_key_exists('gender', $payload)) {
@@ -190,10 +181,9 @@ class UpdateDoctorProfileAction extends BaseAction
     private function syncWorkingHours(int $clinicId, int $doctorUserId, array $workingHours): void
     {
         DoctorSchedule::query()
-            ->withTrashed()
             ->where('clinic_id', $clinicId)
             ->where('doctor_id', $doctorUserId)
-            ->forceDelete();
+            ->delete();
 
         foreach ($workingHours as $day) {
             if (! filter_var($day['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
@@ -209,15 +199,6 @@ class UpdateDoctorProfileAction extends BaseAction
                 'is_available' => true,
             ]);
         }
-    }
-
-    private function normalizeNullableInteger(mixed $value): ?int
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        return (int) $value;
     }
 
     private function normalizeNullableDate(mixed $value): ?string
@@ -261,24 +242,6 @@ class UpdateDoctorProfileAction extends BaseAction
         }
     }
 
-    private function ensureDepartmentBelongsToClinicIfProvided(int $clinicId, mixed $departmentId): void
-    {
-        if ($departmentId === null || $departmentId === '') {
-            return;
-        }
-
-        $departmentExists = Department::query()
-            ->forClinic($clinicId)
-            ->whereKey((int) $departmentId)
-            ->exists();
-
-        if (! $departmentExists) {
-            throw ValidationException::withMessages([
-                'department_id' => 'The selected clinic is not available.',
-            ]);
-        }
-    }
-
     /**
      * @return array<int, string>
      */
@@ -286,7 +249,7 @@ class UpdateDoctorProfileAction extends BaseAction
     {
         return [
             'user_id',
-            'department_id',
+            'clinic_id',
             'gender',
             'phone',
             'work_start_date',

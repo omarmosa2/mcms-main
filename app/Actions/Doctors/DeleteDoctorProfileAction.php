@@ -22,7 +22,7 @@ class DeleteDoctorProfileAction extends BaseAction
     ): void {
         DB::transaction(function () use ($clinicId, $doctorProfileId, $userId, $doctorScopeUserId): void {
             $query = DoctorProfile::query()
-                ->forClinic($clinicId)
+                ->withoutGlobalScope('clinic')
                 ->with('user:id,clinic_id,is_active');
 
             if ($doctorScopeUserId !== null) {
@@ -84,7 +84,7 @@ class DeleteDoctorProfileAction extends BaseAction
     {
         return [
             'user_id',
-            'department_id',
+            'clinic_id',
             'gender',
             'phone',
             'work_start_date',

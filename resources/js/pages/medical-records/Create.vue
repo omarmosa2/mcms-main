@@ -7,7 +7,7 @@ import {
     Stethoscope,
     Trash2,
 } from 'lucide-vue-next';
-import { computed, onMounted, watch } from 'vue';
+import { computed, onMounted } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/composables/usePermissions';
 
-type Department = {
+type Clinic = {
     id: number;
     name: string;
-    clinic_type: string | null;
+    code: string | null;
 };
 
 type PatientOption = {
@@ -32,14 +32,13 @@ type AppointmentData = {
     appointment_id: number;
     patient_id: number;
     doctor_id: number | null;
-    department_id: number | null;
-    clinic_type: string | null;
+    clinic_id: number | null;
     scheduled_for: string;
     appointment_type: string | null;
 } | null;
 
-const { departments, clinicTypes, patients, appointment_data } = defineProps<{
-    departments: Department[];
+const { clinics, clinicTypes, patients, appointment_data } = defineProps<{
+    clinics: Clinic[];
     clinicTypes: string[];
     patients: PatientOption[];
     appointment_data: AppointmentData;
@@ -64,7 +63,7 @@ const { can } = usePermissions();
 
 const form = useForm({
     patient_id: null as number | null,
-    department_id: null as number | null,
+    clinic_id: null as number | null,
     clinic_type: '' as string,
     appointment_id: null as number | null,
     visit_date: new Date().toISOString().split('T')[0],
@@ -92,27 +91,10 @@ const form = useForm({
 onMounted(() => {
     if (appointment_data) {
         form.patient_id = appointment_data.patient_id;
-        form.department_id = appointment_data.department_id;
-        form.clinic_type = appointment_data.clinic_type ?? '';
+        form.clinic_id = appointment_data.clinic_id;
         form.appointment_id = appointment_data.appointment_id;
     }
 });
-
-const selectedDepartment = computed(() =>
-    departments.find((d) => d.id === form.department_id),
-);
-
-watch(
-    () => form.department_id,
-    (newDeptId) => {
-        if (newDeptId) {
-            const dept = departments.find((d) => d.id === newDeptId);
-            if (dept?.clinic_type) {
-                form.clinic_type = dept.clinic_type;
-            }
-        }
-    },
-);
 
 function addTreatmentPlan() {
     form.treatment_plans.push({
@@ -169,7 +151,7 @@ const clinicTypeLabel = (type: string | null): string => {
 };
 
 const clinicFormFields = computed(() => {
-    const type = form.clinic_type || selectedDepartment.value?.clinic_type;
+    const type = form.clinic_type;
 
     const fieldMap: Record<string, Array<{ key: string; label: string; type: 'text' | 'textarea' }>> = {
         internal_medicine: [
@@ -309,16 +291,29 @@ function getFormDataField(key: string): string {
                     <div class="flex flex-col gap-1.5">
                         <Label>العيادة / القسم</Label>
                         <select
-                            v-model="form.department_id"
+                            v-model="form.clinic_id"
                             class="flex h-10 w-full rounded-lg border border-border bg-background px-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
                         >
                             <option :value="null">اختر العيادة</option>
-                            <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-                                {{ dept.name }}
-                                <template v-if="dept.clinic_type"> ({{ clinicTypeLabel(dept.clinic_type) }})</template>
+                            <option v-for="clinic in clinics" :key="clinic.id" :value="clinic.id">
+                                {{ clinic.name }}
                             </option>
                         </select>
-                        <InputError :message="form.errors.department_id" />
+                        <InputError :message="form.errors.clinic_id" />
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <Label>نوع العيادة</Label>
+                        <select
+                            v-model="form.clinic_type"
+                            class="flex h-10 w-full rounded-lg border border-border bg-background px-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+                        >
+                            <option value="">اختر نوع العيادة</option>
+                            <option v-for="type in clinicTypes" :key="type" :value="type">
+                                {{ clinicTypeLabel(type) }}
+                            </option>
+                        </select>
+                        <InputError :message="form.errors.clinic_type" />
                     </div>
 
                     <div class="flex flex-col gap-1.5">
@@ -328,10 +323,10 @@ function getFormDataField(key: string): string {
                     </div>
                 </div>
 
-                <div v-if="form.clinic_type || selectedDepartment?.clinic_type" class="flex items-center gap-2">
+                <div v-if="form.clinic_type" class="flex items-center gap-2">
                     <Badge variant="outline" class="border-primary/30 text-primary bg-primary/5">
                         <Stethoscope class="me-1 size-3" />
-                        نوع العيادة: {{ clinicTypeLabel(form.clinic_type || (selectedDepartment?.clinic_type ?? null)) }}
+                        نوع العيادة: {{ clinicTypeLabel(form.clinic_type) }}
                     </Badge>
                 </div>
             </div>
@@ -352,7 +347,7 @@ function getFormDataField(key: string): string {
 
                 <div v-if="clinicFormFields.length > 0" class="space-y-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
                     <h4 class="text-xs font-semibold text-primary uppercase">
-                        حقول خاصة بعيادة {{ clinicTypeLabel(form.clinic_type || (selectedDepartment?.clinic_type ?? '')) }}
+                        حقول خاصة بعيادة {{ clinicTypeLabel(form.clinic_type) }}
                     </h4>
                     <div
                         v-for="field in clinicFormFields"

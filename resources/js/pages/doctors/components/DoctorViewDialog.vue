@@ -114,7 +114,7 @@ const scheduleTimeLabel = (
                                 class="mt-1 truncate text-sm text-muted-foreground"
                             >
                                 {{ profile.specialty }} ·
-                                {{ profile.department?.name ?? 'غير معين' }}
+                                {{ profile.clinic?.name ?? 'غير معين' }}
                             </p>
                         </div>
                     </div>
@@ -179,7 +179,7 @@ const scheduleTimeLabel = (
                                 العيادة
                             </dt>
                             <dd class="mt-1 font-bold text-foreground">
-                                {{ profile.department?.name ?? '-' }}
+                                {{ profile.clinic?.name ?? '-' }}
                             </dd>
                         </div>
                         <div

@@ -6,30 +6,21 @@ export type Option = {
     phone?: string | null;
     date_of_birth?: string | null;
     age?: number | null;
-    department_id?: number | null;
+    clinic_id?: number | null;
     specialty?: string | null;
-    department?: {
+    clinic?: {
         id: number;
         name: string;
     } | null;
 };
 
-export type DepartmentOption = {
+export type ClinicOption = {
     id: number;
     name: string;
 };
 
-export type ClinicWorkingDay =
-    | 'saturday'
-    | 'sunday'
-    | 'monday'
-    | 'tuesday'
-    | 'wednesday'
-    | 'thursday'
-    | 'friday';
-
 export type ClinicWorkingHour = {
-    day_of_week: ClinicWorkingDay;
+    day_of_week: number;
     is_active: boolean;
     start_time: string | null;
     end_time: string | null;
@@ -42,15 +33,15 @@ export type AvailabilityPeriod = {
 
 export type DoctorTodayAvailability = {
     id: number;
-    department_id: number;
+    clinic_id: number;
     available_periods: AvailabilityPeriod[];
 };
 
 export type TodayAvailability = {
     date: string;
-    departments: number[];
+    clinics: number[];
     doctors: DoctorTodayAvailability[];
-    department_periods: Record<number, AvailabilityPeriod[]>;
+    clinic_periods: Record<number, AvailabilityPeriod[]>;
 };
 
 export type Appointment = {
@@ -78,7 +69,7 @@ export type Appointment = {
         id?: number;
         name?: string;
         specialty?: string | null;
-        department?: {
+        clinic?: {
             id: number;
             name: string;
         } | null;

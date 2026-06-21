@@ -222,7 +222,7 @@
                     </div>
                     <div class="info-row">
                         <div class="info-cell info-label">العيادة / القسم</div>
-                        <div class="info-cell info-value">{{ $record->department->name ?? '—' }}</div>
+                        <div class="info-cell info-value">{{ $record->clinic->name ?? '—' }}</div>
                     </div>
                     <div class="info-row">
                         <div class="info-cell info-label">نوع العيادة</div>

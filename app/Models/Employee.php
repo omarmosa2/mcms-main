@@ -82,11 +82,6 @@ class Employee extends BaseModel
         return $this->belongsTo(User::class);
     }
 
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class);
-    }
-
     public function salaryPayments(): HasMany
     {
         return $this->hasMany(EmployeeSalaryPayment::class);

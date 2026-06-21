@@ -37,7 +37,6 @@ class UpdateMedicalRecordAction extends BaseAction
         ]);
 
         $updateData = array_filter([
-            'department_id' => $payload['department_id'] ?? null,
             'clinic_type' => $payload['clinic_type'] ?? null,
             'form_data' => $payload['form_data'] ?? null,
             'chief_complaint' => array_key_exists('chief_complaint', $payload) ? $payload['chief_complaint'] : null,

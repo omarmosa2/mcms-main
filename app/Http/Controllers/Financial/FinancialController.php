@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Financial;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
-use App\Models\Department;
 use App\Models\Invoice;
 use App\Models\Payment;
 use Carbon\CarbonImmutable;
@@ -30,7 +29,6 @@ class FinancialController extends Controller
         $payload = [
             'financial_rows' => $rows->values()->all(),
             'summaries' => $summaries,
-            'departments' => $this->departmentOptions($clinicId),
             'filters' => [
                 ...$filters,
                 'period_start' => $periodStart->toDateString(),
@@ -66,7 +64,6 @@ class FinancialController extends Controller
             'date_from' => $this->nullableString($request->query('date_from')),
             'date_to' => $this->nullableString($request->query('date_to')),
             'status' => $this->allowedNullableString($request->query('status'), ['unpaid', 'partially_paid', 'paid']),
-            'department_id' => $this->nullableInteger($request->query('department_id')),
             'doctor_id' => $this->nullableInteger($request->query('doctor_id')),
             'appointment_type' => $this->allowedNullableString($request->query('appointment_type'), ['first_visit', 'review']),
         ];
@@ -102,17 +99,9 @@ class FinancialController extends Controller
             ->with([
                 'patient:id,clinic_id,first_name,last_name,file_number',
                 'doctor:id,clinic_id,name',
-                'doctor.doctorProfile:id,clinic_id,user_id,department_id',
-                'doctor.doctorProfile.department:id,clinic_id,name',
             ])
             ->whereBetween('scheduled_for', [$periodStart, $periodEnd])
             ->whereNotIn('status', [Appointment::STATUS_CANCELED, Appointment::STATUS_NO_SHOW]);
-
-        if ($filters['department_id'] !== null) {
-            $query->whereHas('doctor.doctorProfile', function ($q) use ($filters): void {
-                $q->where('department_id', $filters['department_id']);
-            });
-        }
 
         if ($filters['doctor_id'] !== null) {
             $query->where('doctor_id', $filters['doctor_id']);
@@ -138,7 +127,6 @@ class FinancialController extends Controller
                 'patient_name' => trim(($appointment->patient?->first_name ?? '').' '.($appointment->patient?->last_name ?? '')),
                 'file_number' => $appointment->patient?->file_number,
                 'doctor_name' => $appointment->doctor?->name ?? '-',
-                'department' => $appointment->doctor?->doctorProfile?->department?->name ?? '-',
                 'appointment_type' => $appointment->appointment_type ?? 'first_visit',
                 'cost' => $cost,
                 'paid_amount' => $paidAmount,
@@ -231,20 +219,6 @@ class FinancialController extends Controller
         }
 
         return 'partially_paid';
-    }
-
-    /**
-     * @return array<int, array{id: int, name: string}>
-     */
-    private function departmentOptions(int $clinicId): array
-    {
-        return Department::query()
-            ->forClinic($clinicId)
-            ->select(['id', 'name'])
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Department $department): array => ['id' => $department->id, 'name' => $department->name])
-            ->all();
     }
 
     private function nullableString(mixed $value): ?string

@@ -209,7 +209,7 @@ function startVisit(): void {
                                 العيادة
                             </p>
                             <p class="text-sm font-medium text-foreground">
-                                {{ props.appointment.doctor?.department?.name ?? '-' }}
+                                {{ props.appointment.doctor?.clinic?.name ?? '-' }}
                             </p>
                         </div>
                     </div>

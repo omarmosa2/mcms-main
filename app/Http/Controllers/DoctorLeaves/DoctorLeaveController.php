@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\DoctorLeaves\StoreDoctorLeaveRequest;
 use App\Http\Requests\DoctorLeaves\UpdateDoctorLeaveRequest;
 use App\Http\Resources\DoctorLeaveResource;
-use App\Models\Department;
+use App\Models\Clinic;
 use App\Models\DoctorLeave;
 use App\Models\DoctorProfile;
 use Illuminate\Http\JsonResponse;
@@ -26,14 +26,14 @@ class DoctorLeaveController extends Controller
 
         $query = DoctorLeave::query()
             ->forClinic($clinicId)
-            ->with(['doctor', 'department']);
+            ->with(['doctor', 'clinic']);
 
         if ($filters['doctor_id'] !== null) {
             $query->where('doctor_id', $filters['doctor_id']);
         }
 
-        if ($filters['department_id'] !== null) {
-            $query->where('department_id', $filters['department_id']);
+        if ($filters['clinic_id'] !== null) {
+            $query->where('clinic_id', $filters['clinic_id']);
         }
 
         if ($filters['status'] !== null) {
@@ -62,7 +62,7 @@ class DoctorLeaveController extends Controller
         return Inertia::render('doctor-leaves/Index', [
             'leaves' => $leavesResource->response()->getData(true),
             'doctors' => $this->doctorsForSelect($clinicId),
-            'departments' => $this->departmentsForSelect($clinicId),
+            'clinics' => $this->clinicsForSelect($clinicId),
             'filters' => $filters,
             'type_options' => [DoctorLeave::TYPE_FULL_DAY, DoctorLeave::TYPE_HOURLY],
             'status_options' => [DoctorLeave::STATUS_ACTIVE, DoctorLeave::STATUS_CANCELED],
@@ -80,7 +80,7 @@ class DoctorLeaveController extends Controller
         ]);
 
         if ($request->expectsJson()) {
-            return DoctorLeaveResource::make($leave->load(['doctor', 'department']))
+            return DoctorLeaveResource::make($leave->load(['doctor', 'clinic']))
                 ->response()
                 ->setStatusCode(Response::HTTP_CREATED);
         }
@@ -105,7 +105,7 @@ class DoctorLeaveController extends Controller
         $leave->save();
 
         if ($request->expectsJson()) {
-            return DoctorLeaveResource::make($leave->load(['doctor', 'department']));
+            return DoctorLeaveResource::make($leave->load(['doctor', 'clinic']));
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'تم تعديل إجازة الطبيب بنجاح.']);
@@ -124,7 +124,7 @@ class DoctorLeaveController extends Controller
         $leave->forceFill(['status' => DoctorLeave::STATUS_CANCELED])->save();
 
         if ($request->expectsJson()) {
-            return DoctorLeaveResource::make($leave->load(['doctor', 'department']));
+            return DoctorLeaveResource::make($leave->load(['doctor', 'clinic']));
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'تم إلغاء إجازة الطبيب بنجاح.']);
@@ -165,7 +165,7 @@ class DoctorLeaveController extends Controller
     }
 
     /**
-     * @return array<int, array{id: int, name: string|null, department_id: int|null, department: array{id: int, name: string}|null}>
+     * @return array<int, array{id: int, name: string|null, clinic_id: int|null, clinic: array{id: int, name: string}|null}>
      */
     private function doctorsForSelect(int $clinicId): array
     {
@@ -173,15 +173,15 @@ class DoctorLeaveController extends Controller
             ->forClinic($clinicId)
             ->withoutTrashed()
             ->where('status', DoctorProfile::STATUS_ACTIVE)
-            ->with(['user:id,clinic_id,name', 'department:id,clinic_id,name'])
+            ->with(['user:id,clinic_id,name', 'clinic:id,name'])
             ->get()
             ->map(fn (DoctorProfile $profile): array => [
                 'id' => (int) $profile->user_id,
                 'name' => $profile->user?->name,
-                'department_id' => $profile->department_id,
-                'department' => $profile->department === null ? null : [
-                    'id' => $profile->department->id,
-                    'name' => $profile->department->name,
+                'clinic_id' => $profile->clinic_id,
+                'clinic' => $profile->clinic === null ? null : [
+                    'id' => $profile->clinic->id,
+                    'name' => $profile->clinic->name,
                 ],
             ])
             ->filter(fn (array $doctor): bool => $doctor['name'] !== null)
@@ -192,17 +192,16 @@ class DoctorLeaveController extends Controller
     /**
      * @return array<int, array{id: int, name: string}>
      */
-    private function departmentsForSelect(int $clinicId): array
+    private function clinicsForSelect(int $clinicId): array
     {
-        return Department::query()
-            ->forClinic($clinicId)
-            ->withoutTrashed()
+        return Clinic::query()
+            ->whereKey($clinicId)
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name'])
-            ->map(fn (Department $department): array => [
-                'id' => $department->id,
-                'name' => $department->name,
+            ->map(fn (Clinic $clinic): array => [
+                'id' => $clinic->id,
+                'name' => $clinic->name,
             ])
             ->all();
     }
@@ -210,7 +209,7 @@ class DoctorLeaveController extends Controller
     /**
      * @return array{
      *     doctor_id: ?int,
-     *     department_id: ?int,
+     *     clinic_id: ?int,
      *     status: ?string,
      *     date_from: ?string,
      *     date_to: ?string,
@@ -221,7 +220,7 @@ class DoctorLeaveController extends Controller
     {
         return [
             'doctor_id' => $this->normalizeNullableInteger($request->query('doctor_id')),
-            'department_id' => $this->normalizeNullableInteger($request->query('department_id')),
+            'clinic_id' => $this->normalizeNullableInteger($request->query('clinic_id')),
             'status' => $this->normalizeStatus($request->query('status')),
             'date_from' => $this->normalizeNullableDate($request->query('date_from')),
             'date_to' => $this->normalizeNullableDate($request->query('date_to')),

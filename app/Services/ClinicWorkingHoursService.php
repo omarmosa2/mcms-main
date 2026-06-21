@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\ClinicWorkingHour;
-use App\Support\WeekDay;
 use Illuminate\Support\Carbon;
 
 class ClinicWorkingHoursService
@@ -11,12 +10,12 @@ class ClinicWorkingHoursService
     /**
      * @param  array<int, array<string, mixed>>  $workingHours
      */
-    public function replaceForDepartment(int $departmentId, array $workingHours): void
+    public function replaceForClinic(int $clinicId, array $workingHours): void
     {
         foreach ($this->normalizeRows($workingHours) as $row) {
             ClinicWorkingHour::query()->updateOrCreate(
                 [
-                    'department_id' => $departmentId,
+                    'clinic_id' => $clinicId,
                     'day_of_week' => $row['day_of_week'],
                 ],
                 [
@@ -28,15 +27,18 @@ class ClinicWorkingHoursService
         }
     }
 
-    public function getForDepartment(int $departmentId): array
+    /**
+     * @return array<int, array{day_of_week: int, is_active: bool, start_time: ?string, end_time: ?string}>
+     */
+    public function getForClinic(int $clinicId): array
     {
         $rows = ClinicWorkingHour::query()
-            ->where('department_id', $departmentId)
+            ->where('clinic_id', $clinicId)
             ->get()
             ->keyBy('day_of_week');
 
         return collect(ClinicWorkingHour::DAYS)
-            ->map(function (string $day) use ($rows): array {
+            ->map(function (int $day) use ($rows): array {
                 $row = $rows->get($day);
 
                 return [
@@ -50,53 +52,13 @@ class ClinicWorkingHoursService
             ->all();
     }
 
-    /**
-     * @return array<int, array{day_of_week: string, is_active: bool, start_time: ?string, end_time: ?string}>
-     */
-    public function getForClinic(int $clinicId): array
-    {
-        $allHours = ClinicWorkingHour::query()
-            ->whereHas('department', fn ($query) => $query->where('clinic_id', $clinicId))
-            ->get();
-
-        return collect(ClinicWorkingHour::DAYS)
-            ->map(function (string $day) use ($allHours): array {
-                $dayHours = $allHours
-                    ->where('day_of_week', $day)
-                    ->where('is_active', true)
-                    ->whereNotNull('start_time')
-                    ->whereNotNull('end_time');
-
-                if ($dayHours->isEmpty()) {
-                    return [
-                        'day_of_week' => $day,
-                        'is_active' => false,
-                        'start_time' => null,
-                        'end_time' => null,
-                    ];
-                }
-
-                $earliestStart = $dayHours->min('start_time');
-                $latestEnd = $dayHours->max('end_time');
-
-                return [
-                    'day_of_week' => $day,
-                    'is_active' => true,
-                    'start_time' => $this->formatTime($earliestStart),
-                    'end_time' => $this->formatTime($latestEnd),
-                ];
-            })
-            ->values()
-            ->all();
-    }
-
     public function isAppointmentWithinWorkingHours(
-        int $departmentId,
+        int $clinicId,
         mixed $scheduledFor,
         int $durationMinutes,
     ): bool {
         $hasSchedule = ClinicWorkingHour::query()
-            ->where('department_id', $departmentId)
+            ->where('clinic_id', $clinicId)
             ->exists();
 
         if (! $hasSchedule) {
@@ -105,11 +67,11 @@ class ClinicWorkingHoursService
 
         $start = Carbon::parse($scheduledFor);
         $end = $start->copy()->addMinutes($durationMinutes);
-        $day = WeekDay::fromDate($start);
+        $dayOfWeek = (int) $start->dayOfWeek;
 
         $workingHour = ClinicWorkingHour::query()
-            ->where('department_id', $departmentId)
-            ->where('day_of_week', $day)
+            ->where('clinic_id', $clinicId)
+            ->where('day_of_week', $dayOfWeek)
             ->first();
 
         if (
@@ -129,14 +91,14 @@ class ClinicWorkingHoursService
 
     /**
      * @param  array<int, array<string, mixed>>  $workingHours
-     * @return array<int, array{day_of_week: string, is_active: bool, start_time: ?string, end_time: ?string}>
+     * @return array<int, array{day_of_week: int, is_active: bool, start_time: ?string, end_time: ?string}>
      */
     private function normalizeRows(array $workingHours): array
     {
         $inputRows = collect($workingHours)->keyBy('day_of_week');
 
         return collect(ClinicWorkingHour::DAYS)
-            ->map(function (string $day) use ($inputRows): array {
+            ->map(function (int $day) use ($inputRows): array {
                 $input = $inputRows->get($day, []);
                 $isActive = filter_var($input['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
 

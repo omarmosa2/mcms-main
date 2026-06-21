@@ -38,7 +38,7 @@ import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
 import type {
     AvailabilityPeriod,
     ClinicWorkingHour,
-    DepartmentOption,
+    ClinicOption,
     Option,
     TodayAvailability,
 } from './types';
@@ -47,7 +47,7 @@ const props = defineProps<{
     open: boolean;
     patients: Option[];
     doctors: Option[];
-    departments: DepartmentOption[];
+    clinics: ClinicOption[];
     clinicWorkingHours: ClinicWorkingHour[];
     todayAvailability: TodayAvailability;
 }>();
@@ -56,7 +56,7 @@ const emit = defineEmits<{
     'update:open': [value: boolean];
 }>();
 
-const selectedDepartmentId = ref('');
+const selectedClinicId = ref('');
 const selectedDoctorId = ref('');
 const selectedDuration = ref('30');
 const formResetKey = ref(0);
@@ -66,13 +66,13 @@ const noDoctorSelected = computed(() => {
     return !Number.isFinite(doctorId) || doctorId <= 0;
 });
 
-const todayAvailableDepartmentIds = computed(
-    () => new Set(props.todayAvailability.departments),
+const todayAvailableClinicIds = computed(
+    () => new Set(props.todayAvailability.clinics),
 );
 
-const availableDepartments = computed(() =>
-    props.departments.filter((department) =>
-        todayAvailableDepartmentIds.value.has(department.id),
+const availableClinics = computed(() =>
+    props.clinics.filter((clinic) =>
+        todayAvailableClinicIds.value.has(clinic.id),
     ),
 );
 
@@ -84,14 +84,14 @@ const filteredDoctors = computed(() => {
         todayAvailableDoctorIds.has(doctor.id),
     );
 
-    if (!selectedDepartmentId.value) {
+    if (!selectedClinicId.value) {
         return availableDoctors;
     }
 
-    const departmentId = Number(selectedDepartmentId.value);
+    const clinicId = Number(selectedClinicId.value);
 
     return availableDoctors.filter(
-        (doctor) => doctor.department_id === departmentId,
+        (doctor) => doctor.clinic_id === clinicId,
     );
 });
 
@@ -109,10 +109,10 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
     return [];
 });
 
-const handleDepartmentChange = (value: unknown): void => {
-    const departmentId = String(value ?? '');
+const handleClinicChange = (value: unknown): void => {
+    const clinicId = String(value ?? '');
 
-    selectedDepartmentId.value = departmentId === '__all__' ? '' : departmentId;
+    selectedClinicId.value = clinicId === '__all__' ? '' : clinicId;
     selectedDoctorId.value = '';
 };
 
@@ -123,7 +123,7 @@ const handleDoctorChange = (value: unknown): void => {
 };
 
 const resetFormState = (): void => {
-    selectedDepartmentId.value = '';
+    selectedClinicId.value = '';
     selectedDoctorId.value = '';
     selectedDuration.value = '30';
     formResetKey.value += 1;
@@ -290,7 +290,7 @@ const defaultScheduledFor = computed(() => {
                         <div class="grid gap-4 sm:grid-cols-2">
                             <div class="grid gap-1.5">
                                 <Label
-                                    for="department_id"
+                                    for="clinic_id"
                                     class="flex items-center gap-1.5 text-xs font-medium"
                                 >
                                     <Building2
@@ -299,11 +299,11 @@ const defaultScheduledFor = computed(() => {
                                     العيادة
                                 </Label>
                                 <Select
-                                    :model-value="selectedDepartmentId"
-                                    @update:model-value="handleDepartmentChange"
+                                    :model-value="selectedClinicId"
+                                    @update:model-value="handleClinicChange"
                                 >
                                     <SelectTrigger
-                                        id="department_id"
+                                        id="clinic_id"
                                         class="h-11 rounded-lg bg-background"
                                     >
                                         <SelectValue
@@ -315,11 +315,11 @@ const defaultScheduledFor = computed(() => {
                                             كل العيادات
                                         </SelectItem>
                                         <SelectItem
-                                            v-for="department in availableDepartments"
-                                            :key="department.id"
-                                            :value="String(department.id)"
+                                            v-for="clinic in availableClinics"
+                                            :key="clinic.id"
+                                            :value="String(clinic.id)"
                                         >
-                                            {{ department.name }}
+                                            {{ clinic.name }}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -360,8 +360,8 @@ const defaultScheduledFor = computed(() => {
                                             :value="String(doctor.id)"
                                         >
                                             {{
-                                                doctor.department?.name
-                                                    ? `${doctor.name} - ${doctor.department.name}`
+                                                doctor.clinic?.name
+                                                    ? `${doctor.name} - ${doctor.clinic.name}`
                                                     : (doctor.name ??
                                                       `#${doctor.id}`)
                                             }}

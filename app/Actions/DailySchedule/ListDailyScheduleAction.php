@@ -4,9 +4,9 @@ namespace App\Actions\DailySchedule;
 
 use App\Actions\BaseAction;
 use App\Models\BrandingSetting;
+use App\Models\Clinic;
 use App\Models\ClinicSetting;
 use App\Models\ClinicWorkingHour;
-use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Services\DoctorAvailabilityService;
@@ -22,20 +22,19 @@ class ListDailyScheduleAction extends BaseAction
      * @return array{
      *     date: string,
      *     day_name: string,
-     *     day_of_week: string,
+     *     day_of_week: int,
      *     branding: array<string, mixed>,
      *     clinic_settings: array<string, mixed>,
      *     clinics: array<int, array<string, mixed>>
      * }
      */
-    public function handle(int $clinicId, ?string $date = null, ?int $departmentFilter = null, ?int $doctorFilter = null): array
+    public function handle(int $clinicId, ?string $date = null, ?int $clinicFilter = null, ?int $doctorFilter = null): array
     {
         $carbonDate = $date !== null && $date !== ''
             ? Carbon::createFromFormat('Y-m-d', $date)
             : Carbon::now();
 
-        $legacyDayOfWeek = (int) $carbonDate->dayOfWeek;
-        $dayString = WeekDay::fromCarbonDay($legacyDayOfWeek);
+        $dayOfWeek = (int) $carbonDate->dayOfWeek;
 
         $branding = BrandingSetting::query()
             ->withoutClinicScope()
@@ -44,14 +43,14 @@ class ListDailyScheduleAction extends BaseAction
 
         $clinicSettings = ClinicSetting::getGroupSettings($clinicId, 'clinic');
 
-        $departments = $this->getActiveDepartments($clinicId, $departmentFilter);
+        $clinics = $this->getActiveClinics($clinicId, $clinicFilter);
 
         $clinicData = [];
 
-        foreach ($departments as $department) {
+        foreach ($clinics as $clinic) {
             $clinicHours = ClinicWorkingHour::query()
-                ->where('department_id', $department->id)
-                ->where('day_of_week', $dayString)
+                ->where('clinic_id', $clinic->id)
+                ->where('day_of_week', $dayOfWeek)
                 ->where('is_active', true)
                 ->whereNotNull('start_time')
                 ->whereNotNull('end_time')
@@ -61,19 +60,17 @@ class ListDailyScheduleAction extends BaseAction
                 continue;
             }
 
-            $doctors = $this->getDoctorsForDepartment(
-                clinicId: $clinicId,
-                departmentId: (int) $department->id,
-                dayString: $dayString,
-                legacyDayOfWeek: $legacyDayOfWeek,
+            $doctors = $this->getDoctorsForClinic(
+                clinicId: (int) $clinic->id,
+                dayOfWeek: $dayOfWeek,
                 date: $carbonDate,
                 doctorFilter: $doctorFilter,
             );
 
-            $clinicData[$department->id] = [
-                'id' => $department->id,
-                'name' => $department->name,
-                'clinic_type' => $department->clinic_type,
+            $clinicData[$clinic->id] = [
+                'id' => $clinic->id,
+                'name' => $clinic->name,
+                'clinic_type' => null,
                 'clinic_start_time' => $this->formatTime($clinicHours->start_time),
                 'clinic_end_time' => $this->formatTime($clinicHours->end_time),
                 'doctors' => $doctors->values()->all(),
@@ -82,8 +79,8 @@ class ListDailyScheduleAction extends BaseAction
 
         return [
             'date' => $carbonDate->format('Y-m-d'),
-            'day_name' => WeekDay::arabicName($dayString),
-            'day_of_week' => $dayString,
+            'day_name' => WeekDay::arabicName((string) $dayOfWeek),
+            'day_of_week' => $dayOfWeek,
             'formatted_date' => $carbonDate->locale('ar')->isoFormat('D MMMM YYYY'),
             'branding' => [
                 'company_name' => $branding?->company_name,
@@ -100,15 +97,13 @@ class ListDailyScheduleAction extends BaseAction
     }
 
     /**
-     * @return Collection<int, Department>
+     * @return Collection<int, Clinic>
      */
-    private function getActiveDepartments(int $clinicId, ?int $departmentFilter): Collection
+    private function getActiveClinics(int $clinicId, ?int $clinicFilter): Collection
     {
-        return Department::query()
-            ->forClinic($clinicId)
-            ->withoutTrashed()
+        return Clinic::query()
+            ->whereKey($clinicFilter ?? $clinicId)
             ->where('is_active', true)
-            ->when($departmentFilter !== null, fn ($query) => $query->whereKey($departmentFilter))
             ->orderBy('name')
             ->get();
     }
@@ -116,37 +111,33 @@ class ListDailyScheduleAction extends BaseAction
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    private function getDoctorsForDepartment(
+    private function getDoctorsForClinic(
         int $clinicId,
-        int $departmentId,
-        string $dayString,
-        int $legacyDayOfWeek,
+        int $dayOfWeek,
         Carbon $date,
         ?int $doctorFilter,
     ): Collection {
         $doctorIds = DoctorProfile::query()
             ->forClinic($clinicId)
             ->withoutTrashed()
-            ->where('department_id', $departmentId)
             ->where('status', DoctorProfile::STATUS_ACTIVE)
             ->pluck('user_id');
 
         return DoctorSchedule::query()
             ->forClinic($clinicId)
             ->withoutTrashed()
-            ->whereIn('day_of_week', [$dayString, (string) $legacyDayOfWeek])
+            ->where('day_of_week', $dayOfWeek)
             ->where('is_available', true)
             ->whereIn('doctor_id', $doctorIds)
             ->when($doctorFilter !== null, fn ($query) => $query->where('doctor_id', $doctorFilter))
             ->with(['doctor', 'doctor.doctorProfile'])
             ->orderBy('start_time')
             ->get()
-            ->map(function (DoctorSchedule $schedule) use ($clinicId, $departmentId, $date): ?array {
+            ->map(function (DoctorSchedule $schedule) use ($clinicId, $date): ?array {
                 $availability = $this->doctorAvailabilityService->availabilityForDay(
                     clinicId: $clinicId,
                     doctorId: (int) $schedule->doctor_id,
                     date: $date,
-                    departmentId: $departmentId,
                 );
 
                 if ($availability['unavailable_all_day'] || ! $availability['is_available']) {

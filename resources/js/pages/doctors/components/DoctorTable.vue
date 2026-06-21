@@ -97,7 +97,7 @@ const compensationValueLabel = (profile: DoctorProfile): string => {
                             </span>
                         </td>
                         <td class="px-4 py-4">{{ profile.specialty }}</td>
-                        <td class="px-4 py-4 text-foreground">{{ profile.department?.name ?? '-' }}</td>
+                        <td class="px-4 py-4 text-foreground">{{ profile.clinic?.name ?? '-' }}</td>
                         <td class="px-4 py-4">{{ compensationTypeLabel(profile) }}</td>
                         <td class="px-4 py-4">{{ compensationValueLabel(profile) }}</td>
                         <td class="px-4 py-4">

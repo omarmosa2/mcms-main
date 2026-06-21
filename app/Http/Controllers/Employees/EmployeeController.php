@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Employees;
 
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Http\Controllers\Controller;
-use App\Models\Department;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -26,7 +25,7 @@ class EmployeeController extends Controller
 
         $employees = Employee::query()
             ->forClinic($clinicId)
-            ->with(['department:id,name,code', 'user:id,name,email'])
+            ->with(['user:id,name,email'])
             ->withCount('salaryPayments')
             ->when($filters['search'] !== null, function ($query) use ($filters): void {
                 $search = $filters['search'];
@@ -42,7 +41,6 @@ class EmployeeController extends Controller
             })
             ->when($filters['employee_type'] !== null, fn ($query) => $query->where('employee_type', $filters['employee_type']))
             ->when($filters['status'] !== null, fn ($query) => $query->where('status', $filters['status']))
-            ->when($filters['department_id'] !== null, fn ($query) => $query->where('department_id', $filters['department_id']))
             ->when($filters['education_level'] !== null, fn ($query) => $query->where('education_level', $filters['education_level']))
             ->when($filters['hire_date_from'] !== null, fn ($query) => $query->whereDate('hire_date', '>=', $filters['hire_date_from']))
             ->when($filters['hire_date_to'] !== null, fn ($query) => $query->whereDate('hire_date', '<=', $filters['hire_date_to']))
@@ -52,7 +50,6 @@ class EmployeeController extends Controller
 
         $payload = [
             'employees' => $employees->through(fn (Employee $employee): array => $this->employeePayload($employee))->toArray(),
-            'departments' => $this->departmentOptions($clinicId),
             'filters' => $filters,
             'stats' => [
                 'total' => Employee::query()->forClinic($clinicId)->count(),
@@ -108,7 +105,7 @@ class EmployeeController extends Controller
         });
 
         if ($request->expectsJson()) {
-            return response()->json(['data' => $this->employeePayload($employee->load(['department', 'user']))], Response::HTTP_CREATED);
+            return response()->json(['data' => $this->employeePayload($employee->load(['user']))], Response::HTTP_CREATED);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Employee saved successfully.']);
@@ -125,7 +122,7 @@ class EmployeeController extends Controller
         $employee->update($payload);
 
         if ($request->expectsJson()) {
-            return response()->json(['data' => $this->employeePayload($employee->refresh()->load(['department', 'user']))]);
+            return response()->json(['data' => $this->employeePayload($employee->refresh()->load(['user']))]);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Employee updated successfully.']);
@@ -177,7 +174,6 @@ class EmployeeController extends Controller
             'search' => $this->nullableString($request->query('search')),
             'employee_type' => $this->allowedNullableString($request->query('employee_type'), $this->employeeTypes()),
             'status' => $this->allowedNullableString($request->query('status'), [Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE]),
-            'department_id' => $this->nullableInteger($request->query('department_id')),
             'education_level' => $this->allowedNullableString($request->query('education_level'), $this->educationLevels()),
             'hire_date_from' => $this->nullableString($request->query('hire_date_from')),
             'hire_date_to' => $this->nullableString($request->query('hire_date_to')),
@@ -206,10 +202,6 @@ class EmployeeController extends Controller
             'hire_date' => ['required', 'date'],
             'status' => ['required', Rule::in([Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE])],
             'job_title' => ['required', 'string', 'max:255'],
-            'department_id' => [
-                'nullable',
-                Rule::exists('departments', 'id')->where('clinic_id', $clinicId),
-            ],
             'employee_type' => ['required', Rule::in($this->employeeTypes())],
             'specialty' => ['nullable', 'string', 'max:150'],
             'job_description' => ['nullable', 'string', 'max:2000'],
@@ -255,11 +247,6 @@ class EmployeeController extends Controller
             'hire_date' => $employee->hire_date?->toDateString(),
             'status' => $employee->status,
             'job_title' => $employee->job_title,
-            'department_id' => $employee->department_id,
-            'department' => $employee->department !== null ? [
-                'id' => $employee->department->id,
-                'name' => $employee->department->name,
-            ] : null,
             'employee_type' => $employee->employee_type,
             'specialty' => $employee->specialty,
             'job_description' => $employee->job_description,
@@ -278,20 +265,6 @@ class EmployeeController extends Controller
                 'email' => $employee->user->email,
             ] : null,
         ];
-    }
-
-    /**
-     * @return array<int, array{id: int, name: string}>
-     */
-    private function departmentOptions(int $clinicId): array
-    {
-        return Department::query()
-            ->forClinic($clinicId)
-            ->select(['id', 'name'])
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Department $department): array => ['id' => $department->id, 'name' => $department->name])
-            ->all();
     }
 
     /**

@@ -75,12 +75,11 @@ class WeekDay
         return in_array($normalized, self::DAYS, true) ? $normalized : 'sunday';
     }
 
-    public static function toIndex(string $day): int
+    public static function toIndex(mixed $day): int
     {
-        $normalized = self::normalize($day);
-        $index = array_search($normalized, self::DAYS, true);
-
-        return $index !== false ? $index : 0;
+        return is_numeric($day)
+            ? (int) $day
+            : self::toCarbonDay((string) $day);
     }
 
     public static function arabicName(string $day): string

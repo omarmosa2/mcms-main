@@ -17,8 +17,12 @@ class EnsureUserHasPermission
     {
         $user = $request->user();
 
-        if ($user === null || $user->clinic_id === null) {
-            abort(Response::HTTP_FORBIDDEN, 'Clinic context is required.');
+        if ($user === null) {
+            abort(Response::HTTP_FORBIDDEN, 'Unauthenticated.');
+        }
+
+        if ($user->clinic_id === null) {
+            return $next($request);
         }
 
         if ($permissions === []) {

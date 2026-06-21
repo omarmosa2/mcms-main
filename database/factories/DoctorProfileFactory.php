@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Clinic;
-use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -24,11 +23,6 @@ class DoctorProfileFactory extends Factory
             'clinic_id' => Clinic::factory(),
             'user_id' => function (array $attributes): int {
                 return User::factory()->create([
-                    'clinic_id' => $attributes['clinic_id'],
-                ])->id;
-            },
-            'department_id' => function (array $attributes): int {
-                return Department::factory()->create([
                     'clinic_id' => $attributes['clinic_id'],
                 ])->id;
             },

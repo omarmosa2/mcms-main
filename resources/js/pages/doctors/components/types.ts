@@ -9,7 +9,7 @@ export type DoctorUser = {
     is_active: boolean;
 };
 
-export type DepartmentOption = {
+export type ClinicSelectOption = {
     id: number;
     name: string;
     code: string | null;
@@ -30,14 +30,7 @@ export type WorkingHour = {
 };
 
 export type ClinicWorkingHour = {
-    day_of_week:
-        | 'saturday'
-        | 'sunday'
-        | 'monday'
-        | 'tuesday'
-        | 'wednesday'
-        | 'thursday'
-        | 'friday';
+    day_of_week: number;
     is_active: boolean;
     start_time: string | null;
     end_time: string | null;
@@ -47,7 +40,6 @@ export type DoctorProfile = {
     id: number;
     clinic_id: number;
     user_id: number;
-    department_id: number | null;
     gender: DoctorGender | null;
     phone: string | null;
     work_start_date: string | null;
@@ -61,7 +53,7 @@ export type DoctorProfile = {
     working_hours: WorkingHour[];
     bio: string | null;
     user?: DoctorUser | null;
-    department?: DepartmentOption | null;
+    clinic?: ClinicSelectOption | null;
     created_at: string | null;
     updated_at: string | null;
 };
@@ -71,7 +63,7 @@ export type DoctorProfileStats = {
     active_doctors: number;
     on_leave_doctors: number;
     inactive_doctors: number;
-    departments_with_doctors: number;
+    clinics_with_doctors: number;
 };
 
 export type PaginationMeta = {

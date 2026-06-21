@@ -2,31 +2,31 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { Plus } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
+import ClinicController from '@/actions/App/Http/Controllers/Clinics/ClinicController';
 import { Button } from '@/components/ui/button';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
 import ClinicFormModal from './components/ClinicFormModal.vue';
-import DepartmentStatsCards from './components/DepartmentStatsCards.vue';
-import DepartmentTable from './components/DepartmentTable.vue';
-import DepartmentViewDialog from './components/DepartmentViewDialog.vue';
+import ClinicStatsCards from './components/ClinicStatsCards.vue';
+import ClinicTable from './components/ClinicTable.vue';
+import ClinicViewDialog from './components/ClinicViewDialog.vue';
 import type {
     ActiveFilter,
-    Department,
-    DepartmentSortField,
+    Clinic,
+    ClinicSortField,
     PaginatedResponse,
     SortDirection,
 } from './components/types';
 
-const { departments, filters } = defineProps<{
-    departments: PaginatedResponse<Department>;
+const { departments: clinics, filters } = defineProps<{
+    departments: PaginatedResponse<Clinic>;
     filters: {
         search: string | null;
         is_active: boolean | null;
         per_page: number;
-        sort_by: DepartmentSortField | null;
+        sort_by: ClinicSortField | null;
         sort_direction: SortDirection | null;
     };
 }>();
@@ -36,7 +36,7 @@ defineOptions({
         breadcrumbs: [
             {
                 title: 'العيادات',
-                href: DepartmentController.index(),
+                href: ClinicController.index(),
             },
         ],
     },
@@ -54,10 +54,10 @@ const {
 const toast = useToast();
 const page = usePage();
 
-const viewingDepartment = ref<Department | null>(null);
-const editingDepartment = ref<Department | null>(null);
+const viewingClinic = ref<Clinic | null>(null);
+const editingClinic = ref<Clinic | null>(null);
 const isCreateDialogOpen = ref(false);
-const selectedDepartmentIds = ref<number[]>([]);
+const selectedClinicIds = ref<number[]>([]);
 
 const roleNames = computed<string[]>(() => {
     return (
@@ -94,7 +94,7 @@ const activeRoleLabel = computed<string>(
 
 const localSearch = ref<string>(filters.search ?? '');
 const localRowsPerPage = ref<number>(filters.per_page);
-const localPage = ref<number>(departments.meta.current_page);
+const localPage = ref<number>(clinics.meta.current_page);
 
 const resolveInitialActiveFilter = (): ActiveFilter => {
     if (filters.is_active === true) {
@@ -110,66 +110,66 @@ const resolveInitialActiveFilter = (): ActiveFilter => {
 
 const localIsActive = ref<ActiveFilter>(resolveInitialActiveFilter());
 
-const allowedSortFields: DepartmentSortField[] = [
+const allowedSortFields: ClinicSortField[] = [
     'name',
     'code',
     'is_active',
-    'doctor_profiles_count',
+    'employees_count',
     'created_at',
 ];
 
-const resolveInitialSortBy = (): DepartmentSortField => {
+const resolveInitialSortBy = (): ClinicSortField => {
     const sortBy = filters.sort_by;
 
-    if (sortBy !== null && allowedSortFields.includes(sortBy as DepartmentSortField)) {
+    if (sortBy !== null && allowedSortFields.includes(sortBy as ClinicSortField)) {
         return sortBy;
     }
 
     return 'created_at';
 };
 
-const localSortBy = ref<DepartmentSortField>(resolveInitialSortBy());
+const localSortBy = ref<ClinicSortField>(resolveInitialSortBy());
 const localSortDirection = ref<SortDirection>(
     filters.sort_direction === 'asc' ? 'asc' : 'desc',
 );
 
-const visibleDepartments = computed<Department[]>(() => departments.data);
-const totalLocalPages = computed<number>(() => Math.max(1, departments.meta.last_page));
-const localVisibleFrom = computed<number>(() => departments.meta.from ?? 0);
-const localVisibleTo = computed<number>(() => departments.meta.to ?? 0);
+const visibleClinics = computed<Clinic[]>(() => clinics.data);
+const totalLocalPages = computed<number>(() => Math.max(1, clinics.meta.last_page));
+const localVisibleFrom = computed<number>(() => clinics.meta.from ?? 0);
+const localVisibleTo = computed<number>(() => clinics.meta.to ?? 0);
 
-const activeDepartmentsOnPage = computed<number>(
-    () => visibleDepartments.value.filter((department) => department.is_active).length,
+const activeClinicsOnPage = computed<number>(
+    () => visibleClinics.value.filter((clinic) => clinic.is_active).length,
 );
 
-const inactiveDepartmentsOnPage = computed<number>(
-    () => visibleDepartments.value.filter((department) => !department.is_active).length,
+const inactiveClinicsOnPage = computed<number>(
+    () => visibleClinics.value.filter((clinic) => !clinic.is_active).length,
 );
 
 const totalDoctors = computed<number>(() =>
-    visibleDepartments.value.reduce(
-        (sum, dept) => sum + (dept.doctor_profiles_count ?? 0),
+    visibleClinics.value.reduce(
+        (sum, clinic) => sum + (clinic.employees_count ?? 0),
         0,
     ),
 );
 
-const selectableDepartmentIds = computed<number[]>(() =>
-    visibleDepartments.value.map((department) => department.id),
+const selectableClinicIds = computed<number[]>(() =>
+    visibleClinics.value.map((clinic) => clinic.id),
 );
 
-const areAllDepartmentsSelected = computed<boolean>(() => {
-    if (selectableDepartmentIds.value.length === 0) {
+const areAllClinicsSelected = computed<boolean>(() => {
+    if (selectableClinicIds.value.length === 0) {
         return false;
     }
 
-    return selectableDepartmentIds.value.every((departmentId) =>
-        selectedDepartmentIds.value.includes(departmentId),
+    return selectableClinicIds.value.every((clinicId) =>
+        selectedClinicIds.value.includes(clinicId),
     );
 });
 
 const defaultRowsPerPage = 15;
 const isSyncingFromServer = ref(false);
-let departmentFiltersDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+let clinicFiltersDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const buildIndexQuery = (
     overrides: Partial<{
@@ -177,7 +177,7 @@ const buildIndexQuery = (
         is_active: ActiveFilter;
         per_page: number;
         page: number;
-        sort_by: DepartmentSortField;
+        sort_by: ClinicSortField;
         sort_direction: SortDirection;
     }> = {},
 ) => {
@@ -199,13 +199,13 @@ const buildIndexQuery = (
     };
 };
 
-const reloadDepartments = (
+const reloadClinics = (
     overrides: Partial<{
         search: string;
         is_active: ActiveFilter;
         per_page: number;
         page: number;
-        sort_by: DepartmentSortField;
+        sort_by: ClinicSortField;
         sort_direction: SortDirection;
     }> = {},
     debounce = false,
@@ -216,7 +216,7 @@ const reloadDepartments = (
 
     const executeReload = (): void => {
         router.cancelAll();
-        router.get(DepartmentController.index.url(), buildIndexQuery(overrides), {
+        router.get(ClinicController.index.url(), buildIndexQuery(overrides), {
             only: ['departments', 'filters'],
             preserveState: true,
             preserveScroll: true,
@@ -225,11 +225,11 @@ const reloadDepartments = (
     };
 
     if (debounce) {
-        if (departmentFiltersDebounceTimeout !== null) {
-            clearTimeout(departmentFiltersDebounceTimeout);
+        if (clinicFiltersDebounceTimeout !== null) {
+            clearTimeout(clinicFiltersDebounceTimeout);
         }
 
-        departmentFiltersDebounceTimeout = setTimeout(executeReload, 320);
+        clinicFiltersDebounceTimeout = setTimeout(executeReload, 320);
 
         return;
     }
@@ -237,7 +237,7 @@ const reloadDepartments = (
     executeReload();
 };
 
-const toggleSort = (field: DepartmentSortField): void => {
+const toggleSort = (field: ClinicSortField): void => {
     if (localSortBy.value === field) {
         localSortDirection.value = localSortDirection.value === 'asc' ? 'desc' : 'asc';
     } else {
@@ -256,7 +256,7 @@ const resetLocalFilters = (): void => {
     localPage.value = 1;
     isSyncingFromServer.value = false;
 
-    reloadDepartments({
+    reloadClinics({
         search: '',
         is_active: 'all',
         per_page: defaultRowsPerPage,
@@ -272,7 +272,7 @@ const goToPreviousPage = (): void => {
     }
 
     localPage.value -= 1;
-    reloadDepartments({ page: localPage.value });
+    reloadClinics({ page: localPage.value });
 };
 
 const goToNextPage = (): void => {
@@ -281,7 +281,7 @@ const goToNextPage = (): void => {
     }
 
     localPage.value += 1;
-    reloadDepartments({ page: localPage.value });
+    reloadClinics({ page: localPage.value });
 };
 
 watch(
@@ -291,7 +291,7 @@ watch(
         filters.per_page,
         filters.sort_by,
         filters.sort_direction,
-        departments.meta.current_page,
+        clinics.meta.current_page,
     ],
     () => {
         isSyncingFromServer.value = true;
@@ -300,7 +300,7 @@ watch(
         localRowsPerPage.value = filters.per_page;
         localSortBy.value = resolveInitialSortBy();
         localSortDirection.value = filters.sort_direction === 'asc' ? 'asc' : 'desc';
-        localPage.value = departments.meta.current_page;
+        localPage.value = clinics.meta.current_page;
         isSyncingFromServer.value = false;
     },
     { immediate: true },
@@ -310,7 +310,7 @@ watch(
     () => localSearch.value,
     () => {
         localPage.value = 1;
-        reloadDepartments({ page: 1, search: localSearch.value.trim() }, true);
+        reloadClinics({ page: 1, search: localSearch.value.trim() }, true);
     },
 );
 
@@ -318,7 +318,7 @@ watch(
     () => localIsActive.value,
     () => {
         localPage.value = 1;
-        reloadDepartments({ page: 1, is_active: localIsActive.value });
+        reloadClinics({ page: 1, is_active: localIsActive.value });
     },
 );
 
@@ -326,7 +326,7 @@ watch(
     () => localRowsPerPage.value,
     () => {
         localPage.value = 1;
-        reloadDepartments({ page: 1, per_page: localRowsPerPage.value });
+        reloadClinics({ page: 1, per_page: localRowsPerPage.value });
     },
 );
 
@@ -334,7 +334,7 @@ watch(
     () => [localSortBy.value, localSortDirection.value],
     () => {
         localPage.value = 1;
-        reloadDepartments({
+        reloadClinics({
             page: 1,
             sort_by: localSortBy.value,
             sort_direction: localSortDirection.value,
@@ -343,52 +343,52 @@ watch(
 );
 
 watch(
-    () => selectableDepartmentIds.value,
+    () => selectableClinicIds.value,
     (ids) => {
-        selectedDepartmentIds.value = selectedDepartmentIds.value.filter((id) =>
+        selectedClinicIds.value = selectedClinicIds.value.filter((id) =>
             ids.includes(id),
         );
     },
 );
 
 onBeforeUnmount(() => {
-    if (departmentFiltersDebounceTimeout !== null) {
-        clearTimeout(departmentFiltersDebounceTimeout);
-        departmentFiltersDebounceTimeout = null;
+    if (clinicFiltersDebounceTimeout !== null) {
+        clearTimeout(clinicFiltersDebounceTimeout);
+        clinicFiltersDebounceTimeout = null;
     }
 });
 
-const toggleAllDepartmentsSelection = (event: Event): void => {
+const toggleAllClinicsSelection = (event: Event): void => {
     const target = event.target as HTMLInputElement;
 
-    selectedDepartmentIds.value = target.checked
-        ? [...selectableDepartmentIds.value]
+    selectedClinicIds.value = target.checked
+        ? [...selectableClinicIds.value]
         : [];
 };
 
-const clearSelectedDepartments = (): void => {
-    selectedDepartmentIds.value = [];
+const clearSelectedClinics = (): void => {
+    selectedClinicIds.value = [];
 };
 
-const openViewDepartment = (department: Department): void => {
-    viewingDepartment.value = department;
+const openViewClinic = (clinic: Clinic): void => {
+    viewingClinic.value = clinic;
 };
 
-const openEditDepartment = (department: Department): void => {
-    editingDepartment.value = department;
+const openEditClinic = (clinic: Clinic): void => {
+    editingClinic.value = clinic;
 };
 
-const deleteDepartment = async (department: Department) => {
+const deleteClinic = async (clinic: Clinic) => {
     const confirmed = await confirm({
         title: 'حذف العيادة',
-        description: `هل أنت متأكد من حذف العيادة "${department.name}"؟ لا يمكن التراجع عن هذا الإجراء.`,
+        description: `هل أنت متأكد من حذف العيادة "${clinic.name}"؟ لا يمكن التراجع عن هذا الإجراء.`,
         confirmText: 'حذف',
         cancelText: 'إلغاء',
         variant: 'destructive',
     });
 
     if (confirmed) {
-        router.delete(DepartmentController.destroy(department.id), {
+        router.delete(ClinicController.destroy(clinic.id), {
             onSuccess: () => {
                 closeConfirm();
                 toast.success('تم حذف العيادة بنجاح');
@@ -432,38 +432,38 @@ const deleteDepartment = async (department: Department) => {
             </div>
         </div>
 
-        <DepartmentStatsCards
-            :total-departments="departments.meta.total"
-            :active-count="activeDepartmentsOnPage"
-            :inactive-count="inactiveDepartmentsOnPage"
+        <ClinicStatsCards
+            :total-departments="clinics.meta.total"
+            :active-count="activeClinicsOnPage"
+            :inactive-count="inactiveClinicsOnPage"
             :total-doctors="totalDoctors"
         />
 
-        <DepartmentTable
+        <ClinicTable
             v-model:search="localSearch"
             v-model:active-filter="localIsActive"
             v-model:rows-per-page="localRowsPerPage"
-            v-model:selected-ids="selectedDepartmentIds"
-            :departments="departments.data"
+            v-model:selected-ids="selectedClinicIds"
+            :clinics="clinics.data"
             :page="localPage"
             :total-pages="totalLocalPages"
             :visible-from="localVisibleFrom"
             :visible-to="localVisibleTo"
-            :total-departments="departments.meta.total"
+            :total-clinics="clinics.meta.total"
             :sort-by="localSortBy"
             :sort-direction="localSortDirection"
-            :are-all-selected="areAllDepartmentsSelected"
+            :are-all-selected="areAllClinicsSelected"
             :can-delete="can('department.delete')"
             :can-update="can('department.update')"
             @toggle-sort="toggleSort"
             @previous-page="goToPreviousPage"
             @next-page="goToNextPage"
             @reset-filters="resetLocalFilters"
-            @toggle-all-selection="toggleAllDepartmentsSelection"
-            @clear-selection="clearSelectedDepartments"
-            @view="openViewDepartment"
-            @edit="openEditDepartment"
-            @delete="deleteDepartment"
+            @toggle-all-selection="toggleAllClinicsSelection"
+            @clear-selection="clearSelectedClinics"
+            @view="openViewClinic"
+            @edit="openEditClinic"
+            @delete="deleteClinic"
         />
 
         <ClinicFormModal
@@ -472,17 +472,17 @@ const deleteDepartment = async (department: Department) => {
             @saved="() => {}"
         />
 
-        <DepartmentViewDialog
-            :open="viewingDepartment !== null"
-            :department="viewingDepartment"
-            @update:open="(val) => { if (!val) viewingDepartment = null }"
+        <ClinicViewDialog
+            :open="viewingClinic !== null"
+            :department="viewingClinic"
+            @update:open="(val) => { if (!val) viewingClinic = null }"
         />
 
         <ClinicFormModal
-            :open="editingDepartment !== null"
-            :department="editingDepartment"
-            @update:open="(val) => { if (!val) editingDepartment = null }"
-            @saved="editingDepartment = null"
+            :open="editingClinic !== null"
+            :department="editingClinic"
+            @update:open="(val) => { if (!val) editingClinic = null }"
+            @saved="editingClinic = null"
         />
 
         <ConfirmationDialog

@@ -115,23 +115,11 @@ class DoctorScheduleController extends Controller
     public function clinicHours(Request $request): JsonResponse
     {
         $dayOfWeek = (int) $request->query('day_of_week', 0);
-        $departmentId = (int) $request->query('department_id', 0);
-
-        $dayStrings = [
-            0 => 'sunday',
-            1 => 'monday',
-            2 => 'tuesday',
-            3 => 'wednesday',
-            4 => 'thursday',
-            5 => 'friday',
-            6 => 'saturday',
-        ];
-
-        $dayString = $dayStrings[$dayOfWeek] ?? 'sunday';
+        $clinicId = (int) $request->query('clinic_id', 0);
 
         $clinicHour = ClinicWorkingHour::query()
-            ->where('department_id', $departmentId)
-            ->where('day_of_week', $dayString)
+            ->where('clinic_id', $clinicId)
+            ->where('day_of_week', $dayOfWeek)
             ->where('is_active', true)
             ->first();
 

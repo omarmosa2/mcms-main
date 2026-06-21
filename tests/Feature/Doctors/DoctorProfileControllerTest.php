@@ -45,17 +45,13 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertJsonPath('data.0.id', $doctorProfile->id);
     }
 
-    public function test_index_passes_clinic_working_hours_with_department_options(): void
+    public function test_index_passes_department_options_without_working_hours(): void
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
-        $department = Department::factory()->create([
+        Department::factory()->create([
             'clinic_id' => $clinic->id,
             'name' => 'Cardiology',
-        ]);
-
-        $this->setDepartmentWorkingHours($department, [
-            'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
         $response = $this->get(route('doctors.index'));
@@ -63,10 +59,7 @@ class DoctorProfileControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('doctors/Index')
-            ->where('departments.0.working_hours.1.day_of_week', 'sunday')
-            ->where('departments.0.working_hours.1.is_active', true)
-            ->where('departments.0.working_hours.1.start_time', '09:00')
-            ->where('departments.0.working_hours.1.end_time', '17:00')
+            ->has('doctor_profiles')
         );
     }
 
@@ -122,7 +115,6 @@ class DoctorProfileControllerTest extends TestCase
             ->where('stats.active_doctors', 1)
             ->where('stats.on_leave_doctors', 1)
             ->where('stats.inactive_doctors', 1)
-            ->where('stats.departments_with_doctors', 2)
         );
     }
 
@@ -139,6 +131,7 @@ class DoctorProfileControllerTest extends TestCase
         ]);
 
         $payload = [
+            'clinic_id' => $clinic->id,
             'name' => 'Dr New Account',
             'username' => 'doctor-new@example.com',
             'password' => 'password-123',
@@ -167,7 +160,6 @@ class DoctorProfileControllerTest extends TestCase
         $response = $this->postJson(route('doctors.store'), $payload);
 
         $response->assertCreated();
-        $response->assertJsonPath('data.department_id', $department->id);
         $response->assertJsonPath('data.license_number', 'LIC-2026-100');
         $response->assertJsonPath('data.work_start_date', '2026-06-14');
         $response->assertJsonPath('data.specialty', 'Cardiology');
@@ -179,7 +171,6 @@ class DoctorProfileControllerTest extends TestCase
             'id' => $doctorProfileId,
             'clinic_id' => $clinic->id,
             'user_id' => $doctorUserId,
-            'department_id' => $department->id,
             'gender' => DoctorProfile::GENDER_MALE,
             'phone' => '+963999000111',
             'license_number' => 'LIC-2026-100',
@@ -217,12 +208,13 @@ class DoctorProfileControllerTest extends TestCase
         $this->authenticateForClinic($clinic);
         $department = Department::factory()->create(['clinic_id' => $clinic->id]);
 
-        $this->setDepartmentWorkingHours($department, [
+        $this->setClinicWorkingHours($clinic, [
             'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
             'thursday' => ['start_time' => '11:00', 'end_time' => '15:00'],
         ]);
 
         $response = $this->postJson(route('doctors.store'), [
+            'clinic_id' => $clinic->id,
             'name' => 'Dr Outside Hours',
             'username' => 'doctor-outside-hours@example.com',
             'password' => 'password-123',
@@ -255,6 +247,7 @@ class DoctorProfileControllerTest extends TestCase
         ]);
 
         $response = $this->postJson(route('doctors.store'), [
+            'clinic_id' => $clinic->id,
             'user_id' => $nonDoctorUser->id,
             'gender' => DoctorProfile::GENDER_MALE,
             'specialty' => 'Family Medicine',
@@ -467,7 +460,6 @@ class DoctorProfileControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('data.user_id', $replacementDoctor->id);
-        $response->assertJsonPath('data.department_id', $department->id);
         $response->assertJsonPath('data.specialty', 'Updated Specialty');
         $response->assertJsonPath('data.status', DoctorProfile::STATUS_ON_LEAVE);
         $response->assertJsonPath('data.work_start_date', '2026-07-01');
@@ -477,7 +469,6 @@ class DoctorProfileControllerTest extends TestCase
             'id' => $profile->id,
             'clinic_id' => $clinic->id,
             'user_id' => $replacementDoctor->id,
-            'department_id' => $department->id,
             'gender' => DoctorProfile::GENDER_FEMALE,
             'phone' => '+963944222333',
             'specialty' => 'Updated Specialty',
@@ -521,7 +512,7 @@ class DoctorProfileControllerTest extends TestCase
             'department_id' => $department->id,
         ]);
 
-        $this->setDepartmentWorkingHours($department, [
+        $this->setClinicWorkingHours($clinic, [
             'sunday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
@@ -651,16 +642,27 @@ class DoctorProfileControllerTest extends TestCase
     }
 
     /**
-     * @param  array<string, array{start_time: string, end_time: string}>  $activeDays
+     * @param  array<int, array{start_time: string, end_time: string}>  $activeDays
      */
-    private function setDepartmentWorkingHours(Department $department, array $activeDays): void
+    private function setClinicWorkingHours(Clinic $clinic, array $activeDays): void
     {
-        foreach (ClinicWorkingHour::DAYS as $day) {
-            $hours = $activeDays[$day] ?? null;
+        $nameToIndex = [
+            'sunday' => 0, 'monday' => 1, 'tuesday' => 2,
+            'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6,
+        ];
+
+        $normalized = [];
+        foreach ($activeDays as $day => $hours) {
+            $index = is_int($day) ? $day : ($nameToIndex[$day] ?? $day);
+            $normalized[$index] = $hours;
+        }
+
+        foreach (ClinicWorkingHour::DAYS as $dayIndex) {
+            $hours = $normalized[$dayIndex] ?? null;
 
             ClinicWorkingHour::query()->create([
-                'department_id' => $department->id,
-                'day_of_week' => $day,
+                'clinic_id' => $clinic->id,
+                'day_of_week' => $dayIndex,
                 'is_active' => $hours !== null,
                 'start_time' => $hours['start_time'] ?? null,
                 'end_time' => $hours['end_time'] ?? null,

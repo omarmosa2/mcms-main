@@ -5,7 +5,6 @@ namespace App\Actions\MedicalRecords;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\Appointment;
-use App\Models\Department;
 use App\Models\FollowUp;
 use App\Models\MedicalRecord;
 use App\Models\TreatmentPlan;
@@ -23,21 +22,13 @@ class StoreMedicalRecordAction extends BaseAction
         return DB::transaction(function () use ($clinicId, $userId, $payload): MedicalRecord {
             $recordNumber = $this->generateRecordNumber($clinicId);
 
-            $clinicType = $payload['clinic_type'] ?? null;
-
-            if ($clinicType === null && isset($payload['department_id'])) {
-                $department = Department::query()->forClinic($clinicId)->find($payload['department_id']);
-                $clinicType = $department?->clinic_type;
-            }
-
             $record = MedicalRecord::query()->create([
                 'clinic_id' => $clinicId,
                 'patient_id' => (int) $payload['patient_id'],
-                'department_id' => $payload['department_id'] ?? null,
                 'appointment_id' => $payload['appointment_id'] ?? null,
                 'doctor_id' => $userId,
                 'record_number' => $recordNumber,
-                'clinic_type' => $clinicType,
+                'clinic_type' => $payload['clinic_type'] ?? null,
                 'form_data' => $payload['form_data'] ?? null,
                 'chief_complaint' => $payload['chief_complaint'] ?? null,
                 'primary_diagnosis' => $payload['primary_diagnosis'] ?? null,
@@ -105,7 +96,7 @@ class StoreMedicalRecordAction extends BaseAction
                 newValues: $record->only([
                     'record_number',
                     'patient_id',
-                    'department_id',
+                    'clinic_id',
                     'clinic_type',
                     'status',
                 ]),

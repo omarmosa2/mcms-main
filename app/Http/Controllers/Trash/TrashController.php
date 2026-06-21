@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Trash;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
-use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\DrugBatch;
@@ -79,12 +78,6 @@ class TrashController extends Controller
             'model' => DoctorSchedule::class,
             'label' => 'جداول أطباء',
             'name_column' => 'id',
-            'number_column' => null,
-        ],
-        'departments' => [
-            'model' => Department::class,
-            'label' => 'أقسام',
-            'name_column' => 'name',
             'number_column' => null,
         ],
         'users' => [

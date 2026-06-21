@@ -18,7 +18,7 @@ import DoctorTable from './components/DoctorTable.vue';
 import DoctorViewDialog from './components/DoctorViewDialog.vue';
 import type {
     ClinicOption,
-    DepartmentOption,
+    ClinicSelectOption,
     DoctorProfile,
     DoctorProfileStats,
     DoctorProfileStatus,
@@ -29,10 +29,10 @@ const props = defineProps<{
     doctor_profiles: PaginatedResponse<DoctorProfile>;
     stats: DoctorProfileStats;
     clinic: ClinicOption;
-    departments: DepartmentOption[];
+    clinics: ClinicSelectOption[];
     filters: {
         status: DoctorProfileStatus | null;
-        department_id: number | null;
+        clinic_id: number | null;
         search: string | null;
         per_page: number;
         sort_by: string | null;
@@ -64,7 +64,7 @@ const {
 
 const search = ref(props.filters.search ?? '');
 const status = ref<DoctorProfileStatus | 'all'>(props.filters.status ?? 'all');
-const departmentId = ref<number | 'all'>(props.filters.department_id ?? 'all');
+const clinicId = ref<number | 'all'>(props.filters.clinic_id ?? 'all');
 const formOpen = ref(false);
 const editingProfile = ref<DoctorProfile | null>(null);
 const viewingProfile = ref<DoctorProfile | null>(null);
@@ -81,8 +81,8 @@ const reload = (): void => {
         {
             search: search.value,
             status: status.value === 'all' ? '' : status.value,
-            department_id:
-                departmentId.value === 'all' ? '' : departmentId.value,
+            clinic_id:
+                clinicId.value === 'all' ? '' : clinicId.value,
             per_page: props.filters.per_page,
         },
         {
@@ -101,7 +101,7 @@ watch(search, () => {
     searchTimer = setTimeout(reload, 350);
 });
 
-watch([status, departmentId], reload);
+watch([status, clinicId], reload);
 
 const openCreate = (): void => {
     editingProfile.value = null;
@@ -210,16 +210,16 @@ const goTo = (url: string | null): void => {
                 </select>
 
                 <select
-                    v-model="departmentId"
+                    v-model="clinicId"
                     class="h-12 rounded-lg border border-input bg-muted px-4 text-sm"
                 >
                     <option value="all">كل العيادات</option>
                     <option
-                        v-for="department in departments"
-                        :key="department.id"
-                        :value="department.id"
+                        v-for="clinic in clinics"
+                        :key="clinic.id"
+                        :value="clinic.id"
                     >
-                        {{ department.name }}
+                        {{ clinic.name }}
                     </option>
                 </select>
             </div>
@@ -266,7 +266,7 @@ const goTo = (url: string | null): void => {
             v-model:open="formOpen"
             :profile="editingProfile"
             :clinic="clinic"
-            :departments="departments"
+            :clinics="clinics"
             @saved="editingProfile = null"
         />
 

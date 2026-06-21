@@ -37,7 +37,7 @@ const props = defineProps<{
     localSearch: string;
     localStatus: string;
     localDoctorId: string;
-    localDepartmentId: string;
+    localClinicId: string;
     localDateFrom: string;
     localDateTo: string;
     localRowsPerPage: number;
@@ -49,7 +49,7 @@ const props = defineProps<{
     totalLocalPages: number;
     statusOptions: { label: string; value: string }[];
     doctorOptions: { label: string; value: string }[];
-    departmentOptions: { label: string; value: string }[];
+    clinicOptions: { label: string; value: string }[];
     activeFilters: { key: string; label: string; value: string | null }[];
     canEditAppointment: boolean;
     canDeleteAppointment: boolean;
@@ -64,7 +64,7 @@ const emit = defineEmits([
     'search',
     'status',
     'doctor',
-    'department',
+    'clinic',
     'date-from',
     'date-to',
     'rows-per-page',
@@ -189,19 +189,19 @@ const sortIconFor = (field: AppointmentSortField) => {
 
                     <div v-if="!isDoctor" class="grid gap-1.5 lg:col-span-2">
                         <Label
-                            for="appointments_department"
+                            for="appointments_clinic"
                             class="flex items-center gap-1 text-xs font-semibold text-foreground"
                         >
                             <Filter class="size-3.5 text-primary" />
                             العيادة
                         </Label>
                         <FilterSelect
-                            id="appointments_department"
-                            :model-value="localDepartmentId"
-                            :options="departmentOptions"
+                            id="appointments_clinic"
+                            :model-value="localClinicId"
+                            :options="clinicOptions"
                             placeholder="كل العيادات"
                             class="h-10 rounded-xl"
-                            @update:model-value="emit('department', $event)"
+                            @update:model-value="emit('clinic', $event)"
                         />
                     </div>
 
@@ -378,7 +378,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                             </td>
                             <td class="px-4 py-3 text-sm" data-label="العيادة">
                                 {{
-                                    appointment.doctor?.department?.name ?? '-'
+                                    appointment.doctor?.clinic?.name ?? '-'
                                 }}
                             </td>
                             <td class="px-4 py-3" data-label="الطبيب">

@@ -32,8 +32,8 @@ type Visit = {
     appointment_id: number | null;
     doctor_id: number | null;
     doctor?: { id: number; name: string } | null;
-    department_id: number | null;
-    department?: { id: number; name: string; clinic_type: string | null } | null;
+    clinic_id: number | null;
+    clinic?: { id: number; name: string; clinic_type: string | null } | null;
     visit_date: string | null;
     visit_time: string | null;
     visit_reason: string | null;
@@ -64,7 +64,7 @@ type AppointmentData = {
         id?: number;
         name?: string;
         specialty?: string | null;
-        department?: {
+        clinic?: {
             id: number;
             name: string;
         } | null;
@@ -74,7 +74,7 @@ type AppointmentData = {
 type Option = {
     id: number;
     name: string;
-    department_id?: number | null;
+    clinic_id?: number | null;
     specialty?: string | null;
     clinic_type?: string | null;
 };
@@ -83,14 +83,14 @@ const props = defineProps<{
     patient: Resource<Patient>;
     visits: Resource<Visit[]>;
     doctors: Option[];
-    departments: Option[];
+    clinics: Option[];
     card: {
         clinic_name: string | null;
         project_name: string | null;
         page_number: string | null;
         date: string | null;
         doctor: string | null;
-        department: string | null;
+        clinic: string | null;
     };
     permissions: {
         can_manage_visits: boolean;
@@ -102,7 +102,7 @@ const props = defineProps<{
         name: string;
         is_doctor: boolean;
         doctor_id: number | null;
-        department_id: number | null;
+        clinic_id: number | null;
     } | null;
 }>();
 
@@ -134,7 +134,7 @@ const genderLabel = computed(() => {
 });
 
 const appointmentDoctorName = computed(() => props.activeAppointment?.doctor?.name ?? dash);
-const appointmentDepartmentName = computed(() => props.activeAppointment?.doctor?.department?.name ?? dash);
+const appointmentClinicName = computed(() => props.activeAppointment?.doctor?.clinic?.name ?? dash);
 const appointmentDate = computed(() => {
     const iso = props.activeAppointment?.scheduled_for;
     if (!iso) return dash;
@@ -159,9 +159,9 @@ const currentUserDoctorName = computed(() => {
     return doctor?.name ?? props.currentUser?.name ?? null;
 });
 
-const currentUserDepartmentName = computed(() => {
-    if (!props.currentUser?.is_doctor || !props.currentUser?.department_id) return null;
-    const dept = props.departments.find((d) => d.id === props.currentUser!.department_id);
+const currentUserClinicName = computed(() => {
+    if (!props.currentUser?.is_doctor || !props.currentUser?.clinic_id) return null;
+    const dept = props.clinics.find((d) => d.id === props.currentUser!.clinic_id);
     return dept?.name ?? null;
 });
 
@@ -170,7 +170,7 @@ const form = useForm({
     visit_date: new Date().toISOString().slice(0, 10),
     visit_time: '',
     doctor_id: '',
-    department_id: '',
+    clinic_id: '',
     visit_reason: '',
     chief_complaint: '',
     general_notes: '',
@@ -213,7 +213,7 @@ function openCreateForm(): void {
     if (props.activeAppointment) {
         form.appointment_id = props.activeAppointment.id.toString();
         form.doctor_id = props.activeAppointment.doctor_id?.toString() ?? '';
-        form.department_id = props.activeAppointment.doctor?.department?.id?.toString() ?? '';
+        form.clinic_id = props.activeAppointment.doctor?.clinic?.id?.toString() ?? '';
         form.visit_date = appointmentDate.value;
         const iso = props.activeAppointment.scheduled_for;
         if (iso) {
@@ -227,10 +227,10 @@ function openCreateForm(): void {
 
         if (props.currentUser?.is_doctor) {
             form.doctor_id = props.currentUser.doctor_id?.toString() ?? '';
-            form.department_id = props.currentUser.department_id?.toString() ?? '';
+            form.clinic_id = props.currentUser.clinic_id?.toString() ?? '';
         } else {
             form.doctor_id = '';
-            form.department_id = '';
+            form.clinic_id = '';
         }
     }
 
@@ -253,7 +253,7 @@ function openEditForm(visit: Visit): void {
     form.visit_date = visit.visit_date ?? new Date().toISOString().slice(0, 10);
     form.visit_time = visit.visit_time ?? '';
     form.doctor_id = visit.doctor_id?.toString() ?? '';
-    form.department_id = visit.department_id?.toString() ?? '';
+    form.clinic_id = visit.clinic_id?.toString() ?? '';
     form.visit_reason = visit.visit_reason ?? '';
     form.chief_complaint = visit.chief_complaint ?? '';
     form.general_notes = visit.general_notes ?? '';
@@ -319,8 +319,8 @@ watch(
         if (isLinkedToAppointment.value) return;
         const selectedDoctor = props.doctors.find((doctor) => doctor.id.toString() === doctorId);
 
-        if (selectedDoctor?.department_id) {
-            form.department_id = selectedDoctor.department_id.toString();
+        if (selectedDoctor?.clinic_id) {
+            form.clinic_id = selectedDoctor.clinic_id.toString();
         }
     },
 );
@@ -419,7 +419,7 @@ watch(
                         <FileText class="size-3.5 text-muted-foreground" />
                         <div>
                             <span class="text-[0.65rem] text-muted-foreground">العيادة</span>
-                            <p class="font-medium">{{ appointmentDepartmentName }}</p>
+                            <p class="font-medium">{{ appointmentClinicName }}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
@@ -442,7 +442,7 @@ watch(
             <form class="grid grid-cols-1 gap-4 lg:grid-cols-4" @submit.prevent="submitVisit">
                 <input v-if="form.appointment_id" type="hidden" :value="form.appointment_id" name="appointment_id" />
                 <input v-if="isFieldReadonly && form.doctor_id" type="hidden" :value="form.doctor_id" name="doctor_id" />
-                <input v-if="isFieldReadonly && form.department_id" type="hidden" :value="form.department_id" name="department_id" />
+                <input v-if="isFieldReadonly && form.clinic_id" type="hidden" :value="form.clinic_id" name="clinic_id" />
 
                 <label v-if="!isLinkedToAppointment" class="space-y-1.5">
                     <span class="text-xs font-semibold text-muted-foreground">تاريخ الزيارة</span>
@@ -473,18 +473,18 @@ watch(
 
                 <label v-if="!isFieldReadonly" class="space-y-1.5">
                     <span class="text-xs font-semibold text-muted-foreground">العيادة</span>
-                    <select v-model="form.department_id" class="pattern-field-clay">
+                    <select v-model="form.clinic_id" class="pattern-field-clay">
                         <option value="">—</option>
-                        <option v-for="department in departments" :key="department.id" :value="department.id.toString()">
-                            {{ department.name }}
+                        <option v-for="clinic in clinics" :key="clinic.id" :value="clinic.id.toString()">
+                            {{ clinic.name }}
                         </option>
                     </select>
-                    <InputError :message="form.errors.department_id" />
+                    <InputError :message="form.errors.clinic_id" />
                 </label>
                 <div v-else class="space-y-1.5">
                     <span class="text-xs font-semibold text-muted-foreground">العيادة</span>
                     <div class="pattern-field-clay flex h-10 items-center bg-muted/50 px-3 text-sm">
-                        {{ isLinkedToAppointment ? appointmentDepartmentName : (currentUserDepartmentName ?? dash) }}
+                        {{ isLinkedToAppointment ? appointmentClinicName : (currentUserClinicName ?? dash) }}
                     </div>
                 </div>
 
@@ -618,7 +618,7 @@ watch(
                     </div>
                     <div class="info-box">
                         <span>العيادة</span>
-                        <strong>{{ display(card.department) }}</strong>
+                        <strong>{{ display(card.clinic) }}</strong>
                     </div>
                     <div class="info-box">
                         <span>تاريخ الميلاد</span>

@@ -48,10 +48,10 @@ type Patient = {
     file_number: number;
 };
 
-type Department = {
+type Clinic = {
     id: number;
     name: string;
-    clinic_type: string | null;
+    code: string | null;
 };
 
 type Doctor = {
@@ -64,8 +64,7 @@ type MedicalRecord = {
     clinic_id: number;
     patient_id: number;
     patient: Patient;
-    department_id: number | null;
-    department: Department | null;
+    clinic: Clinic | null;
     appointment_id: number | null;
     doctor_id: number | null;
     doctor: Doctor | null;
@@ -89,15 +88,15 @@ type PaginatedResponse<T> = {
     meta: PaginationMeta;
 };
 
-const { records, departments, doctors, clinicTypes, filters, is_doctor } = defineProps<{
+const { records, clinics, doctors, clinicTypes, filters, is_doctor } = defineProps<{
     records: PaginatedResponse<MedicalRecord>;
-    departments: Department[];
+    clinics: Clinic[];
     doctors: Doctor[];
     clinicTypes: string[];
     filters: {
         search: string | null;
         per_page: number;
-        department_id: number | null;
+        clinic_id: number | null;
         doctor_id: number | null;
         clinic_type: string | null;
         status: string | null;
@@ -128,7 +127,7 @@ const { success: toastSuccess } = useToast();
 const deleteRecordId = ref<number | null>(null);
 
 const search = ref(filters.search ?? '');
-const selectedDepartment = ref<string>(filters.department_id?.toString() ?? '');
+const selectedClinic = ref<string>(filters.clinic_id?.toString() ?? '');
 const selectedDoctor = ref<string>(filters.doctor_id?.toString() ?? '');
 const selectedClinicType = ref(filters.clinic_type ?? '');
 const selectedStatus = ref(filters.status ?? '');
@@ -149,9 +148,9 @@ const statusOptions = [
     { label: 'ملغي', value: 'cancelled' },
 ];
 
-const departmentOptions = computed(() => [
+const clinicOptions = computed(() => [
     { label: 'جميع العيادات', value: '' },
-    ...departments.map((d) => ({ label: d.name, value: d.id.toString() })),
+    ...clinics.map((d) => ({ label: d.name, value: d.id.toString() })),
 ]);
 
 const doctorOptions = computed(() => [
@@ -169,9 +168,9 @@ const activeFilters = computed(() => {
         const opt = clinicTypeOptions.value.find((o) => o.value === selectedClinicType.value);
         filters.push({ key: 'clinic_type', label: 'نوع العيادة', value: opt?.label ?? selectedClinicType.value });
     }
-    if (selectedDepartment.value) {
-        const opt = departmentOptions.value.find((o) => o.value === selectedDepartment.value);
-        filters.push({ key: 'department_id', label: 'العيادة', value: opt?.label ?? null });
+    if (selectedClinic.value) {
+        const opt = clinicOptions.value.find((o) => o.value === selectedClinic.value);
+        filters.push({ key: 'clinic_id', label: 'العيادة', value: opt?.label ?? null });
     }
     if (selectedDoctor.value) {
         const opt = doctorOptions.value.find((o) => o.value === selectedDoctor.value);
@@ -202,8 +201,8 @@ function handleRemoveFilter(key: string) {
         case 'clinic_type':
             selectedClinicType.value = '';
             break;
-        case 'department_id':
-            selectedDepartment.value = '';
+        case 'clinic_id':
+            selectedClinic.value = '';
             break;
         case 'doctor_id':
             selectedDoctor.value = '';
@@ -235,7 +234,7 @@ watch(search, (value) => {
 });
 
 watch(
-    [selectedDepartment, selectedDoctor, selectedClinicType, selectedStatus, dateFrom, dateTo, diagnosis],
+    [selectedClinic, selectedDoctor, selectedClinicType, selectedStatus, dateFrom, dateTo, diagnosis],
     () => {
         applyFilters();
     },
@@ -247,8 +246,8 @@ function applyFilters() {
     if (search.value) {
         params.search = search.value;
     }
-    if (selectedDepartment.value) {
-        params.department_id = selectedDepartment.value;
+    if (selectedClinic.value) {
+        params.clinic_id = selectedClinic.value;
     }
     if (selectedDoctor.value) {
         params.doctor_id = selectedDoctor.value;
@@ -278,7 +277,7 @@ function applyFilters() {
 
 function resetFilters() {
     search.value = '';
-    selectedDepartment.value = '';
+    selectedClinic.value = '';
     selectedDoctor.value = '';
     selectedClinicType.value = '';
     selectedStatus.value = '';
@@ -419,7 +418,7 @@ function formatDateTime(date: string | null): string {
                     <FilterSearch v-model="search" placeholder="بحث بالاسم أو رقم السجل أو التشخيص..." />
                 </div>
                 <FilterSelect v-if="!is_doctor" v-model="selectedClinicType" :options="clinicTypeOptions" placeholder="نوع العيادة" />
-                <FilterSelect v-if="!is_doctor" v-model="selectedDepartment" :options="departmentOptions" placeholder="العيادة" />
+                <FilterSelect v-if="!is_doctor" v-model="selectedClinic" :options="clinicOptions" placeholder="العيادة" />
                 <FilterSelect v-if="!is_doctor" v-model="selectedDoctor" :options="doctorOptions" placeholder="الطبيب" />
                 <FilterSelect v-model="selectedStatus" :options="statusOptions" placeholder="الحالة" />
             </div>
@@ -499,7 +498,7 @@ function formatDateTime(date: string | null): string {
                             </td>
                             <td class="px-4 py-3">
                                 <div>
-                                    <p class="text-xs">{{ record.department?.name ?? '—' }}</p>
+                                    <p class="text-xs">{{ record.clinic?.name ?? '—' }}</p>
                                     <Badge v-if="record.clinic_type" variant="outline" class="mt-1 text-[0.6rem]">
                                         {{ clinicTypeLabel(record.clinic_type) }}
                                     </Badge>

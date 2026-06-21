@@ -88,6 +88,6 @@ class DatabaseSchemaTest extends TestCase
         $doctorProfile = DoctorProfile::factory()->create();
 
         $this->assertSame($doctorProfile->clinic_id, $doctorProfile->user?->clinic_id);
-        $this->assertSame($doctorProfile->clinic_id, $doctorProfile->department?->clinic_id);
+        $this->assertNotNull($doctorProfile->clinic);
     }
 }

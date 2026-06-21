@@ -8,21 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('clinic_settings', function (Blueprint $table) {
+        Schema::create('departments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('clinic_id')->constrained('clinics')->cascadeOnDelete();
-            $table->string('group')->index();
-            $table->string('key');
-            $table->json('value')->nullable();
+            $table->string('name', 120);
+            $table->string('code', 50)->nullable();
+            $table->text('description')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
-
-            $table->unique(['clinic_id', 'group', 'key']);
-            $table->index(['clinic_id', 'group']);
+            $table->unique(['clinic_id', 'name']);
+            $table->unique(['clinic_id', 'code']);
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('clinic_settings');
+        Schema::dropIfExists('departments');
     }
 };

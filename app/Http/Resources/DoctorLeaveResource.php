@@ -15,8 +15,11 @@ class DoctorLeaveResource extends JsonResource
             'clinic_id' => $this->clinic_id,
             'doctor_id' => $this->doctor_id,
             'doctor' => UserResource::make($this->whenLoaded('doctor')),
-            'department_id' => $this->department_id,
-            'department' => DepartmentResource::make($this->whenLoaded('department')),
+            'clinic' => $this->whenLoaded('clinic', fn () => [
+                'id' => $this->clinic->id,
+                'name' => $this->clinic->name,
+                'code' => $this->clinic->code,
+            ]),
             'type' => $this->type,
             'leave_date' => $this->leave_date?->toDateString(),
             'start_time' => $this->formatTime($this->start_time),

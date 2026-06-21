@@ -1,22 +1,11 @@
-export type Department = {
+export type Clinic = {
     id: number;
-    clinic_id: number;
     name: string;
     code: string | null;
     description: string | null;
     is_active: boolean;
-    doctor_profiles_count: number;
+    employees_count: number;
     working_hours?: ClinicWorkingHour[];
-    created_by: number | null;
-    updated_by: number | null;
-    creator?: {
-        id: number;
-        name: string;
-    } | null;
-    updater?: {
-        id: number;
-        name: string;
-    } | null;
     created_at: string | null;
     updated_at: string | null;
 };
@@ -65,11 +54,11 @@ export type PaginatedResponse<T> = {
     meta: PaginationMeta;
 };
 
-export type DepartmentSortField =
+export type ClinicSortField =
     | 'name'
     | 'code'
     | 'is_active'
-    | 'doctor_profiles_count'
+    | 'employees_count'
     | 'created_at';
 
 export type SortDirection = 'asc' | 'desc';

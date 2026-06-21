@@ -3,7 +3,6 @@
 namespace App\Http\Requests\DoctorLeaves;
 
 use App\Models\DoctorLeave;
-use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\User;
 use Carbon\Carbon;
@@ -33,12 +32,6 @@ class StoreDoctorLeaveRequest extends FormRequest
                 'integer',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('clinic_id', $clinicId)),
                 $this->doctorRoleRule($clinicId),
-            ],
-            'department_id' => [
-                'required',
-                'integer',
-                Rule::exists('departments', 'id')->where(fn ($query) => $query->where('clinic_id', $clinicId)),
-                $this->doctorDepartmentRule($clinicId),
             ],
             'type' => ['required', 'string', Rule::in([DoctorLeave::TYPE_FULL_DAY, DoctorLeave::TYPE_HOURLY])],
             'leave_date' => ['required', 'date_format:Y-m-d'],
@@ -107,25 +100,6 @@ class StoreDoctorLeaveRequest extends FormRequest
 
             if (! $doctorExists) {
                 $fail('The selected doctor must be a doctor in this clinic.');
-            }
-        };
-    }
-
-    private function doctorDepartmentRule(?int $clinicId): Closure
-    {
-        return function (string $attribute, mixed $value, Closure $fail) use ($clinicId): void {
-            if ($clinicId === null || ! $this->filled('doctor_id')) {
-                return;
-            }
-
-            $matches = DoctorProfile::query()
-                ->forClinic((int) $clinicId)
-                ->where('user_id', (int) $this->input('doctor_id'))
-                ->where('department_id', (int) $value)
-                ->exists();
-
-            if (! $matches) {
-                $fail('The selected department must match the doctor department.');
             }
         };
     }

@@ -13,8 +13,7 @@ import { computed } from 'vue';
 
 type ClinicInfo = {
     name: string | null;
-    department_name: string | null;
-    clinic_type: string | null;
+    specialty: string | null;
 };
 
 type DoctorInfo = {
@@ -124,27 +123,6 @@ const getVisitTypeLabel = (type: string | null) => {
 
     return '—';
 };
-
-const clinicTypeLabel = computed(() => {
-    const typeMap: Record<string, string> = {
-        internal_medicine: 'الطب الباطني',
-        pediatrics: 'طب الأطفال',
-        gynecology: 'النساء والتوليد',
-        orthopedics: 'العظام',
-        dermatology: 'الجلدية',
-        ophthalmology: 'العيون',
-        ent: 'الأنف والأذن والحنجرة',
-        cardiology: 'القلب',
-        neurology: 'المخ والأعصاب',
-        psychiatry: 'الطب النفسي',
-        general_surgery: 'الجراحة العامة',
-        urology: 'المسالك البولية',
-        dental: 'طب الأسنان',
-        other: 'أخرى',
-    };
-
-    return props.clinic.clinic_type ? (typeMap[props.clinic.clinic_type] ?? props.clinic.clinic_type) : null;
-});
 </script>
 
 <template>
@@ -157,9 +135,7 @@ const clinicTypeLabel = computed(() => {
                 <div>
                     <div class="flex items-center gap-2 text-sm text-[#0284C7]">
                         <Stethoscope class="size-4" />
-                        <span class="font-medium">{{ clinic.department_name ?? clinic.name ?? 'العيادة' }}</span>
-                        <span v-if="clinicTypeLabel" class="text-slate-400">•</span>
-                        <span v-if="clinicTypeLabel" class="text-slate-500">{{ clinicTypeLabel }}</span>
+                        <span class="font-medium">{{ clinic.specialty ?? clinic.name ?? 'العيادة' }}</span>
                     </div>
                     <h1 class="mt-2 text-2xl font-bold tracking-normal text-[#111827] md:text-3xl">
                         مرحباً، د. {{ doctor.name }}

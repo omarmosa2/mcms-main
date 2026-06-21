@@ -55,14 +55,19 @@ class Clinic extends Model
         return $this->hasMany(Payment::class);
     }
 
-    public function departments(): HasMany
+    public function employees(): HasMany
     {
-        return $this->hasMany(Department::class);
+        return $this->hasMany(Employee::class);
     }
 
     public function workingHours(): HasMany
     {
         return $this->hasMany(ClinicWorkingHour::class);
+    }
+
+    public function doctors(): HasMany
+    {
+        return $this->hasMany(DoctorProfile::class);
     }
 
     public function doctorProfiles(): HasMany

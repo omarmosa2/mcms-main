@@ -4,13 +4,11 @@ namespace App\Providers;
 
 use App\Listeners\LogAuthenticationAttempts;
 use App\Models\Clinic;
-use App\Models\Department;
 use App\Models\ExpenseCategory;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\SecurityPolicy;
 use App\Observers\ClinicObserver;
-use App\Observers\DepartmentObserver;
 use App\Observers\ExpenseCategoryObserver;
 use App\Observers\PermissionObserver;
 use App\Observers\RoleObserver;
@@ -75,7 +73,6 @@ class AppServiceProvider extends ServiceProvider
         SecurityPolicy::observe(SecurityPolicyObserver::class);
         Role::observe(RoleObserver::class);
         Permission::observe(PermissionObserver::class);
-        Department::observe(DepartmentObserver::class);
         ExpenseCategory::observe(ExpenseCategoryObserver::class);
     }
 

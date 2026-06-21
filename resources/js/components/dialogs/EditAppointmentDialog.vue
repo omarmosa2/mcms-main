@@ -8,7 +8,6 @@ interface Appointment {
     id: number;
     patient_id: number;
     doctor_id: number;
-    department_id?: number;
     date: string;
     time: string;
     type: string;
@@ -22,7 +21,6 @@ const props = defineProps<{
     appointment: Appointment | null;
     patients?: { id: number; full_name: string }[];
     doctors?: { id: number; name: string }[];
-    departments?: { id: number; name: string }[];
 }>();
 
 const emit = defineEmits<{
@@ -46,13 +44,6 @@ const fields = computed<FormField[]>(() => [
         placeholder: 'اختر الطبيب',
         options: props.doctors?.map((d) => ({ value: d.id, label: d.name })) ?? [],
         required: true,
-    },
-    {
-        name: 'department_id',
-        label: 'القسم',
-        type: 'select',
-        placeholder: 'اختر القسم',
-        options: props.departments?.map((d) => ({ value: d.id, label: d.name })) ?? [],
     },
     {
         name: 'date',
@@ -89,7 +80,6 @@ const fields = computed<FormField[]>(() => [
 const form = useForm({
     patient_id: props.appointment?.patient_id?.toString() ?? '',
     doctor_id: props.appointment?.doctor_id?.toString() ?? '',
-    department_id: props.appointment?.department_id?.toString() ?? '',
     date: props.appointment?.date ?? '',
     time: props.appointment?.time ?? '',
     type: props.appointment?.type ?? '',

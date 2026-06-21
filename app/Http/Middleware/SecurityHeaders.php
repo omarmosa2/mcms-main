@@ -51,6 +51,7 @@ class SecurityHeaders
                 "'self'",
                 "'unsafe-inline'",
                 "'unsafe-eval'",
+                'blob:',
                 ...$viteAssetSources,
             ]),
             'connect-src '.$this->implodeSources([

@@ -35,11 +35,6 @@ class StorePatientCardVisitRequest extends FormRequest
                 'integer',
                 Rule::exists('users', 'id')->where('clinic_id', $clinicId),
             ],
-            'department_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('departments', 'id')->where('clinic_id', $clinicId),
-            ],
             'visit_reason' => ['nullable', 'string', 'max:5000'],
             'chief_complaint' => ['nullable', 'string', 'max:5000'],
             'general_notes' => ['nullable', 'string', 'max:5000'],

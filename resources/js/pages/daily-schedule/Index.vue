@@ -59,11 +59,11 @@ type ScheduleData = {
 
 const props = defineProps<{
     scheduleData: ScheduleData;
-    departments: Array<{ id: number; name: string }>;
+    clinics: Array<{ id: number; name: string }>;
     doctors: Array<{ id: number; name: string }>;
     filters: {
         date: string;
-        department_id: number | null;
+        clinic_id: number | null;
         doctor_id: number | null;
     };
 }>();
@@ -93,8 +93,8 @@ const logoPath = computed(
 );
 
 const filterDate = ref(props.filters.date);
-const filterDepartment = ref<string>(
-    props.filters.department_id?.toString() ?? '',
+const filterClinic = ref<string>(
+    props.filters.clinic_id?.toString() ?? '',
 );
 const filterDoctor = ref<string>(props.filters.doctor_id?.toString() ?? '');
 
@@ -103,8 +103,8 @@ function applyFilters() {
         date: filterDate.value || props.scheduleData.date,
     };
 
-    if (filterDepartment.value) {
-        params.department_id = filterDepartment.value;
+    if (filterClinic.value) {
+        params.clinic_id = filterClinic.value;
     }
 
     if (filterDoctor.value) {
@@ -119,7 +119,7 @@ function applyFilters() {
 
 function resetFilters() {
     filterDate.value = new Date().toISOString().split('T')[0];
-    filterDepartment.value = '';
+    filterClinic.value = '';
     filterDoctor.value = '';
     router.get(
         '/daily-schedule',
@@ -137,8 +137,8 @@ watch(filterDate, (newDate) => {
             date: newDate,
         };
 
-        if (filterDepartment.value) {
-            params.department_id = filterDepartment.value;
+        if (filterClinic.value) {
+            params.clinic_id = filterClinic.value;
         }
 
         if (filterDoctor.value) {
@@ -268,16 +268,16 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                     <div class="w-[200px]">
                         <Label>العيادة</Label>
                         <select
-                            v-model="filterDepartment"
+                            v-model="filterClinic"
                             class="pattern-field-clay mt-1 h-9 w-full px-3 py-1.5"
                         >
                             <option value="">جميع العيادات</option>
                             <option
-                                v-for="dept in departments"
-                                :key="dept.id"
-                                :value="dept.id"
+                                v-for="clinic in clinics"
+                                :key="clinic.id"
+                                :value="clinic.id"
                             >
-                                {{ dept.name }}
+                                {{ clinic.name }}
                             </option>
                         </select>
                     </div>

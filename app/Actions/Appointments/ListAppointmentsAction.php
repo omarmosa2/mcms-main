@@ -22,7 +22,7 @@ class ListAppointmentsAction extends BaseAction
         string $sortBy = 'scheduled_for',
         string $sortDirection = 'desc',
         ?int $doctorId = null,
-        ?int $departmentId = null,
+        ?int $clinicFilterId = null,
         ?string $dateFrom = null,
         ?string $dateTo = null,
     ): LengthAwarePaginator {
@@ -32,8 +32,8 @@ class ListAppointmentsAction extends BaseAction
             ->with([
                 'patient:id,clinic_id,first_name,last_name,file_number,phone,date_of_birth',
                 'doctor:id,clinic_id,name',
-                'doctor.doctorProfile:id,clinic_id,user_id,department_id,specialty,status',
-                'doctor.doctorProfile.department:id,clinic_id,name',
+                'doctor.doctorProfile:id,clinic_id,user_id,specialty,status',
+                'doctor.doctorProfile.clinic:id,name',
             ])
             ->orderByDesc('scheduled_for');
 
@@ -48,10 +48,8 @@ class ListAppointmentsAction extends BaseAction
             $query->where('status', $status);
         }
 
-        if ($departmentId !== null) {
-            $query->whereHas('doctor.doctorProfile', function (Builder $doctorProfileQuery) use ($departmentId): void {
-                $doctorProfileQuery->where('department_id', $departmentId);
-            });
+        if ($clinicFilterId !== null) {
+            $query->where('clinic_id', $clinicFilterId);
         }
 
         if ($dateFrom !== null) {
@@ -98,7 +96,7 @@ class ListAppointmentsAction extends BaseAction
                 'sort_by' => $sortBy,
                 'sort_direction' => $sortDirection,
                 'doctor_filter_id' => $doctorId,
-                'department_filter_id' => $departmentId,
+                'clinic_filter_id' => $clinicFilterId,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'returned' => $appointments->count(),

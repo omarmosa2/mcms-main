@@ -12,13 +12,13 @@ import {
     Trash2,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
-import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
+import ClinicController from '@/actions/App/Http/Controllers/Clinics/ClinicController';
 import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch, FilterSelect } from '@/components/ui/filter';
 import type {
     ActiveFilter,
-    Department,
-    DepartmentSortField,
+    Clinic,
+    ClinicSortField,
     SortDirection,
 } from './types';
 
@@ -30,13 +30,13 @@ const rowsPerPage = defineModel<number>('rowsPerPage', { default: 15 });
 const selectedIds = defineModel<number[]>('selectedIds', { default: () => [] });
 
 const props = defineProps<{
-    departments: Department[];
+    clinics: Clinic[];
     page: number;
     totalPages: number;
     visibleFrom: number;
     visibleTo: number;
-    totalDepartments: number;
-    sortBy: DepartmentSortField;
+    totalClinics: number;
+    sortBy: ClinicSortField;
     sortDirection: SortDirection;
     areAllSelected: boolean;
     canDelete: boolean;
@@ -44,15 +44,15 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    'toggle-sort': [field: DepartmentSortField];
+    'toggle-sort': [field: ClinicSortField];
     'previous-page': [];
     'next-page': [];
     'reset-filters': [];
     'toggle-all-selection': [event: Event];
     'clear-selection': [];
-    view: [department: Department];
-    edit: [department: Department];
-    delete: [department: Department];
+    view: [clinic: Clinic];
+    edit: [clinic: Clinic];
+    delete: [clinic: Clinic];
 }>();
 
 const statusOptions = computed(() => [
@@ -93,8 +93,8 @@ const handleRemoveFilter = (key: string) => {
     }
 };
 
-const activeHoursCount = (department: Department): number => {
-    return department.working_hours?.filter((row) => row.is_active).length ?? 0;
+const activeHoursCount = (clinic: Clinic): number => {
+    return clinic.working_hours?.filter((row) => row.is_active).length ?? 0;
 };
 
 const statusClass = (isActive: boolean): string => {
@@ -103,7 +103,7 @@ const statusClass = (isActive: boolean): string => {
         : 'bg-muted text-muted-foreground';
 };
 
-const sortMark = (field: DepartmentSortField): string => {
+const sortMark = (field: ClinicSortField): string => {
     if (props.sortBy !== field) {
         return '↕';
     }
@@ -150,7 +150,7 @@ const sortMark = (field: DepartmentSortField): string => {
 
         <Form
             v-if="canDelete && selectedIds.length > 0"
-            v-bind="DepartmentController.bulkDestroy.form()"
+            v-bind="ClinicController.bulkDestroy.form()"
             class="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4 shadow-card"
             v-slot="{ processing }"
         >
@@ -231,12 +231,12 @@ const sortMark = (field: DepartmentSortField): string => {
                             <th
                                 class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-foreground transition-colors select-none hover:text-primary"
                                 @click="
-                                    emit('toggle-sort', 'doctor_profiles_count')
+                                    emit('toggle-sort', 'employees_count')
                                 "
                             >
-                                الأطباء
+                                الموظفون
                                 <span class="ms-1 text-muted-foreground/50">{{
-                                    sortMark('doctor_profiles_count')
+                                    sortMark('employees_count')
                                 }}</span>
                             </th>
                             <th
@@ -271,8 +271,8 @@ const sortMark = (field: DepartmentSortField): string => {
                     </thead>
                     <tbody>
                         <tr
-                            v-for="(department, index) in departments"
-                            :key="department.id"
+                            v-for="(clinic, index) in clinics"
+                            :key="clinic.id"
                             class="group h-20 border-b border-border transition-all duration-150 last:border-b-0 hover:bg-muted/50"
                         >
                             <td
@@ -287,18 +287,18 @@ const sortMark = (field: DepartmentSortField): string => {
                                     <span
                                         class="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-primary/20"
                                     >
-                                        {{ department.name.charAt(0) }}
+                                        {{ clinic.name.charAt(0) }}
                                     </span>
                                     <span
                                         class="min-w-0 truncate text-sm font-semibold text-foreground"
-                                        >{{ department.name }}</span
+                                        >{{ clinic.name }}</span
                                     >
                                 </div>
                             </td>
                             <td
                                 class="px-3 py-4 text-center text-sm font-semibold text-foreground"
                             >
-                                {{ department.code ?? '-' }}
+                                {{ clinic.code ?? '-' }}
                             </td>
                             <!-- <td class="max-w-xs px-5 py-4 text-sm text-muted-foreground">
                                 <span class="line-clamp-2">{{ department.description ?? '-' }}</span>
@@ -307,7 +307,7 @@ const sortMark = (field: DepartmentSortField): string => {
                                 <span
                                     class="inline-flex min-w-10 items-center justify-center rounded-full bg-muted px-3 py-1.5 text-xs font-bold text-foreground"
                                 >
-                                    {{ department.doctor_profiles_count }}
+                                     {{ clinic.employees_count }}
                                 </span>
                             </td>
                             <td class="px-3 py-4 text-center">
@@ -315,16 +315,16 @@ const sortMark = (field: DepartmentSortField): string => {
                                     class="inline-flex items-center justify-center gap-2 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-primary"
                                 >
                                     <Clock class="size-3.5" />
-                                    {{ activeHoursCount(department) }} أيام
+                                     {{ activeHoursCount(clinic) }} أيام
                                 </span>
                             </td>
                             <td class="px-3 py-4 text-center">
                                 <span
                                     class="inline-flex min-w-20 items-center justify-center rounded-full px-3 py-1.5 text-xs font-bold"
-                                    :class="statusClass(department.is_active)"
+                                    :class="statusClass(clinic.is_active)"
                                 >
                                     {{
-                                        department.is_active
+                                        clinic.is_active
                                             ? 'نشطة'
                                             : 'غير نشطة'
                                     }}
@@ -334,9 +334,9 @@ const sortMark = (field: DepartmentSortField): string => {
                                 class="px-3 py-4 text-center text-sm text-foreground"
                             >
                                 {{
-                                    department.created_at !== null
+                                    clinic.created_at !== null
                                         ? new Date(
-                                              department.created_at,
+                                              clinic.created_at,
                                           ).toLocaleDateString('ar-EG')
                                         : '-'
                                 }}
@@ -350,7 +350,7 @@ const sortMark = (field: DepartmentSortField): string => {
                                         type="button"
                                         class="inline-flex size-8 items-center justify-center rounded-lg text-destructive transition-all duration-150 hover:bg-destructive/10 active:scale-[0.95]"
                                         title="حذف"
-                                        @click="emit('delete', department)"
+                                        @click="emit('delete', clinic)"
                                     >
                                         <Trash2 class="size-4" />
                                     </button>
@@ -359,7 +359,7 @@ const sortMark = (field: DepartmentSortField): string => {
                                         type="button"
                                         class="inline-flex size-8 items-center justify-center rounded-lg text-primary transition-all duration-150 hover:bg-primary/10 active:scale-[0.95]"
                                         title="تعديل"
-                                        @click="emit('edit', department)"
+                                        @click="emit('edit', clinic)"
                                     >
                                         <Pencil class="size-4" />
                                     </button>
@@ -367,7 +367,7 @@ const sortMark = (field: DepartmentSortField): string => {
                                         type="button"
                                         class="inline-flex size-8 items-center justify-center rounded-lg text-primary transition-all duration-150 hover:bg-accent active:scale-[0.95]"
                                         title="عرض"
-                                        @click="emit('view', department)"
+                                        @click="emit('view', clinic)"
                                     >
                                         <Eye class="size-4" />
                                     </button>
@@ -375,7 +375,7 @@ const sortMark = (field: DepartmentSortField): string => {
                             </td>
                         </tr>
 
-                        <tr v-if="departments.length === 0">
+                        <tr v-if="clinics.length === 0">
                             <td colspan="8" class="px-5">
                                 <div class="py-20 text-center">
                                     <h3
@@ -455,7 +455,7 @@ const sortMark = (field: DepartmentSortField): string => {
 
             <p class="text-sm font-medium text-muted-foreground">
                 عرض {{ visibleFrom }} إلى {{ visibleTo }} من
-                {{ totalDepartments }} عيادة
+                {{ totalClinics }} عيادة
             </p>
         </div>
     </div>

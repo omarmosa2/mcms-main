@@ -26,8 +26,7 @@ type DoctorInfo = {
 
 type ClinicInfo = {
     name: string | null;
-    department_name: string | null;
-    clinic_type: string | null;
+    specialty: string | null;
 };
 
 type WorkSchedule = Array<{
@@ -79,27 +78,6 @@ const genderLabel = computed(() => {
     if (props.doctor.gender === 'female') return 'أنثى';
 
     return '—';
-});
-
-const clinicTypeLabel = computed(() => {
-    const typeMap: Record<string, string> = {
-        internal_medicine: 'الطب الباطني',
-        pediatrics: 'طب الأطفال',
-        gynecology: 'النساء والتوليد',
-        orthopedics: 'العظام',
-        dermatology: 'الجلدية',
-        ophthalmology: 'العيون',
-        ent: 'الأنف والأذن والحنجرة',
-        cardiology: 'القلب',
-        neurology: 'المخ والأعصاب',
-        psychiatry: 'الطب النفسي',
-        general_surgery: 'الجراحة العامة',
-        urology: 'المسالك البولية',
-        dental: 'طب الأسنان',
-        other: 'أخرى',
-    };
-
-    return props.clinic.clinic_type ? (typeMap[props.clinic.clinic_type] ?? props.clinic.clinic_type) : null;
 });
 
 const sortedSchedule = computed(() => {
@@ -233,16 +211,8 @@ const formatTime = (time: string) => {
                     <div class="flex items-center gap-3 rounded-xl bg-[#F8FAFC] p-3">
                         <Stethoscope class="size-5 text-slate-400" />
                         <div>
-                            <p class="text-xs text-slate-500">القسم</p>
-                            <p class="text-sm font-medium text-slate-900">{{ clinic.department_name ?? '—' }}</p>
-                        </div>
-                    </div>
-
-                    <div v-if="clinicTypeLabel" class="flex items-center gap-3 rounded-xl bg-[#F8FAFC] p-3">
-                        <Stethoscope class="size-5 text-slate-400" />
-                        <div>
-                            <p class="text-xs text-slate-500">نوع العيادة</p>
-                            <p class="text-sm font-medium text-slate-900">{{ clinicTypeLabel }}</p>
+                            <p class="text-xs text-slate-500">التخصص</p>
+                            <p class="text-sm font-medium text-slate-900">{{ clinic.specialty ?? '—' }}</p>
                         </div>
                     </div>
                 </div>

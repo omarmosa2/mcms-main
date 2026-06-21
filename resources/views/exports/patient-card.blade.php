@@ -208,7 +208,7 @@
                 </tr>
                 <tr>
                     <td><span class="label">{!! $pdf('الطبيب') !!}</span><span class="value">{!! $pdf($card['doctor'] ?? null) !!}</span></td>
-                    <td><span class="label">{!! $pdf('العيادة') !!}</span><span class="value">{!! $pdf($card['department'] ?? null) !!}</span></td>
+                    <td><span class="label">{!! $pdf('العيادة') !!}</span><span class="value">{!! $pdf($card['clinic'] ?? null) !!}</span></td>
                     <td><span class="label">{!! $pdf('رقم المريض') !!}</span><span class="value">{!! $pdf($patient->file_number) !!}</span></td>
                     <td><span class="label">{!! $pdf('تاريخ الميلاد') !!}</span><span class="value">{!! $pdf($patient->date_of_birth?->toDateString()) !!}</span></td>
                 </tr>

@@ -80,20 +80,17 @@ class AppointmentControllerTest extends TestCase
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $unavailableDoctor->id,
-            'department_id' => $unavailableDepartment->id,
+
             'status' => DoctorProfile::STATUS_ACTIVE,
         ]);
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $availableDoctor->id,
-            'department_id' => $availableDepartment->id,
+
             'status' => DoctorProfile::STATUS_ACTIVE,
         ]);
 
         $this->setDepartmentWorkingHours($unavailableDepartment, [
-            'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
-        ]);
-        $this->setDepartmentWorkingHours($availableDepartment, [
             'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
         ]);
 
@@ -111,7 +108,7 @@ class AppointmentControllerTest extends TestCase
         DoctorLeave::factory()->create([
             'clinic_id' => $clinic->id,
             'doctor_id' => $unavailableDoctor->id,
-            'department_id' => $unavailableDepartment->id,
+
             'type' => DoctorLeave::TYPE_FULL_DAY,
             'leave_date' => '2026-06-15',
         ]);
@@ -185,7 +182,7 @@ class AppointmentControllerTest extends TestCase
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
+
         ]);
         $this->setDepartmentWorkingHours($department, [
             'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
@@ -217,7 +214,7 @@ class AppointmentControllerTest extends TestCase
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
+
         ]);
         $this->setDepartmentWorkingHours($department, [
             'saturday' => ['start_time' => '09:00', 'end_time' => '17:00'],
@@ -251,7 +248,7 @@ class AppointmentControllerTest extends TestCase
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
+
         ]);
         $this->setDepartmentWorkingHours($department, [
             'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
@@ -296,20 +293,10 @@ class AppointmentControllerTest extends TestCase
         $response->assertJsonPath('data.0.id', $matchingAppointment->id);
     }
 
-    public function test_index_filters_by_patient_file_number_doctor_department_and_date_range(): void
+    public function test_index_filters_by_patient_file_number_doctor_and_date_range(): void
     {
         $clinic = Clinic::factory()->create();
         $user = $this->authenticateForClinic($clinic);
-
-        $department = Department::factory()->create([
-            'clinic_id' => $clinic->id,
-            'name' => 'عيادة الأسنان',
-            'is_active' => true,
-        ]);
-        $otherDepartment = Department::factory()->create([
-            'clinic_id' => $clinic->id,
-            'is_active' => true,
-        ]);
 
         $doctor = User::factory()->create(['clinic_id' => $clinic->id]);
         $otherDoctor = User::factory()->create(['clinic_id' => $clinic->id]);
@@ -319,13 +306,11 @@ class AppointmentControllerTest extends TestCase
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
             'status' => DoctorProfile::STATUS_ACTIVE,
         ]);
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $otherDoctor->id,
-            'department_id' => $otherDepartment->id,
             'status' => DoctorProfile::STATUS_ACTIVE,
         ]);
 
@@ -362,7 +347,6 @@ class AppointmentControllerTest extends TestCase
         $response = $this->getJson(route('appointments.index', [
             'search' => '123',
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
             'date_from' => '2026-06-01',
             'date_to' => '2026-06-30',
         ]));
@@ -371,7 +355,6 @@ class AppointmentControllerTest extends TestCase
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', $matchingAppointment->id);
         $response->assertJsonPath('data.0.patient.file_number', 123);
-        $response->assertJsonPath('data.0.doctor.department.name', 'عيادة الأسنان');
     }
 
     public function test_index_clears_search_filter_when_empty_search_is_passed(): void
@@ -744,13 +727,26 @@ class AppointmentControllerTest extends TestCase
      */
     private function setDepartmentWorkingHours(Department $department, array $activeDays): void
     {
+        $nameToIndex = [
+            'sunday' => 0, 'monday' => 1, 'tuesday' => 2,
+            'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6,
+        ];
+
+        $normalized = [];
+        foreach ($activeDays as $day => $hours) {
+            $index = is_int($day) ? $day : ($nameToIndex[$day] ?? $day);
+            $normalized[$index] = $hours;
+        }
+
         foreach (ClinicWorkingHour::DAYS as $day) {
+            $hours = $normalized[$day] ?? null;
+
             ClinicWorkingHour::query()->create([
-                'department_id' => $department->id,
+                'clinic_id' => $department->clinic_id,
                 'day_of_week' => $day,
-                'is_active' => array_key_exists($day, $activeDays),
-                'start_time' => $activeDays[$day]['start_time'] ?? null,
-                'end_time' => $activeDays[$day]['end_time'] ?? null,
+                'is_active' => $hours !== null,
+                'start_time' => $hours['start_time'] ?? null,
+                'end_time' => $hours['end_time'] ?? null,
             ]);
         }
     }

@@ -9,11 +9,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import type { Department } from './types';
+import type { Clinic } from './types';
 
 defineProps<{
     open: boolean;
-    department: Department | null;
+    department: Clinic | null;
 }>();
 
 const emit = defineEmits<{
@@ -85,7 +85,7 @@ const formatDate = (value: string | null): string => {
                             class="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground"
                         >
                             <UsersRound class="size-4" />
-                            {{ department.doctor_profiles_count }} طبيب
+                            {{ department.employees_count }} موظف
                         </span>
                     </div>
 
@@ -114,7 +114,7 @@ const formatDate = (value: string | null): string => {
                             <dd
                                 class="mt-1 font-bold text-foreground tabular-nums"
                             >
-                                {{ department.doctor_profiles_count }}
+                                 {{ department.employees_count }}
                             </dd>
                         </div>
 
@@ -124,20 +124,7 @@ const formatDate = (value: string | null): string => {
                             <dt
                                 class="text-xs font-semibold text-muted-foreground"
                             >
-                                آخر تحديث بواسطة
-                            </dt>
-                            <dd class="mt-1 font-bold text-foreground">
-                                {{ department.updater?.name ?? '-' }}
-                            </dd>
-                        </div>
-
-                        <div
-                            class="rounded-lg border border-border/70 bg-card px-4 py-3"
-                        >
-                            <dt
-                                class="text-xs font-semibold text-muted-foreground"
-                            >
-                                تاريخ آخر تحديث
+                                آخر تحديث
                             </dt>
                             <dd class="mt-1 font-bold text-foreground">
                                 {{ formatDate(department.updated_at) }}

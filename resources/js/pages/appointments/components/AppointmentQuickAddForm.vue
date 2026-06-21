@@ -29,7 +29,7 @@ import AppointmentWorkingHoursInput from './AppointmentWorkingHoursInput.vue';
 import type {
     AvailabilityPeriod,
     ClinicWorkingHour,
-    DepartmentOption,
+    ClinicOption,
     Option,
     TodayAvailability,
 } from './types';
@@ -37,7 +37,7 @@ import type {
 const props = defineProps<{
     patients: Option[];
     doctors: Option[];
-    departments: DepartmentOption[];
+    clinics: ClinicOption[];
     clinicWorkingHours: ClinicWorkingHour[];
     todayAvailability: TodayAvailability;
 }>();
@@ -48,7 +48,7 @@ const emit = defineEmits<{
     reset: [];
 }>();
 
-const selectedDepartmentId = ref('');
+const selectedClinicId = ref('');
 const selectedDoctorId = ref('');
 const selectedDuration = ref('30');
 const formResetKey = ref(0);
@@ -58,13 +58,13 @@ const noDoctorSelected = computed(() => {
     return !Number.isFinite(doctorId) || doctorId <= 0;
 });
 
-const todayAvailableDepartmentIds = computed(
-    () => new Set(props.todayAvailability.departments),
+const todayAvailableClinicIds = computed(
+    () => new Set(props.todayAvailability.clinics),
 );
 
-const availableDepartments = computed(() =>
-    props.departments.filter((department) =>
-        todayAvailableDepartmentIds.value.has(department.id),
+const availableClinics = computed(() =>
+    props.clinics.filter((clinic) =>
+        todayAvailableClinicIds.value.has(clinic.id),
     ),
 );
 
@@ -76,14 +76,14 @@ const filteredDoctors = computed(() => {
         todayAvailableDoctorIds.has(doctor.id),
     );
 
-    if (!selectedDepartmentId.value) {
+    if (!selectedClinicId.value) {
         return availableDoctors;
     }
 
-    const departmentId = Number(selectedDepartmentId.value);
+    const clinicId = Number(selectedClinicId.value);
 
     return availableDoctors.filter(
-        (doctor) => doctor.department_id === departmentId,
+        (doctor) => doctor.clinic_id === clinicId,
     );
 });
 
@@ -101,9 +101,9 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
     return [];
 });
 
-const handleDepartmentChange = (value: unknown): void => {
+const handleClinicChange = (value: unknown): void => {
     const strValue = String(value ?? '');
-    selectedDepartmentId.value = strValue === '__all__' ? '' : strValue;
+    selectedClinicId.value = strValue === '__all__' ? '' : strValue;
     selectedDoctorId.value = '';
 };
 
@@ -113,7 +113,7 @@ const handleDoctorChange = (value: unknown): void => {
 };
 
 const resetFormState = (): void => {
-    selectedDepartmentId.value = '';
+    selectedClinicId.value = '';
     selectedDoctorId.value = '';
     selectedDuration.value = '30';
     formResetKey.value += 1;
@@ -227,18 +227,18 @@ const handleSubmit = (event: SubmitEvent): void => {
 
                     <div class="grid gap-1.5">
                         <Label
-                            for="quick_department"
+                            for="quick_clinic"
                             class="flex items-center gap-1 text-xs font-semibold text-foreground"
                         >
                             <Building2 class="size-3.5 text-primary" />
                             العيادة
                         </Label>
                         <Select
-                            :model-value="selectedDepartmentId"
-                            @update:model-value="handleDepartmentChange"
+                            :model-value="selectedClinicId"
+                            @update:model-value="handleClinicChange"
                         >
                             <SelectTrigger
-                                id="quick_department"
+                                id="quick_clinic"
                                 class="h-10 w-full rounded-xl bg-secondary/50"
                             >
                                 <SelectValue placeholder="كل العيادات" />
@@ -248,11 +248,11 @@ const handleSubmit = (event: SubmitEvent): void => {
                                     كل العيادات
                                 </SelectItem>
                                 <SelectItem
-                                    v-for="department in availableDepartments"
-                                    :key="department.id"
-                                    :value="String(department.id)"
+                                    v-for="clinic in availableClinics"
+                                    :key="clinic.id"
+                                    :value="String(clinic.id)"
                                 >
-                                    {{ department.name }}
+                                    {{ clinic.name }}
                                 </SelectItem>
                             </SelectContent>
                         </Select>
@@ -290,8 +290,8 @@ const handleSubmit = (event: SubmitEvent): void => {
                                     :value="String(doctor.id)"
                                 >
                                     {{
-                                        doctor.department?.name
-                                            ? `${doctor.name} - ${doctor.department.name}`
+                                        doctor.clinic?.name
+                                            ? `${doctor.name} - ${doctor.clinic.name}`
                                             : doctor.name
                                     }}
                                 </SelectItem>

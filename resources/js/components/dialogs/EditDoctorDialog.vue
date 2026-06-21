@@ -8,7 +8,7 @@ import type { Doctor } from '@/types';
 const props = defineProps<{
     open: boolean;
     doctor: Doctor | null;
-    departments?: { id: number; name: string }[];
+    clinics?: { id: number; name: string }[];
     specialties?: { id: number; name: string }[];
 }>();
 
@@ -47,11 +47,12 @@ const fields = computed<FormField[]>(() => [
         required: true,
     },
     {
-        name: 'department_id',
-        label: 'القسم',
+        name: 'clinic_id',
+        label: 'العيادة',
         type: 'select',
-        placeholder: 'اختر القسم',
-        options: props.departments?.map((d) => ({ value: d.id, label: d.name })) ?? [],
+        placeholder: 'اختر العيادة',
+        options: props.clinics?.map((c) => ({ value: c.id, label: c.name })) ?? [],
+        required: true,
     },
     {
         name: 'license_number',
@@ -72,7 +73,7 @@ const form = useForm({
     email: props.doctor?.email ?? '',
     phone: props.doctor?.phone ?? '',
     specialty_id: props.doctor?.specialty_id?.toString() ?? '',
-    department_id: props.doctor?.department_id?.toString() ?? '',
+    clinic_id: props.doctor?.clinic_id?.toString() ?? '',
     license_number: props.doctor?.license_number ?? '',
     bio: props.doctor?.bio ?? '',
 });

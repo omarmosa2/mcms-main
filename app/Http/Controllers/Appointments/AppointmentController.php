@@ -14,7 +14,7 @@ use App\Http\Requests\Appointments\TransitionAppointmentStatusRequest;
 use App\Http\Requests\Appointments\UpdateAppointmentRequest;
 use App\Http\Resources\AppointmentResource;
 use App\Models\Appointment;
-use App\Models\Department;
+use App\Models\Clinic;
 use App\Models\PatientCardVisit;
 use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
@@ -59,7 +59,7 @@ class AppointmentController extends Controller
             sortBy: $filters['sort_by'],
             sortDirection: $filters['sort_direction'],
             doctorId: $doctorScopeUserId ?? $filters['doctor_id'],
-            departmentId: $filters['department_id'],
+            clinicFilterId: $filters['clinic_id'],
             dateFrom: $filters['date_from'],
             dateTo: $filters['date_to'],
         );
@@ -73,11 +73,13 @@ class AppointmentController extends Controller
         $patients = $this->cacheService->getPatientsDropdown($clinicId);
 
         $doctors = $this->cacheService->getDoctorsDropdown($clinicId);
-        $departments = $this->cacheService
-            ->getClinicDepartments($clinicId)
-            ->map(fn (Department $department): array => [
-                'id' => $department->id,
-                'name' => $department->name,
+        $clinics = Clinic::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Clinic $clinic): array => [
+                'id' => $clinic->id,
+                'name' => $clinic->name,
             ])
             ->values()
             ->all();
@@ -88,8 +90,8 @@ class AppointmentController extends Controller
             ->with([
                 'patient:id,clinic_id,first_name,last_name,file_number,phone,date_of_birth',
                 'doctor:id,clinic_id,name',
-                'doctor.doctorProfile:id,clinic_id,user_id,department_id,specialty,status',
-                'doctor.doctorProfile.department:id,clinic_id,name',
+                'doctor.doctorProfile:id,clinic_id,user_id,specialty,status',
+                'doctor.doctorProfile.clinic:id,name',
             ])
             ->whereDate('scheduled_for', now()->toDateString())
             ->orderBy('scheduled_for')
@@ -99,7 +101,7 @@ class AppointmentController extends Controller
             'appointments' => $appointmentsResource->response()->getData(true),
             'patients' => $patients,
             'doctors' => $doctors,
-            'departments' => $departments,
+            'clinics' => $clinics,
             'status_options' => [
                 Appointment::STATUS_SCHEDULED,
                 Appointment::STATUS_CONFIRMED,
@@ -219,7 +221,7 @@ class AppointmentController extends Controller
 
         $appointment = Appointment::query()
             ->forClinic($clinicId)
-            ->with(['patient:id,clinic_id', 'doctor:id,clinic_id,name', 'doctor.doctorProfile:id,clinic_id,user_id,department_id'])
+            ->with(['patient:id,clinic_id', 'doctor:id,clinic_id,name', 'doctor.doctorProfile:id,clinic_id,user_id'])
             ->whereKey($appointmentId)
             ->firstOrFail();
 
@@ -235,7 +237,6 @@ class AppointmentController extends Controller
         }
 
         $doctorId = $appointment->doctor_id;
-        $departmentId = $appointment->doctor?->doctorProfile?->department_id;
         $scheduledFor = $appointment->scheduled_for;
 
         PatientCardVisit::query()->create([
@@ -243,7 +244,6 @@ class AppointmentController extends Controller
             'patient_id' => $appointment->patient_id,
             'appointment_id' => $appointment->id,
             'doctor_id' => $doctorId,
-            'department_id' => $departmentId,
             'visit_date' => $scheduledFor->toDateString(),
             'visit_time' => $scheduledFor->format('H:i'),
             'created_by' => $userId,
@@ -332,37 +332,36 @@ class AppointmentController extends Controller
     }
 
     /**
-     * @param  array<int, array{id: int, department_id?: int|null}>  $doctors
+     * @param  array<int, array{id: int, clinic_id?: int|null}>  $doctors
      * @return array{
      *     date: string,
-     *     departments: array<int, int>,
+     *     clinics: array<int, int>,
      *     doctors: array<int, array{
      *         id: int,
-     *         department_id: int,
+     *         clinic_id: int,
      *         available_periods: array<int, array{start_time: string, end_time: string}>
      *     }>,
-     *     department_periods: array<int, array<int, array{start_time: string, end_time: string}>>
+     *     clinic_periods: array<int, array<int, array{start_time: string, end_time: string}>>
      * }
      */
     private function resolveTodayAvailability(int $clinicId, array $doctors): array
     {
         $today = now()->toDateString();
         $availableDoctors = [];
-        $departmentPeriods = [];
+        $clinicPeriods = [];
 
         foreach ($doctors as $doctor) {
             $doctorId = (int) ($doctor['id'] ?? 0);
-            $departmentId = (int) ($doctor['department_id'] ?? 0);
+            $doctorClinicId = (int) ($doctor['clinic_id'] ?? $clinicId);
 
-            if ($doctorId <= 0 || $departmentId <= 0) {
+            if ($doctorId <= 0 || $doctorClinicId <= 0) {
                 continue;
             }
 
             $availability = $this->doctorAvailabilityService->availabilityForDay(
-                clinicId: $clinicId,
+                clinicId: $doctorClinicId,
                 doctorId: $doctorId,
                 date: $today,
-                departmentId: $departmentId,
             );
 
             if (! $availability['is_available']) {
@@ -371,21 +370,21 @@ class AppointmentController extends Controller
 
             $availableDoctors[] = [
                 'id' => $doctorId,
-                'department_id' => $departmentId,
+                'clinic_id' => $doctorClinicId,
                 'available_periods' => $availability['available_periods'],
             ];
 
-            $departmentPeriods[$departmentId] = $this->mergePeriods([
-                ...($departmentPeriods[$departmentId] ?? []),
+            $clinicPeriods[$doctorClinicId] = $this->mergePeriods([
+                ...($clinicPeriods[$doctorClinicId] ?? []),
                 ...$availability['available_periods'],
             ]);
         }
 
         return [
             'date' => $today,
-            'departments' => array_values(array_unique(array_column($availableDoctors, 'department_id'))),
+            'clinics' => array_values(array_unique(array_column($availableDoctors, 'clinic_id'))),
             'doctors' => $availableDoctors,
-            'department_periods' => $departmentPeriods,
+            'clinic_periods' => $clinicPeriods,
         ];
     }
 
@@ -432,7 +431,7 @@ class AppointmentController extends Controller
      *     status: ?string,
      *     search: ?string,
      *     doctor_id: ?int,
-     *     department_id: ?int,
+     *     clinic_id: ?int,
      *     date_from: ?string,
      *     date_to: ?string,
      *     per_page: int,
@@ -452,7 +451,7 @@ class AppointmentController extends Controller
          *     status?: ?string,
          *     search?: ?string,
          *     doctor_id?: ?int,
-         *     department_id?: ?int,
+         *     clinic_id?: ?int,
          *     date_from?: ?string,
          *     date_to?: ?string,
          *     per_page?: int,
@@ -483,10 +482,10 @@ class AppointmentController extends Controller
             : ($savedFilters['doctor_id'] ?? null);
         $doctorId = $this->normalizeNullableInteger($doctorIdInput);
 
-        $departmentIdInput = $request->exists('department_id')
-            ? $request->query('department_id')
-            : ($savedFilters['department_id'] ?? null);
-        $departmentId = $this->normalizeNullableInteger($departmentIdInput);
+        $clinicIdInput = $request->exists('clinic_id')
+            ? $request->query('clinic_id')
+            : ($savedFilters['clinic_id'] ?? null);
+        $clinicFilterId = $this->normalizeNullableInteger($clinicIdInput);
 
         $dateFromInput = $request->exists('date_from')
             ? $request->query('date_from')
@@ -517,7 +516,7 @@ class AppointmentController extends Controller
             'status' => $status,
             'search' => $search,
             'doctor_id' => $doctorId,
-            'department_id' => $departmentId,
+            'clinic_id' => $clinicFilterId,
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
             'per_page' => $perPage,

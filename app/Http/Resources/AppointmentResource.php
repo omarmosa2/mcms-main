@@ -45,10 +45,10 @@ class AppointmentResource extends JsonResource
                 'id' => $this->doctor?->id,
                 'name' => $this->doctor?->name,
                 'specialty' => $this->doctor?->doctorProfile?->specialty,
-                'department' => $this->doctor?->doctorProfile?->department !== null
+                'clinic' => $this->doctor?->doctorProfile?->clinic !== null
                     ? [
-                        'id' => $this->doctor->doctorProfile->department->id,
-                        'name' => $this->doctor->doctorProfile->department->name,
+                        'id' => $this->doctor->doctorProfile->clinic->id,
+                        'name' => $this->doctor->doctorProfile->clinic->name,
                     ]
                     : null,
             ]),

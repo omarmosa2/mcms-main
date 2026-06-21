@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Payroll;
 
 use App\Http\Controllers\Controller;
-use App\Models\Department;
 use App\Models\DoctorAppointmentEntitlement;
 use App\Models\DoctorDeduction;
 use App\Models\DoctorDuePayment;
@@ -42,7 +41,6 @@ class PayrollController extends Controller
             'employee_salaries' => $employeeRows->values()->all(),
             'doctor_dues' => $doctorRows->values()->all(),
             'summaries' => $this->summaries($employeeRows, $doctorRows),
-            'departments' => $this->departmentOptions($clinicId),
             'filters' => $filters,
         ];
 
@@ -274,11 +272,8 @@ class PayrollController extends Controller
         return EmployeeMonthlySalary::query()
             ->forClinic($clinicId)
             ->where('salary_month', $month)
-            ->with(['employee:id,full_name,employee_type,job_title,department_id', 'employee.department:id,name'])
+            ->with(['employee:id,full_name,employee_type,job_title'])
             ->withCount('payments')
-            ->when($filters['department_id'] !== null, function ($query) use ($filters) {
-                $query->whereHas('employee', fn ($q) => $q->where('department_id', $filters['department_id']));
-            })
             ->when($filters['status'] !== null, fn ($query) => $query->where('status', $filters['status']))
             ->orderBy('id')
             ->get()
@@ -289,7 +284,6 @@ class PayrollController extends Controller
                 'name' => $record->employee?->full_name ?? 'Employee #'.$record->employee_id,
                 'employee_type' => $record->employee?->employee_type,
                 'job_title' => $record->employee?->job_title,
-                'department' => $record->employee?->department?->name,
                 'base_salary' => (float) $record->base_salary,
                 'salary_month' => $record->salary_month,
                 'due_amount' => (float) $record->due_amount,
@@ -323,10 +317,7 @@ class PayrollController extends Controller
         return DoctorMonthlyDue::query()
             ->forClinic($clinicId)
             ->where('salary_month', $month)
-            ->with(['doctor:id,user_id,department_id,compensation_type,compensation_value', 'doctor.user:id,name', 'doctor.department:id,name'])
-            ->when($filters['department_id'] !== null, function ($query) use ($filters) {
-                $query->whereHas('doctor', fn ($q) => $q->where('department_id', $filters['department_id']));
-            })
+            ->with(['doctor:id,user_id,compensation_type,compensation_value', 'doctor.user:id,name'])
             ->when($filters['status'] !== null, fn ($query) => $query->where('status', $filters['status']))
             ->orderBy('id')
             ->get()
@@ -335,7 +326,6 @@ class PayrollController extends Controller
                 'doctor_monthly_due_id' => $record->id,
                 'doctor_id' => $record->doctor_id,
                 'name' => $record->doctor?->user?->name ?? 'Doctor #'.$record->doctor_id,
-                'department' => $record->doctor?->department?->name,
                 'payment_type' => $record->payment_type,
                 'percentage' => $record->percentage !== null ? (float) $record->percentage : null,
                 'fixed_weekly_amount' => $record->fixed_weekly_amount !== null ? (float) $record->fixed_weekly_amount : null,
@@ -445,22 +435,7 @@ class PayrollController extends Controller
             'month' => $this->nullableString($request->query('month')) ?? now()->format('Y-m'),
             'person_type' => $this->allowedNullableString($request->query('person_type'), ['employee', 'doctor']),
             'status' => $this->allowedNullableString($request->query('status'), ['unpaid', 'partially_paid', 'paid']),
-            'department_id' => $this->nullableInteger($request->query('department_id')),
         ];
-    }
-
-    /**
-     * @return array<int, array{id: int, name: string}>
-     */
-    private function departmentOptions(int $clinicId): array
-    {
-        return Department::query()
-            ->forClinic($clinicId)
-            ->select(['id', 'name'])
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Department $department): array => ['id' => $department->id, 'name' => $department->name])
-            ->all();
     }
 
     private function paymentResponse(Request $request, string $message): JsonResponse|RedirectResponse

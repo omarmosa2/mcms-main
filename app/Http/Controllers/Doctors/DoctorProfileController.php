@@ -12,10 +12,8 @@ use App\Http\Requests\Doctors\StoreDoctorProfileRequest;
 use App\Http\Requests\Doctors\UpdateDoctorProfileRequest;
 use App\Http\Resources\DoctorProfileResource;
 use App\Models\Clinic;
-use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\User;
-use App\Services\ClinicWorkingHoursService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -35,7 +33,6 @@ class DoctorProfileController extends Controller
         private CreateDoctorProfileAction $createDoctorProfileAction,
         private UpdateDoctorProfileAction $updateDoctorProfileAction,
         private DeleteDoctorProfileAction $deleteDoctorProfileAction,
-        private ClinicWorkingHoursService $clinicWorkingHoursService,
     ) {}
 
     public function index(Request $request): AnonymousResourceCollection|InertiaResponse
@@ -49,11 +46,11 @@ class DoctorProfileController extends Controller
             userId: (int) $request->user()->id,
             perPage: $filters['per_page'],
             status: $filters['status'],
-            departmentId: $filters['department_id'],
             search: $filters['search'],
             sortBy: $filters['sort_by'],
             sortDirection: $filters['sort_direction'],
             doctorScopeUserId: $doctorScopeUserId,
+            allClinics: true,
         );
 
         $doctorProfilesResource = DoctorProfileResource::collection($doctorProfiles);
@@ -67,7 +64,7 @@ class DoctorProfileController extends Controller
             'stats' => $this->resolveStats($clinicId, $doctorScopeUserId),
             'clinic' => $this->resolveClinicOption($clinicId),
             'doctors' => $this->resolveDoctorOptions($clinicId, $doctorScopeUserId),
-            'departments' => $this->resolveDepartmentOptions($clinicId),
+            'clinics' => $this->resolveClinicOptions($clinicId),
             'status_options' => $this->statusOptions(),
             'filters' => $filters,
             'is_doctor_scope' => $doctorScopeUserId !== null,
@@ -76,7 +73,7 @@ class DoctorProfileController extends Controller
 
     public function store(StoreDoctorProfileRequest $request): JsonResponse|RedirectResponse
     {
-        $clinicId = $this->resolveClinicId($request);
+        $clinicId = (int) $request->validated('clinic_id');
         $doctorScopeUserId = $this->resolveDoctorScopeUserId($request);
 
         $doctorProfile = $this->createDoctorProfileAction->handle(
@@ -247,7 +244,6 @@ class DoctorProfileController extends Controller
     /**
      * @return array{
      *     status: ?string,
-     *     department_id: ?int,
      *     search: ?string,
      *     per_page: int,
      *     sort_by: string,
@@ -264,7 +260,6 @@ class DoctorProfileController extends Controller
 
         /** @var array{
          *     status?: ?string,
-         *     department_id?: ?int,
          *     search?: ?string,
          *     per_page?: int,
          *     sort_by?: string,
@@ -276,11 +271,6 @@ class DoctorProfileController extends Controller
             ? $request->query('status')
             : ($savedFilters['status'] ?? null);
         $status = $this->normalizeStatus($statusInput);
-
-        $departmentIdInput = $request->exists('department_id')
-            ? $request->query('department_id')
-            : ($savedFilters['department_id'] ?? null);
-        $departmentId = $this->normalizeNullableInteger($departmentIdInput);
 
         $searchInput = $request->exists('search')
             ? $request->query('search')
@@ -304,8 +294,8 @@ class DoctorProfileController extends Controller
 
         $filters = [
             'status' => $status,
-            'department_id' => $departmentId,
             'search' => $search,
+            'clinic_id' => $this->resolveClinicId($request),
             'per_page' => $perPage,
             'sort_by' => $sortBy,
             'sort_direction' => $sortDirection,
@@ -332,21 +322,6 @@ class DoctorProfileController extends Controller
         $normalized = trim((string) ($value ?? ''));
 
         return $normalized !== '' ? $normalized : null;
-    }
-
-    private function normalizeNullableInteger(mixed $value): ?int
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        if (! is_numeric($value)) {
-            return null;
-        }
-
-        $intValue = (int) $value;
-
-        return $intValue > 0 ? $intValue : null;
     }
 
     private function normalizePerPage(mixed $value): int
@@ -396,13 +371,13 @@ class DoctorProfileController extends Controller
      *     active_doctors: int,
      *     on_leave_doctors: int,
      *     inactive_doctors: int,
-     *     departments_with_doctors: int
+     *     clinics_with_doctors: int
      * }
      */
     private function resolveStats(int $clinicId, ?int $doctorScopeUserId): array
     {
         $stats = DoctorProfile::query()
-            ->forClinic($clinicId)
+            ->withoutGlobalScope('clinic')
             ->withoutTrashed()
             ->when($doctorScopeUserId !== null, function (Builder $builder) use ($doctorScopeUserId): void {
                 $builder->where('user_id', $doctorScopeUserId);
@@ -411,7 +386,7 @@ class DoctorProfileController extends Controller
             ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_doctors', [DoctorProfile::STATUS_ACTIVE])
             ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as on_leave_doctors', [DoctorProfile::STATUS_ON_LEAVE])
             ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as inactive_doctors', [DoctorProfile::STATUS_INACTIVE])
-            ->selectRaw('COUNT(DISTINCT department_id) as departments_with_doctors')
+            ->selectRaw('COUNT(DISTINCT clinic_id) as clinics_with_doctors')
             ->first();
 
         return [
@@ -419,7 +394,7 @@ class DoctorProfileController extends Controller
             'active_doctors' => (int) ($stats?->active_doctors ?? 0),
             'on_leave_doctors' => (int) ($stats?->on_leave_doctors ?? 0),
             'inactive_doctors' => (int) ($stats?->inactive_doctors ?? 0),
-            'departments_with_doctors' => (int) ($stats?->departments_with_doctors ?? 0),
+            'clinics_with_doctors' => (int) ($stats?->clinics_with_doctors ?? 0),
         ];
     }
 
@@ -467,25 +442,42 @@ class DoctorProfileController extends Controller
     }
 
     /**
-     * @return array<int, array{id: int, name: string, code: string|null, is_active: bool, working_hours: array<int, array{day_of_week: string, is_active: bool, start_time: ?string, end_time: ?string}>}>
+     * @return array<int, array{id: int, name: string, code: string|null, is_active: bool, working_hours: array<int, array{day_of_week: int, is_active: bool, start_time: string|null, end_time: string|null}>}>
      */
-    private function resolveDepartmentOptions(int $clinicId): array
+    private function resolveClinicOptions(int $clinicId): array
     {
-        return Department::query()
-            ->forClinic($clinicId)
+        return Clinic::query()
+            ->where('is_active', true)
+            ->with('workingHours:id,clinic_id,day_of_week,is_active,start_time,end_time')
             ->select(['id', 'name', 'code', 'is_active'])
-            ->with('workingHours')
             ->orderBy('name')
             ->limit(250)
             ->get()
-            ->map(fn (Department $department): array => [
-                'id' => $department->id,
-                'name' => $department->name,
-                'code' => $department->code,
-                'is_active' => (bool) $department->is_active,
-                'working_hours' => $this->clinicWorkingHoursService->getForDepartment($department->id),
+            ->map(fn (Clinic $clinic): array => [
+                'id' => $clinic->id,
+                'name' => $clinic->name,
+                'code' => $clinic->code,
+                'is_active' => (bool) $clinic->is_active,
+                'working_hours' => $clinic->workingHours
+                    ->map(fn ($workingHour): array => [
+                        'day_of_week' => (int) $workingHour->day_of_week,
+                        'is_active' => (bool) $workingHour->is_active,
+                        'start_time' => $this->formatTime($workingHour->start_time),
+                        'end_time' => $this->formatTime($workingHour->end_time),
+                    ])
+                    ->values()
+                    ->all(),
             ])
             ->values()
             ->all();
+    }
+
+    private function formatTime(mixed $time): ?string
+    {
+        if ($time === null || $time === '') {
+            return null;
+        }
+
+        return substr((string) $time, 0, 5);
     }
 }

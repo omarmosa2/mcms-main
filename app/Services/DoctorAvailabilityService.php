@@ -4,9 +4,7 @@ namespace App\Services;
 
 use App\Models\ClinicWorkingHour;
 use App\Models\DoctorLeave;
-use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
-use App\Support\WeekDay;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -21,22 +19,16 @@ class DoctorAvailabilityService
      *     unavailable_periods: array<int, array{start_time: string, end_time: string, reason: ?string}>
      * }
      */
-    public function availabilityForDay(int $clinicId, int $doctorId, Carbon|string $date, ?int $departmentId = null): array
+    public function availabilityForDay(int $clinicId, int $doctorId, Carbon|string $date): array
     {
         $carbonDate = CarbonImmutable::parse($date);
-        $departmentId ??= $this->doctorDepartmentId($clinicId, $doctorId);
-
-        if ($departmentId === null) {
-            return $this->emptyAvailability();
-        }
-
-        $day = WeekDay::fromCarbonDay((int) $carbonDate->dayOfWeek);
+        $day = (int) $carbonDate->dayOfWeek;
 
         $doctorSchedule = DoctorSchedule::query()
             ->forClinic($clinicId)
             ->withoutTrashed()
             ->where('doctor_id', $doctorId)
-            ->whereIn('day_of_week', [$day, (string) $carbonDate->dayOfWeek])
+            ->where('day_of_week', $day)
             ->where('is_available', true)
             ->first();
 
@@ -45,7 +37,7 @@ class DoctorAvailabilityService
         }
 
         $clinicHours = ClinicWorkingHour::query()
-            ->where('department_id', $departmentId)
+            ->where('clinic_id', $clinicId)
             ->where('day_of_week', $day)
             ->where('is_active', true)
             ->first();
@@ -98,12 +90,11 @@ class DoctorAvailabilityService
         int $doctorId,
         mixed $scheduledFor,
         int $durationMinutes,
-        ?int $departmentId = null,
     ): bool {
         $start = CarbonImmutable::parse($scheduledFor);
         $end = $start->addMinutes($durationMinutes);
 
-        $availability = $this->availabilityForDay($clinicId, $doctorId, $start, $departmentId);
+        $availability = $this->availabilityForDay($clinicId, $doctorId, $start);
 
         if (! $availability['is_available']) {
             return false;
@@ -133,14 +124,6 @@ class DoctorAvailabilityService
             ->where('status', DoctorLeave::STATUS_ACTIVE)
             ->orderBy('start_time')
             ->get();
-    }
-
-    private function doctorDepartmentId(int $clinicId, int $doctorId): ?int
-    {
-        return DoctorProfile::query()
-            ->forClinic($clinicId)
-            ->where('user_id', $doctorId)
-            ->value('department_id');
     }
 
     /**

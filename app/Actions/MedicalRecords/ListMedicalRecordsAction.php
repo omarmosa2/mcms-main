@@ -18,7 +18,7 @@ class ListMedicalRecordsAction extends BaseAction
         int $userId,
         int $perPage = 15,
         ?string $search = null,
-        ?int $departmentId = null,
+        ?int $clinicFilterId = null,
         ?int $doctorId = null,
         ?string $clinicType = null,
         ?string $status = null,
@@ -33,7 +33,7 @@ class ListMedicalRecordsAction extends BaseAction
             ->withoutTrashed()
             ->with([
                 'patient:id,clinic_id,first_name,last_name,file_number',
-                'department:id,clinic_id,name,clinic_type',
+                'clinic:id,name,code',
                 'doctor:id,clinic_id,name',
                 'creator:id,clinic_id,name',
             ]);
@@ -64,8 +64,8 @@ class ListMedicalRecordsAction extends BaseAction
             });
         }
 
-        if ($departmentId !== null) {
-            $query->where('department_id', $departmentId);
+        if ($clinicFilterId !== null) {
+            $query->where('clinic_id', $clinicFilterId);
         }
 
         if ($doctorId !== null) {

@@ -8,7 +8,6 @@ const props = defineProps<{
     open: boolean;
     patients?: { id: number; full_name: string }[];
     doctors?: { id: number; name: string }[];
-    departments?: { id: number; name: string }[];
 }>();
 
 const emit = defineEmits<{
@@ -32,13 +31,6 @@ const fields = computed<FormField[]>(() => [
         placeholder: 'اختر الطبيب',
         options: props.doctors?.map((d) => ({ value: d.id, label: d.name })) ?? [],
         required: true,
-    },
-    {
-        name: 'department_id',
-        label: 'القسم',
-        type: 'select',
-        placeholder: 'اختر القسم',
-        options: props.departments?.map((d) => ({ value: d.id, label: d.name })) ?? [],
     },
     {
         name: 'date',
@@ -75,7 +67,6 @@ const fields = computed<FormField[]>(() => [
 const form = useForm({
     patient_id: '',
     doctor_id: '',
-    department_id: '',
     date: '',
     time: '',
     type: '',

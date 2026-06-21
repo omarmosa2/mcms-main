@@ -191,12 +191,12 @@ class UpdateAppointmentAction extends BaseAction
             ->where('user_id', $doctorId)
             ->first();
 
-        if ($doctorProfile === null || $doctorProfile->department_id === null) {
+        if ($doctorProfile === null) {
             return;
         }
 
         $isAvailable = $this->clinicWorkingHoursService->isAppointmentWithinWorkingHours(
-            $doctorProfile->department_id,
+            $clinicId,
             $payload['scheduled_for'],
             (int) ($payload['duration_minutes'] ?? 30),
         );

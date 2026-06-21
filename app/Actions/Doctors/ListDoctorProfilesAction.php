@@ -17,19 +17,19 @@ class ListDoctorProfilesAction extends BaseAction
         int $userId,
         int $perPage = 15,
         ?string $status = null,
-        ?int $departmentId = null,
         ?string $search = null,
         string $sortBy = 'created_at',
         string $sortDirection = 'desc',
         ?int $doctorScopeUserId = null,
+        bool $allClinics = false,
     ): LengthAwarePaginator {
         $query = DoctorProfile::query()
-            ->forClinic($clinicId)
+            ->withoutGlobalScope('clinic')
             ->withoutTrashed()
             ->with([
                 'user:id,clinic_id,name,email,is_active',
                 'user.doctorSchedules:id,clinic_id,doctor_id,day_of_week,start_time,end_time,is_available',
-                'department:id,clinic_id,name,code,is_active',
+                'clinic:id,name,code,is_active',
             ])
             ->orderByDesc('created_at');
 
@@ -39,10 +39,6 @@ class ListDoctorProfilesAction extends BaseAction
 
         if ($status !== null) {
             $query->where('status', $status);
-        }
-
-        if ($departmentId !== null) {
-            $query->where('department_id', $departmentId);
         }
 
         if ($search !== null) {
@@ -55,8 +51,8 @@ class ListDoctorProfilesAction extends BaseAction
                     ->orWhereHas('user', function (Builder $userQuery) use ($searchTerm): void {
                         $userQuery->where('name', 'like', $searchTerm);
                     })
-                    ->orWhereHas('department', function (Builder $departmentQuery) use ($searchTerm): void {
-                        $departmentQuery
+                    ->orWhereHas('clinic', function (Builder $clinicQuery) use ($searchTerm): void {
+                        $clinicQuery
                             ->where('name', 'like', $searchTerm)
                             ->orWhere('code', 'like', $searchTerm);
                     });
@@ -74,7 +70,6 @@ class ListDoctorProfilesAction extends BaseAction
             metadata: [
                 'per_page' => $perPage,
                 'status_filter' => $status,
-                'department_filter' => $departmentId,
                 'search' => $search,
                 'sort_by' => $sortBy,
                 'sort_direction' => $sortDirection,

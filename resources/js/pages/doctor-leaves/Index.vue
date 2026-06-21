@@ -21,11 +21,11 @@ import { Label } from '@/components/ui/label';
 type DoctorOption = {
     id: number;
     name: string | null;
-    department_id: number | null;
-    department: { id: number; name: string } | null;
+    clinic_id: number | null;
+    clinic: { id: number; name: string } | null;
 };
 
-type DepartmentOption = {
+type ClinicOption = {
     id: number;
     name: string;
 };
@@ -34,8 +34,8 @@ type DoctorLeave = {
     id: number;
     doctor_id: number;
     doctor: { id: number; name: string } | null;
-    department_id: number;
-    department: { id: number; name: string } | null;
+    clinic_id: number;
+    clinic: { id: number; name: string } | null;
     type: 'full_day' | 'hourly';
     leave_date: string;
     start_time: string | null;
@@ -52,10 +52,10 @@ type PaginatedLeaves = {
 const props = defineProps<{
     leaves: PaginatedLeaves;
     doctors: DoctorOption[];
-    departments: DepartmentOption[];
+    clinics: ClinicOption[];
     filters: {
         doctor_id: number | null;
-        department_id: number | null;
+        clinic_id: number | null;
         status: string | null;
         date_from: string | null;
         date_to: string | null;
@@ -75,7 +75,7 @@ defineOptions({
 });
 
 const selectedDoctorId = ref('');
-const selectedDepartmentId = ref('');
+const selectedClinicId = ref('');
 const leaveType = ref<'full_day' | 'hourly'>('full_day');
 const editingLeave = ref<DoctorLeave | null>(null);
 const isEditDialogOpen = ref(false);
@@ -83,15 +83,15 @@ const isEditDialogOpen = ref(false);
 const doctorOptions = computed(() =>
     props.doctors.map((doctor) => ({
         ...doctor,
-        label: doctor.department?.name
-            ? `${doctor.name} - ${doctor.department.name}`
+        label: doctor.clinic?.name
+            ? `${doctor.name} - ${doctor.clinic.name}`
             : (doctor.name ?? `#${doctor.id}`),
     })),
 );
 
 watch(selectedDoctorId, (doctorId) => {
     if (!doctorId) {
-        selectedDepartmentId.value = '';
+        selectedClinicId.value = '';
         return;
     }
 
@@ -99,8 +99,8 @@ watch(selectedDoctorId, (doctorId) => {
         (item) => String(item.id) === String(doctorId),
     );
 
-    if (doctor?.department_id != null) {
-        selectedDepartmentId.value = String(doctor.department_id);
+    if (doctor?.clinic_id != null) {
+        selectedClinicId.value = String(doctor.clinic_id);
     }
 });
 
@@ -199,21 +199,21 @@ function formatTime(time: string | null): string {
                     <div class="grid gap-2 lg:col-span-2">
                         <Label>العيادة</Label>
                         <select
-                            v-model="selectedDepartmentId"
-                            name="department_id"
+                            v-model="selectedClinicId"
+                            name="clinic_id"
                             class="pattern-field-clay h-10 w-full px-3"
                             
                         >
                             <option value="">اختر العيادة</option>
                             <option
-                                v-for="department in departments"
-                                :key="department.id"
-                                :value="department.id"
+                                v-for="clinic in clinics"
+                                :key="clinic.id"
+                                :value="clinic.id"
                             >
-                                {{ department.name }}
+                                {{ clinic.name }}
                             </option>
                         </select>
-                        <InputError :message="errors.department_id" />
+                        <InputError :message="errors.clinic_id" />
                     </div>
 
                     <div class="grid gap-2">
@@ -298,7 +298,7 @@ function formatTime(time: string | null): string {
                                 <td class="font-medium">
                                     {{ leave.doctor?.name ?? '-' }}
                                 </td>
-                                <td>{{ leave.department?.name ?? '-' }}</td>
+                                <td>{{ leave.clinic?.name ?? '-' }}</td>
                                 <td>{{ typeLabel(leave.type) }}</td>
                                 <td>{{ leave.leave_date }}</td>
                                 <td class="tabular-nums">
@@ -421,21 +421,21 @@ function formatTime(time: string | null): string {
                     <div class="grid gap-2">
                         <Label>العيادة</Label>
                         <select
-                            name="department_id"
+                            name="clinic_id"
                             class="pattern-field-clay h-10 w-full px-3"
                         >
                             <option
-                                v-for="department in departments"
-                                :key="department.id"
-                                :value="department.id"
+                                v-for="clinic in clinics"
+                                :key="clinic.id"
+                                :value="clinic.id"
                                 :selected="
-                                    editingLeave.department_id === department.id
+                                    editingLeave.clinic_id === clinic.id
                                 "
                             >
-                                {{ department.name }}
+                                {{ clinic.name }}
                             </option>
                         </select>
-                        <InputError :message="errors.department_id" />
+                        <InputError :message="errors.clinic_id" />
                     </div>
 
                     <div class="grid gap-2">

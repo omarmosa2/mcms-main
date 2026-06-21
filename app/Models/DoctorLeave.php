@@ -33,9 +33,9 @@ class DoctorLeave extends BaseModel
         return $this->belongsTo(User::class, 'doctor_id');
     }
 
-    public function department(): BelongsTo
+    public function clinic(): BelongsTo
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Clinic::class);
     }
 
     public function appointments(): HasMany

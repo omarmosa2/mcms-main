@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('clinic_id')->constrained('clinics')->cascadeOnDelete();
             $table->foreignId('patient_id')->constrained('patients')->cascadeOnDelete();
-            $table->foreignId('department_id')->nullable()->constrained('departments')->nullOnDelete();
             $table->foreignId('appointment_id')->nullable()->constrained('appointments')->nullOnDelete();
             $table->foreignId('doctor_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('record_number')->unique();
@@ -31,7 +30,6 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index(['clinic_id', 'patient_id', 'created_at']);
-            $table->index(['clinic_id', 'department_id']);
             $table->index(['clinic_id', 'doctor_id']);
             $table->index(['clinic_id', 'status']);
             $table->index(['clinic_id', 'clinic_type']);

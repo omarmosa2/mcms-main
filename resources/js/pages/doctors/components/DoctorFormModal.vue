@@ -21,9 +21,8 @@ import { Label } from '@/components/ui/label';
 import DoctorWorkingHoursSelector from './DoctorWorkingHoursSelector.vue';
 import type {
     ClinicOption,
-    ClinicWorkingHour,
+    ClinicSelectOption,
     CompensationType,
-    DepartmentOption,
     DoctorGender,
     DoctorProfile,
     WorkingHour,
@@ -33,7 +32,7 @@ const props = defineProps<{
     open: boolean;
     profile: DoctorProfile | null;
     clinic: ClinicOption;
-    departments: DepartmentOption[];
+    clinics: ClinicSelectOption[];
 }>();
 
 const emit = defineEmits<{
@@ -41,23 +40,13 @@ const emit = defineEmits<{
     saved: [];
 }>();
 
-const clinicDayToDoctorDay: Record<ClinicWorkingHour['day_of_week'], number> = {
-    sunday: 0,
-    monday: 1,
-    tuesday: 2,
-    wednesday: 3,
-    thursday: 4,
-    friday: 5,
-    saturday: 6,
-};
-
 type DoctorForm = {
     name: string;
     gender: DoctorGender;
     specialty: string;
     phone: string;
     work_start_date: string;
-    department_id: number | '';
+    clinic_id: number | '';
     username: string;
     password: string;
     status: 'active' | 'on_leave' | 'inactive';
@@ -72,84 +61,62 @@ const normalizeTime = (value: string | null): string | null => {
     return value === null ? null : value.slice(0, 5);
 };
 
-const departmentForId = (
-    departmentId: number | '' | null | undefined,
-): DepartmentOption | null => {
+const clinicForId = (
+    clinicId: number | '' | null | undefined,
+): ClinicSelectOption | null => {
     if (
-        departmentId === null ||
-        departmentId === undefined ||
-        departmentId === ''
+        clinicId === null ||
+        clinicId === undefined ||
+        clinicId === ''
     ) {
         return null;
     }
 
     return (
-        props.departments.find(
-            (department) => department.id === Number(departmentId),
+        props.clinics.find(
+            (clinicOption) => clinicOption.id === Number(clinicId),
         ) ?? null
     );
 };
 
-const isWithinClinicHours = (
-    doctorStartTime: string | null,
-    doctorEndTime: string | null,
-    clinicStartTime: string | null,
-    clinicEndTime: string | null,
-): boolean => {
-    if (
-        doctorStartTime === null ||
-        doctorEndTime === null ||
-        clinicStartTime === null ||
-        clinicEndTime === null
-    ) {
-        return false;
-    }
+const ALL_DAYS = [6, 0, 1, 2, 3, 4, 5] as const;
 
-    return (
-        doctorStartTime >= clinicStartTime &&
-        doctorEndTime <= clinicEndTime &&
-        doctorEndTime > doctorStartTime
-    );
-};
-
-const workingHoursForDepartment = (
-    department: DepartmentOption | null,
-    profile: DoctorProfile | null = null,
+const buildWorkingHoursFromProfile = (
+    profile: DoctorProfile | null,
 ): WorkingHour[] => {
-    if (department === null) {
-        return [];
+    const empty = ALL_DAYS.map((dayOfWeek) => ({
+        day_of_week: dayOfWeek,
+        is_active: false,
+        start_time: null,
+        end_time: null,
+    }));
+
+    if (profile === null) {
+        return empty;
     }
 
-    return department.working_hours
-        .filter(
-            (day) =>
-                day.is_active &&
-                day.start_time !== null &&
-                day.end_time !== null,
-        )
-        .map((clinicDay) => {
-            const dayOfWeek = clinicDayToDoctorDay[clinicDay.day_of_week];
-            const current = profile?.working_hours.find(
-                (item) => item.day_of_week === dayOfWeek,
-            );
-            const currentStartTime = normalizeTime(current?.start_time ?? null);
-            const currentEndTime = normalizeTime(current?.end_time ?? null);
-            const canUseCurrentHours =
-                current?.is_active === true &&
-                isWithinClinicHours(
-                    currentStartTime,
-                    currentEndTime,
-                    normalizeTime(clinicDay.start_time),
-                    normalizeTime(clinicDay.end_time),
-                );
+    const result = ALL_DAYS.map((dayOfWeek) => {
+        const schedule = profile.working_hours.find(
+            (item) => item.day_of_week === dayOfWeek,
+        );
 
-            return {
-                day_of_week: dayOfWeek,
-                is_active: canUseCurrentHours,
-                start_time: canUseCurrentHours ? currentStartTime : null,
-                end_time: canUseCurrentHours ? currentEndTime : null,
-            };
-        });
+        const isActive = schedule?.is_active ?? false;
+        const startTime = isActive
+            ? normalizeTime(schedule?.start_time ?? null)
+            : null;
+        const endTime = isActive
+            ? normalizeTime(schedule?.end_time ?? null)
+            : null;
+
+        return {
+            day_of_week: dayOfWeek,
+            is_active: isActive,
+            start_time: startTime,
+            end_time: endTime,
+        };
+    });
+
+    return result;
 };
 
 const defaultsFor = (profile: DoctorProfile | null): DoctorForm => ({
@@ -158,7 +125,7 @@ const defaultsFor = (profile: DoctorProfile | null): DoctorForm => ({
     specialty: profile?.specialty ?? '',
     phone: profile?.phone ?? '',
     work_start_date: profile?.work_start_date ?? '',
-    department_id: profile?.department_id ?? '',
+    clinic_id: profile?.clinic_id ?? props.clinic.id,
     username: profile?.user?.email ?? '',
     password: '',
     status: profile?.status ?? 'active',
@@ -170,18 +137,15 @@ const defaultsFor = (profile: DoctorProfile | null): DoctorForm => ({
             ? String(Number(profile.compensation_value))
             : '',
     consultation_duration_minutes: profile?.consultation_duration_minutes ?? 30,
-    working_hours: workingHoursForDepartment(
-        departmentForId(profile?.department_id),
-        profile,
-    ),
+    working_hours: buildWorkingHoursFromProfile(profile),
 });
 
 const form = useForm<DoctorForm>(defaultsFor(props.profile));
 const isHydratingForm = ref(false);
 
 const isEditing = computed(() => props.profile !== null);
-const selectedDepartment = computed<DepartmentOption | null>(() =>
-    departmentForId(form.department_id),
+const selectedClinic = computed<ClinicSelectOption | null>(() =>
+    clinicForId(form.clinic_id),
 );
 const compensationLabel = computed(() => {
     if (form.compensation_type === 'percentage') {
@@ -211,15 +175,13 @@ watch(
 );
 
 watch(
-    () => form.department_id,
+    () => form.clinic_id,
     () => {
         if (!props.open || isHydratingForm.value) {
             return;
         }
 
-        form.working_hours = workingHoursForDepartment(
-            selectedDepartment.value,
-        );
+        form.working_hours = buildWorkingHoursFromProfile(props.profile);
         form.clearErrors();
     },
 );
@@ -342,24 +304,24 @@ const submit = (): void => {
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="doctor_department"
+                            <Label for="doctor_clinic_select"
                                 >العيادة التابعة للطبيب</Label
                             >
                             <select
-                                id="doctor_department"
-                                v-model="form.department_id"
+                                id="doctor_clinic_select"
+                                v-model="form.clinic_id"
                                 class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
                             >
                                 <option value="">يرجى اختيار العيادة</option>
                                 <option
-                                    v-for="department in departments"
-                                    :key="department.id"
-                                    :value="department.id"
+                                    v-for="clinicOption in clinics"
+                                    :key="clinicOption.id"
+                                    :value="clinicOption.id"
                                 >
-                                    {{ department.name }}
+                                    {{ clinicOption.name }}
                                 </option>
                             </select>
-                            <InputError :message="form.errors.department_id" />
+                            <InputError :message="form.errors.clinic_id" />
                         </div>
 
                         <div class="grid gap-2">
@@ -378,9 +340,9 @@ const submit = (): void => {
                     v-model="form.working_hours"
                     :errors="form.errors"
                     :clinic-working-hours="
-                        selectedDepartment?.working_hours ?? []
+                        selectedClinic?.working_hours ?? []
                     "
-                    :has-selected-department="selectedDepartment !== null"
+                    :has-selected-clinic="selectedClinic !== null"
                 />
 
                 <section

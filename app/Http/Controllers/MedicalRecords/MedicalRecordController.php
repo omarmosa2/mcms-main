@@ -10,7 +10,7 @@ use App\Http\Requests\MedicalRecords\StoreMedicalRecordRequest;
 use App\Http\Requests\MedicalRecords\UpdateMedicalRecordRequest;
 use App\Http\Resources\MedicalRecordResource;
 use App\Models\Appointment;
-use App\Models\Department;
+use App\Models\Clinic;
 use App\Models\MedicalRecord;
 use App\Models\Patient;
 use App\Models\User;
@@ -43,7 +43,7 @@ class MedicalRecordController extends Controller
             userId: (int) $user->id,
             perPage: $filters['per_page'],
             search: $filters['search'],
-            departmentId: $isDoctor ? null : $filters['department_id'],
+            clinicFilterId: $isDoctor ? null : $filters['clinic_id'],
             doctorId: $filters['doctor_id'],
             clinicType: $isDoctor ? null : $filters['clinic_type'],
             status: $filters['status'],
@@ -54,12 +54,12 @@ class MedicalRecordController extends Controller
             sortDirection: $filters['sort_direction'],
         );
 
-        $departments = $isDoctor
+        $clinics = $isDoctor
             ? collect()
-            : Department::query()
-                ->forClinic($clinicId)
+            : Clinic::query()
+                ->whereKey($clinicId)
                 ->where('is_active', true)
-                ->get(['id', 'name', 'clinic_type']);
+                ->get(['id', 'name', 'code']);
 
         $doctors = $isDoctor
             ? collect()
@@ -76,7 +76,7 @@ class MedicalRecordController extends Controller
 
         return Inertia::render('medical-records/Index', [
             'records' => $recordsResource->response()->getData(true),
-            'departments' => $departments,
+            'clinics' => $clinics,
             'doctors' => $doctors,
             'clinicTypes' => $isDoctor ? [] : MedicalRecord::CLINIC_TYPES,
             'filters' => $filters,
@@ -88,10 +88,10 @@ class MedicalRecordController extends Controller
     {
         $clinicId = $this->resolveClinicId($request);
 
-        $departments = Department::query()
-            ->forClinic($clinicId)
+        $clinics = Clinic::query()
+            ->whereKey($clinicId)
             ->where('is_active', true)
-            ->get(['id', 'name', 'clinic_type']);
+            ->get(['id', 'name', 'code']);
 
         $patients = Patient::query()
             ->forClinic($clinicId)
@@ -110,15 +110,11 @@ class MedicalRecordController extends Controller
                 ->first();
 
             if ($appointment) {
-                $doctorProfile = $appointment->doctor?->doctorProfile;
-                $department = $doctorProfile?->department;
-
                 $appointmentData = [
                     'appointment_id' => $appointment->id,
                     'patient_id' => $appointment->patient_id,
                     'doctor_id' => $appointment->doctor_id,
-                    'department_id' => $department?->id,
-                    'clinic_type' => $department?->clinic_type,
+                    'clinic_id' => $appointment->clinic_id,
                     'scheduled_for' => $appointment->scheduled_for,
                     'appointment_type' => $appointment->appointment_type,
                 ];
@@ -126,7 +122,7 @@ class MedicalRecordController extends Controller
         }
 
         return Inertia::render('medical-records/Create', [
-            'departments' => $departments,
+            'clinics' => $clinics,
             'clinicTypes' => MedicalRecord::CLINIC_TYPES,
             'patients' => $patients,
             'appointment_data' => $appointmentData,
@@ -146,7 +142,7 @@ class MedicalRecordController extends Controller
         if ($request->expectsJson()) {
             return MedicalRecordResource::make($record->load([
                 'patient:id,clinic_id,first_name,last_name,file_number',
-                'department:id,clinic_id,name,clinic_type',
+                'clinic:id,name,code',
                 'doctor:id,clinic_id,name',
                 'treatmentPlans',
                 'followUps',
@@ -179,7 +175,7 @@ class MedicalRecordController extends Controller
                 'patient.radiologyOrders:id,clinic_id,visit_id,patient_id,ordered_by,study_code,study_name,modality,status,ordered_at,notes',
                 'patient.radiologyOrders.orderer:id,clinic_id,name',
                 'patient.radiologyOrders.reports:id,clinic_id,radiology_order_id,reported_by,report_text,reported_at',
-                'department:id,clinic_id,name,clinic_type',
+                'clinic:id,name,code',
                 'doctor:id,clinic_id,name',
                 'creator:id,clinic_id,name',
                 'auditLogs' => fn ($query) => $query
@@ -220,7 +216,7 @@ class MedicalRecordController extends Controller
         if ($request->expectsJson()) {
             return MedicalRecordResource::make($record->load([
                 'patient:id,clinic_id,first_name,last_name,file_number',
-                'department:id,clinic_id,name,clinic_type',
+                'clinic:id,name,code',
                 'doctor:id,clinic_id,name',
                 'treatmentPlans',
                 'followUps',
@@ -267,7 +263,7 @@ class MedicalRecordController extends Controller
      * @return array{
      *     search: ?string,
      *     per_page: int,
-     *     department_id: ?int,
+     *     clinic_id: ?int,
      *     doctor_id: ?int,
      *     clinic_type: ?string,
      *     status: ?string,
@@ -283,7 +279,7 @@ class MedicalRecordController extends Controller
         return [
             'search' => $request->filled('search') ? trim($request->query('search', '')) : null,
             'per_page' => $this->normalizePerPage($request->query('per_page', 15)),
-            'department_id' => ($isDoctor || ! $request->filled('department_id')) ? null : (int) $request->query('department_id'),
+            'clinic_id' => ($isDoctor || ! $request->filled('clinic_id')) ? null : (int) $request->query('clinic_id'),
             'doctor_id' => $request->filled('doctor_id') ? (int) $request->query('doctor_id') : null,
             'clinic_type' => ($isDoctor || ! $request->filled('clinic_type')) ? null : $request->query('clinic_type'),
             'status' => $request->filled('status') ? $request->query('status') : null,

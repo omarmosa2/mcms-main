@@ -16,7 +16,7 @@ type DoctorOption = {
     email: string | null;
 };
 
-type DepartmentOption = {
+type ClinicOption = {
     id: number;
     name: string;
     code: string | null;
@@ -27,7 +27,7 @@ type DoctorProfile = {
     id: number;
     clinic_id: number;
     user_id: number;
-    department_id: number | null;
+    clinic_id: number | null;
     license_number: string | null;
     specialty: string;
     consultation_duration_minutes: number;
@@ -35,7 +35,7 @@ type DoctorProfile = {
     work_schedule: Record<string, unknown> | null;
     bio: string | null;
     user?: DoctorOption | null;
-    department?: DepartmentOption | null;
+    clinic?: ClinicOption | null;
     created_at: string | null;
     updated_at: string | null;
 };
@@ -43,7 +43,7 @@ type DoctorProfile = {
 const props = defineProps<{
     profile: DoctorProfile | null;
     doctors: DoctorOption[];
-    departments: DepartmentOption[];
+    clinics: ClinicOption[];
     statusOptions: DoctorProfileStatus[];
 }>();
 
@@ -109,29 +109,29 @@ const stringifyWorkSchedule = (workSchedule: Record<string, unknown> | null): st
                     </div>
 
                     <div class="grid gap-2">
-                        <Label for="edit_doctor_department_id">القسم</Label>
+                        <Label for="edit_doctor_clinic_id">القسم</Label>
                         <select
-                            id="edit_doctor_department_id"
-                            name="department_id"
+                            id="edit_doctor_clinic_id"
+                            name="clinic_id"
                             class="pattern-field-clay h-9 px-3 py-1.5"
-                            :value="profile.department_id ?? ''"
+                            :value="profile.clinic_id ?? ''"
                         >
                             <option value="">
                                 غير معين
                             </option>
                             <option
-                                v-for="department in departments"
-                                :key="`edit-department-option-${department.id}`"
-                                :value="department.id"
+                                v-for="clinic in clinics"
+                                :key="`edit-clinic-option-${clinic.id}`"
+                                :value="clinic.id"
                             >
                                 {{
-                                    department.code !== null
-                                        ? `${department.name} (${department.code})`
-                                        : department.name
+                                    clinic.code !== null
+                                        ? `${clinic.name} (${clinic.code})`
+                                        : clinic.name
                                 }}
                             </option>
                         </select>
-                        <InputError :message="errors.department_id" />
+                        <InputError :message="errors.clinic_id" />
                     </div>
                 </div>
 

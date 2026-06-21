@@ -24,11 +24,9 @@ class PatientCardVisitResource extends JsonResource
                 'id' => $this->doctor->id,
                 'name' => $this->doctor->name,
             ]),
-            'department_id' => $this->department_id,
-            'department' => $this->whenLoaded('department', fn () => [
-                'id' => $this->department->id,
-                'name' => $this->department->name,
-                'clinic_type' => $this->department->clinic_type,
+            'clinic' => $this->whenLoaded('clinic', fn () => [
+                'id' => $this->clinic->id,
+                'name' => $this->clinic->name,
             ]),
             'visit_date' => $this->visit_date?->toDateString(),
             'visit_time' => $this->visit_time?->format('H:i'),

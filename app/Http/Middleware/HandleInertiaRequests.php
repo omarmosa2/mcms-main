@@ -79,13 +79,10 @@ class HandleInertiaRequests extends Middleware
 
             if (in_array('doctor', $roles, true) && $user->doctorProfile !== null) {
                 $doctorProfile = $user->doctorProfile;
-                $department = $doctorProfile->department;
                 $clinic = $user->clinic;
 
                 $doctorClinic = [
                     'name' => $clinic?->name,
-                    'department_name' => $department?->name,
-                    'clinic_type' => $department?->clinic_type,
                     'specialty' => $doctorProfile->specialty,
                 ];
             }

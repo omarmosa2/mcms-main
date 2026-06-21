@@ -22,7 +22,19 @@ export function usePermissions() {
         );
     });
 
+    const roles = computed<string[]>(() => {
+        return ((page.props.auth as { roles?: string[] } | undefined)?.roles ?? []).filter(
+            (value): value is string => typeof value === 'string',
+        );
+    });
+
+    const noClinicContext = computed(() => roles.value.length === 0);
+
     const can = (permission: string): boolean => {
+        if (noClinicContext.value) {
+            return true;
+        }
+
         return permissions.value.some((grantedPermission) =>
             permissionMatches(grantedPermission, permission),
         );
@@ -30,6 +42,7 @@ export function usePermissions() {
 
     return {
         permissions,
+        roles,
         can,
     };
 }

@@ -50,11 +50,6 @@ class DoctorProfile extends BaseModel
         return $this->belongsTo(User::class);
     }
 
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class);
-    }
-
     public function salaryPayments(): HasMany
     {
         return $this->hasMany(DoctorSalaryPayment::class);

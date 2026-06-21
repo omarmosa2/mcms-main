@@ -48,7 +48,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
 
         $contentSecurityPolicy = (string) $response->headers->get('Content-Security-Policy');
 
-        $this->assertStringContainsString("script-src 'self' 'unsafe-inline' 'unsafe-eval' http:", $contentSecurityPolicy);
+        $this->assertStringContainsString("script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http:", $contentSecurityPolicy);
         $this->assertStringContainsString("style-src 'self' 'unsafe-inline' https://fonts.bunny.net http:", $contentSecurityPolicy);
         $this->assertStringContainsString('connect-src', $contentSecurityPolicy);
         $this->assertStringContainsString('ws:', $contentSecurityPolicy);
@@ -65,7 +65,7 @@ class SecurityHeadersMiddlewareTest extends TestCase
 
         $contentSecurityPolicy = (string) $response->headers->get('Content-Security-Policy');
 
-        $this->assertStringNotContainsString("script-src 'self' 'unsafe-inline' 'unsafe-eval' http:", $contentSecurityPolicy);
+        $this->assertStringNotContainsString("script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: http:", $contentSecurityPolicy);
         $this->assertStringNotContainsString("style-src 'self' 'unsafe-inline' https://fonts.bunny.net http:", $contentSecurityPolicy);
         $this->assertStringNotContainsString('[::1]:5173', $contentSecurityPolicy);
     }

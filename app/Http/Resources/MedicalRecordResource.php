@@ -62,11 +62,10 @@ class MedicalRecordResource extends JsonResource
                         ->values()
                     : [],
             ]),
-            'department_id' => $this->department_id,
-            'department' => $this->whenLoaded('department', fn () => [
-                'id' => $this->department->id,
-                'name' => $this->department->name,
-                'clinic_type' => $this->department->clinic_type,
+            'clinic' => $this->whenLoaded('clinic', fn () => [
+                'id' => $this->clinic->id,
+                'name' => $this->clinic->name,
+                'code' => $this->clinic->code,
             ]),
             'appointment_id' => $this->appointment_id,
             'doctor_id' => $this->doctor_id,

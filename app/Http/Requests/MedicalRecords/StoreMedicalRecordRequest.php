@@ -17,7 +17,6 @@ class StoreMedicalRecordRequest extends FormRequest
     {
         return [
             'patient_id' => ['required', 'integer', 'exists:patients,id'],
-            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
             'appointment_id' => ['nullable', 'integer', 'exists:appointments,id'],
             'clinic_type' => ['nullable', 'string', Rule::in(MedicalRecord::CLINIC_TYPES)],
             'form_data' => ['nullable', 'array'],

@@ -6,7 +6,7 @@ import { useToast } from '@/composables/useToast';
 
 const props = defineProps<{
     open: boolean;
-    departments?: { id: number; name: string }[];
+    clinics?: { id: number; name: string }[];
     specialties?: { id: number; name: string }[];
 }>();
 
@@ -47,11 +47,12 @@ const fields = computed<FormField[]>(() => [
         required: true,
     },
     {
-        name: 'department_id',
-        label: 'القسم',
+        name: 'clinic_id',
+        label: 'العيادة',
         type: 'select',
-        placeholder: 'اختر القسم',
-        options: props.departments?.map((d) => ({ value: d.id, label: d.name })) ?? [],
+        placeholder: 'اختر العيادة',
+        options: props.clinics?.map((c) => ({ value: c.id, label: c.name })) ?? [],
+        required: true,
     },
     {
         name: 'license_number',

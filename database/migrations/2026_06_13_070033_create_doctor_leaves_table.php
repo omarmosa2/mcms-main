@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('clinic_id')->constrained()->cascadeOnDelete();
             $table->foreignId('doctor_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('department_id')->constrained()->cascadeOnDelete();
             $table->string('type', 16);
             $table->date('leave_date');
             $table->time('start_time')->nullable();
@@ -24,7 +23,6 @@ return new class extends Migration
             $table->string('status', 16)->default('active');
             $table->timestamps();
 
-            $table->index(['clinic_id', 'department_id', 'leave_date', 'status']);
             $table->index(['clinic_id', 'doctor_id', 'leave_date', 'status']);
         });
     }

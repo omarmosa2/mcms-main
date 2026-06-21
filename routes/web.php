@@ -22,7 +22,7 @@ require __DIR__.'/notifications.php';
 require __DIR__.'/help.php';
 require __DIR__.'/accounts.php';
 require __DIR__.'/patients.php';
-require __DIR__.'/departments.php';
+require __DIR__.'/clinics.php';
 require __DIR__.'/doctors.php';
 require __DIR__.'/employees.php';
 require __DIR__.'/doctor-schedules.php';

@@ -111,10 +111,10 @@ type Patient = {
     radiology_orders: RadiologyOrder[];
 };
 
-type Department = {
+type Clinic = {
     id: number;
     name: string;
-    clinic_type: string | null;
+    code: string | null;
 };
 
 type TreatmentPlan = {
@@ -181,8 +181,7 @@ type MedicalRecord = {
     clinic_id: number;
     patient_id: number;
     patient: Patient;
-    department_id: number | null;
-    department: Department | null;
+    clinic: Clinic | null;
     appointment_id: number | null;
     doctor_id: number | null;
     doctor: Person | null;
@@ -307,7 +306,7 @@ const visitMetrics = computed(() => [
     { label: 'الجنس', value: genderLabel(record.patient?.gender) },
     { label: 'العمر', value: calculateAge(record.patient?.date_of_birth) },
     { label: 'الهاتف', value: record.patient?.phone ?? '—' },
-    { label: 'العيادة', value: record.department?.name ?? '—' },
+    { label: 'العيادة', value: record.clinic?.name ?? '—' },
     { label: 'الطبيب', value: record.doctor?.name ?? '—' },
     { label: 'تاريخ الزيارة', value: formatDate(record.visit_date) },
     { label: 'نوع الزيارة', value: visitTypeLabel(record.form_data?.visit_type) },
@@ -578,7 +577,7 @@ function fileSize(size: number): string {
                             <Badge variant="outline">{{ clinicTypeLabel(record.clinic_type) }}</Badge>
                         </div>
                         <p class="mt-1 truncate text-sm text-muted-foreground">
-                            {{ record.patient?.full_name }} · {{ record.record_number }} · {{ record.department?.name ?? 'بدون عيادة' }}
+                            {{ record.patient?.full_name }} · {{ record.record_number }} · {{ record.clinic?.name ?? 'بدون عيادة' }}
                         </p>
                     </div>
                 </div>

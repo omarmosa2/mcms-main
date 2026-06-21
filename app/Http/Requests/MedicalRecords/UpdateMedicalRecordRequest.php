@@ -16,7 +16,6 @@ class UpdateMedicalRecordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'department_id' => ['nullable', 'integer', 'exists:departments,id'],
             'clinic_type' => ['nullable', 'string', Rule::in(MedicalRecord::CLINIC_TYPES)],
             'form_data' => ['nullable', 'array'],
             'chief_complaint' => ['nullable', 'string', 'max:5000'],

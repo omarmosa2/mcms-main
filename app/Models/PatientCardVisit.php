@@ -41,11 +41,6 @@ class PatientCardVisit extends BaseModel
         return $this->belongsTo(User::class, 'doctor_id');
     }
 
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class);
-    }
-
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -4,7 +4,6 @@ namespace App\Services\Cache;
 
 use App\Models\Appointment;
 use App\Models\BrandingSetting;
-use App\Models\Department;
 use App\Models\ExpenseCategory;
 use App\Models\Invoice;
 use App\Models\Patient;
@@ -133,29 +132,6 @@ class CacheService
     {
         Cache::forget("clinic:{$clinicId}:roles");
         Cache::forget("clinic:{$clinicId}:roles:list");
-    }
-
-    public function getClinicDepartments(int $clinicId): EloquentCollection
-    {
-        $key = "clinic:{$clinicId}:departments:list";
-
-        $rows = $this->rememberList($key, self::REFERENCE_DATA_TTL, function () use ($clinicId): array {
-            return Department::query()
-                ->forClinic($clinicId)
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get()
-                ->map(fn (Department $department): array => $department->getAttributes())
-                ->all();
-        });
-
-        return Department::hydrate($rows);
-    }
-
-    public function invalidateClinicDepartments(int $clinicId): void
-    {
-        Cache::forget("clinic:{$clinicId}:departments");
-        Cache::forget("clinic:{$clinicId}:departments:list");
     }
 
     public function getClinicExpenseCategories(int $clinicId): EloquentCollection
@@ -377,7 +353,7 @@ class CacheService
         return Cache::remember($key, now()->addSeconds(self::DROPDOWN_OPTIONS_TTL), function () use ($clinicId) {
             return User::query()
                 ->where('clinic_id', $clinicId)
-                ->with(['doctorProfile.department:id,clinic_id,name'])
+                ->with(['doctorProfile.clinic:id,name'])
                 ->whereHas('roles', function ($builder) use ($clinicId): void {
                     $builder
                         ->where('roles.clinic_id', $clinicId)
@@ -390,12 +366,12 @@ class CacheService
                 ->map(fn (User $doctor): array => [
                     'id' => $doctor->id,
                     'name' => $doctor->name,
-                    'department_id' => $doctor->doctorProfile?->department_id,
+                    'clinic_id' => $doctor->doctorProfile?->clinic_id,
                     'specialty' => $doctor->doctorProfile?->specialty,
-                    'department' => $doctor->doctorProfile?->department !== null
+                    'clinic' => $doctor->doctorProfile?->clinic !== null
                         ? [
-                            'id' => $doctor->doctorProfile->department->id,
-                            'name' => $doctor->doctorProfile->department->name,
+                            'id' => $doctor->doctorProfile->clinic->id,
+                            'name' => $doctor->doctorProfile->clinic->name,
                         ]
                         : null,
                 ])

@@ -46,7 +46,7 @@ class DoctorLeaveControllerTest extends TestCase
 
         $response = $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_FULL_DAY,
             'leave_date' => '2026-06-15',
             'reason' => 'Conference',
@@ -59,7 +59,6 @@ class DoctorLeaveControllerTest extends TestCase
         $this->assertDatabaseHas('doctor_leaves', [
             'clinic_id' => $clinic->id,
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
             'type' => DoctorLeave::TYPE_FULL_DAY,
             'leave_date' => '2026-06-15 00:00:00',
             'status' => DoctorLeave::STATUS_ACTIVE,
@@ -83,7 +82,7 @@ class DoctorLeaveControllerTest extends TestCase
 
         $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_HOURLY,
             'leave_date' => '2026-06-16',
         ])->assertUnprocessable()
@@ -92,13 +91,13 @@ class DoctorLeaveControllerTest extends TestCase
         DoctorLeave::factory()->hourly('10:00', '12:00')->create([
             'clinic_id' => $clinic->id,
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'leave_date' => '2026-06-16',
         ]);
 
         $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_HOURLY,
             'leave_date' => '2026-06-16',
             'start_time' => '11:00',
@@ -108,7 +107,7 @@ class DoctorLeaveControllerTest extends TestCase
 
         $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_HOURLY,
             'leave_date' => '2026-06-16',
             'start_time' => '12:00',
@@ -141,7 +140,7 @@ class DoctorLeaveControllerTest extends TestCase
         DoctorLeave::factory()->hourly('10:00', '12:00')->create([
             'clinic_id' => $clinic->id,
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'leave_date' => $leaveDate,
         ]);
 
@@ -188,7 +187,7 @@ class DoctorLeaveControllerTest extends TestCase
         DoctorLeave::factory()->create([
             'clinic_id' => $clinic->id,
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_FULL_DAY,
             'leave_date' => $leaveDate,
         ]);
@@ -228,7 +227,7 @@ class DoctorLeaveControllerTest extends TestCase
         DoctorLeave::factory()->create([
             'clinic_id' => $clinic->id,
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_FULL_DAY,
             'leave_date' => $leaveDate,
         ]);
@@ -251,7 +250,7 @@ class DoctorLeaveControllerTest extends TestCase
 
         $response = $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_FULL_DAY,
             'leave_date' => '2026-06-15',
             'reason' => 'Vacation',
@@ -277,7 +276,7 @@ class DoctorLeaveControllerTest extends TestCase
 
         $response = $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_HOURLY,
             'leave_date' => '2026-06-16',
             'start_time' => '10:00',
@@ -312,7 +311,7 @@ class DoctorLeaveControllerTest extends TestCase
 
         $response = $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_HOURLY,
             'leave_date' => '2026-06-16',
             'start_time' => '15:00',
@@ -347,7 +346,7 @@ class DoctorLeaveControllerTest extends TestCase
 
         $response = $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_HOURLY,
             'leave_date' => '2026-06-16',
             'start_time' => '13:00',
@@ -382,7 +381,7 @@ class DoctorLeaveControllerTest extends TestCase
 
         $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_HOURLY,
             'leave_date' => '2026-06-16',
             'start_time' => '09:00',
@@ -414,7 +413,7 @@ class DoctorLeaveControllerTest extends TestCase
 
         $this->postJson(route('doctor-leaves.store'), [
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
+
             'type' => DoctorLeave::TYPE_FULL_DAY,
             'leave_date' => '2026-06-15',
         ])->assertCreated();
@@ -454,7 +453,6 @@ class DoctorLeaveControllerTest extends TestCase
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
             'status' => DoctorProfile::STATUS_ACTIVE,
         ]);
 
@@ -463,12 +461,21 @@ class DoctorLeaveControllerTest extends TestCase
 
     private function setDepartmentWorkingHours(Department $department, string $day, string $startTime, string $endTime): void
     {
-        ClinicWorkingHour::query()->create([
-            'department_id' => $department->id,
-            'day_of_week' => $day,
-            'is_active' => true,
-            'start_time' => $startTime,
-            'end_time' => $endTime,
-        ]);
+        $nameToIndex = [
+            'sunday' => 0, 'monday' => 1, 'tuesday' => 2,
+            'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6,
+        ];
+
+        $dayIndex = $nameToIndex[$day] ?? $day;
+
+        foreach (ClinicWorkingHour::DAYS as $dayOfWeek) {
+            ClinicWorkingHour::query()->create([
+                'clinic_id' => $department->clinic_id,
+                'day_of_week' => $dayOfWeek,
+                'is_active' => $dayOfWeek === $dayIndex,
+                'start_time' => $dayOfWeek === $dayIndex ? $startTime : null,
+                'end_time' => $dayOfWeek === $dayIndex ? $endTime : null,
+            ]);
+        }
     }
 }

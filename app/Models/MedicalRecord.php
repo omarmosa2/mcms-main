@@ -83,11 +83,6 @@ class MedicalRecord extends BaseModel
         return $this->belongsTo(Patient::class);
     }
 
-    public function department(): BelongsTo
-    {
-        return $this->belongsTo(Department::class);
-    }
-
     public function appointment(): BelongsTo
     {
         return $this->belongsTo(Appointment::class);

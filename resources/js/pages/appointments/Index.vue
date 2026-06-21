@@ -29,8 +29,8 @@ import AppointmentViewDialog from './components/AppointmentViewDialog.vue';
 import type {
     Appointment,
     AppointmentSortField,
+    ClinicOption,
     ClinicWorkingHour,
-    DepartmentOption,
     Option,
     SortDirection,
     TodayAvailability,
@@ -68,7 +68,7 @@ const {
     appointments,
     patients,
     doctors,
-    departments,
+    clinics,
     status_options,
     filters,
     clinic_working_hours,
@@ -79,7 +79,7 @@ const {
     appointments: PaginatedResponse<Appointment>;
     patients: Option[];
     doctors: Option[];
-    departments: DepartmentOption[];
+    clinics: ClinicOption[];
     status_options: string[];
     clinic_working_hours: ClinicWorkingHour[];
     today_availability: TodayAvailability;
@@ -87,7 +87,7 @@ const {
         status: string | null;
         search: string | null;
         doctor_id: number | null;
-        department_id: number | null;
+        clinic_id: number | null;
         date_from: string | null;
         date_to: string | null;
         per_page: number;
@@ -165,8 +165,8 @@ const localStatus = ref<string>(filters.status ?? '');
 const localDoctorId = ref<string>(
     filters.doctor_id !== null ? String(filters.doctor_id) : '',
 );
-const localDepartmentId = ref<string>(
-    filters.department_id !== null ? String(filters.department_id) : '',
+const localClinicId = ref<string>(
+    filters.clinic_id !== null ? String(filters.clinic_id) : '',
 );
 const localDateFrom = ref<string>(filters.date_from ?? '');
 const localDateTo = ref<string>(filters.date_to ?? '');
@@ -214,7 +214,7 @@ const buildIndexQuery = (
         status: string;
         search: string;
         doctor_id: string;
-        department_id: string;
+        clinic_id: string;
         date_from: string;
         date_to: string;
         per_page: number;
@@ -226,7 +226,7 @@ const buildIndexQuery = (
     status?: string;
     search?: string;
     doctor_id?: string;
-    department_id?: string;
+    clinic_id?: string;
     date_from?: string;
     date_to?: string;
     per_page: number;
@@ -238,7 +238,7 @@ const buildIndexQuery = (
         status?: string;
         search?: string;
         doctor_id?: string;
-        department_id?: string;
+    clinic_id?: string;
         date_from?: string;
         date_to?: string;
         per_page: number;
@@ -249,7 +249,7 @@ const buildIndexQuery = (
         status: localStatus.value.trim(),
         search: localSearch.value.trim(),
         doctor_id: localDoctorId.value.trim(),
-        department_id: localDepartmentId.value.trim(),
+        clinic_id: localClinicId.value.trim(),
         date_from: localDateFrom.value.trim(),
         date_to: localDateTo.value.trim(),
         per_page: localRowsPerPage.value,
@@ -267,7 +267,7 @@ const reloadAppointments = (
         status: string;
         search: string;
         doctor_id: string;
-        department_id: string;
+        clinic_id: string;
         date_from: string;
         date_to: string;
         per_page: number;
@@ -323,7 +323,7 @@ const resetLocalFilters = (): void => {
     localSearch.value = '';
     localStatus.value = '';
     localDoctorId.value = '';
-    localDepartmentId.value = '';
+    localClinicId.value = '';
     localDateFrom.value = '';
     localDateTo.value = '';
     localRowsPerPage.value = defaultRowsPerPage;
@@ -335,7 +335,7 @@ const resetLocalFilters = (): void => {
         status: '',
         search: '',
         doctor_id: '',
-        department_id: '',
+        clinic_id: '',
         date_from: '',
         date_to: '',
         per_page: defaultRowsPerPage,
@@ -350,7 +350,7 @@ watch(
         filters.search,
         filters.status,
         filters.doctor_id,
-        filters.department_id,
+        filters.clinic_id,
         filters.date_from,
         filters.date_to,
         filters.per_page,
@@ -364,8 +364,8 @@ watch(
         localStatus.value = filters.status ?? '';
         localDoctorId.value =
             filters.doctor_id !== null ? String(filters.doctor_id) : '';
-        localDepartmentId.value =
-            filters.department_id !== null ? String(filters.department_id) : '';
+        localClinicId.value =
+            filters.clinic_id !== null ? String(filters.clinic_id) : '';
         localDateFrom.value = filters.date_from ?? '';
         localDateTo.value = filters.date_to ?? '';
         localRowsPerPage.value = filters.per_page;
@@ -403,12 +403,12 @@ watch(
 );
 
 watch(
-    () => localDepartmentId.value,
+    () => localClinicId.value,
     () => {
         localPage.value = 1;
         reloadAppointments({
             page: 1,
-            department_id: localDepartmentId.value.trim(),
+            clinic_id: localClinicId.value.trim(),
         });
     },
 );
@@ -531,15 +531,15 @@ const selectedDoctorName = computed<string | null>(() => {
     return doctors.find((doctor) => doctor.id === doctorId)?.name ?? null;
 });
 
-const selectedDepartmentName = computed<string | null>(() => {
-    const departmentId = Number(localDepartmentId.value);
+const selectedClinicName = computed<string | null>(() => {
+    const clinicId = Number(localClinicId.value);
 
-    if (!Number.isFinite(departmentId) || departmentId <= 0) {
+    if (!Number.isFinite(clinicId) || clinicId <= 0) {
         return null;
     }
 
     return (
-        departments.find((department) => department.id === departmentId)
+        clinics.find((clinic) => clinic.id === clinicId)
             ?.name ?? null
     );
 });
@@ -567,11 +567,11 @@ const activeFilters = computed(() => {
         });
     }
 
-    if (localDepartmentId.value) {
+    if (localClinicId.value) {
         f.push({
-            key: 'department_id',
+            key: 'clinic_id',
             label: 'العيادة',
-            value: selectedDepartmentName.value ?? localDepartmentId.value,
+            value: selectedClinicName.value ?? localClinicId.value,
         });
     }
 
@@ -609,18 +609,18 @@ const statusOptions = computed(() => {
 const doctorOptions = computed(() => [
     { label: 'كل الأطباء', value: '' },
     ...doctors.map((doctor) => ({
-        label: doctor.department?.name
-            ? `${doctor.name} - ${doctor.department.name}`
+        label: doctor.clinic?.name
+            ? `${doctor.name} - ${doctor.clinic.name}`
             : (doctor.name ?? `#${doctor.id}`),
         value: String(doctor.id),
     })),
 ]);
 
-const departmentOptions = computed(() => [
+const clinicOptions = computed(() => [
     { label: 'كل العيادات', value: '' },
-    ...departments.map((department) => ({
-        label: department.name,
-        value: String(department.id),
+    ...clinics.map((clinic) => ({
+        label: clinic.name,
+        value: String(clinic.id),
     })),
 ]);
 
@@ -631,8 +631,8 @@ const handleRemoveFilter = (key: string) => {
         localStatus.value = '';
     } else if (key === 'doctor_id') {
         localDoctorId.value = '';
-    } else if (key === 'department_id') {
-        localDepartmentId.value = '';
+    } else if (key === 'clinic_id') {
+        localClinicId.value = '';
     } else if (key === 'date_from') {
         localDateFrom.value = '';
     } else if (key === 'date_to') {
@@ -864,7 +864,7 @@ const todaySummary = computed(() => ({
             v-if="can('appointment.create') && isQuickAddOpen"
             :patients="patients"
             :doctors="doctors"
-            :departments="departments"
+            :clinics="clinics"
             :clinic-working-hours="clinic_working_hours"
             :today-availability="today_availability"
             @success="handleQuickAddSuccess"
@@ -895,7 +895,7 @@ const todaySummary = computed(() => ({
             :local-search="localSearch"
             :local-status="localStatus"
             :local-doctor-id="localDoctorId"
-            :local-department-id="localDepartmentId"
+            :local-clinic-id="localClinicId"
             :local-date-from="localDateFrom"
             :local-date-to="localDateTo"
             :local-rows-per-page="localRowsPerPage"
@@ -909,7 +909,7 @@ const todaySummary = computed(() => ({
             :active-filters="activeFilters"
             :status-options="statusOptions"
             :doctor-options="doctorOptions"
-            :department-options="departmentOptions"
+            :clinic-options="clinicOptions"
             :can-delete-appointment="can('appointment.delete')"
             :can-edit-appointment="canEditAppointment"
             :can-update-status="
@@ -921,7 +921,7 @@ const todaySummary = computed(() => ({
             @search="localSearch = $event"
             @status="localStatus = $event"
             @doctor="localDoctorId = $event"
-            @department="localDepartmentId = $event"
+            @clinic="localClinicId = $event"
             @date-from="localDateFrom = $event"
             @date-to="localDateTo = $event"
             @rows-per-page="localRowsPerPage = $event"
@@ -941,7 +941,7 @@ const todaySummary = computed(() => ({
             :open="isCreateSheetOpen"
             :patients="patients"
             :doctors="doctors"
-            :departments="departments"
+            :clinics="clinics"
             :clinic-working-hours="clinic_working_hours"
             :today-availability="today_availability"
             @update:open="isCreateSheetOpen = $event"
@@ -956,7 +956,7 @@ const todaySummary = computed(() => ({
             :appointment="editingAppointment"
             :patients="patients"
             :doctors="doctors"
-            :departments="departments"
+            :clinics="clinics"
             :clinic-working-hours="clinic_working_hours"
             :today-availability="today_availability"
             @close="closeEditAppointment"

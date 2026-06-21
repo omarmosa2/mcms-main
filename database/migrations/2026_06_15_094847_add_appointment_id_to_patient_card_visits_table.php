@@ -22,7 +22,9 @@ return new class extends Migration
             }
         });
 
-        $indexExists = DB::select("SHOW INDEX FROM patient_card_visits WHERE Key_name = 'unique_appointment_id'");
+        $indexExists = DB::getDriverName() === 'mysql'
+            ? DB::select("SHOW INDEX FROM patient_card_visits WHERE Key_name = 'unique_appointment_id'")
+            : [];
 
         if ($indexExists === []) {
             DB::statement('CREATE UNIQUE INDEX unique_appointment_id ON patient_card_visits (appointment_id, clinic_id)');

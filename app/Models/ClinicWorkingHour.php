@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ClinicWorkingHour extends Model
 {
-    public const DAYS = WeekDay::DAYS;
+    public const DAYS = [0, 1, 2, 3, 4, 5, 6];
 
     protected $guarded = [];
 
@@ -16,6 +16,7 @@ class ClinicWorkingHour extends Model
     {
         return [
             'is_active' => 'boolean',
+            'day_of_week' => 'integer',
         ];
     }
 
@@ -24,8 +25,8 @@ class ClinicWorkingHour extends Model
         return $this->belongsTo(Clinic::class);
     }
 
-    public function department(): BelongsTo
+    public function getDayNameAttribute(): string
     {
-        return $this->belongsTo(Department::class);
+        return WeekDay::arabicName((string) $this->day_of_week);
     }
 }

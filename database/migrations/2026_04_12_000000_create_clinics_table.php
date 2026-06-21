@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('clinics', function (Blueprint $table) {
@@ -17,7 +14,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('legal_name')->nullable();
             $table->string('timezone')->default('Asia/Riyadh');
-            $table->string('currency', 3)->default('SAR');
+            $table->string('currency')->default('SAR');
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->text('address')->nullable();
@@ -26,9 +23,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('clinics');

@@ -22,7 +22,7 @@ class MedicalRecordExportController extends Controller
             ->forClinic((int) $clinicId)
             ->with([
                 'patient:id,clinic_id,first_name,last_name,file_number,phone,date_of_birth,gender',
-                'department:id,clinic_id,name,clinic_type',
+                'clinic:id,name,code',
                 'doctor:id,clinic_id,name',
                 'creator:id,clinic_id,name',
                 'treatmentPlans',

@@ -8,16 +8,22 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('departments')) {
+            return;
+        }
+
         Schema::table('departments', function (Blueprint $table) {
-            $table->string('clinic_type', 50)->nullable()->after('name');
-            $table->index(['clinic_id', 'clinic_type']);
+            $table->string('clinic_type', 50)->nullable()->after('is_active');
         });
     }
 
     public function down(): void
     {
+        if (! Schema::hasTable('departments')) {
+            return;
+        }
+
         Schema::table('departments', function (Blueprint $table) {
-            $table->dropIndex(['clinic_id', 'clinic_type']);
             $table->dropColumn('clinic_type');
         });
     }

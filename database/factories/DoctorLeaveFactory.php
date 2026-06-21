@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Clinic;
-use App\Models\Department;
 use App\Models\DoctorLeave;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -25,7 +24,6 @@ class DoctorLeaveFactory extends Factory
         return [
             'clinic_id' => $clinic,
             'doctor_id' => User::factory()->for($clinic),
-            'department_id' => Department::factory()->for($clinic),
             'type' => DoctorLeave::TYPE_FULL_DAY,
             'leave_date' => fake()->dateTimeBetween('+1 day', '+30 days')->format('Y-m-d'),
             'start_time' => null,

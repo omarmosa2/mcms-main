@@ -77,7 +77,7 @@ defineProps<{
                 <Building2 class="size-5 text-sky-600" />
             </div>
             <p class="mt-4 text-3xl font-black text-sky-700 tabular-nums">
-                {{ stats.departments_with_doctors }}
+                {{ stats.clinics_with_doctors }}
             </p>
         </article>
     </section>

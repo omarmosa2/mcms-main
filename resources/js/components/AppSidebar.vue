@@ -19,7 +19,7 @@ import {
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
-import DepartmentController from '@/actions/App/Http/Controllers/Departments/DepartmentController';
+import ClinicController from '@/actions/App/Http/Controllers/Clinics/ClinicController';
 import DoctorProfileController from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
 import EmployeeController from '@/actions/App/Http/Controllers/Employees/EmployeeController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
@@ -114,6 +114,10 @@ const roleNames = computed<string[]>(() => {
 });
 
 const primaryRole = computed<string>(() => {
+    if (roleNames.value.length === 0) {
+        return 'super_admin';
+    }
+
     const rolePriority = [
         'super_admin',
         'admin',
@@ -148,7 +152,7 @@ const mainNavItems = computed<MainNavItem[]>(() => {
             },
             {
                 title: 'العيادات',
-                href: DepartmentController.index(),
+                href: ClinicController.index(),
                 icon: Building2,
                 group: 'clinical',
                 permission: 'department.view',
@@ -266,6 +270,10 @@ const mainNavItems = computed<MainNavItem[]>(() => {
             item.title !== 'لوحة التحكم'
         ) {
             return false;
+        }
+
+        if (roleNames.value.length === 0) {
+            return true;
         }
 
         if (item.permission !== undefined && !can(item.permission)) {

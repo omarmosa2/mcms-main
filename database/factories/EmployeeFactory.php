@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Clinic;
-use App\Models\Department;
 use App\Models\Employee;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -21,11 +20,6 @@ class EmployeeFactory extends Factory
     {
         return [
             'clinic_id' => Clinic::factory(),
-            'department_id' => function (array $attributes): int {
-                return Department::factory()->create([
-                    'clinic_id' => $attributes['clinic_id'],
-                ])->id;
-            },
             'full_name' => fake()->name(),
             'gender' => fake()->randomElement(['male', 'female']),
             'birth_date' => fake()->optional()->date(),

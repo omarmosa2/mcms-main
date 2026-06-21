@@ -22,7 +22,7 @@ type DoctorOption = {
     email: string | null;
 };
 
-type DepartmentOption = {
+type ClinicOption = {
     id: number;
     name: string;
     code: string | null;
@@ -32,7 +32,7 @@ type DepartmentOption = {
 const props = defineProps<{
     open: boolean;
     doctors: DoctorOption[];
-    departments: DepartmentOption[];
+    clinics: ClinicOption[];
     statusOptions: DoctorProfileStatus[];
 }>();
 
@@ -88,28 +88,28 @@ const formatStatus = (status: DoctorProfileStatus): string => {
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="doctor_department_id">القسم</Label>
+                    <Label for="doctor_clinic_id">القسم</Label>
                     <select
-                        id="doctor_department_id"
-                        name="department_id"
+                        id="doctor_clinic_id"
+                        name="clinic_id"
                         class="pattern-field-clay h-9 px-3 py-1.5"
                     >
                         <option value="">
                             غير معين
                         </option>
                         <option
-                            v-for="department in departments"
-                            :key="`department-option-${department.id}`"
-                            :value="department.id"
+                            v-for="clinic in clinics"
+                            :key="`clinic-option-${clinic.id}`"
+                            :value="clinic.id"
                         >
                             {{
-                                department.code !== null
-                                    ? `${department.name} (${department.code})`
-                                    : department.name
+                                clinic.code !== null
+                                    ? `${clinic.name} (${clinic.code})`
+                                    : clinic.name
                             }}
                         </option>
                     </select>
-                    <InputError :message="errors.department_id" />
+                    <InputError :message="errors.clinic_id" />
                 </div>
 
                 <div class="grid gap-2">

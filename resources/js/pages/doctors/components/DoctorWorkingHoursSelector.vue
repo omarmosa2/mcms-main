@@ -10,7 +10,7 @@ const props = defineProps<{
     modelValue: WorkingHour[];
     errors: Record<string, string>;
     clinicWorkingHours: ClinicWorkingHour[];
-    hasSelectedDepartment: boolean;
+    hasSelectedClinic: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -27,23 +27,13 @@ const days = [
     { value: 5, label: 'الجمعة' },
 ];
 
-const clinicDayToDoctorDay: Record<ClinicWorkingHour['day_of_week'], number> = {
-    sunday: 0,
-    monday: 1,
-    tuesday: 2,
-    wednesday: 3,
-    thursday: 4,
-    friday: 5,
-    saturday: 6,
-};
-
 const clinicHoursForDay = (
     dayOfWeek: number,
 ): ClinicWorkingHour | undefined => {
     return props.clinicWorkingHours.find(
         (clinicDay) =>
             clinicDay.is_active &&
-            clinicDayToDoctorDay[clinicDay.day_of_week] === dayOfWeek,
+            clinicDay.day_of_week === dayOfWeek,
     );
 };
 
@@ -52,11 +42,11 @@ const labelForDay = (dayOfWeek: number): string => {
 };
 
 const defaultStartTimeFor = (dayOfWeek: number): string => {
-    return clinicHoursForDay(dayOfWeek)?.start_time ?? '09:00';
+    return clinicHoursForDay(dayOfWeek)?.start_time ?? '';
 };
 
 const defaultEndTimeFor = (dayOfWeek: number): string => {
-    return clinicHoursForDay(dayOfWeek)?.end_time ?? '17:00';
+    return clinicHoursForDay(dayOfWeek)?.end_time ?? '';
 };
 
 const updateDay = (index: number, updates: Partial<WorkingHour>): void => {
@@ -68,6 +58,7 @@ const updateDay = (index: number, updates: Partial<WorkingHour>): void => {
         return { ...day, ...updates };
     });
 
+    console.log('[DoctorWorkingHoursSelector] updated day:', { index, updates, next });
     emit('update:modelValue', next);
 };
 
@@ -104,7 +95,7 @@ const toggleDay = (index: number, isActive: boolean): void => {
 
         <div class="grid gap-2">
             <div
-                v-if="!hasSelectedDepartment"
+                v-if="!hasSelectedClinic"
                 class="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-4 text-sm font-medium text-slate-500"
             >
                 يرجى اختيار العيادة أولاً لعرض أيام الدوام المتاحة.
@@ -180,10 +171,7 @@ const toggleDay = (index: number, isActive: boolean): void => {
                                     clinicHoursForDay(day.day_of_week)
                                         ?.end_time ?? undefined
                                 "
-                                :model-value="
-                                    day.start_time ??
-                                    defaultStartTimeFor(day.day_of_week)
-                                "
+                                :model-value="day.start_time ?? ''"
                                 @update:model-value="
                                     updateDay(index, {
                                         start_time: String($event),
@@ -213,10 +201,7 @@ const toggleDay = (index: number, isActive: boolean): void => {
                                     clinicHoursForDay(day.day_of_week)
                                         ?.end_time ?? undefined
                                 "
-                                :model-value="
-                                    day.end_time ??
-                                    defaultEndTimeFor(day.day_of_week)
-                                "
+                                :model-value="day.end_time ?? ''"
                                 @update:model-value="
                                     updateDay(index, {
                                         end_time: String($event),

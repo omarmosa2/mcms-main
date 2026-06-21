@@ -38,11 +38,11 @@ class StoreDoctorProfileRequest extends FormRequest
             'name' => [$usesExistingUser ? 'nullable' : 'required', 'string', 'max:255'],
             'username' => [$usesExistingUser ? 'nullable' : 'required', 'email', 'max:255', Rule::unique('users', 'email')],
             'password' => [$usesExistingUser ? 'nullable' : 'required', 'string', 'min:8', 'max:255'],
-            'department_id' => [
-                'nullable',
+            'clinic_id' => [
+                'required',
                 'integer',
-                Rule::exists('departments', 'id')
-                    ->where(fn ($query) => $query->where('clinic_id', $clinicId)),
+                Rule::exists('clinics', 'id')
+                    ->where('is_active', true),
             ],
             'gender' => ['required', 'string', Rule::in([DoctorProfile::GENDER_MALE, DoctorProfile::GENDER_FEMALE])],
             'phone' => ['nullable', 'string', 'max:50'],
@@ -164,14 +164,14 @@ class StoreDoctorProfileRequest extends FormRequest
      */
     private function activeClinicWorkingHoursByDoctorDay(): array
     {
-        $departmentId = $this->input('department_id');
+        $clinicId = $this->input('clinic_id');
 
-        if ($departmentId === null) {
+        if ($clinicId === null) {
             return [];
         }
 
         return ClinicWorkingHour::query()
-            ->where('department_id', $departmentId)
+            ->where('clinic_id', $clinicId)
             ->where('is_active', true)
             ->whereNotNull('start_time')
             ->whereNotNull('end_time')
@@ -187,14 +187,14 @@ class StoreDoctorProfileRequest extends FormRequest
 
     private function hasClinicWorkingHoursConfigured(): bool
     {
-        $departmentId = $this->input('department_id');
+        $clinicId = $this->input('clinic_id');
 
-        if ($departmentId === null) {
+        if ($clinicId === null) {
             return false;
         }
 
         return ClinicWorkingHour::query()
-            ->where('department_id', $departmentId)
+            ->where('clinic_id', $clinicId)
             ->exists();
     }
 

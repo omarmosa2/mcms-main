@@ -4,7 +4,7 @@ namespace App\Http\Controllers\DailySchedule;
 
 use App\Actions\DailySchedule\ListDailyScheduleAction;
 use App\Http\Controllers\Controller;
-use App\Models\Department;
+use App\Models\Clinic;
 use App\Models\DoctorProfile;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,8 +22,8 @@ class DailyScheduleController extends Controller
         $clinicId = $this->resolveClinicId($request);
 
         $date = $request->query('date');
-        $departmentFilter = $request->exists('department_id') && $request->query('department_id') !== ''
-            ? (int) $request->query('department_id')
+        $clinicFilter = $request->exists('clinic_id') && $request->query('clinic_id') !== ''
+            ? (int) $request->query('clinic_id')
             : null;
         $doctorFilter = $request->exists('doctor_id') && $request->query('doctor_id') !== ''
             ? (int) $request->query('doctor_id')
@@ -32,13 +32,12 @@ class DailyScheduleController extends Controller
         $scheduleData = $this->listDailyScheduleAction->handle(
             clinicId: $clinicId,
             date: is_string($date) ? $date : null,
-            departmentFilter: $departmentFilter,
+            clinicFilter: $clinicFilter,
             doctorFilter: $doctorFilter,
         );
 
-        $departments = Department::query()
-            ->forClinic($clinicId)
-            ->withoutTrashed()
+        $clinics = Clinic::query()
+            ->whereKey($clinicId)
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name']);
@@ -58,11 +57,11 @@ class DailyScheduleController extends Controller
 
         return Inertia::render('daily-schedule/Index', [
             'scheduleData' => $scheduleData,
-            'departments' => $departments,
+            'clinics' => $clinics,
             'doctors' => $doctorProfiles,
             'filters' => [
                 'date' => $scheduleData['date'],
-                'department_id' => $departmentFilter,
+                'clinic_id' => $clinicFilter,
                 'doctor_id' => $doctorFilter,
             ],
         ]);

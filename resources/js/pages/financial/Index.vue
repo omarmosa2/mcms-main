@@ -7,13 +7,11 @@ import { Label } from '@/components/ui/label';
 import { index as financialIndex } from '@/routes/financial';
 import FinancialStatsCards from './components/FinancialStatsCards.vue';
 
-type DepartmentOption = { id: number; name: string };
 type FinancialRow = {
     appointment_id: number;
     patient_name: string;
     file_number: number | null;
     doctor_name: string;
-    department: string;
     appointment_type: string;
     cost: number;
     paid_amount: number;
@@ -33,7 +31,6 @@ const props = defineProps<{
         unpaid_count: number;
         partially_paid_count: number;
     };
-    departments: DepartmentOption[];
     filters: Record<string, string | number | null>;
 }>();
 
@@ -49,7 +46,6 @@ const month = ref(
 const dateFrom = ref(String(props.filters.date_from ?? ''));
 const dateTo = ref(String(props.filters.date_to ?? ''));
 const status = ref(String(props.filters.status ?? ''));
-const departmentId = ref(String(props.filters.department_id ?? ''));
 const appointmentType = ref(String(props.filters.appointment_type ?? ''));
 
 const labels: Record<string, string> = {
@@ -91,7 +87,6 @@ const reload = (): void => {
             date_from: dateFrom.value || undefined,
             date_to: dateTo.value || undefined,
             status: status.value || undefined,
-            department_id: departmentId.value || undefined,
             appointment_type: appointmentType.value || undefined,
         },
         { preserveScroll: true, preserveState: true, replace: true },
@@ -127,7 +122,7 @@ watch([month, dateFrom, dateTo, status, departmentId, appointmentType], () => {
         <FinancialStatsCards :summaries="summaries" />
 
         <section class="rounded-lg border bg-card p-4">
-            <div class="grid gap-3 md:grid-cols-6">
+            <div class="grid gap-3 md:grid-cols-5">
                 <div class="grid gap-1">
                     <Label>الشهر</Label
                     ><Input v-model="month" type="month" class="h-10" />
@@ -163,22 +158,6 @@ watch([month, dateFrom, dateTo, status, departmentId, appointmentType], () => {
                         <option value="review">مراجعة</option>
                     </select>
                 </div>
-                <div class="grid gap-1">
-                    <Label>العيادة</Label
-                    ><select
-                        v-model="departmentId"
-                        class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
-                    >
-                        <option value="">الكل</option>
-                        <option
-                            v-for="department in departments"
-                            :key="department.id"
-                            :value="department.id"
-                        >
-                            {{ department.name }}
-                        </option>
-                    </select>
-                </div>
             </div>
         </section>
 
@@ -190,7 +169,6 @@ watch([month, dateFrom, dateTo, status, departmentId, appointmentType], () => {
                             <th class="px-4 py-3">اسم المريض</th>
                             <th class="px-4 py-3">رقم الملف</th>
                             <th class="px-4 py-3">اسم الطبيب</th>
-                            <th class="px-4 py-3">العيادة</th>
                             <th class="px-4 py-3">نوع الموعد</th>
                             <th class="px-4 py-3">تكلفة الموعد</th>
                             <th class="px-4 py-3">المبلغ المدفوع</th>
@@ -214,9 +192,6 @@ watch([month, dateFrom, dateTo, status, departmentId, appointmentType], () => {
                             </td>
                             <td class="px-4 py-3 text-foreground">
                                 {{ row.doctor_name }}
-                            </td>
-                            <td class="px-4 py-3 text-foreground">
-                                {{ row.department }}
                             </td>
                             <td class="px-4 py-3 text-foreground">
                                 {{ labelFor(row.appointment_type) }}
@@ -246,7 +221,7 @@ watch([month, dateFrom, dateTo, status, departmentId, appointmentType], () => {
                         </tr>
                         <tr v-if="financial_rows.length === 0">
                             <td
-                                colspan="11"
+                                colspan="10"
                                 class="px-4 py-10 text-center text-muted-foreground"
                             >
                                 لا توجد بيانات مالية ضمن الفلاتر الحالية.

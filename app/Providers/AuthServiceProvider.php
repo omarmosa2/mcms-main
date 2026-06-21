@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Models\Appointment;
 use App\Models\Cashbox;
-use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\Expense;
 use App\Models\FollowUp;
@@ -24,7 +23,6 @@ use App\Models\TreatmentPlan;
 use App\Models\User;
 use App\Policies\AppointmentPolicy;
 use App\Policies\CashboxPolicy;
-use App\Policies\DepartmentPolicy;
 use App\Policies\DoctorProfilePolicy;
 use App\Policies\ExpensePolicy;
 use App\Policies\FollowUpPolicy;
@@ -54,7 +52,6 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Appointment::class => AppointmentPolicy::class,
         Cashbox::class => CashboxPolicy::class,
-        Department::class => DepartmentPolicy::class,
         DoctorProfile::class => DoctorProfilePolicy::class,
         Expense::class => ExpensePolicy::class,
         FollowUp::class => FollowUpPolicy::class,

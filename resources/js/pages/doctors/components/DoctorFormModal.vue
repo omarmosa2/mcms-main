@@ -127,11 +127,7 @@ const buildWorkingHoursFromProfile = (
         .map((clinicDay) => {
             const dayOfWeek = normalizeDayOfWeek(clinicDay.day_of_week);
             const schedule = doctorSchedules.get(dayOfWeek);
-            const isAvailable = schedule !== undefined && (
-                'is_available' in schedule
-                    ? schedule.is_available
-                    : schedule.is_active
-            );
+            const isAvailable = schedule !== undefined && schedule.is_available;
 
             return {
                 day_of_week: dayOfWeek,

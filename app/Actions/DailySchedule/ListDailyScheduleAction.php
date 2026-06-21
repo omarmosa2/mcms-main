@@ -5,7 +5,6 @@ namespace App\Actions\DailySchedule;
 use App\Actions\BaseAction;
 use App\Models\BrandingSetting;
 use App\Models\Clinic;
-use App\Models\ClinicSetting;
 use App\Models\ClinicWorkingHour;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
@@ -28,7 +27,7 @@ class ListDailyScheduleAction extends BaseAction
      *     clinics: array<int, array<string, mixed>>
      * }
      */
-    public function handle(int $clinicId, ?string $date = null, ?int $clinicFilter = null, ?int $doctorFilter = null): array
+    public function handle(?string $date = null, ?int $clinicFilter = null, ?int $doctorFilter = null): array
     {
         $carbonDate = $date !== null && $date !== ''
             ? Carbon::createFromFormat('Y-m-d', $date)
@@ -38,12 +37,11 @@ class ListDailyScheduleAction extends BaseAction
 
         $branding = BrandingSetting::query()
             ->withoutClinicScope()
-            ->where('clinic_id', $clinicId)
             ->first();
 
-        $clinicSettings = ClinicSetting::getGroupSettings($clinicId, 'clinic');
+        $clinicSettings = [];
 
-        $clinics = $this->getActiveClinics($clinicId, $clinicFilter);
+        $clinics = $this->getActiveClinics($clinicFilter);
 
         $clinicData = [];
 
@@ -99,13 +97,16 @@ class ListDailyScheduleAction extends BaseAction
     /**
      * @return Collection<int, Clinic>
      */
-    private function getActiveClinics(int $clinicId, ?int $clinicFilter): Collection
+    private function getActiveClinics(?int $clinicFilter): Collection
     {
-        return Clinic::query()
-            ->whereKey($clinicFilter ?? $clinicId)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $query = Clinic::query()
+            ->where('is_active', true);
+
+        if ($clinicFilter !== null) {
+            $query->whereKey($clinicFilter);
+        }
+
+        return $query->orderBy('name')->get();
     }
 
     /**
@@ -118,12 +119,14 @@ class ListDailyScheduleAction extends BaseAction
         ?int $doctorFilter,
     ): Collection {
         $doctorIds = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
             ->forClinic($clinicId)
             ->withoutTrashed()
             ->where('status', DoctorProfile::STATUS_ACTIVE)
             ->pluck('user_id');
 
         return DoctorSchedule::query()
+            ->withoutGlobalScope('clinic')
             ->forClinic($clinicId)
             ->withoutTrashed()
             ->where('day_of_week', $dayOfWeek)

@@ -9,7 +9,6 @@ use App\Models\DoctorProfile;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
-use Symfony\Component\HttpFoundation\Response;
 
 class DailyScheduleController extends Controller
 {
@@ -19,8 +18,6 @@ class DailyScheduleController extends Controller
 
     public function index(Request $request): InertiaResponse
     {
-        $clinicId = $this->resolveClinicId($request);
-
         $date = $request->query('date');
         $clinicFilter = $request->exists('clinic_id') && $request->query('clinic_id') !== ''
             ? (int) $request->query('clinic_id')
@@ -30,20 +27,18 @@ class DailyScheduleController extends Controller
             : null;
 
         $scheduleData = $this->listDailyScheduleAction->handle(
-            clinicId: $clinicId,
             date: is_string($date) ? $date : null,
             clinicFilter: $clinicFilter,
             doctorFilter: $doctorFilter,
         );
 
-        $clinics = Clinic::query()
-            ->whereKey($clinicId)
+        $allClinics = Clinic::query()
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name']);
 
         $doctorProfiles = DoctorProfile::query()
-            ->forClinic($clinicId)
+            ->withoutGlobalScope('clinic')
             ->withoutTrashed()
             ->where('status', DoctorProfile::STATUS_ACTIVE)
             ->with('user')
@@ -57,7 +52,7 @@ class DailyScheduleController extends Controller
 
         return Inertia::render('daily-schedule/Index', [
             'scheduleData' => $scheduleData,
-            'clinics' => $clinics,
+            'clinics' => $allClinics,
             'doctors' => $doctorProfiles,
             'filters' => [
                 'date' => $scheduleData['date'],
@@ -69,25 +64,10 @@ class DailyScheduleController extends Controller
 
     public function display(Request $request): InertiaResponse
     {
-        $clinicId = $this->resolveClinicId($request);
-
-        $scheduleData = $this->listDailyScheduleAction->handle(
-            clinicId: $clinicId,
-        );
+        $scheduleData = $this->listDailyScheduleAction->handle();
 
         return Inertia::render('daily-schedule/Display', [
             'scheduleData' => $scheduleData,
         ]);
-    }
-
-    private function resolveClinicId(Request $request): int
-    {
-        $clinicId = $request->user()?->clinic_id;
-
-        if ($clinicId === null) {
-            abort(Response::HTTP_FORBIDDEN, 'Clinic context is required.');
-        }
-
-        return (int) $clinicId;
     }
 }

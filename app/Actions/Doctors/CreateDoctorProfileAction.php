@@ -112,7 +112,7 @@ class CreateDoctorProfileAction extends BaseAction
         DoctorSchedule::query()
             ->where('clinic_id', $clinicId)
             ->where('doctor_id', $doctorUserId)
-            ->delete();
+            ->forceDelete();
 
         foreach ($workingHours as $day) {
             if (! filter_var($day['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN)) {

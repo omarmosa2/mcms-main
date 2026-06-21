@@ -48,6 +48,7 @@ class HandleInertiaRequests extends Middleware
         $securityPolicy = null;
         $canManageSecurityPolicies = false;
         $doctorClinic = null;
+        $clinicName = null;
 
         if ($request->user() !== null) {
             $user = $request->user();

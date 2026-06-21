@@ -10,7 +10,12 @@ class ReportController extends Controller
 {
     public function outstandingByClinic(Request $request)
     {
-        $clinicId = $request->user()?->clinic_id ?? (int) $request->query('clinic_id', 1);
+        $clinicId = $request->user()?->clinic_id;
+
+        if ($clinicId === null) {
+            abort(403, 'Clinic context is required.');
+        }
+
         $invoices = Invoice::query()
             ->where('clinic_id', $clinicId)
             ->where('balance_amount', '>', 0)
@@ -21,7 +26,11 @@ class ReportController extends Controller
 
     public function revenueByClinic(Request $request)
     {
-        $clinicId = $request->user()?->clinic_id ?? (int) $request->query('clinic_id', 1);
+        $clinicId = $request->user()?->clinic_id;
+
+        if ($clinicId === null) {
+            abort(403, 'Clinic context is required.');
+        }
         $start = $request->query('start');
         $end = $request->query('end');
         $query = Invoice::query()->where('clinic_id', $clinicId);

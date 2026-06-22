@@ -3,6 +3,7 @@
 namespace App\Http\Requests\DoctorLeaves;
 
 use App\Models\DoctorLeave;
+use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\User;
 use Carbon\Carbon;
@@ -106,12 +107,16 @@ class StoreDoctorLeaveRequest extends FormRequest
 
     private function validateDoctorHasSchedule(int $clinicId): ?string
     {
-        $doctorId = (int) $this->input('doctor_id');
+        $doctorProfileId = $this->doctorProfileId($clinicId);
         $dayOfWeek = Carbon::parse((string) $this->input('leave_date'))->dayOfWeek;
+
+        if ($doctorProfileId === null) {
+            return 'The selected doctor has no profile in this clinic.';
+        }
 
         $hasSchedule = DoctorSchedule::query()
             ->forClinic($clinicId)
-            ->where('doctor_id', $doctorId)
+            ->where('doctor_id', $doctorProfileId)
             ->where('day_of_week', $dayOfWeek)
             ->where('is_available', true)
             ->exists();
@@ -129,14 +134,18 @@ class StoreDoctorLeaveRequest extends FormRequest
             return null;
         }
 
-        $doctorId = (int) $this->input('doctor_id');
+        $doctorProfileId = $this->doctorProfileId($clinicId);
         $dayOfWeek = Carbon::parse((string) $this->input('leave_date'))->dayOfWeek;
         $startTime = (string) $this->input('start_time');
         $endTime = (string) $this->input('end_time');
 
+        if ($doctorProfileId === null) {
+            return 'The selected doctor has no profile in this clinic.';
+        }
+
         $coversLeave = DoctorSchedule::query()
             ->forClinic($clinicId)
-            ->where('doctor_id', $doctorId)
+            ->where('doctor_id', $doctorProfileId)
             ->where('day_of_week', $dayOfWeek)
             ->where('is_available', true)
             ->where('start_time', '<=', $startTime)
@@ -181,5 +190,14 @@ class StoreDoctorLeaveRequest extends FormRequest
             ->exists();
 
         return $overlaps ? 'Cannot add overlapping hourly leaves for the same doctor and date.' : null;
+    }
+
+    private function doctorProfileId(int $clinicId): ?int
+    {
+        return DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
+            ->where('clinic_id', $clinicId)
+            ->where('user_id', (int) $this->input('doctor_id'))
+            ->value('id');
     }
 }

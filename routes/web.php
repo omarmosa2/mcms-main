@@ -25,7 +25,6 @@ require __DIR__.'/patients.php';
 require __DIR__.'/clinics.php';
 require __DIR__.'/doctors.php';
 require __DIR__.'/employees.php';
-require __DIR__.'/doctor-schedules.php';
 require __DIR__.'/doctor-leaves.php';
 require __DIR__.'/appointments.php';
 require __DIR__.'/billing.php';

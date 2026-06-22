@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ClinicWorkingHour;
 use App\Models\DoctorLeave;
+use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
@@ -24,9 +25,15 @@ class DoctorAvailabilityService
         $carbonDate = CarbonImmutable::parse($date);
         $day = (int) $carbonDate->dayOfWeek;
 
+        $doctorProfileId = $this->doctorProfileId($clinicId, $doctorId);
+
+        if ($doctorProfileId === null) {
+            return $this->emptyAvailability();
+        }
+
         $doctorSchedules = DoctorSchedule::query()
             ->forClinic($clinicId)
-            ->where('doctor_id', $doctorId)
+            ->where('doctor_profile_id', $doctorProfileId)
             ->where('day_of_week', $day)
             ->where('is_available', true)
             ->orderBy('start_time')
@@ -190,5 +197,14 @@ class DoctorAvailabilityService
     private function formatTime(mixed $time): string
     {
         return substr((string) $time, 0, 5);
+    }
+
+    private function doctorProfileId(int $clinicId, int $doctorUserId): ?int
+    {
+        return DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
+            ->where('clinic_id', $clinicId)
+            ->where('user_id', $doctorUserId)
+            ->value('id');
     }
 }

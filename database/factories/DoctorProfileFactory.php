@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Clinic;
 use App\Models\DoctorProfile;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -21,14 +20,9 @@ class DoctorProfileFactory extends Factory
     {
         return [
             'clinic_id' => Clinic::factory(),
-            'user_id' => function (array $attributes): int {
-                return User::factory()->create([
-                    'clinic_id' => $attributes['clinic_id'],
-                ])->id;
-            },
-            'license_number' => fake()->boolean(85)
-                ? strtoupper(fake()->unique()->bothify('LIC-########'))
-                : null,
+            'user_id' => null,
+            'full_name' => fake()->name(),
+            'gender' => fake()->randomElement([DoctorProfile::GENDER_MALE, DoctorProfile::GENDER_FEMALE]),
             'specialty' => fake()->randomElement([
                 'Family Medicine',
                 'Internal Medicine',
@@ -37,21 +31,22 @@ class DoctorProfileFactory extends Factory
                 'Cardiology',
                 'Orthopedics',
             ]),
-            'consultation_duration_minutes' => fake()->randomElement([15, 20, 30, 45, 60]),
-            'status' => fake()->randomElement([
-                DoctorProfile::STATUS_ACTIVE,
-                DoctorProfile::STATUS_ACTIVE,
-                DoctorProfile::STATUS_ON_LEAVE,
-                DoctorProfile::STATUS_INACTIVE,
+            'phone' => fake()->optional()->phoneNumber(),
+            'email' => fake()->optional()->safeEmail(),
+            'username' => fake()->optional()->userName(),
+            'employment_start_date' => fake()->optional()->dateTimeBetween('-3 years', 'now')?->format('Y-m-d'),
+            'compensation_type' => fake()->randomElement([
+                DoctorProfile::COMPENSATION_PERCENTAGE,
+                DoctorProfile::COMPENSATION_WEEKLY_FIXED,
+                DoctorProfile::COMPENSATION_MONTHLY_FIXED,
             ]),
-            'work_schedule' => [
-                'sunday' => ['09:00-13:00', '17:00-20:00'],
-                'monday' => ['09:00-13:00', '17:00-20:00'],
-                'tuesday' => ['09:00-13:00'],
-                'wednesday' => ['09:00-13:00', '17:00-20:00'],
-                'thursday' => ['09:00-13:00'],
-            ],
-            'bio' => fake()->optional()->sentence(),
+            'compensation_value' => fn (array $attributes): ?string => match ($attributes['compensation_type'] ?? null) {
+                DoctorProfile::COMPENSATION_PERCENTAGE => (string) fake()->numberBetween(10, 60),
+                DoctorProfile::COMPENSATION_WEEKLY_FIXED, DoctorProfile::COMPENSATION_MONTHLY_FIXED => (string) fake()->numberBetween(1000, 50000),
+                default => null,
+            },
+            'is_active' => true,
+            'notes' => fake()->optional()->sentence(),
         ];
     }
 }

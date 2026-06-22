@@ -44,7 +44,7 @@ class DoctorScheduleValidationService
 
         $overlaps = DoctorSchedule::query()
             ->where('clinic_id', $clinicId)
-            ->where('doctor_id', $doctorId)
+            ->where('doctor_profile_id', $doctorId)
             ->where('day_of_week', $dayOfWeek)
             ->where('is_available', true)
             ->when($ignoreScheduleId !== null, fn ($query) => $query->whereKeyNot($ignoreScheduleId))

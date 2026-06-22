@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { KeyRound, Save, UserPlus, X } from 'lucide-vue-next';
+import { CalendarClock, KeyRound, Save, Stethoscope, UserPlus, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import {
-    store,
-    update,
-} from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
+import { store, update } from '@/actions/App/Http/Controllers/DoctorController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,21 +15,20 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import DoctorWorkingHoursSelector from './DoctorWorkingHoursSelector.vue';
+import { Switch } from '@/components/ui/switch';
 import type {
-    ClinicOption,
-    ClinicSelectOption,
+    Clinic,
     CompensationType,
-    DoctorGender,
-    DoctorProfile,
-    WorkingHour,
-} from './types';
+    Doctor,
+    DoctorFormData,
+    DoctorSchedule,
+} from '../types';
+import { DAY_NAMES, ORDERED_DAYS } from '../types';
 
 const props = defineProps<{
     open: boolean;
-    profile: DoctorProfile | null;
-    clinic: ClinicOption;
-    clinics: ClinicSelectOption[];
+    doctor: Doctor | null;
+    clinics: Clinic[];
 }>();
 
 const emit = defineEmits<{
@@ -40,188 +36,167 @@ const emit = defineEmits<{
     saved: [];
 }>();
 
-type DoctorForm = {
-    name: string;
-    gender: DoctorGender;
-    specialty: string;
-    phone: string;
-    work_start_date: string;
-    clinic_id: number | '';
-    username: string;
-    password: string;
-    status: 'active' | 'on_leave' | 'inactive';
-    is_active: boolean;
-    compensation_type: CompensationType;
-    compensation_value: string;
-    consultation_duration_minutes: number;
-    working_hours: WorkingHour[];
-};
-
-const normalizeTime = (value: string | null): string | null => {
-    return value === null ? null : value.slice(0, 5);
-};
-
-const clinicForId = (
-    clinicId: number | '' | null | undefined,
-): ClinicSelectOption | null => {
-    if (
-        clinicId === null ||
-        clinicId === undefined ||
-        clinicId === ''
-    ) {
+const selectedClinic = computed<Clinic | null>(() => {
+    if (form.clinic_id === '' || form.clinic_id === null) {
         return null;
     }
+    return props.clinics.find((c) => c.id === Number(form.clinic_id)) ?? null;
+});
 
-    return (
-        props.clinics.find(
-            (clinicOption) => clinicOption.id === Number(clinicId),
-        ) ?? null
-    );
-};
+const normalizeTime = (value: string | null): string | null =>
+    value === null ? null : value.slice(0, 5);
 
-const ALL_DAYS = [6, 0, 1, 2, 3, 4, 5] as const;
-
-const normalizeDayOfWeek = (value: unknown): number => {
-    const numericValue = Number(value);
-
-    if (Number.isInteger(numericValue) && numericValue >= 0 && numericValue <= 6) {
-        return numericValue;
+const buildSchedulesForClinic = (clinic: Clinic | null, existing: DoctorSchedule[] = []): DoctorSchedule[] => {
+    if (clinic === null) {
+        return [];
     }
 
-    const dayIndexes: Record<string, number> = {
-        sunday: 0,
-        monday: 1,
-        tuesday: 2,
-        wednesday: 3,
-        thursday: 4,
-        friday: 5,
-        saturday: 6,
-    };
-
-    return dayIndexes[String(value).trim().toLowerCase()] ?? 0;
-};
-
-const buildWorkingHoursFromProfile = (
-    profile: DoctorProfile | null,
-): WorkingHour[] => {
-    if (profile === null) {
-        return ALL_DAYS.map((dayOfWeek) => ({
-            day_of_week: dayOfWeek,
-            is_active: false,
-            start_time: null,
-            end_time: null,
-        }));
-    }
-
-    const clinicWorkingDays = profile.clinic_working_days ??
-        clinicForId(profile.clinic_id)?.working_hours ?? [];
-    const doctorSchedules = new Map(
-        profile.doctor_schedules.map((schedule) => [
-            normalizeDayOfWeek(schedule.day_of_week),
-            schedule,
-        ]),
+    const existingByDay = new Map(
+        existing.map((s) => [Number(s.day_of_week), s]),
     );
 
-    return clinicWorkingDays
-        .filter((day) => day.is_active)
-        .map((clinicDay) => {
-            const dayOfWeek = normalizeDayOfWeek(clinicDay.day_of_week);
-            const schedule = doctorSchedules.get(dayOfWeek);
-            const isAvailable = schedule !== undefined && schedule.is_available;
+    return clinic.working_hours
+        .filter((wh) => wh.is_active)
+        .map((wh) => {
+            const day = Number(wh.day_of_week);
+            const schedule = existingByDay.get(day);
 
             return {
-                day_of_week: dayOfWeek,
-                is_active: isAvailable,
-                start_time: isAvailable
-                    ? normalizeTime(schedule?.start_time ?? null)
-                    : null,
-                end_time: isAvailable
-                    ? normalizeTime(schedule?.end_time ?? null)
-                    : null,
+                day_of_week: day,
+                is_available: schedule?.is_available ?? false,
+                start_time: schedule?.is_available ? normalizeTime(schedule.start_time) : null,
+                end_time: schedule?.is_available ? normalizeTime(schedule.end_time) : null,
             };
         });
 };
 
-const defaultsFor = (profile: DoctorProfile | null): DoctorForm => ({
-    name: profile?.user?.name ?? '',
-    gender: profile?.gender ?? 'male',
-    specialty: profile?.specialty ?? '',
-    phone: profile?.phone ?? '',
-    work_start_date: profile?.work_start_date ?? '',
-    clinic_id: profile?.clinic_id ?? '',
-    username: profile?.user?.email ?? '',
-    password: '',
-    status: profile?.status ?? 'active',
-    is_active: profile?.user?.is_active ?? true,
-    compensation_type: profile?.compensation_type ?? 'percentage',
+const defaultsFor = (doctor: Doctor | null): DoctorFormData => ({
+    clinic_id: doctor?.clinic_id ?? '',
+    user_id: doctor?.user_id ?? null,
+    full_name: doctor?.full_name ?? '',
+    gender: doctor?.gender ?? 'male',
+    specialty: doctor?.specialty ?? '',
+    phone: doctor?.phone ?? '',
+    email: doctor?.email ?? '',
+    username: doctor?.username ?? '',
+    employment_start_date: doctor?.employment_start_date ?? '',
+    compensation_type: doctor?.compensation_type ?? 'percentage',
     compensation_value:
-        profile?.compensation_value !== null &&
-        profile?.compensation_value !== undefined
-            ? String(Number(profile.compensation_value))
+        doctor?.compensation_value !== null && doctor?.compensation_value !== undefined
+            ? String(doctor.compensation_value)
             : '',
-    consultation_duration_minutes: profile?.consultation_duration_minutes ?? 30,
-    working_hours: buildWorkingHoursFromProfile(profile),
+    is_active: doctor?.is_active ?? true,
+    notes: doctor?.notes ?? '',
+    schedules: doctor
+        ? buildSchedulesForClinic(
+              props.clinics.find((c) => c.id === doctor.clinic_id) ?? null,
+              doctor.schedules,
+          )
+        : [],
 });
 
-const form = useForm<DoctorForm>(defaultsFor(props.profile));
-const isHydratingForm = ref(false);
+const form = useForm<DoctorFormData>(defaultsFor(props.doctor));
+const isHydrating = ref(false);
 
-const isEditing = computed(() => props.profile !== null);
-const selectedClinic = computed<ClinicSelectOption | null>(() =>
-    clinicForId(form.clinic_id),
-);
+const isEditing = computed(() => props.doctor !== null);
+
 const compensationLabel = computed(() => {
-    if (form.compensation_type === 'percentage') {
-        return 'نسبة الطبيب (%)';
+    switch (form.compensation_type) {
+        case 'percentage':
+            return 'نسبة الطبيب (%)';
+        case 'weekly_fixed':
+            return 'قيمة الأجر الأسبوعي';
+        case 'monthly_fixed':
+            return 'قيمة الأجر الشهري';
+        default:
+            return 'قيمة الأجر';
     }
+});
 
-    if (form.compensation_type === 'weekly') {
-        return 'قيمة الأجر الأسبوعي';
+const activeScheduleDays = computed(() => form.schedules.filter((s) => s.is_available));
+
+const totalHours = computed(() => {
+    let minutes = 0;
+    for (const schedule of activeScheduleDays.value) {
+        if (schedule.start_time && schedule.end_time) {
+            const [sh, sm] = schedule.start_time.split(':').map(Number);
+            const [eh, em] = schedule.end_time.split(':').map(Number);
+            minutes += eh * 60 + em - (sh * 60 + sm);
+        }
     }
-
-    return 'قيمة الأجر الشهري';
+    return (minutes / 60).toFixed(1);
 });
 
 watch(
-    () => [props.open, props.profile?.id],
+    () => [props.open, props.doctor?.id],
     () => {
         if (!props.open) {
             return;
         }
-
-        isHydratingForm.value = true;
-        const nextDefaults = defaultsFor(props.profile);
-
-        form.defaults(nextDefaults);
+        isHydrating.value = true;
+        const next = defaultsFor(props.doctor);
+        form.defaults(next);
         form.reset();
-        Object.assign(form, nextDefaults);
+        Object.assign(form, next);
         form.clearErrors();
-        isHydratingForm.value = false;
+        isHydrating.value = false;
     },
 );
-
-const resetWorkingHoursForSelectedClinic = (): void => {
-    form.working_hours = selectedClinic.value?.working_hours
-        .filter((day) => day.is_active)
-        .map((day) => ({
-            day_of_week: normalizeDayOfWeek(day.day_of_week),
-            is_active: false,
-            start_time: null,
-            end_time: null,
-        })) ?? [];
-    form.clearErrors();
-};
 
 watch(
-    () => form.compensation_type,
-    () => {
-        form.compensation_value = '';
+    () => form.clinic_id,
+    (newId, oldId) => {
+        if (isHydrating.value || newId === '' || oldId === undefined || newId === oldId) {
+            return;
+        }
+        form.schedules = buildSchedulesForClinic(selectedClinic.value);
+        form.clearErrors('schedules');
     },
+    { flush: 'sync' },
 );
 
-const close = (): void => {
-    emit('update:open', false);
+const toggleDay = (index: number, checked: boolean): void => {
+    const schedule = form.schedules[index];
+    if (checked) {
+        const clinicWh = selectedClinic.value?.working_hours.find(
+            (wh) => Number(wh.day_of_week) === Number(schedule.day_of_week),
+        );
+        form.schedules[index] = {
+            ...schedule,
+            is_available: true,
+            start_time: schedule.start_time ?? clinicWh?.start_time ?? '09:00',
+            end_time: schedule.end_time ?? clinicWh?.end_time ?? '17:00',
+        };
+    } else {
+        form.schedules[index] = {
+            ...schedule,
+            is_available: false,
+            start_time: null,
+            end_time: null,
+        };
+    }
 };
+
+const updateDayField = (index: number, field: 'start_time' | 'end_time', value: string): void => {
+    form.schedules[index] = {
+        ...form.schedules[index],
+        [field]: value === '' ? null : value,
+    };
+};
+
+const dayName = (day: number): string => DAY_NAMES[day] ?? '';
+
+const clinicRefFor = (schedule: DoctorSchedule): string => {
+    const wh = selectedClinic.value?.working_hours.find(
+        (w) => Number(w.day_of_week) === Number(schedule.day_of_week),
+    );
+    if (!wh || !wh.start_time || !wh.end_time) {
+        return '—';
+    }
+    return `${wh.start_time} - ${wh.end_time}`;
+};
+
+const close = (): void => emit('update:open', false);
 
 const submit = (): void => {
     const options = {
@@ -232,9 +207,8 @@ const submit = (): void => {
         },
     };
 
-    if (props.profile !== null) {
-        form.put(update.url(props.profile.id), options);
-
+    if (props.doctor !== null) {
+        form.put(update.url(props.doctor.id), options);
         return;
     }
 
@@ -255,8 +229,7 @@ const submit = (): void => {
                     {{ isEditing ? 'تعديل بيانات الطبيب' : 'إضافة طبيب جديد' }}
                 </DialogTitle>
                 <DialogDescription class="text-muted-foreground">
-                    إدارة بيانات الطبيب والحساب والدوام ونظام الأجر من نموذج
-                    واحد.
+                    إدارة بيانات الطبيب والحساب والدوام ونظام الأجر من نموذج واحد.
                 </DialogDescription>
             </DialogHeader>
 
@@ -264,19 +237,18 @@ const submit = (): void => {
                 class="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 pb-28 sm:px-6"
                 @submit.prevent="submit"
             >
+                <!-- 1. البيانات الأساسية -->
                 <section class="space-y-3">
-                    <h3 class="text-sm font-bold text-foreground">
-                        البيانات الأساسية
-                    </h3>
+                    <h3 class="text-sm font-bold text-foreground">البيانات الأساسية</h3>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="grid gap-2">
-                            <Label for="doctor_name">الاسم الكامل</Label>
+                            <Label for="doctor_full_name">الاسم الكامل</Label>
                             <Input
-                                id="doctor_name"
-                                v-model="form.name"
+                                id="doctor_full_name"
+                                v-model="form.full_name"
                                 class="h-11 rounded-lg"
                             />
-                            <InputError :message="form.errors.name" />
+                            <InputError :message="form.errors.full_name" />
                         </div>
 
                         <div class="grid gap-2">
@@ -303,9 +275,7 @@ const submit = (): void => {
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="doctor_phone"
-                                >رقم الهاتف (اختياري)</Label
-                            >
+                            <Label for="doctor_phone">رقم الهاتف (اختياري)</Label>
                             <Input
                                 id="doctor_phone"
                                 v-model="form.phone"
@@ -315,144 +285,195 @@ const submit = (): void => {
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="doctor_work_start_date"
-                                >تاريخ مباشرة العمل</Label
-                            >
+                            <Label for="doctor_email">البريد الإلكتروني (اختياري)</Label>
                             <Input
-                                id="doctor_work_start_date"
-                                v-model="form.work_start_date"
-                                type="date"
+                                id="doctor_email"
+                                v-model="form.email"
+                                type="email"
                                 class="h-11 rounded-lg"
                             />
-                            <InputError
-                                :message="form.errors.work_start_date"
-                            />
-                        </div>
-
-                        <div class="grid gap-2">
-                            <Label for="doctor_clinic_select"
-                                >العيادة التابعة للطبيب</Label
-                            >
-                            <select
-                                id="doctor_clinic_select"
-                                v-model="form.clinic_id"
-                                class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
-                                @change="resetWorkingHoursForSelectedClinic"
-                            >
-                                <option value="">يرجى اختيار العيادة</option>
-                                <option
-                                    v-for="clinicOption in clinics"
-                                    :key="clinicOption.id"
-                                    :value="clinicOption.id"
-                                >
-                                    {{ clinicOption.name }}
-                                </option>
-                            </select>
-                            <InputError :message="form.errors.clinic_id" />
+                            <InputError :message="form.errors.email" />
                         </div>
                     </div>
                 </section>
 
-                <DoctorWorkingHoursSelector
-                    v-model="form.working_hours"
-                    :errors="form.errors"
-                    :clinic-working-hours="
-                        selectedClinic?.working_hours ?? []
-                    "
-                    :has-selected-clinic="selectedClinic !== null"
-                />
+                <!-- 2. بيانات العيادة والعمل -->
+                <section
+                    class="space-y-3 rounded-lg border border-border bg-card p-4"
+                >
+                    <h3 class="text-sm font-bold text-foreground">بيانات العيادة والعمل</h3>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="grid gap-2">
+                            <Label for="doctor_clinic">العيادة التابعة للطبيب</Label>
+                            <select
+                                id="doctor_clinic"
+                                v-model="form.clinic_id"
+                                class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
+                            >
+                                <option value="">يرجى اختيار العيادة</option>
+                                <option
+                                    v-for="clinic in clinics"
+                                    :key="clinic.id"
+                                    :value="clinic.id"
+                                >
+                                    {{ clinic.name }}
+                                </option>
+                            </select>
+                            <InputError :message="form.errors.clinic_id" />
+                        </div>
 
+                        <div class="grid gap-2">
+                            <Label for="doctor_employment_start_date">تاريخ مباشرة العمل</Label>
+                            <Input
+                                id="doctor_employment_start_date"
+                                v-model="form.employment_start_date"
+                                type="date"
+                                class="h-11 rounded-lg"
+                            />
+                            <InputError :message="form.errors.employment_start_date" />
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. جدول الدوام -->
+                <section
+                    v-if="selectedClinic !== null"
+                    class="space-y-3 rounded-lg border border-border bg-card p-4"
+                >
+                    <div class="flex items-center gap-2">
+                        <CalendarClock class="size-4 text-primary" />
+                        <h3 class="text-sm font-bold text-foreground">جدول الدوام</h3>
+                    </div>
+                    <p class="text-xs text-muted-foreground">
+                        يظهر دوام العيادة كمرجع. فعّل الأيام وحدد أوقات الطبيب ضمنها.
+                    </p>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div
+                            v-for="(schedule, index) in form.schedules"
+                            :key="schedule.day_of_week"
+                            class="rounded-lg border border-border/70 bg-muted/40 p-3"
+                        >
+                            <div class="mb-2 flex items-center justify-between gap-2">
+                                <div>
+                                    <p class="font-bold text-foreground">
+                                        {{ dayName(Number(schedule.day_of_week)) }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        دوام العيادة: {{ clinicRefFor(schedule) }}
+                                    </p>
+                                </div>
+                                <Switch
+                                    :model-value="schedule.is_available"
+                                    @update:model-value="toggleDay(index, $event)"
+                                />
+                            </div>
+
+                            <div v-if="schedule.is_available" class="grid gap-2 grid-cols-2">
+                                <div>
+                                    <Label class="text-xs">بداية الدوام</Label>
+                                    <Input
+                                        :value="schedule.start_time ?? ''"
+                                        type="time"
+                                        class="h-9 rounded-lg"
+                                        @input="updateDayField(index, 'start_time', ($event.target as HTMLInputElement).value)"
+                                    />
+                                    <InputError :message="form.errors[`schedules.${index}.start_time`]" />
+                                </div>
+                                <div>
+                                    <Label class="text-xs">نهاية الدوام</Label>
+                                    <Input
+                                        :value="schedule.end_time ?? ''"
+                                        type="time"
+                                        class="h-9 rounded-lg"
+                                        @input="updateDayField(index, 'end_time', ($event.target as HTMLInputElement).value)"
+                                    />
+                                    <InputError :message="form.errors[`schedules.${index}.end_time`]" />
+                                </div>
+                                <InputError
+                                    v-if="form.errors[`schedules.${index}.day_of_week`]"
+                                    :message="form.errors[`schedules.${index}.day_of_week`]"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 rounded-lg bg-primary/5 px-3 py-2 text-sm">
+                        <span class="font-semibold text-foreground">
+                            الأيام المفعّلة: {{ activeScheduleDays.length }}
+                        </span>
+                        <span class="font-semibold text-foreground">
+                            إجمالي الساعات: {{ totalHours }}
+                        </span>
+                    </div>
+                    <InputError :message="form.errors.schedules" />
+                </section>
+
+                <section
+                    v-else-if="form.clinic_id === ''"
+                    class="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground"
+                >
+                    اختر عيادة أولاً لتحديد جدول الدوام.
+                </section>
+
+                <!-- 4. بيانات الحساب -->
                 <section
                     class="space-y-3 rounded-lg border border-border bg-card p-4"
                 >
                     <div class="flex items-center gap-2">
                         <KeyRound class="size-4 text-primary" />
-                        <h3 class="text-sm font-bold text-foreground">
-                            بيانات الحساب
-                        </h3>
+                        <h3 class="text-sm font-bold text-foreground">بيانات الحساب</h3>
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="grid gap-2">
-                            <Label for="doctor_username">اسم المستخدم</Label>
+                            <Label for="doctor_username">اسم المستخدم (اختياري)</Label>
                             <Input
                                 id="doctor_username"
                                 v-model="form.username"
-                                type="email"
                                 class="h-11 rounded-lg"
-                                placeholder="doctor@example.com"
+                                placeholder="اسم مستخدم فريد للطبيب"
                             />
                             <InputError :message="form.errors.username" />
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="doctor_password">كلمة المرور</Label>
-                            <Input
-                                id="doctor_password"
-                                v-model="form.password"
-                                type="password"
-                                autocomplete="new-password"
-                                class="h-11 rounded-lg"
-                                :placeholder="
-                                    isEditing ? 'اتركها فارغة بدون تغيير' : ''
-                                "
-                            />
-                            <InputError :message="form.errors.password" />
+                            <Label for="doctor_is_active">حالة الطبيب</Label>
+                            <label class="flex items-center gap-3 rounded-lg border border-border bg-muted px-3 py-2.5">
+                                <Switch v-model="form.is_active" />
+                                <span class="text-sm font-semibold text-foreground">
+                                    {{ form.is_active ? 'نشط' : 'غير نشط' }}
+                                </span>
+                            </label>
+                            <InputError :message="form.errors.is_active" />
                         </div>
-
-                        <label
-                            v-if="isEditing"
-                            class="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3 py-2 md:col-span-2"
-                        >
-                            <span>
-                                <span
-                                    class="block text-sm font-semibold text-foreground"
-                                    >حالة الحساب</span
-                                >
-                                <span
-                                    class="block text-xs text-muted-foreground"
-                                    >{{
-                                        form.is_active ? 'نشط' : 'غير نشط'
-                                    }}</span
-                                >
-                            </span>
-                            <input
-                                v-model="form.is_active"
-                                type="checkbox"
-                                class="size-5 accent-primary"
-                            />
-                        </label>
                     </div>
                 </section>
 
+                <!-- 5. نظام الأجر -->
                 <section
                     class="space-y-3 rounded-lg border border-border bg-card p-4"
                 >
-                    <h3 class="text-sm font-bold text-foreground">
-                        نظام أجر الطبيب
-                    </h3>
+                    <div class="flex items-center gap-2">
+                        <Stethoscope class="size-4 text-primary" />
+                        <h3 class="text-sm font-bold text-foreground">نظام أجر الطبيب</h3>
+                    </div>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="grid gap-2">
-                            <Label for="doctor_compensation_type"
-                                >نوع أجر الطبيب</Label
-                            >
+                            <Label for="doctor_compensation_type">نوع أجر الطبيب</Label>
                             <select
                                 id="doctor_compensation_type"
                                 v-model="form.compensation_type"
                                 class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
                             >
                                 <option value="percentage">نسبة مئوية</option>
-                                <option value="weekly">أجر أسبوعي</option>
-                                <option value="monthly">أجر شهري</option>
+                                <option value="weekly_fixed">أجر أسبوعي ثابت</option>
+                                <option value="monthly_fixed">أجر شهري ثابت</option>
                             </select>
-                            <InputError
-                                :message="form.errors.compensation_type"
-                            />
+                            <InputError :message="form.errors.compensation_type" />
                         </div>
 
                         <div class="grid gap-2">
-                            <Label for="doctor_compensation_value">{{
-                                compensationLabel
-                            }}</Label>
+                            <Label for="doctor_compensation_value">{{ compensationLabel }}</Label>
                             <Input
                                 id="doctor_compensation_value"
                                 v-model="form.compensation_value"
@@ -461,14 +482,28 @@ const submit = (): void => {
                                 step="0.01"
                                 class="h-11 rounded-lg"
                             />
-                            <InputError
-                                :message="form.errors.compensation_value"
-                            />
+                            <InputError :message="form.errors.compensation_value" />
                         </div>
+                    </div>
+                </section>
+
+                <!-- 6. الملاحظات -->
+                <section class="space-y-3">
+                    <h3 class="text-sm font-bold text-foreground">الملاحظات</h3>
+                    <div class="grid gap-2">
+                        <textarea
+                            id="doctor_notes"
+                            v-model="form.notes"
+                            rows="3"
+                            class="rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
+                            placeholder="ملاحظات إدارية حول الطبيب (اختياري)"
+                        ></textarea>
+                        <InputError :message="form.errors.notes" />
                     </div>
                 </section>
             </form>
 
+            <!-- 7. أزرار -->
             <DialogFooter
                 class="sticky bottom-0 z-10 shrink-0 border-t border-border bg-card px-4 py-3 shadow-[0_-12px_24px_rgba(15,23,42,0.06)] sm:px-6 sm:py-4"
             >
@@ -488,10 +523,7 @@ const submit = (): void => {
                     :disabled="form.processing"
                     @click="submit"
                 >
-                    <component
-                        :is="isEditing ? Save : UserPlus"
-                        class="size-4"
-                    />
+                    <component :is="isEditing ? Save : UserPlus" class="size-4" />
                     {{ isEditing ? 'حفظ التغييرات' : 'إضافة طبيب جديد' }}
                 </Button>
             </DialogFooter>

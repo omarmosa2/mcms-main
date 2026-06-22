@@ -5,13 +5,19 @@ namespace App\Models;
 use App\Domain\Shared\Models\BaseModel;
 use App\Support\WeekDay;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DoctorSchedule extends BaseModel
 {
-    use SoftDeletes;
+    public const DAYS = [0, 1, 2, 3, 4, 5, 6];
 
-    public const DAYS = WeekDay::DAYS;
+    protected $fillable = [
+        'doctor_profile_id',
+        'clinic_id',
+        'day_of_week',
+        'start_time',
+        'end_time',
+        'is_available',
+    ];
 
     protected function casts(): array
     {
@@ -21,14 +27,14 @@ class DoctorSchedule extends BaseModel
         ];
     }
 
+    public function doctorProfile(): BelongsTo
+    {
+        return $this->belongsTo(DoctorProfile::class, 'doctor_profile_id');
+    }
+
     public function clinic(): BelongsTo
     {
         return $this->belongsTo(Clinic::class);
-    }
-
-    public function doctor(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'doctor_id');
     }
 
     public function getDayNameAttribute(): string

@@ -1,310 +1,178 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button';
+import { computed } from 'vue';
 import {
     Dialog,
     DialogContent,
-    DialogFooter,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import type { DoctorProfile } from './types';
+import { Button } from '@/components/ui/button';
+import type { Doctor, DoctorSchedule } from '../types';
+import { DAY_NAMES } from '../types';
 
-defineProps<{
-    profile: DoctorProfile | null;
+const props = defineProps<{
+    doctor: Doctor | null;
 }>();
 
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{
+    close: [];
+}>();
 
-const days: Record<number, string> = {
-    6: 'السبت',
-    0: 'الأحد',
-    1: 'الإثنين',
-    2: 'الثلاثاء',
-    3: 'الأربعاء',
-    4: 'الخميس',
-    5: 'الجمعة',
-};
+const open = computed({
+    get: () => props.doctor !== null,
+    set: (value: boolean) => {
+        if (!value) {
+            emit('close');
+        }
+    },
+});
 
-const genderLabel = (profile: DoctorProfile): string => {
-    if (profile.gender === 'female') {
-        return 'أنثى';
+const compensationLabel = computed(() => {
+    if (props.doctor === null) {
+        return '—';
     }
-
-    if (profile.gender === 'male') {
-        return 'ذكر';
+    switch (props.doctor.compensation_type) {
+        case 'percentage':
+            return `${props.doctor.compensation_value ?? 0}% نسبة مئوية`;
+        case 'weekly_fixed':
+            return `${props.doctor.compensation_value ?? 0} أجر أسبوعي ثابت`;
+        case 'monthly_fixed':
+            return `${props.doctor.compensation_value ?? 0} أجر شهري ثابت`;
+        default:
+            return '—';
     }
+});
 
-    return '-';
-};
-
-const compensationTypeLabel = (profile: DoctorProfile): string => {
-    if (profile.compensation_type === 'weekly') {
-        return 'أجر أسبوعي';
+const sortedSchedules = computed<DoctorSchedule[]>(() => {
+    if (props.doctor === null) {
+        return [];
     }
+    return [...props.doctor.schedules].sort(
+        (a, b) => Number(a.day_of_week) - Number(b.day_of_week),
+    );
+});
 
-    if (profile.compensation_type === 'monthly') {
-        return 'أجر شهري';
-    }
-
-    return profile.compensation_type === 'percentage' ? 'نسبة مئوية' : '-';
-};
-
-const compensationValueLabel = (profile: DoctorProfile): string => {
-    if (
-        profile.compensation_value === null ||
-        profile.compensation_value === undefined
-    ) {
-        return '-';
-    }
-
-    const value = Number(profile.compensation_value);
-
-    if (profile.compensation_type === 'percentage') {
-        return `${value}%`;
-    }
-
-    return value.toLocaleString('ar-SY', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    });
-};
-
-const formatDate = (value: string | null): string => {
-    if (value === null) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('ar-SY').format(new Date(value));
-};
-
-const scheduleTimeLabel = (
-    startTime: string | null,
-    endTime: string | null,
-): string => {
-    if (startTime === null || endTime === null) {
-        return '-';
-    }
-
-    return `${startTime.slice(0, 5)} - ${endTime.slice(0, 5)}`;
-};
+const dayName = (day: number): string => DAY_NAMES[day] ?? '';
 </script>
 
 <template>
-    <Dialog
-        :open="profile !== null"
-        @update:open="(open) => !open && emit('close')"
-    >
-        <DialogContent size="2xl" class="max-h-[90vh] bg-card p-0" dir="rtl">
-            <DialogHeader class="border-b border-border px-6 py-5 text-right">
-                <div class="flex items-start justify-between gap-4 pl-10">
-                    <div class="flex min-w-0 items-center gap-3">
-                        <span
-                            class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg font-black text-primary"
-                        >
-                            {{ (profile?.user?.name ?? 'ط').slice(0, 1) }}
-                        </span>
-                        <div class="min-w-0">
-                            <DialogTitle
-                                class="truncate text-2xl font-black text-foreground"
-                            >
-                                {{ profile?.user?.name ?? 'تفاصيل الطبيب' }}
-                            </DialogTitle>
-                            <p
-                                v-if="profile"
-                                class="mt-1 truncate text-sm text-muted-foreground"
-                            >
-                                {{ profile.specialty }} ·
-                                {{ profile.clinic?.name ?? 'غير معين' }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <span
-                        v-if="profile"
-                        class="mt-1 inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold"
-                        :class="
-                            profile.user?.is_active
-                                ? 'border-success/20 bg-success/10 text-success'
-                                : 'border-destructive/20 bg-destructive/10 text-destructive'
-                        "
-                    >
-                        <span class="size-2 rounded-full bg-current"></span>
-                        {{ profile.user?.is_active ? 'نشط' : 'غير نشط' }}
-                    </span>
-                </div>
+    <Dialog v-model:open="open">
+        <DialogContent
+            class="max-w-2xl rounded-xl bg-card p-0"
+            dir="rtl"
+        >
+            <DialogHeader class="border-b border-border px-5 py-4 text-right">
+                <DialogTitle class="text-xl font-bold text-foreground">
+                    بيانات الطبيب
+                </DialogTitle>
+                <DialogDescription class="text-muted-foreground">
+                    عرض تفاصيل الطبيب وجدول الدوام.
+                </DialogDescription>
             </DialogHeader>
 
-            <div
-                v-if="profile"
-                class="max-h-[66vh] space-y-5 overflow-y-auto p-6"
-            >
-                <section
-                    class="rounded-xl border border-border bg-muted/40 p-4"
-                >
-                    <h3 class="mb-4 text-sm font-black text-foreground">
-                        البيانات الأساسية
-                    </h3>
+            <div v-if="doctor" class="space-y-5 px-5 py-5">
+                <!-- بطاقة علوية -->
+                <div class="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 p-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-foreground">
+                            {{ doctor.full_name }}
+                        </h2>
+                        <p class="text-sm text-muted-foreground">
+                            {{ doctor.specialty }}
+                        </p>
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                        <span
+                            :class="[
+                                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                                doctor.is_active
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-rose-100 text-rose-700',
+                            ]"
+                        >
+                            {{ doctor.is_active ? 'نشط' : 'غير نشط' }}
+                        </span>
+                        <span class="text-sm font-semibold text-muted-foreground">
+                            {{ doctor.clinic?.name ?? '—' }}
+                        </span>
+                    </div>
+                </div>
 
-                    <dl class="grid gap-3 md:grid-cols-3">
-                        <div
-                            class="rounded-lg border border-border/70 bg-card px-4 py-3"
-                        >
-                            <dt
-                                class="text-xs font-semibold text-muted-foreground"
-                            >
-                                الجنس
-                            </dt>
-                            <dd class="mt-1 font-bold text-foreground">
-                                {{ genderLabel(profile) }}
+                <!-- البيانات الأساسية -->
+                <section class="space-y-2">
+                    <h3 class="text-sm font-bold text-foreground">البيانات الأساسية</h3>
+                    <dl class="grid gap-2 text-sm sm:grid-cols-2">
+                        <div class="flex justify-between gap-2 rounded bg-muted/30 px-3 py-2">
+                            <dt class="text-muted-foreground">الجنس</dt>
+                            <dd class="font-semibold text-foreground">
+                                {{ doctor.gender === 'male' ? 'ذكر' : doctor.gender === 'female' ? 'أنثى' : '—' }}
                             </dd>
                         </div>
-                        <div
-                            class="rounded-lg border border-border/70 bg-card px-4 py-3"
-                        >
-                            <dt
-                                class="text-xs font-semibold text-muted-foreground"
-                            >
-                                الاختصاص
-                            </dt>
-                            <dd class="mt-1 font-bold text-foreground">
-                                {{ profile.specialty }}
-                            </dd>
+                        <div class="flex justify-between gap-2 rounded bg-muted/30 px-3 py-2">
+                            <dt class="text-muted-foreground">الهاتف</dt>
+                            <dd class="font-semibold text-foreground">{{ doctor.phone ?? '—' }}</dd>
                         </div>
-                        <div
-                            class="rounded-lg border border-border/70 bg-card px-4 py-3"
-                        >
-                            <dt
-                                class="text-xs font-semibold text-muted-foreground"
-                            >
-                                العيادة
-                            </dt>
-                            <dd class="mt-1 font-bold text-foreground">
-                                {{ profile.clinic?.name ?? '-' }}
-                            </dd>
+                        <div class="flex justify-between gap-2 rounded bg-muted/30 px-3 py-2">
+                            <dt class="text-muted-foreground">البريد الإلكتروني</dt>
+                            <dd class="font-semibold text-foreground">{{ doctor.email ?? '—' }}</dd>
                         </div>
-                        <div
-                            class="rounded-lg border border-border/70 bg-card px-4 py-3"
-                        >
-                            <dt
-                                class="text-xs font-semibold text-muted-foreground"
-                            >
-                                رقم الهاتف
-                            </dt>
-                            <dd class="mt-1 font-bold text-foreground">
-                                {{ profile.phone ?? '-' }}
-                            </dd>
+                        <div class="flex justify-between gap-2 rounded bg-muted/30 px-3 py-2">
+                            <dt class="text-muted-foreground">اسم المستخدم</dt>
+                            <dd class="font-semibold text-foreground">{{ doctor.username ?? '—' }}</dd>
                         </div>
-                        <div
-                            class="rounded-lg border border-border/70 bg-card px-4 py-3"
-                        >
-                            <dt
-                                class="text-xs font-semibold text-muted-foreground"
-                            >
-                                تاريخ مباشرة العمل
-                            </dt>
-                            <dd class="mt-1 font-bold text-foreground">
-                                {{ formatDate(profile.work_start_date) }}
-                            </dd>
-                        </div>
-                        <div
-                            class="rounded-lg border border-border/70 bg-card px-4 py-3"
-                        >
-                            <dt
-                                class="text-xs font-semibold text-muted-foreground"
-                            >
-                                اسم المستخدم
-                            </dt>
-                            <dd
-                                class="mt-1 truncate font-bold text-foreground"
-                                dir="ltr"
-                            >
-                                {{ profile.user?.email ?? '-' }}
-                            </dd>
-                        </div>
-                        <div
-                            class="rounded-lg border border-border/70 bg-card px-4 py-3"
-                        >
-                            <dt
-                                class="text-xs font-semibold text-muted-foreground"
-                            >
-                                نوع الأجر
-                            </dt>
-                            <dd class="mt-1 font-bold text-foreground">
-                                {{ compensationTypeLabel(profile) }}
-                            </dd>
-                        </div>
-                        <div
-                            class="rounded-lg border border-border/70 bg-card px-4 py-3"
-                        >
-                            <dt
-                                class="text-xs font-semibold text-muted-foreground"
-                            >
-                                قيمة الأجر
-                            </dt>
-                            <dd
-                                class="mt-1 font-bold text-foreground tabular-nums"
-                            >
-                                {{ compensationValueLabel(profile) }}
+                        <div class="flex justify-between gap-2 rounded bg-muted/30 px-3 py-2">
+                            <dt class="text-muted-foreground">تاريخ المباشرة</dt>
+                            <dd class="font-semibold text-foreground">
+                                {{ doctor.employment_start_date ?? '—' }}
                             </dd>
                         </div>
                     </dl>
                 </section>
 
-                <section class="rounded-xl border border-border bg-card p-4">
-                    <div class="mb-4 flex items-center justify-between gap-3">
-                        <h3 class="text-sm font-black text-foreground">
-                            دوام الطبيب
-                        </h3>
-                        <span
-                            class="text-xs font-semibold text-muted-foreground"
-                        >
-                            الأيام الفعالة تعرض وقت البداية والنهاية
-                        </span>
+                <!-- الأجر -->
+                <section class="space-y-2">
+                    <h3 class="text-sm font-bold text-foreground">نظام الأجر</h3>
+                    <div class="rounded bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground">
+                        {{ compensationLabel }}
                     </div>
+                </section>
 
-                    <div class="grid gap-2 md:grid-cols-2">
+                <!-- الدوام -->
+                <section class="space-y-2">
+                    <h3 class="text-sm font-bold text-foreground">جدول الدوام</h3>
+                    <div v-if="sortedSchedules.length === 0" class="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
+                        لا يوجد دوام
+                    </div>
+                    <div v-else class="grid gap-2 sm:grid-cols-2">
                         <div
-                            v-for="schedule in profile.doctor_schedules"
-                            :key="schedule.day_of_week"
-                            class="flex min-h-12 items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/40 px-4 py-3"
+                            v-for="schedule in sortedSchedules"
+                            :key="schedule.id ?? schedule.day_of_week"
+                            class="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-sm"
                         >
-                            <span class="font-bold text-foreground">
-                                {{ days[schedule.day_of_week] }}
+                            <span class="font-semibold text-foreground">
+                                {{ dayName(Number(schedule.day_of_week)) }}
                             </span>
-                            <span
-                                v-if="schedule.is_available"
-                                class="rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary tabular-nums"
-                                dir="ltr"
-                            >
-                                {{
-                                    scheduleTimeLabel(
-                                        schedule.start_time,
-                                        schedule.end_time,
-                                    )
-                                }}
-                            </span>
-                            <span
-                                v-else
-                                class="rounded-full bg-muted px-3 py-1 text-sm font-semibold text-muted-foreground"
-                            >
-                                لا يوجد دوام
+                            <span class="text-muted-foreground">
+                                {{ schedule.start_time ?? '—' }} - {{ schedule.end_time ?? '—' }}
                             </span>
                         </div>
-                        <p
-                            v-if="profile.doctor_schedules.length === 0"
-                            class="rounded-lg border border-dashed border-border px-4 py-5 text-center text-sm font-medium text-muted-foreground md:col-span-2"
-                        >
-                            لا يوجد دوام محفوظ للطبيب.
-                        </p>
                     </div>
+                </section>
+
+                <section v-if="doctor.notes" class="space-y-2">
+                    <h3 class="text-sm font-bold text-foreground">ملاحظات</h3>
+                    <p class="rounded-lg bg-muted/30 px-3 py-2 text-sm text-foreground">
+                        {{ doctor.notes }}
+                    </p>
                 </section>
             </div>
 
-            <DialogFooter class="border-t border-border px-6 py-4">
-                <Button type="button" variant="outline" @click="emit('close')"
-                    >إغلاق</Button
-                >
-            </DialogFooter>
+            <div class="flex justify-end border-t border-border px-5 py-3">
+                <Button variant="outline" class="rounded-lg" @click="emit('close')">
+                    إغلاق
+                </Button>
+            </div>
         </DialogContent>
     </Dialog>
 </template>

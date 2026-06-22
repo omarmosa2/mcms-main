@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 
 class DoctorScheduleService
@@ -10,9 +11,19 @@ class DoctorScheduleService
 
     public function isDoctorAvailable(int $clinicId, int $doctorId, string $scheduledFor, int $durationMinutes): bool
     {
+        $doctorProfileId = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
+            ->where('clinic_id', $clinicId)
+            ->where('user_id', $doctorId)
+            ->value('id');
+
+        if ($doctorProfileId === null) {
+            return true;
+        }
+
         $hasSchedule = DoctorSchedule::query()
             ->where('clinic_id', $clinicId)
-            ->where('doctor_id', $doctorId)
+            ->where('doctor_profile_id', $doctorProfileId)
             ->exists();
 
         if (! $hasSchedule) {

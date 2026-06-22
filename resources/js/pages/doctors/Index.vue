@@ -1,46 +1,26 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Plus, Search, Stethoscope } from 'lucide-vue-next';
+import { Eye, Pencil, Plus, Search, Stethoscope, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import {
-    destroy,
-    index,
-    show,
-} from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
+import { index, show, destroy } from '@/actions/App/Http/Controllers/DoctorController';
 import { Button } from '@/components/ui/button';
-import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
 import { Input } from '@/components/ui/input';
-import { useConfirm } from '@/composables/useConfirm';
-import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
+import DoctorDeleteDialog from './components/DoctorDeleteDialog.vue';
 import DoctorFormModal from './components/DoctorFormModal.vue';
-import DoctorStatsCards from './components/DoctorStatsCards.vue';
-import DoctorTable from './components/DoctorTable.vue';
 import DoctorViewDialog from './components/DoctorViewDialog.vue';
 import type {
-    ClinicOption,
-    ClinicSelectOption,
-    DoctorProfile,
-    DoctorProfileStats,
-    DoctorProfileStatus,
+    Clinic,
+    Doctor,
+    DoctorFilters,
+    DoctorSchedule,
     PaginatedResponse,
-} from './components/types';
+} from './types';
 
 const props = defineProps<{
-    doctor_profiles: PaginatedResponse<DoctorProfile>;
-    doctors: PaginatedResponse<DoctorProfile>;
-    stats: DoctorProfileStats;
-    clinic: ClinicOption;
-    clinics: ClinicSelectOption[];
-    filters: {
-        status: DoctorProfileStatus | null;
-        clinic_id: number | null;
-        search: string | null;
-        per_page: number;
-        sort_by: string | null;
-        sort_direction: string | null;
-    };
-    all_clinics: boolean;
+    doctors: PaginatedResponse<Doctor>;
+    clinics: Clinic[];
+    filters: DoctorFilters;
 }>();
 
 defineOptions({
@@ -54,27 +34,53 @@ defineOptions({
     },
 });
 
-const { can } = usePermissions();
 const toast = useToast();
-const {
-    isOpen: isConfirmOpen,
-    options: confirmOptions,
-    confirm,
-    close: closeConfirm,
-    handleConfirm: handleConfirmDelete,
-    handleCancel: handleConfirmCancel,
-} = useConfirm();
 
-const search = ref(props.filters.search ?? '');
-const status = ref<DoctorProfileStatus | 'all'>(props.filters.status ?? 'all');
+const search = ref<string>(props.filters.search ?? '');
 const clinicId = ref<number | 'all'>(props.filters.clinic_id ?? 'all');
+const isActive = ref<'all' | 'active' | 'inactive'>(
+    props.filters.is_active === true
+        ? 'active'
+        : props.filters.is_active === false
+          ? 'inactive'
+          : 'all',
+);
+
 const formOpen = ref(false);
-const editingProfile = ref<DoctorProfile | null>(null);
-const viewingProfile = ref<DoctorProfile | null>(null);
+const editingDoctor = ref<Doctor | null>(null);
+const viewingDoctor = ref<Doctor | null>(null);
+const deletingDoctor = ref<Doctor | null>(null);
+
+const doctorsList = computed<Doctor[]>(() => props.doctors.data);
 
 const totalLabel = computed(() => {
     return `عرض ${props.doctors.meta.from ?? 0} إلى ${props.doctors.meta.to ?? 0} من ${props.doctors.meta.total} طبيب`;
 });
+
+const compensationLabel = (doctor: Doctor): string => {
+    switch (doctor.compensation_type) {
+        case 'percentage':
+            return `${doctor.compensation_value ?? 0}% نسبة`;
+        case 'weekly_fixed':
+            return `${doctor.compensation_value ?? 0} أسبوعي`;
+        case 'monthly_fixed':
+            return `${doctor.compensation_value ?? 0} شهري`;
+        default:
+            return '—';
+    }
+};
+
+const scheduleSummary = (schedules: DoctorSchedule[]): string => {
+    const active = schedules.filter((s) => s.is_available);
+
+    if (active.length === 0) {
+        return 'لا يوجد دوام';
+    }
+
+    return `${active.length} أيام`;
+};
+
+const clinicName = (doctor: Doctor): string => doctor.clinic?.name ?? '—';
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -82,10 +88,14 @@ const reload = (): void => {
     router.get(
         index.url(),
         {
-            search: search.value,
-            status: status.value === 'all' ? '' : status.value,
-            clinic_id:
-                clinicId.value === 'all' ? '' : clinicId.value,
+            search: search.value.trim() || undefined,
+            clinic_id: clinicId.value === 'all' ? undefined : clinicId.value,
+            is_active:
+                isActive.value === 'all'
+                    ? undefined
+                    : isActive.value === 'active'
+                      ? '1'
+                      : '0',
             per_page: props.filters.per_page,
         },
         {
@@ -100,43 +110,38 @@ watch(search, () => {
     if (searchTimer !== null) {
         clearTimeout(searchTimer);
     }
-
     searchTimer = setTimeout(reload, 350);
 });
 
-watch([status, clinicId], reload);
+watch([clinicId, isActive], reload);
 
 const openCreate = (): void => {
-    editingProfile.value = null;
+    editingDoctor.value = null;
     formOpen.value = true;
 };
 
-const openEdit = async (profile: DoctorProfile): Promise<void> => {
-    const doctorProfile = await loadDoctorProfile(profile);
-
-    if (doctorProfile === null) {
-        return;
+const openEdit = async (doctor: Doctor): Promise<void> => {
+    const full = await loadDoctor(doctor.id);
+    if (full !== null) {
+        editingDoctor.value = full;
+        formOpen.value = true;
     }
-
-    editingProfile.value = doctorProfile;
-    formOpen.value = true;
 };
 
-const openView = async (profile: DoctorProfile): Promise<void> => {
-    const doctorProfile = await loadDoctorProfile(profile);
-
-    if (doctorProfile === null) {
-        return;
+const openView = async (doctor: Doctor): Promise<void> => {
+    const full = await loadDoctor(doctor.id);
+    if (full !== null) {
+        viewingDoctor.value = full;
     }
-
-    viewingProfile.value = doctorProfile;
 };
 
-const loadDoctorProfile = async (
-    profile: DoctorProfile,
-): Promise<DoctorProfile | null> => {
+const openDelete = (doctor: Doctor): void => {
+    deletingDoctor.value = doctor;
+};
+
+const loadDoctor = async (id: number): Promise<Doctor | null> => {
     try {
-        const response = await window.fetch(show.url(profile.id), {
+        const response = await window.fetch(show.url(id), {
             headers: {
                 Accept: 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
@@ -144,38 +149,29 @@ const loadDoctorProfile = async (
         });
 
         if (!response.ok) {
-            throw new Error('Unable to load doctor profile.');
+            throw new Error('Unable to load doctor.');
         }
 
-        const payload = await response.json() as { data: DoctorProfile };
+        const payload = (await response.json()) as { data: Doctor };
 
         return payload.data;
     } catch {
-        toast.error('تعذر تحميل بيانات الطبيب الكاملة.');
+        toast.error('تعذر تحميل بيانات الطبيب.');
 
         return null;
     }
 };
 
-const deleteProfile = async (profile: DoctorProfile): Promise<void> => {
-    const accepted = await confirm({
-        title: 'حذف الطبيب',
-        description:
-            'إذا كان للطبيب زيارات أو سجلات مالية سيتم تعطيل حسابه وأرشفته بدلاً من الحذف.',
-        confirmText: 'تأكيد الحذف',
-        cancelText: 'إلغاء',
-        variant: 'destructive',
-    });
-
-    if (!accepted) {
+const confirmDelete = (): void => {
+    if (deletingDoctor.value === null) {
         return;
     }
 
-    router.delete(destroy.url(profile.id), {
+    router.delete(destroy.url(deletingDoctor.value.id), {
         preserveScroll: true,
         onSuccess: () => {
-            closeConfirm();
-            toast.success('تم تنفيذ العملية بنجاح.');
+            toast.success('تم حذف الطبيب بنجاح.');
+            deletingDoctor.value = null;
         },
         onError: () => {
             toast.error('تعذر حذف الطبيب.');
@@ -187,11 +183,7 @@ const goTo = (url: string | null): void => {
     if (url === null) {
         return;
     }
-
-    router.visit(url, {
-        preserveScroll: true,
-        preserveState: true,
-    });
+    router.visit(url, { preserveScroll: true, preserveState: true });
 };
 </script>
 
@@ -218,7 +210,6 @@ const goTo = (url: string | null): void => {
             </div>
 
             <Button
-                v-if="can('doctor_profile.create')"
                 type="button"
                 class="h-12 rounded-lg bg-primary px-6 text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
                 @click="openCreate"
@@ -227,8 +218,6 @@ const goTo = (url: string | null): void => {
                 إضافة طبيب جديد
             </Button>
         </section>
-
-        <DoctorStatsCards :stats="stats" />
 
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
             <div class="grid gap-4 md:grid-cols-[1fr_220px_220px]">
@@ -239,19 +228,9 @@ const goTo = (url: string | null): void => {
                     <Input
                         v-model="search"
                         class="h-12 rounded-lg pr-12"
-                        placeholder="البحث باسم الطبيب أو الاختصاص أو العيادة..."
+                        placeholder="البحث بالاسم أو الاختصاص أو الهاتف أو اسم المستخدم..."
                     />
                 </div>
-
-                <select
-                    v-model="status"
-                    class="h-12 rounded-lg border border-input bg-muted px-4 text-sm"
-                >
-                    <option value="all">كل الحالات</option>
-                    <option value="active">نشط</option>
-                    <option value="on_leave">في إجازة</option>
-                    <option value="inactive">غير نشط</option>
-                </select>
 
                 <select
                     v-model="clinicId"
@@ -266,15 +245,113 @@ const goTo = (url: string | null): void => {
                         {{ clinic.name }}
                     </option>
                 </select>
+
+                <select
+                    v-model="isActive"
+                    class="h-12 rounded-lg border border-input bg-muted px-4 text-sm"
+                >
+                    <option value="all">كل الحالات</option>
+                    <option value="active">نشط</option>
+                    <option value="inactive">غير نشط</option>
+                </select>
             </div>
         </section>
 
-        <DoctorTable
-            :doctor-profiles="doctors"
-            @view="openView($event)"
-            @edit="openEdit($event)"
-            @delete="deleteProfile($event)"
-        />
+        <section class="rounded-xl border border-border bg-card shadow-sm">
+            <div class="overflow-x-auto">
+                <table class="w-full text-right text-sm">
+                    <thead class="border-b border-border bg-muted/40 text-xs uppercase">
+                        <tr>
+                            <th class="px-4 py-3 font-bold text-foreground">الاسم</th>
+                            <th class="px-4 py-3 font-bold text-foreground">العيادة</th>
+                            <th class="px-4 py-3 font-bold text-foreground">الاختصاص</th>
+                            <th class="px-4 py-3 font-bold text-foreground">الهاتف</th>
+                            <th class="px-4 py-3 font-bold text-foreground">نوع الأجر</th>
+                            <th class="px-4 py-3 font-bold text-foreground">الحالة</th>
+                            <th class="px-4 py-3 font-bold text-foreground">الدوام</th>
+                            <th class="px-4 py-3 font-bold text-foreground">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                        <tr
+                            v-for="doctor in doctorsList"
+                            :key="doctor.id"
+                            class="hover:bg-muted/30"
+                        >
+                            <td class="px-4 py-3 font-semibold text-foreground">
+                                {{ doctor.full_name }}
+                            </td>
+                            <td class="px-4 py-3 text-muted-foreground">
+                                {{ clinicName(doctor) }}
+                            </td>
+                            <td class="px-4 py-3 text-muted-foreground">
+                                {{ doctor.specialty }}
+                            </td>
+                            <td class="px-4 py-3 text-muted-foreground">
+                                {{ doctor.phone ?? '—' }}
+                            </td>
+                            <td class="px-4 py-3 text-muted-foreground">
+                                {{ compensationLabel(doctor) }}
+                            </td>
+                            <td class="px-4 py-3">
+                                <span
+                                    :class="[
+                                        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                                        doctor.is_active
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-rose-100 text-rose-700',
+                                    ]"
+                                >
+                                    {{ doctor.is_active ? 'نشط' : 'غير نشط' }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-muted-foreground">
+                                {{ scheduleSummary(doctor.schedules) }}
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8"
+                                        title="عرض"
+                                        @click="openView(doctor)"
+                                    >
+                                        <Eye class="size-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8"
+                                        title="تعديل"
+                                        @click="openEdit(doctor)"
+                                    >
+                                        <Pencil class="size-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8 text-rose-600 hover:text-rose-700"
+                                        title="حذف"
+                                        @click="openDelete(doctor)"
+                                    >
+                                        <Trash2 class="size-4" />
+                                    </Button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="doctorsList.length === 0">
+                            <td
+                                colspan="8"
+                                class="px-4 py-10 text-center text-muted-foreground"
+                            >
+                                لا يوجد أطباء مطابقون.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
         <div
             class="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground"
@@ -308,23 +385,20 @@ const goTo = (url: string | null): void => {
 
         <DoctorFormModal
             v-model:open="formOpen"
-            :profile="editingProfile"
-            :clinic="clinic"
+            :doctor="editingDoctor"
             :clinics="clinics"
-            @saved="editingProfile = null"
+            @saved="editingDoctor = null"
         />
 
         <DoctorViewDialog
-            :profile="viewingProfile"
-            @close="viewingProfile = null"
+            :doctor="viewingDoctor"
+            @close="viewingDoctor = null"
         />
 
-        <ConfirmationDialog
-            :open="isConfirmOpen"
-            :options="confirmOptions"
-            @confirm="handleConfirmDelete"
-            @cancel="handleConfirmCancel"
-            @update:open="handleConfirmCancel"
+        <DoctorDeleteDialog
+            :doctor="deletingDoctor"
+            @close="deletingDoctor = null"
+            @confirm="confirmDelete"
         />
     </div>
 </template>

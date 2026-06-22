@@ -20,7 +20,7 @@ import {
 import { computed } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import ClinicController from '@/actions/App/Http/Controllers/Clinics/ClinicController';
-import DoctorProfileController from '@/actions/App/Http/Controllers/Doctors/DoctorProfileController';
+import DoctorController from '@/actions/App/Http/Controllers/DoctorController';
 import EmployeeController from '@/actions/App/Http/Controllers/Employees/EmployeeController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import PayrollController from '@/actions/App/Http/Controllers/Payroll/PayrollController';
@@ -159,10 +159,9 @@ const mainNavItems = computed<MainNavItem[]>(() => {
             },
             {
                 title: 'الأطباء',
-                href: DoctorProfileController.index(),
+                href: DoctorController.index(),
                 icon: UserRound,
                 group: 'clinical',
-                permission: 'doctor_profile.view',
             },
             {
                 title: 'إدارة الموظفين',

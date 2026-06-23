@@ -555,7 +555,7 @@ watch(
         </section>
 
         <article class="print-area overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-            <header class="border-b border-border bg-[#F8FBFE] p-5">
+            <header class="border-b border-border bg-muted/30 p-5">
                 <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div class="flex items-center gap-3">
                         <div class="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-card">

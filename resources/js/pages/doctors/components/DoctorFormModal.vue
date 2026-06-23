@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { CalendarClock, KeyRound, Save, Stethoscope, UserPlus, X } from 'lucide-vue-next';
+import { KeyRound, Save, Stethoscope, UserPlus, X } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { store, update } from '@/actions/App/Http/Controllers/DoctorController';
 import InputError from '@/components/InputError.vue';
@@ -15,15 +15,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import DoctorScheduleSection from './DoctorScheduleSection.vue';
 import type {
     Clinic,
     CompensationType,
     Doctor,
     DoctorFormData,
-    DoctorSchedule,
 } from '../types';
-import { DAY_NAMES, ORDERED_DAYS } from '../types';
 
 const props = defineProps<{
     open: boolean;
@@ -43,33 +41,6 @@ const selectedClinic = computed<Clinic | null>(() => {
     return props.clinics.find((c) => c.id === Number(form.clinic_id)) ?? null;
 });
 
-const normalizeTime = (value: string | null): string | null =>
-    value === null ? null : value.slice(0, 5);
-
-const buildSchedulesForClinic = (clinic: Clinic | null, existing: DoctorSchedule[] = []): DoctorSchedule[] => {
-    if (clinic === null) {
-        return [];
-    }
-
-    const existingByDay = new Map(
-        existing.map((s) => [Number(s.day_of_week), s]),
-    );
-
-    return clinic.working_hours
-        .filter((wh) => wh.is_active)
-        .map((wh) => {
-            const day = Number(wh.day_of_week);
-            const schedule = existingByDay.get(day);
-
-            return {
-                day_of_week: day,
-                is_available: schedule?.is_available ?? false,
-                start_time: schedule?.is_available ? normalizeTime(schedule.start_time) : null,
-                end_time: schedule?.is_available ? normalizeTime(schedule.end_time) : null,
-            };
-        });
-};
-
 const defaultsFor = (doctor: Doctor | null): DoctorFormData => ({
     clinic_id: doctor?.clinic_id ?? '',
     user_id: doctor?.user_id ?? null,
@@ -87,12 +58,7 @@ const defaultsFor = (doctor: Doctor | null): DoctorFormData => ({
             : '',
     is_active: doctor?.is_active ?? true,
     notes: doctor?.notes ?? '',
-    schedules: doctor
-        ? buildSchedulesForClinic(
-              props.clinics.find((c) => c.id === doctor.clinic_id) ?? null,
-              doctor.schedules,
-          )
-        : [],
+    schedules: doctor?.schedules ?? [],
 });
 
 const form = useForm<DoctorFormData>(defaultsFor(props.doctor));
@@ -113,20 +79,6 @@ const compensationLabel = computed(() => {
     }
 });
 
-const activeScheduleDays = computed(() => form.schedules.filter((s) => s.is_available));
-
-const totalHours = computed(() => {
-    let minutes = 0;
-    for (const schedule of activeScheduleDays.value) {
-        if (schedule.start_time && schedule.end_time) {
-            const [sh, sm] = schedule.start_time.split(':').map(Number);
-            const [eh, em] = schedule.end_time.split(':').map(Number);
-            minutes += eh * 60 + em - (sh * 60 + sm);
-        }
-    }
-    return (minutes / 60).toFixed(1);
-});
-
 watch(
     () => [props.open, props.doctor?.id],
     () => {
@@ -142,59 +94,6 @@ watch(
         isHydrating.value = false;
     },
 );
-
-watch(
-    () => form.clinic_id,
-    (newId, oldId) => {
-        if (isHydrating.value || newId === '' || oldId === undefined || newId === oldId) {
-            return;
-        }
-        form.schedules = buildSchedulesForClinic(selectedClinic.value);
-        form.clearErrors('schedules');
-    },
-    { flush: 'sync' },
-);
-
-const toggleDay = (index: number, checked: boolean): void => {
-    const schedule = form.schedules[index];
-    if (checked) {
-        const clinicWh = selectedClinic.value?.working_hours.find(
-            (wh) => Number(wh.day_of_week) === Number(schedule.day_of_week),
-        );
-        form.schedules[index] = {
-            ...schedule,
-            is_available: true,
-            start_time: schedule.start_time ?? clinicWh?.start_time ?? '09:00',
-            end_time: schedule.end_time ?? clinicWh?.end_time ?? '17:00',
-        };
-    } else {
-        form.schedules[index] = {
-            ...schedule,
-            is_available: false,
-            start_time: null,
-            end_time: null,
-        };
-    }
-};
-
-const updateDayField = (index: number, field: 'start_time' | 'end_time', value: string): void => {
-    form.schedules[index] = {
-        ...form.schedules[index],
-        [field]: value === '' ? null : value,
-    };
-};
-
-const dayName = (day: number): string => DAY_NAMES[day] ?? '';
-
-const clinicRefFor = (schedule: DoctorSchedule): string => {
-    const wh = selectedClinic.value?.working_hours.find(
-        (w) => Number(w.day_of_week) === Number(schedule.day_of_week),
-    );
-    if (!wh || !wh.start_time || !wh.end_time) {
-        return '—';
-    }
-    return `${wh.start_time} - ${wh.end_time}`;
-};
 
 const close = (): void => emit('update:open', false);
 
@@ -336,78 +235,13 @@ const submit = (): void => {
                 </section>
 
                 <!-- 3. جدول الدوام -->
-                <section
+                <DoctorScheduleSection
                     v-if="selectedClinic !== null"
-                    class="space-y-3 rounded-lg border border-border bg-card p-4"
-                >
-                    <div class="flex items-center gap-2">
-                        <CalendarClock class="size-4 text-primary" />
-                        <h3 class="text-sm font-bold text-foreground">جدول الدوام</h3>
-                    </div>
-                    <p class="text-xs text-muted-foreground">
-                        يظهر دوام العيادة كمرجع. فعّل الأيام وحدد أوقات الطبيب ضمنها.
-                    </p>
-
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <div
-                            v-for="(schedule, index) in form.schedules"
-                            :key="schedule.day_of_week"
-                            class="rounded-lg border border-border/70 bg-muted/40 p-3"
-                        >
-                            <div class="mb-2 flex items-center justify-between gap-2">
-                                <div>
-                                    <p class="font-bold text-foreground">
-                                        {{ dayName(Number(schedule.day_of_week)) }}
-                                    </p>
-                                    <p class="text-xs text-muted-foreground">
-                                        دوام العيادة: {{ clinicRefFor(schedule) }}
-                                    </p>
-                                </div>
-                                <Switch
-                                    :model-value="schedule.is_available"
-                                    @update:model-value="toggleDay(index, $event)"
-                                />
-                            </div>
-
-                            <div v-if="schedule.is_available" class="grid gap-2 grid-cols-2">
-                                <div>
-                                    <Label class="text-xs">بداية الدوام</Label>
-                                    <Input
-                                        :value="schedule.start_time ?? ''"
-                                        type="time"
-                                        class="h-9 rounded-lg"
-                                        @input="updateDayField(index, 'start_time', ($event.target as HTMLInputElement).value)"
-                                    />
-                                    <InputError :message="form.errors[`schedules.${index}.start_time`]" />
-                                </div>
-                                <div>
-                                    <Label class="text-xs">نهاية الدوام</Label>
-                                    <Input
-                                        :value="schedule.end_time ?? ''"
-                                        type="time"
-                                        class="h-9 rounded-lg"
-                                        @input="updateDayField(index, 'end_time', ($event.target as HTMLInputElement).value)"
-                                    />
-                                    <InputError :message="form.errors[`schedules.${index}.end_time`]" />
-                                </div>
-                                <InputError
-                                    v-if="form.errors[`schedules.${index}.day_of_week`]"
-                                    :message="form.errors[`schedules.${index}.day_of_week`]"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-4 rounded-lg bg-primary/5 px-3 py-2 text-sm">
-                        <span class="font-semibold text-foreground">
-                            الأيام المفعّلة: {{ activeScheduleDays.length }}
-                        </span>
-                        <span class="font-semibold text-foreground">
-                            إجمالي الساعات: {{ totalHours }}
-                        </span>
-                    </div>
-                    <InputError :message="form.errors.schedules" />
-                </section>
+                    :model-value="form"
+                    :selected-clinic="selectedClinic"
+                    :errors="form.errors"
+                    @update:model-value="Object.assign(form, $event)"
+                />
 
                 <section
                     v-else-if="form.clinic_id === ''"

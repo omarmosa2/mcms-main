@@ -73,7 +73,7 @@ class DepartmentControllerTest extends TestCase
         ]);
     }
 
-    public function test_store_generates_a_code_when_the_clinic_code_is_omitted(): void
+    public function test_store_allows_the_clinic_code_to_be_omitted(): void
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
@@ -84,10 +84,29 @@ class DepartmentControllerTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $response->assertJsonPath('data.code', 'DENTAL-CENTER');
+        $response->assertJsonPath('data.code', null);
         $this->assertDatabaseHas('clinics', [
             'name' => 'Dental Center',
-            'code' => 'DENTAL-CENTER',
+            'code' => null,
+        ]);
+    }
+
+    public function test_update_allows_the_clinic_code_to_be_cleared(): void
+    {
+        $clinic = Clinic::factory()->create(['code' => 'DENT']);
+        $this->authenticateForClinic($clinic);
+
+        $response = $this->putJson(route('clinics.update', ['clinicId' => $clinic->id]), [
+            'name' => $clinic->name,
+            'code' => null,
+            'is_active' => $clinic->is_active,
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.code', null);
+        $this->assertDatabaseHas('clinics', [
+            'id' => $clinic->id,
+            'code' => null,
         ]);
     }
 

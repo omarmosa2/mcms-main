@@ -40,8 +40,7 @@ class DailyScheduleController extends Controller
 
         $doctorProfiles = DoctorProfile::query()
             ->withoutGlobalScope('clinic')
-            ->withoutTrashed()
-            ->where('status', DoctorProfile::STATUS_ACTIVE)
+            ->where('is_active', true)
             ->with('user')
             ->get()
             ->map(fn (DoctorProfile $profile) => [

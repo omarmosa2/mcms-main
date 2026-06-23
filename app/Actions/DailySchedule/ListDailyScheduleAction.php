@@ -122,8 +122,7 @@ class ListDailyScheduleAction extends BaseAction
         $doctorProfiles = DoctorProfile::query()
             ->withoutGlobalScope('clinic')
             ->forClinic($clinicId)
-            ->withoutTrashed()
-            ->where('status', DoctorProfile::STATUS_ACTIVE)
+            ->where('is_active', true)
             ->with('user:id,name')
             ->get(['id', 'user_id', 'specialty']);
 
@@ -132,7 +131,6 @@ class ListDailyScheduleAction extends BaseAction
         return DoctorSchedule::query()
             ->withoutGlobalScope('clinic')
             ->forClinic($clinicId)
-            ->withoutTrashed()
             ->where('day_of_week', $dayOfWeek)
             ->where('is_available', true)
             ->whereIn('doctor_id', $doctorProfileIds)

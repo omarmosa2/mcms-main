@@ -15,13 +15,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import DoctorScheduleSection from './DoctorScheduleSection.vue';
+import { Switch } from '@/components/ui/switch';
 import type {
     Clinic,
-    CompensationType,
     Doctor,
     DoctorFormData,
 } from '../types';
+import DoctorScheduleSection from './DoctorScheduleSection.vue';
 
 const props = defineProps<{
     open: boolean;
@@ -38,6 +38,7 @@ const selectedClinic = computed<Clinic | null>(() => {
     if (form.clinic_id === '' || form.clinic_id === null) {
         return null;
     }
+
     return props.clinics.find((c) => c.id === Number(form.clinic_id)) ?? null;
 });
 
@@ -85,6 +86,7 @@ watch(
         if (!props.open) {
             return;
         }
+
         isHydrating.value = true;
         const next = defaultsFor(props.doctor);
         form.defaults(next);
@@ -108,6 +110,7 @@ const submit = (): void => {
 
     if (props.doctor !== null) {
         form.put(update.url(props.doctor.id), options);
+
         return;
     }
 

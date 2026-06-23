@@ -210,7 +210,7 @@ const submit = (): void => {
                                     id="clinic_code"
                                     v-model="form.code"
                                     class="h-11 rounded-lg"
-                                    placeholder="مثال: DENT (يُولّد تلقائيًا عند تركه فارغًا)"
+                                    placeholder="مثال: DENT"
                                 />
                                 <InputError :message="form.errors.code" />
                             </div>

@@ -23,6 +23,7 @@ const form: DoctorFormData = {
     phone: '',
     email: '',
     username: '',
+    password: 'password',
     employment_start_date: '',
     compensation_type: 'percentage',
     compensation_value: '',

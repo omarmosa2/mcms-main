@@ -70,6 +70,32 @@ class UserControllerTest extends TestCase
         $response->assertJsonPath('data.0.name', 'Jane Smith');
     }
 
+    public function test_index_includes_doctor_accounts_from_all_clinics_and_allows_searching_by_username(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'clinic_admin');
+
+        $doctorClinic = Clinic::factory()->create([
+            'name' => 'Doctor Clinic',
+        ]);
+
+        $doctorAccount = User::factory()->create([
+            'clinic_id' => $doctorClinic->id,
+            'name' => 'Dr. Account',
+            'username' => 'doctoraccount',
+        ]);
+        app(AssignUserRoleAction::class)->handle($doctorAccount, 'doctor');
+
+        $response = $this->getJson(route('users.index', ['search' => 'doctoraccount']));
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $doctorAccount->id);
+        $response->assertJsonPath('data.0.username', 'doctoraccount');
+        $response->assertJsonPath('data.0.clinic.name', 'Doctor Clinic');
+        $response->assertJsonPath('data.0.role_names.0', 'doctor');
+    }
+
     public function test_update_user(): void
     {
         $clinic = Clinic::factory()->create();

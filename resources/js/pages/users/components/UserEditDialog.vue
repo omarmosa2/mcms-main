@@ -18,6 +18,7 @@ type User = {
     id: number;
     name: string;
     email: string;
+    username: string | null;
     is_active: boolean;
     is_super_admin: boolean;
     roles: string[];

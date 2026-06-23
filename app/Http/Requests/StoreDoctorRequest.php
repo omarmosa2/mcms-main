@@ -4,9 +4,11 @@ namespace App\Http\Requests;
 
 use App\Models\ClinicWorkingHour;
 use App\Models\DoctorProfile;
+use App\Models\User;
 use App\Support\WeekDay;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -30,7 +32,14 @@ class StoreDoctorRequest extends FormRequest
             'specialty' => ['required', 'string', 'max:150'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:150'],
-            'username' => ['nullable', 'string', 'max:191', Rule::unique('doctor_profiles', 'username')],
+            'username' => [
+                'nullable',
+                'string',
+                'max:191',
+                Rule::unique('doctor_profiles', 'username'),
+                Rule::unique('users', 'username'),
+            ],
+            'password' => ['nullable', 'string', 'min:8', 'max:255'],
             'employment_start_date' => ['nullable', 'date'],
             'compensation_type' => ['required', 'string', Rule::in([
                 DoctorProfile::COMPENSATION_PERCENTAGE,
@@ -54,6 +63,7 @@ class StoreDoctorRequest extends FormRequest
             function (Validator $validator): void {
                 $this->validateCompensationValue($validator);
                 $this->validateSchedules($validator);
+                $this->validateGeneratedAccountEmail($validator);
             },
         ];
     }
@@ -122,6 +132,21 @@ class StoreDoctorRequest extends FormRequest
                     "دوام الطبيب يجب أن يكون ضمن دوام العيادة من {$clinicWorkingHour['start_time']} إلى {$clinicWorkingHour['end_time']}.",
                 );
             }
+        }
+    }
+
+    private function validateGeneratedAccountEmail(Validator $validator): void
+    {
+        $username = trim((string) $this->input('username', ''));
+
+        if ($username === '') {
+            return;
+        }
+
+        $email = Str::lower($username).'@doctor.local';
+
+        if (User::query()->where('email', $email)->exists()) {
+            $validator->errors()->add('username', 'اسم المستخدم مستخدم بالفعل.');
         }
     }
 

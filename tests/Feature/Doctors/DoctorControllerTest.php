@@ -9,6 +9,8 @@ use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class DoctorControllerTest extends TestCase
@@ -116,6 +118,22 @@ class DoctorControllerTest extends TestCase
             'day_of_week' => 0,
             'is_available' => true,
         ]);
+
+        $account = User::query()->where('username', 'drstore')->firstOrFail();
+
+        $this->assertSame($account->id, $doctor->user_id);
+        $this->assertTrue(Hash::check('password', $account->password));
+        $this->assertTrue($account->hasRole('doctor'));
+        $this->assertSame(['doctor'], $account->roleNamesForCurrentClinic()->all());
+
+        Auth::logout();
+
+        $this->post(route('login.store'), [
+            'username' => 'drstore',
+            'password' => 'password',
+        ]);
+
+        $this->assertAuthenticatedAs($account);
     }
 
     public function test_store_requires_at_least_one_active_schedule(): void
@@ -254,6 +272,40 @@ class DoctorControllerTest extends TestCase
             'doctor_profile_id' => $doctor->id,
             'day_of_week' => 1,
         ]);
+    }
+
+    public function test_update_creates_a_login_account_for_an_existing_doctor_when_a_password_is_provided(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+
+        $doctor = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'full_name' => 'Dr. Existing Account',
+            'username' => 'existingdoctor',
+            'user_id' => null,
+        ]);
+
+        $response = $this->put(route('doctors.update', $doctor->id), [
+            'password' => 'newpassword',
+        ]);
+
+        $response->assertRedirect(route('doctors.index'));
+
+        $account = User::query()->where('username', 'existingdoctor')->firstOrFail();
+
+        $this->assertSame($account->id, $doctor->refresh()->user_id);
+        $this->assertTrue(Hash::check('newpassword', $account->password));
+        $this->assertSame(['doctor'], $account->roleNamesForCurrentClinic()->all());
+
+        Auth::logout();
+        $this->actingAs($admin);
+
+        $this->put(route('doctors.update', $doctor->id), [
+            'password' => 'changedpassword',
+        ]);
+
+        $this->assertTrue(Hash::check('changedpassword', $account->refresh()->password));
     }
 
     public function test_destroy_deletes_doctor_and_schedules_only(): void

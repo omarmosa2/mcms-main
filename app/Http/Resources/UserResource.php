@@ -13,6 +13,11 @@ class UserResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
+            'username' => $this->username,
+            'clinic' => $this->whenLoaded('clinic', fn () => [
+                'id' => $this->clinic?->id,
+                'name' => $this->clinic?->name,
+            ]),
             'is_active' => (bool) $this->is_active,
             'is_super_admin' => (bool) $this->is_super_admin,
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')),

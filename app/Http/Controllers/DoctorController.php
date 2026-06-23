@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Rbac\AssignUserRoleAction;
 use App\Http\Requests\StoreDoctorRequest;
 use App\Http\Requests\UpdateDoctorRequest;
 use App\Http\Resources\DoctorResource;
 use App\Models\Clinic;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
+use App\Models\User;
 use App\Support\WeekDay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -52,18 +54,21 @@ class DoctorController extends Controller
         ]);
     }
 
-    public function store(StoreDoctorRequest $request): RedirectResponse
+    public function store(StoreDoctorRequest $request, AssignUserRoleAction $assignUserRoleAction): RedirectResponse
     {
         $validated = $request->validated();
 
-        $doctor = DB::transaction(function () use ($validated): DoctorProfile {
+        $doctor = DB::transaction(function () use ($assignUserRoleAction, $request, $validated): DoctorProfile {
             $scheduleData = collect($validated['schedules'] ?? [])
                 ->filter(fn ($schedule): bool => filter_var($schedule['is_available'] ?? false, FILTER_VALIDATE_BOOLEAN))
                 ->values()
                 ->all();
 
+            $account = $this->createDoctorAccount($validated, $request->user(), $assignUserRoleAction);
+
             $doctor = DoctorProfile::create(collect($validated)
-                ->except(['schedules'])
+                ->except(['schedules', 'password'])
+                ->merge(['user_id' => $account?->id])
                 ->toArray());
 
             $this->createSchedules($doctor, $scheduleData);
@@ -76,13 +81,43 @@ class DoctorController extends Controller
         return to_route('doctors.index');
     }
 
-    public function update(UpdateDoctorRequest $request, int $doctorId): RedirectResponse
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function createDoctorAccount(array $validated, ?User $creator, AssignUserRoleAction $assignUserRoleAction): ?User
+    {
+        $username = trim((string) ($validated['username'] ?? ''));
+
+        if ($username === '') {
+            return null;
+        }
+
+        $account = User::query()->create([
+            'clinic_id' => (int) $validated['clinic_id'],
+            'name' => $validated['full_name'],
+            'username' => $username,
+            'email' => mb_strtolower($username).'@doctor.local',
+            'password' => $validated['password'] ?? 'password',
+            'is_active' => (bool) ($validated['is_active'] ?? true),
+        ]);
+
+        $assignUserRoleAction->handle($account, 'doctor', $creator?->id);
+
+        return $account;
+    }
+
+    public function update(UpdateDoctorRequest $request, int $doctorId, AssignUserRoleAction $assignUserRoleAction): RedirectResponse
     {
         $doctor = $this->resolveDoctor($doctorId);
         $validated = $request->validated();
 
-        DB::transaction(function () use ($validated, $doctor): void {
-            $doctor->update(collect($validated)->except(['schedules'])->toArray());
+        DB::transaction(function () use ($assignUserRoleAction, $request, $validated, $doctor): void {
+            $account = $this->syncDoctorAccount($doctor, $validated, $request->user(), $assignUserRoleAction);
+
+            $doctor->update(collect($validated)
+                ->except(['schedules', 'password', 'user_id'])
+                ->merge(['user_id' => $account?->id ?? $doctor->user_id])
+                ->toArray());
 
             if ($this->shouldUpdateSchedules($validated, $doctor)) {
                 DoctorSchedule::query()
@@ -100,6 +135,43 @@ class DoctorController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'تم تحديث بيانات الطبيب بنجاح.']);
 
         return to_route('doctors.index');
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function syncDoctorAccount(DoctorProfile $doctor, array $validated, ?User $creator, AssignUserRoleAction $assignUserRoleAction): ?User
+    {
+        $password = $validated['password'] ?? null;
+
+        if (! filled($password)) {
+            return null;
+        }
+
+        $username = trim((string) ($validated['username'] ?? $doctor->username));
+        $account = $doctor->user;
+
+        if ($account !== null) {
+            $account->update([
+                'username' => $username,
+                'password' => $password,
+            ]);
+
+            return $account;
+        }
+
+        $account = User::query()->create([
+            'clinic_id' => (int) ($validated['clinic_id'] ?? $doctor->clinic_id),
+            'name' => $validated['full_name'] ?? $doctor->full_name,
+            'username' => $username,
+            'email' => mb_strtolower($username).'@doctor.local',
+            'password' => $password,
+            'is_active' => (bool) ($validated['is_active'] ?? $doctor->is_active),
+        ]);
+
+        $assignUserRoleAction->handle($account, 'doctor', $creator?->id);
+
+        return $account;
     }
 
     public function show(Request $request, int $doctorId): JsonResponse

@@ -23,16 +23,19 @@ class ListUsersAction extends BaseAction
         string $sortDirection = 'asc',
     ): LengthAwarePaginator {
         $query = User::query()
-            ->where('clinic_id', $clinicId)
             ->withoutTrashed()
-            ->with(['roles' => fn ($q) => $q->select('roles.id', 'roles.name')]);
+            ->with([
+                'clinic:id,name',
+                'roles' => fn ($q) => $q->select('roles.id', 'roles.name'),
+            ]);
 
         if ($search !== null) {
             $searchTerm = '%'.trim($search).'%';
             $query->where(function (Builder $builder) use ($searchTerm): void {
                 $builder
                     ->where('name', 'like', $searchTerm)
-                    ->orWhere('email', 'like', $searchTerm);
+                    ->orWhere('email', 'like', $searchTerm)
+                    ->orWhere('username', 'like', $searchTerm);
             });
         }
 

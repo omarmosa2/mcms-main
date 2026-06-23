@@ -17,6 +17,8 @@ type User = {
     id: number;
     name: string;
     email: string;
+    username: string | null;
+    clinic: { id: number; name: string } | null;
     is_active: boolean;
     is_super_admin: boolean;
     roles: string[];
@@ -164,13 +166,13 @@ const serialNumber = (index: number): number => {
             <div class="w-full overflow-hidden">
                 <table class="w-full table-fixed border-separate border-spacing-0 [&_td]:align-middle [&_th]:align-middle">
                     <colgroup>
-                        <col class="w-[5%]" />
-                        <col class="w-[5%]" />
-                        <col class="w-[25%]" />
+                        <col class="w-[4%]" />
                         <col class="w-[22%]" />
-                        <col class="w-[18%]" />
+                        <col class="w-[20%]" />
+                        <col class="w-[16%]" />
+                        <col class="w-[16%]" />
+                        <col class="w-[10%]" />
                         <col class="w-[12%]" />
-                        <col class="w-[13%]" />
                     </colgroup>
                     <thead>
                         <tr class="h-16 bg-muted">
@@ -188,8 +190,11 @@ const serialNumber = (index: number): number => {
                                 class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-foreground transition-colors select-none hover:text-primary"
                                 @click="emit('toggle-sort', 'email')"
                             >
-                                البريد الإلكتروني
+                                بيانات الدخول
                                 <span class="ms-1 text-muted-foreground/50">{{ sortMark('email') }}</span>
+                            </th>
+                            <th class="px-3 py-3 text-center text-sm font-bold text-foreground">
+                                العيادة
                             </th>
                             <th class="px-3 py-3 text-center text-sm font-bold text-foreground">
                                 الأدوار
@@ -230,8 +235,16 @@ const serialNumber = (index: number): number => {
                                     </div>
                                 </div>
                             </td>
+                            <td class="px-3 py-4 text-center">
+                                <p class="truncate text-sm font-medium text-foreground">
+                                    {{ user.username ?? user.email }}
+                                </p>
+                                <p v-if="user.username" class="truncate text-xs text-muted-foreground">
+                                    {{ user.email }}
+                                </p>
+                            </td>
                             <td class="px-3 py-4 text-center text-sm text-muted-foreground">
-                                {{ user.email }}
+                                {{ user.clinic?.name ?? '—' }}
                             </td>
                             <td class="px-3 py-4 text-center">
                                 <div class="flex flex-wrap justify-center gap-1">

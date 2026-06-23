@@ -15,7 +15,7 @@ import { request } from '@/routes/password';
 defineOptions({
     layout: {
         title: 'تسجيل الدخول',
-        description: 'أدخل بريدك الإلكتروني وكلمة المرور للمتابعة',
+        description: 'أدخل اسم المستخدم أو بريدك الإلكتروني وكلمة المرور للمتابعة',
     },
 });
 
@@ -45,21 +45,21 @@ defineProps<{
     >
         <div class="grid gap-5">
             <div class="grid gap-2">
-                <Label for="email" class="text-[0.83rem] font-semibold">
-                    البريد الإلكتروني
+                <Label for="username" class="text-[0.83rem] font-semibold">
+                    اسم المستخدم أو البريد الإلكتروني
                 </Label>
                 <Input
-                    id="email"
-                    type="email"
-                    name="email"
+                    id="username"
+                    type="text"
+                    name="username"
                     required
                     autofocus
                     :tabindex="1"
-                    autocomplete="email"
-                    placeholder="email@example.com"
+                    autocomplete="username"
+                    placeholder="اسم المستخدم أو email@example.com"
                     class="pattern-field-clay h-10"
                 />
-                <InputError :message="errors.email" />
+                <InputError :message="errors.username" />
             </div>
 
             <div class="grid gap-2">

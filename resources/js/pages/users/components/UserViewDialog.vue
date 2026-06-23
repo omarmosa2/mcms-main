@@ -13,6 +13,7 @@ type User = {
     id: number;
     name: string;
     email: string;
+    username: string | null;
     is_active: boolean;
     is_super_admin: boolean;
     roles: string[];
@@ -46,6 +47,10 @@ const emit = defineEmits<{ close: [] }>();
                     <div class="flex items-start py-3 px-4">
                         <span class="w-1/3 text-sm text-muted-foreground shrink-0">الاسم الكامل</span>
                         <span class="flex-1 text-sm font-medium text-foreground">{{ user.name }}</span>
+                    </div>
+                    <div class="flex items-start py-3 px-4">
+                        <span class="w-1/3 text-sm text-muted-foreground shrink-0">اسم المستخدم</span>
+                        <span class="flex-1 text-sm text-muted-foreground">{{ user.username ?? '-' }}</span>
                     </div>
                     <div class="flex items-start py-3 px-4">
                         <span class="w-1/3 text-sm text-muted-foreground shrink-0">البريد الإلكتروني</span>

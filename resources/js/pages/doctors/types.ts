@@ -58,6 +58,7 @@ export type DoctorFormData = {
     phone: string;
     email: string;
     username: string;
+    password: string;
     employment_start_date: string;
     compensation_type: CompensationType;
     compensation_value: string;

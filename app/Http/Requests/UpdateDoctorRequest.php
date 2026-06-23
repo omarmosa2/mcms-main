@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\ClinicWorkingHour;
 use App\Models\DoctorProfile;
+use App\Models\User;
 use App\Support\WeekDay;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -33,7 +34,15 @@ class UpdateDoctorRequest extends FormRequest
             'specialty' => ['sometimes', 'required', 'string', 'max:150'],
             'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
             'email' => ['sometimes', 'nullable', 'email', 'max:150'],
-            'username' => ['sometimes', 'nullable', 'string', 'max:191', Rule::unique('doctor_profiles', 'username')->ignore($doctorId)],
+            'username' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:191',
+                Rule::unique('doctor_profiles', 'username')->ignore($doctorId),
+                Rule::unique('users', 'username')->ignore($doctor?->user_id),
+            ],
+            'password' => ['nullable', 'string', 'min:8', 'max:255'],
             'employment_start_date' => ['sometimes', 'nullable', 'date'],
             'compensation_type' => ['sometimes', 'required', 'string', Rule::in([
                 DoctorProfile::COMPENSATION_PERCENTAGE,
@@ -56,11 +65,32 @@ class UpdateDoctorRequest extends FormRequest
         return [
             function (Validator $validator): void {
                 $this->validateCompensationValue($validator);
+                $this->validateAccountDetails($validator);
                 if ($this->has('schedules')) {
                     $this->validateSchedules($validator);
                 }
             },
         ];
+    }
+
+    private function validateAccountDetails(Validator $validator): void
+    {
+        if (! filled($this->input('password'))) {
+            return;
+        }
+
+        $doctor = $this->resolveDoctor();
+        $username = trim((string) $this->input('username', $doctor?->username ?? ''));
+
+        if ($username === '') {
+            $validator->errors()->add('username', 'اسم المستخدم مطلوب لإضافة أو تغيير كلمة المرور.');
+
+            return;
+        }
+
+        if ($doctor?->user_id === null && User::query()->where('email', mb_strtolower($username).'@doctor.local')->exists()) {
+            $validator->errors()->add('username', 'اسم المستخدم مستخدم بالفعل.');
+        }
     }
 
     private function validateCompensationValue(Validator $validator): void

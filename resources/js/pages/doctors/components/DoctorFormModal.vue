@@ -51,6 +51,7 @@ const defaultsFor = (doctor: Doctor | null): DoctorFormData => ({
     phone: doctor?.phone ?? '',
     email: doctor?.email ?? '',
     username: doctor?.username ?? '',
+    password: doctor === null ? 'password' : '',
     employment_start_date: doctor?.employment_start_date ?? '',
     compensation_type: doctor?.compensation_type ?? 'percentage',
     compensation_value:
@@ -271,6 +272,21 @@ const submit = (): void => {
                                 placeholder="اسم مستخدم فريد للطبيب"
                             />
                             <InputError :message="form.errors.username" />
+                        </div>
+
+                        <div class="grid gap-2">
+                            <Label for="doctor_password">كلمة المرور</Label>
+                            <Input
+                                id="doctor_password"
+                                v-model="form.password"
+                                type="password"
+                                autocomplete="new-password"
+                                class="h-11 rounded-lg"
+                            />
+                            <p class="text-xs text-muted-foreground">
+                                {{ isEditing ? 'أدخل كلمة مرور جديدة لإضافتها أو تغييرها.' : 'القيمة الافتراضية: password' }}
+                            </p>
+                            <InputError :message="form.errors.password" />
                         </div>
 
                         <div class="grid gap-2">

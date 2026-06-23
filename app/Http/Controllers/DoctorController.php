@@ -205,6 +205,7 @@ class DoctorController extends Controller
     private function resolveClinicOptions(): array
     {
         return Clinic::query()
+            ->clinical()
             ->where('is_active', true)
             ->with('workingHours:id,clinic_id,day_of_week,is_active,start_time,end_time')
             ->select(['id', 'name', 'code', 'is_active'])

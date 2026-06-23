@@ -55,6 +55,25 @@ class AppointmentControllerTest extends TestCase
         ]);
     }
 
+    public function test_index_excludes_administrative_clinics_from_clinic_options(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        Clinic::factory()->create([
+            'code' => 'ADMIN001',
+            'name' => 'Administration Clinic',
+            'is_administrative' => true,
+        ]);
+
+        $response = $this->get(route('appointments.index'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->has('clinics', 1)
+            ->where('clinics.0.id', $clinic->id));
+    }
+
     public function test_index_passes_only_today_available_departments_and_doctors(): void
     {
         Carbon::setTestNow('2026-06-15 08:00:00');

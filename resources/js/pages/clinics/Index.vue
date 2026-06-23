@@ -393,8 +393,10 @@ const deleteClinic = async (clinic: Clinic) => {
                 closeConfirm();
                 toast.success('تم حذف العيادة بنجاح');
             },
-            onError: () => {
-                toast.error('فشل حذف العيادة');
+            onError: (errors) => {
+                toast.error(
+                    errors.clinic ?? 'فشل حذف العيادة. حاول مرة أخرى.',
+                );
             },
         });
     }

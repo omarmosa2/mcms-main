@@ -122,6 +122,7 @@ const close = (): void => {
 const handleOpenChange = (value: boolean): void => {
     if (!value) {
         close();
+
         return;
     }
 
@@ -139,6 +140,7 @@ const submit = (): void => {
 
     if (props.department) {
         form.put(ClinicController.update.url(props.department.id), options);
+
         return;
     }
 
@@ -200,12 +202,15 @@ const submit = (): void => {
                             </div>
 
                             <div class="grid gap-2">
-                                <Label for="clinic_code">الرمز</Label>
+                                <Label for="clinic_code">
+                                    الرمز
+                                    <span class="font-normal text-muted-foreground">(اختياري)</span>
+                                </Label>
                                 <Input
                                     id="clinic_code"
                                     v-model="form.code"
                                     class="h-11 rounded-lg"
-                                    placeholder="مثال: DENT"
+                                    placeholder="مثال: DENT (يُولّد تلقائيًا عند تركه فارغًا)"
                                 />
                                 <InputError :message="form.errors.code" />
                             </div>

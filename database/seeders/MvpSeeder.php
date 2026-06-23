@@ -20,8 +20,11 @@ class MvpSeeder extends Seeder
                 'timezone' => 'Asia/Damascus',
                 'currency' => 'SYP',
                 'is_active' => true,
+                'is_administrative' => true,
             ],
         );
+
+        $clinic->update(['is_administrative' => true]);
 
         app(SyncClinicRbacAction::class)->handle($clinic->id);
 

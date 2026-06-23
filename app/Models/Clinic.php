@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\ClinicFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +15,19 @@ class Clinic extends Model
     use HasFactory;
 
     protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'is_administrative' => 'boolean',
+        ];
+    }
+
+    public function scopeClinical(Builder $query): Builder
+    {
+        return $query->where('is_administrative', false);
+    }
 
     public function patients(): HasMany
     {

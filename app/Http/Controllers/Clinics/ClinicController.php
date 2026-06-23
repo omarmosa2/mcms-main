@@ -16,6 +16,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -28,6 +29,7 @@ class ClinicController extends Controller
         $filters = $this->resolveIndexFilters($request);
 
         $clinics = Clinic::query()
+            ->clinical()
             ->withCount('employees')
             ->with(['workingHours'])
             ->orderByDesc('created_at');
@@ -64,6 +66,7 @@ class ClinicController extends Controller
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $this->validatePayload($request);
+        $validated['code'] = $this->resolveClinicCode($validated['code'] ?? null, $validated['name']);
         $workingHours = $validated['working_hours'] ?? [];
         unset($validated['working_hours']);
 
@@ -110,6 +113,11 @@ class ClinicController extends Controller
 
         $clinic = DB::transaction(function () use ($clinicId, $validated, $workingHours): Clinic {
             $clinic = Clinic::query()->findOrFail($clinicId);
+            $validated['code'] = $this->resolveClinicCode(
+                $validated['code'] ?? null,
+                $validated['name'],
+                $clinic->code,
+            );
             $clinic->fill($validated);
             $clinic->save();
 
@@ -136,11 +144,14 @@ class ClinicController extends Controller
                 $query->withoutGlobalScope('clinic');
             }])
             ->withCount('users')
+            ->withCount(['doctorProfiles' => function ($query) {
+                $query->withoutGlobalScope('clinic');
+            }])
             ->findOrFail($clinicId);
 
-        if ($clinic->employees_count > 0 || $clinic->users_count > 0) {
+        if ($clinic->employees_count > 0 || $clinic->users_count > 0 || $clinic->doctor_profiles_count > 0) {
             throw ValidationException::withMessages([
-                'clinic' => 'لا يمكن حذف العيادة بينما يوجد مستخدمون أو موظفون مرتبطون بها.',
+                'clinic' => 'لا يمكن حذف العيادة بينما يوجد مستخدمون أو موظفون أو أطباء مرتبطون بها.',
             ]);
         }
 
@@ -177,9 +188,12 @@ class ClinicController extends Controller
                         $query->withoutGlobalScope('clinic');
                     }])
                     ->withCount('users')
+                    ->withCount(['doctorProfiles' => function ($query) {
+                        $query->withoutGlobalScope('clinic');
+                    }])
                     ->findOrFail($clinicId);
 
-                if ($clinic->employees_count > 0 || $clinic->users_count > 0) {
+                if ($clinic->employees_count > 0 || $clinic->users_count > 0 || $clinic->doctor_profiles_count > 0) {
                     $failedIds[] = $clinicId;
 
                     continue;
@@ -344,7 +358,7 @@ class ClinicController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'code' => ['required', 'string', 'max:50', 'unique:clinics,code,'.($clinicId ?? 'NULL')],
+            'code' => ['nullable', 'string', 'max:50', 'unique:clinics,code,'.($clinicId ?? 'NULL')],
             'description' => ['sometimes', 'nullable', 'string'],
             'is_active' => ['sometimes', 'boolean'],
             'working_hours' => ['sometimes', 'array'],
@@ -353,6 +367,32 @@ class ClinicController extends Controller
             'working_hours.*.start_time' => ['nullable', 'string'],
             'working_hours.*.end_time' => ['nullable', 'string'],
         ]);
+    }
+
+    private function resolveClinicCode(?string $code, string $name, ?string $existingCode = null): string
+    {
+        $normalizedCode = trim((string) $code);
+
+        if ($normalizedCode !== '') {
+            return $normalizedCode;
+        }
+
+        if ($existingCode !== null) {
+            return $existingCode;
+        }
+
+        $baseCode = Str::upper(Str::slug($name));
+        $baseCode = $baseCode !== '' ? Str::substr($baseCode, 0, 45) : 'CLINIC';
+        $candidate = $baseCode;
+        $suffix = 1;
+
+        while (Clinic::query()->where('code', $candidate)->exists()) {
+            $suffixValue = '-'.$suffix;
+            $candidate = Str::substr($baseCode, 0, 50 - strlen($suffixValue)).$suffixValue;
+            $suffix++;
+        }
+
+        return $candidate;
     }
 
     private function normalizeNullableString(mixed $value): ?string

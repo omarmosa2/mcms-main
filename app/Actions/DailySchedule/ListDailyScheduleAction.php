@@ -100,6 +100,7 @@ class ListDailyScheduleAction extends BaseAction
     private function getActiveClinics(?int $clinicFilter): Collection
     {
         $query = Clinic::query()
+            ->clinical()
             ->where('is_active', true);
 
         if ($clinicFilter !== null) {

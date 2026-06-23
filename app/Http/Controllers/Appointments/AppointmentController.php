@@ -74,6 +74,7 @@ class AppointmentController extends Controller
 
         $doctors = $this->cacheService->getDoctorsDropdown($clinicId);
         $clinics = Clinic::query()
+            ->clinical()
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name'])

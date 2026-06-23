@@ -4,6 +4,7 @@ namespace Tests\Feature\Departments;
 
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Clinic;
+use App\Models\DoctorProfile;
 use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,6 +24,24 @@ class DepartmentControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('meta.total', 2);
+    }
+
+    public function test_index_excludes_administrative_clinics(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        Clinic::factory()->create([
+            'code' => 'ADMIN001',
+            'name' => 'Administration Clinic',
+            'is_administrative' => true,
+        ]);
+
+        $response = $this->getJson(route('clinics.index'));
+
+        $response->assertOk();
+        $response->assertJsonPath('meta.total', 1);
+        $response->assertJsonMissing(['name' => 'Administration Clinic']);
     }
 
     public function test_store_creates_clinic(): void
@@ -51,6 +70,24 @@ class DepartmentControllerTest extends TestCase
             'name' => 'Cardiology',
             'code' => 'card',
             'is_active' => true,
+        ]);
+    }
+
+    public function test_store_generates_a_code_when_the_clinic_code_is_omitted(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $response = $this->postJson(route('clinics.store'), [
+            'name' => 'Dental Center',
+            'is_active' => true,
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.code', 'DENTAL-CENTER');
+        $this->assertDatabaseHas('clinics', [
+            'name' => 'Dental Center',
+            'code' => 'DENTAL-CENTER',
         ]);
     }
 
@@ -164,6 +201,22 @@ class DepartmentControllerTest extends TestCase
         $this->assertDatabaseHas('clinics', ['id' => $clinic->id]);
     }
 
+    public function test_destroy_rejects_clinic_with_assigned_doctors(): void
+    {
+        $adminClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($adminClinic);
+
+        $clinic = Clinic::factory()->create();
+        DoctorProfile::factory()->create(['clinic_id' => $clinic->id]);
+
+        $response = $this->deleteJson(route('clinics.destroy', ['clinicId' => $clinic->id]));
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('clinic');
+        $response->assertJsonPath('errors.clinic.0', 'لا يمكن حذف العيادة بينما يوجد مستخدمون أو موظفون أو أطباء مرتبطون بها.');
+        $this->assertDatabaseHas('clinics', ['id' => $clinic->id]);
+    }
+
     public function test_bulk_destroy_deletes_only_empty_clinics(): void
     {
         $clinic = Clinic::factory()->create();
@@ -186,6 +239,26 @@ class DepartmentControllerTest extends TestCase
         $response->assertJsonPath('data.deleted_count', 1);
         $response->assertJsonPath('data.failed_count', 1);
 
+        $this->assertDatabaseMissing('clinics', ['id' => $deletableClinic->id]);
+        $this->assertDatabaseHas('clinics', ['id' => $linkedClinic->id]);
+    }
+
+    public function test_bulk_destroy_skips_clinics_with_assigned_doctors(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $deletableClinic = Clinic::factory()->create();
+        $linkedClinic = Clinic::factory()->create();
+        DoctorProfile::factory()->create(['clinic_id' => $linkedClinic->id]);
+
+        $response = $this->deleteJson(route('clinics.bulk-destroy'), [
+            'ids' => [$deletableClinic->id, $linkedClinic->id],
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.deleted_count', 1);
+        $response->assertJsonPath('data.failed_count', 1);
         $this->assertDatabaseMissing('clinics', ['id' => $deletableClinic->id]);
         $this->assertDatabaseHas('clinics', ['id' => $linkedClinic->id]);
     }

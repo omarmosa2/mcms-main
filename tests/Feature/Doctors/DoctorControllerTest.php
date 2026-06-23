@@ -34,6 +34,25 @@ class DoctorControllerTest extends TestCase
             ->where('doctors.data.0.full_name', 'Dr. Test Index'));
     }
 
+    public function test_index_excludes_administrative_clinics_from_clinic_options(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        Clinic::factory()->create([
+            'code' => 'ADMIN001',
+            'name' => 'Administration Clinic',
+            'is_administrative' => true,
+        ]);
+
+        $response = $this->get(route('doctors.index'));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->has('clinics', 1)
+            ->where('clinics.0.id', $clinic->id));
+    }
+
     public function test_store_creates_doctor_with_schedules(): void
     {
         $clinic = Clinic::factory()->create();

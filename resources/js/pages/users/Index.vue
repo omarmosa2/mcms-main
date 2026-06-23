@@ -125,6 +125,9 @@ const roleLabels: Record<string, string> = {
 };
 
 const activeRoleLabel = computed<string>(() => roleLabels[primaryRole.value] ?? roleLabels.staff);
+const canResetUserPasswords = computed<boolean>(() =>
+    ['super_admin', 'admin', 'clinic_admin'].some((role) => roleNames.value.includes(role)),
+);
 
 const viewingUser = ref<User | null>(null);
 const editingUser = ref<User | null>(null);
@@ -398,6 +401,7 @@ const resetLocalFilters = () => {
         <UserEditDialog
             :user="editingUser"
             :roles="roles"
+            :can-reset-password="canResetUserPasswords"
             @close="editingUser = null"
         />
 

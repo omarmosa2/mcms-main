@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form } from '@inertiajs/vue3';
+import { Form, useForm } from '@inertiajs/vue3';
 import UserController from '@/actions/App/Http/Controllers/Security/UserController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -34,9 +34,21 @@ type Role = {
     is_system: boolean;
 };
 
-defineProps<{ user: User | null; roles: Role[] }>();
+defineProps<{ user: User | null; roles: Role[]; canResetPassword: boolean }>();
 
 const emit = defineEmits<{ close: [] }>();
+
+const resetPasswordForm = useForm({
+    password: '',
+    password_confirmation: '',
+});
+
+const resetPassword = (userId: number): void => {
+    resetPasswordForm.post(UserController.resetPassword.url(userId), {
+        preserveScroll: true,
+        onSuccess: () => resetPasswordForm.reset(),
+    });
+};
 </script>
 
 <template>
@@ -121,6 +133,46 @@ const emit = defineEmits<{ close: [] }>();
                         حساب نشط
                     </Label>
                 </div>
+
+                <section v-if="canResetPassword" class="space-y-3 rounded-lg border border-warning/30 bg-warning/5 p-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-foreground">إعادة ضبط كلمة المرور</h3>
+                        <p class="mt-1 text-xs text-muted-foreground">اترك الحقول فارغة إن لم ترغب بتغيير كلمة المرور.</p>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <Label for="edit_password" class="text-sm font-medium text-foreground">كلمة المرور الجديدة</Label>
+                        <Input
+                            id="edit_password"
+                            v-model="resetPasswordForm.password"
+                            type="password"
+                            autocomplete="new-password"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
+                        />
+                        <InputError :message="resetPasswordForm.errors.password" />
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <Label for="edit_password_confirmation" class="text-sm font-medium text-foreground">تأكيد كلمة المرور الجديدة</Label>
+                        <Input
+                            id="edit_password_confirmation"
+                            v-model="resetPasswordForm.password_confirmation"
+                            type="password"
+                            autocomplete="new-password"
+                            class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
+                        />
+                        <InputError :message="resetPasswordForm.errors.password_confirmation" />
+                    </div>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        :disabled="resetPasswordForm.processing"
+                        @click="resetPassword(user.id)"
+                    >
+                        إعادة ضبط كلمة المرور
+                    </Button>
+                </section>
 
                 <DialogFooter class="flex items-center justify-between p-6 pt-4 gap-2">
                     <Button

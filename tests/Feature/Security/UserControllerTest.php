@@ -6,6 +6,7 @@ use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Clinic;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class UserControllerTest extends TestCase
@@ -132,6 +133,42 @@ class UserControllerTest extends TestCase
             'user_id' => $adminUser->id,
             'action' => 'users.update',
         ]);
+    }
+
+    public function test_administrator_can_reset_a_users_password(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'clinic_admin');
+        $targetUser = User::factory()->create([
+            'clinic_id' => $clinic->id,
+            'password' => 'old-password',
+        ]);
+
+        $response = $this->postJson(route('users.reset-password', ['userId' => $targetUser->id]), [
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ]);
+
+        $response->assertOk();
+        $this->assertTrue(Hash::check('new-password', $targetUser->refresh()->password));
+    }
+
+    public function test_non_administrator_cannot_reset_a_users_password(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'receptionist');
+        $targetUser = User::factory()->create([
+            'clinic_id' => $clinic->id,
+            'password' => 'old-password',
+        ]);
+
+        $response = $this->postJson(route('users.reset-password', ['userId' => $targetUser->id]), [
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ]);
+
+        $response->assertForbidden();
+        $this->assertTrue(Hash::check('old-password', $targetUser->refresh()->password));
     }
 
     public function test_delete_user(): void

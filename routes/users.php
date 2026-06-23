@@ -8,5 +8,6 @@ Route::middleware(['auth', 'verified'])->prefix('users')->name('users.')->group(
     Route::post('/', [UserController::class, 'store'])->middleware('permission:users.create')->name('store');
     Route::delete('/bulk', [UserController::class, 'bulkDestroy'])->middleware('permission:users.delete')->name('bulk-destroy');
     Route::match(['put', 'patch'], '/{userId}', [UserController::class, 'update'])->middleware('permission:users.update')->name('update');
+    Route::post('/{userId}/reset-password', [UserController::class, 'resetPassword'])->middleware('permission:users.update')->name('reset-password');
     Route::delete('/{userId}', [UserController::class, 'destroy'])->middleware('permission:users.delete')->name('destroy');
 });

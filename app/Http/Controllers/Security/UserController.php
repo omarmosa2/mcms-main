@@ -6,6 +6,7 @@ use App\Actions\Rbac\ListRolesAction;
 use App\Actions\Security\CreateUserAction;
 use App\Actions\Security\DeleteUserAction;
 use App\Actions\Security\ListUsersAction;
+use App\Actions\Security\ResetUserPasswordAction;
 use App\Actions\Security\UpdateUserAction;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
@@ -24,6 +25,7 @@ class UserController extends Controller
         private ListRolesAction $listRolesAction,
         private CreateUserAction $createUserAction,
         private UpdateUserAction $updateUserAction,
+        private ResetUserPasswordAction $resetUserPasswordAction,
         private DeleteUserAction $deleteUserAction,
     ) {}
 
@@ -67,8 +69,13 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255'],
             'role_name' => ['required', 'string', 'max:100'],
             'password' => ['nullable', 'string', 'min:8'],
+            'password_confirmation' => ['nullable', 'same:password'],
             'is_active' => ['nullable', 'boolean'],
         ]);
+
+        if (filled($validated['password'] ?? null) && ! $this->canResetUserPasswords($request)) {
+            abort(Response::HTTP_FORBIDDEN, 'Only administrators can reset user passwords.');
+        }
 
         $user = $this->createUserAction->handle(
             clinicId: $clinicId,
@@ -134,6 +141,27 @@ class UserController extends Controller
         return to_route('users.index');
     }
 
+    public function resetPassword(Request $request, int $userId): JsonResponse|RedirectResponse
+    {
+        if (! $this->canResetUserPasswords($request)) {
+            abort(Response::HTTP_FORBIDDEN, 'Only administrators can reset user passwords.');
+        }
+
+        $validated = $request->validate([
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user = $this->resetUserPasswordAction->handle($request->user(), $userId, $validated['password']);
+
+        if ($request->expectsJson()) {
+            return UserResource::make($user)->response();
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'تمت إعادة ضبط كلمة المرور بنجاح.']);
+
+        return to_route('users.index');
+    }
+
     public function bulkDestroy(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
@@ -191,6 +219,13 @@ class UserController extends Controller
         }
 
         return (int) $clinicId;
+    }
+
+    private function canResetUserPasswords(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user !== null && ($user->is_super_admin || $user->isClinicSecurityManager());
     }
 
     private function resolveIndexFilters(Request $request): array

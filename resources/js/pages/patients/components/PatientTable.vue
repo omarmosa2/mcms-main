@@ -314,7 +314,7 @@ const formatDate = (value: string | null): string => {
                                     <button
                                         v-if="can('patient.delete')"
                                         type="button"
-                                        class="inline-flex size-7 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10"
+                                        class="inline-flex size-7 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10 dark:text-red-400 dark:hover:bg-destructive/20"
                                         :aria-label="`حذف ${patient.full_name}`"
                                         :title="'حذف'"
                                         @click="emit('delete', patient)"
@@ -324,7 +324,7 @@ const formatDate = (value: string | null): string => {
                                     <button
                                         v-if="can('patient.update')"
                                         type="button"
-                                        class="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10"
+                                        class="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10 dark:text-sky-300 dark:hover:bg-primary/20"
                                         :aria-label="`تعديل ${patient.full_name}`"
                                         :title="'تعديل'"
                                         @click="emit('edit', patient)"
@@ -338,7 +338,7 @@ const formatDate = (value: string | null): string => {
                                                 patient.id,
                                             )
                                         "
-                                        class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+                                        class="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 dark:text-sky-300 dark:hover:bg-primary/20"
                                         :aria-label="`بطاقة مريض ${patient.full_name}`"
                                         :title="'بطاقة مريض'"
                                     >
@@ -352,7 +352,7 @@ const formatDate = (value: string | null): string => {
                                                 patient.id,
                                             )
                                         "
-                                        class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"
+                                        class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted dark:text-muted-foreground dark:hover:bg-muted/70"
                                         :aria-label="`عرض ${patient.full_name}`"
                                         :title="'عرض'"
                                     >

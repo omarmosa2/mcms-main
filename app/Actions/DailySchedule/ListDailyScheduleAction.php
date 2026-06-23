@@ -123,25 +123,29 @@ class ListDailyScheduleAction extends BaseAction
             ->withoutGlobalScope('clinic')
             ->forClinic($clinicId)
             ->where('is_active', true)
+            ->when($doctorFilter !== null, fn ($query) => $query->where('user_id', $doctorFilter))
             ->with('user:id,name')
-            ->get(['id', 'user_id', 'specialty']);
-
-        $doctorProfileIds = $doctorProfiles->pluck('id');
+            ->get(['id', 'user_id', 'specialty'])
+            ->keyBy('id');
 
         return DoctorSchedule::query()
             ->withoutGlobalScope('clinic')
             ->forClinic($clinicId)
             ->where('day_of_week', $dayOfWeek)
             ->where('is_available', true)
-            ->whereIn('doctor_id', $doctorProfileIds)
-            ->when($doctorFilter !== null, fn ($query) => $query->whereHas('doctor', fn ($doctorQuery) => $doctorQuery->where('user_id', $doctorFilter)))
-            ->with('doctor.user:id,name')
+            ->whereIn('doctor_profile_id', $doctorProfiles->keys())
             ->orderBy('start_time')
             ->get()
-            ->map(function (DoctorSchedule $schedule) use ($clinicId, $date): ?array {
+            ->map(function (DoctorSchedule $schedule) use ($clinicId, $date, $doctorProfiles): ?array {
+                $profile = $doctorProfiles->get($schedule->doctor_profile_id);
+
+                if ($profile === null) {
+                    return null;
+                }
+
                 $availability = $this->doctorAvailabilityService->availabilityForDay(
                     clinicId: $clinicId,
-                    doctorId: (int) $schedule->doctor->user_id,
+                    doctorId: (int) $profile->user_id,
                     date: $date,
                 );
 
@@ -150,9 +154,9 @@ class ListDailyScheduleAction extends BaseAction
                 }
 
                 return [
-                    'doctor_id' => $schedule->doctor?->user_id,
-                    'doctor_name' => $schedule->doctor?->user?->name,
-                    'specialty' => $schedule->doctor?->specialty,
+                    'doctor_id' => $profile->user_id,
+                    'doctor_name' => $profile->user?->name,
+                    'specialty' => $profile->specialty,
                     'start_time' => $availability['available_periods'][0]['start_time'] ?? $this->formatTime($schedule->start_time),
                     'end_time' => $availability['available_periods'][array_key_last($availability['available_periods'])]['end_time'] ?? $this->formatTime($schedule->end_time),
                     'available_periods' => $availability['available_periods'],

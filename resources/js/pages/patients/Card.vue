@@ -589,13 +589,10 @@ watch(
                         <strong>{{ projectName }}</strong>
                     </div>
                     <div class="info-box">
-                        <span>اسم الطفل / المريض</span>
+                        <span>اسم المريض</span>
                         <strong>{{ patientName }}</strong>
                     </div>
-                    <div class="info-box">
-                        <span>اسم الأم</span>
-                        <strong>{{ dash }}</strong>
-                    </div>
+                    
                     <div class="info-box">
                         <span>العمر</span>
                         <strong>{{ patient.age !== null ? `${patient.age} سنة` : dash }}</strong>
@@ -603,10 +600,6 @@ watch(
                     <div class="info-box">
                         <span>الجنس</span>
                         <strong>{{ genderLabel }}</strong>
-                    </div>
-                    <div class="info-box">
-                        <span>العنوان</span>
-                        <strong>{{ dash }}</strong>
                     </div>
                     <div class="info-box">
                         <span>رقم الهاتف</span>

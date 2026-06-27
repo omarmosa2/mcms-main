@@ -3,11 +3,10 @@ import { Head, router, usePage } from '@inertiajs/vue3';
 import { toPng } from 'html-to-image';
 import {
     CalendarDays,
-    Clock,
     Download,
     Monitor,
+    Printer,
     RefreshCw,
-    Stethoscope,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
@@ -15,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import DailySchedulePoster from './components/DailySchedulePoster.vue';
 
 type DoctorSchedule = {
     doctor_id: number;
@@ -93,9 +93,7 @@ const logoPath = computed(
 );
 
 const filterDate = ref(props.filters.date);
-const filterClinic = ref<string>(
-    props.filters.clinic_id?.toString() ?? '',
-);
+const filterClinic = ref<string>(props.filters.clinic_id?.toString() ?? '');
 const filterDoctor = ref<string>(props.filters.doctor_id?.toString() ?? '');
 
 function applyFilters() {
@@ -160,6 +158,10 @@ function openDisplayMode() {
     window.open('/daily-schedule/display', '_blank', 'noopener,noreferrer');
 }
 
+function exportAsPdf() {
+    window.print();
+}
+
 async function exportAsPng() {
     if (!exportRef.value) {
         toast.error('لم يتم العثور على المحتوى للتصدير');
@@ -171,7 +173,7 @@ async function exportAsPng() {
 
     try {
         const dataUrl = await toPng(exportRef.value, {
-            backgroundColor: '#ffffff',
+            backgroundColor: '#fbfdff',
             pixelRatio: 2,
             cacheBust: true,
         });
@@ -190,34 +192,18 @@ async function exportAsPng() {
         isExporting.value = false;
     }
 }
-
-function formatTimeShort(time: string): string {
-    if (!time) {
-        return '';
-    }
-
-    const [hours, minutes] = time.split(':');
-    const h = parseInt(hours, 10);
-    const m = minutes?.substring(0, 2) ?? '00';
-    const period = h >= 12 ? 'م' : 'ص';
-    const displayHours = h % 12 || 12;
-
-    return `${displayHours}:${m} ${period}`;
-}
-
-const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
 </script>
 
 <template>
-    <Head title="العيادات المتوفرة اليوم" />
+    <Head title="العيادات المناوبة اليوم" />
 
     <div class="space-y-6">
         <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between print:hidden"
+            class="flex flex-col gap-4 rounded-3xl border border-border/80 bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between print:hidden"
         >
             <div>
                 <h1 class="page-title">
-                    {{ clinicName }} - العيادات المتوفرة اليوم
+                    {{ clinicName }} - العيادات المناوبة اليوم
                 </h1>
                 <p class="mt-1 text-sm text-muted-foreground">
                     {{ scheduleData.day_name }} -
@@ -229,6 +215,10 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
                 <Button variant="neumorphic" size="sm" @click="refreshData">
                     <RefreshCw class="ms-2 size-4" />
                     تحديث
+                </Button>
+                <Button variant="neumorphic" size="sm" @click="exportAsPdf">
+                    <Printer class="ms-2 size-4" />
+                    تصدير PDF
                 </Button>
                 <Button
                     variant="neumorphic"
@@ -311,216 +301,12 @@ const hasClinics = computed(() => props.scheduleData.clinics.length > 0);
             </CardContent>
         </Card>
 
-        <div
-            ref="exportRef"
-            class="rounded-2xl bg-card p-8 shadow-sm"
-            dir="rtl"
-        >
-            <div
-                class="mb-8 flex items-center justify-between border-b-4 border-primary pb-6"
-            >
-                <div class="flex items-center gap-5">
-                    <div
-                        v-if="logoPath"
-                        class="flex size-20 items-center justify-center overflow-hidden rounded-2xl border-2 border-border bg-card"
-                    >
-                        <img
-                            :src="`/storage/${logoPath}`"
-                            :alt="clinicName"
-                            class="size-full object-contain"
-                        />
-                    </div>
-                    <div
-                        v-else
-                        class="flex size-20 items-center justify-center rounded-2xl bg-primary"
-                    >
-                        <Stethoscope class="size-10 text-primary-foreground" />
-                    </div>
-                    <div>
-                        <h2 class="text-3xl font-bold text-accent-foreground">
-                            {{ clinicName }}
-                        </h2>
-                        <p class="mt-1 text-xl font-semibold text-foreground">
-                            جدول العيادات المتوفرة
-                        </p>
-                    </div>
-                </div>
-                <div class="text-left">
-                    <div
-                        class="flex items-center gap-3 rounded-xl bg-primary px-6 py-4 text-primary-foreground"
-                    >
-                        <CalendarDays class="size-7" />
-                        <div>
-                            <p class="text-2xl font-bold">
-                                {{ scheduleData.day_name }}
-                            </p>
-                            <p class="text-base">
-                                {{ scheduleData.formatted_date }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                v-if="hasClinics"
-                class="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
-            >
-                <div
-                    v-for="clinic in scheduleData.clinics"
-                    :key="clinic.id"
-                    class="overflow-hidden rounded-2xl border-2 border-border bg-card shadow-md"
-                >
-                    <div class="bg-primary p-5">
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="flex size-12 items-center justify-center rounded-xl bg-white/30"
-                            >
-                                <Stethoscope class="size-6 text-white" />
-                            </div>
-                            <div class="flex-1">
-                                <h3 class="text-xl font-bold text-white">
-                                    {{ clinic.name }}
-                                </h3>
-                                <span
-                                    v-if="clinic.clinic_type"
-                                    class="text-sm text-white/90"
-                                    >{{ clinic.clinic_type }}</span
-                                >
-                            </div>
-                        </div>
-                        <div
-                            v-if="clinic.clinic_start_time"
-                            class="mt-3 flex items-center gap-2 rounded-lg bg-primary/80 px-4 py-2 text-base text-white"
-                        >
-                            <Clock class="size-4" />
-                            <span class="font-medium tabular-nums"
-                                >{{
-                                    formatTimeShort(clinic.clinic_start_time)
-                                }}
-                                -
-                                {{
-                                    formatTimeShort(clinic.clinic_end_time!)
-                                }}</span
-                            >
-                        </div>
-                    </div>
-
-                    <div class="p-4">
-                        <div class="space-y-3">
-                            <div
-                                v-for="doctor in clinic.doctors"
-                                :key="doctor.doctor_id"
-                                class="rounded-xl border border-border bg-muted p-3"
-                            >
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-3">
-                                        <div
-                                            class="flex size-10 items-center justify-center rounded-full bg-primary"
-                                        >
-                                            <span
-                                                class="text-base font-bold text-primary-foreground"
-                                                >{{
-                                                    doctor.doctor_name?.charAt(
-                                                        0,
-                                                    )
-                                                }}</span
-                                            >
-                                        </div>
-                                        <div>
-                                            <p
-                                                class="text-base font-bold text-foreground"
-                                            >
-                                                {{ doctor.doctor_name }}
-                                            </p>
-                                            <p
-                                                v-if="doctor.specialty"
-                                                class="text-sm text-muted-foreground"
-                                            >
-                                                {{ doctor.specialty }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div
-                                        class="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-sm font-bold text-accent-foreground"
-                                    >
-                                        <Clock class="size-3.5" />
-                                        <span class="tabular-nums">
-                                            {{
-                                                formatTimeShort(
-                                                    doctor.start_time,
-                                                )
-                                            }}
-                                            -
-                                            {{
-                                                formatTimeShort(doctor.end_time)
-                                            }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div
-                                    v-if="doctor.unavailable_periods.length > 0"
-                                    class="mt-2 space-y-1 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300"
-                                >
-                                    <div
-                                        v-for="period in doctor.unavailable_periods"
-                                        :key="`${period.start_time}-${period.end_time}`"
-                                        class="flex items-center justify-between gap-2"
-                                    >
-                                        <span>إجازة ساعية</span>
-                                        <span class="tabular-nums"
-                                            >{{
-                                                formatTimeShort(
-                                                    period.start_time,
-                                                )
-                                            }}
-                                            -
-                                            {{
-                                                formatTimeShort(period.end_time)
-                                            }}</span
-                                        >
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div
-                v-else
-                class="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted py-16 text-center"
-            >
-                <div
-                    class="flex size-20 items-center justify-center rounded-full bg-accent"
-                >
-                    <CalendarDays class="size-10 text-primary" />
-                </div>
-                <h3 class="mt-4 text-xl font-bold text-foreground">
-                    لا توجد عيادات متوفرة اليوم
-                </h3>
-                <p class="mt-2 text-base text-muted-foreground">
-                    لا توجد عيادات أو أطباء مسجلين للدوام في هذا اليوم.
-                </p>
-            </div>
-
-            <div
-                v-if="
-                    scheduleData.clinic_settings.phone ||
-                    scheduleData.clinic_settings.address
-                "
-                class="mt-8 border-t-2 border-border pt-4 text-center text-base text-muted-foreground"
-            >
-                <p
-                    v-if="scheduleData.clinic_settings.phone"
-                    class="font-medium"
-                >
-                    هاتف: {{ scheduleData.clinic_settings.phone }}
-                </p>
-                <p v-if="scheduleData.clinic_settings.address">
-                    {{ scheduleData.clinic_settings.address }}
-                </p>
-            </div>
+        <div ref="exportRef" class="print:-m-6">
+            <DailySchedulePoster
+                :schedule-data="scheduleData"
+                :clinic-name="clinicName"
+                :logo-path="logoPath"
+            />
         </div>
     </div>
 </template>

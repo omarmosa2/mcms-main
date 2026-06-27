@@ -57,8 +57,16 @@ const branding = computed(
             logo_path: string | null;
         },
 );
+const sharedClinicName = computed(() => {
+    const clinicName = page.props.clinic_name;
+
+    return typeof clinicName === 'string' && clinicName.trim() !== ''
+        ? clinicName
+        : null;
+});
 const clinicName = computed(
     () =>
+        sharedClinicName.value ||
         props.scheduleData.branding.company_name ||
         branding.value.company_name ||
         'المجمع الطبي',

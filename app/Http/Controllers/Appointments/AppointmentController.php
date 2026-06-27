@@ -15,6 +15,9 @@ use App\Http\Requests\Appointments\UpdateAppointmentRequest;
 use App\Http\Resources\AppointmentResource;
 use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\ClinicWorkingHour;
+use App\Models\DoctorProfile;
+use App\Models\DoctorSchedule;
 use App\Models\PatientCardVisit;
 use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
@@ -113,7 +116,7 @@ class AppointmentController extends Controller
             ],
             'filters' => $filters,
             'clinic_working_hours' => $this->clinicWorkingHoursService->getForClinic($clinicId),
-            'today_availability' => $this->resolveTodayAvailability($clinicId, $doctors),
+            'today_availability' => $this->resolveTodayAvailability($clinicId),
             'today_appointments' => AppointmentResource::collection($todayAppointments)->response()->getData(true)['data'],
             'is_doctor' => $doctorScopeUserId !== null,
         ]);
@@ -138,6 +141,21 @@ class AppointmentController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Appointment created successfully.']);
 
         return to_route('appointments.index');
+    }
+
+    public function bookingOptions(Request $request): JsonResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+        $selectedClinicId = $this->normalizeNullableInteger($request->query('clinic_id'));
+        $selectedDoctorId = $this->normalizeNullableInteger($request->query('doctor_id'));
+
+        return response()->json([
+            'data' => $this->resolveTodayAvailability(
+                clinicId: $clinicId,
+                selectedClinicId: $selectedClinicId,
+                selectedDoctorId: $selectedDoctorId,
+            ),
+        ]);
     }
 
     public function show(Request $request, int $appointmentId): AppointmentResource
@@ -333,57 +351,137 @@ class AppointmentController extends Controller
     }
 
     /**
-     * @param  array<int, array{id: int, clinic_id?: int|null}>  $doctors
      * @return array{
      *     date: string,
      *     clinics: array<int, int>,
+     *     clinic_options: array<int, array{id: int, name: string}>,
      *     doctors: array<int, array{
      *         id: int,
+     *         name: string,
      *         clinic_id: int,
+     *         specialty: ?string,
+     *         clinic: array{id: int, name: string},
      *         available_periods: array<int, array{start_time: string, end_time: string}>
      *     }>,
      *     clinic_periods: array<int, array<int, array{start_time: string, end_time: string}>>
      * }
      */
-    private function resolveTodayAvailability(int $clinicId, array $doctors): array
-    {
+    private function resolveTodayAvailability(
+        int $clinicId,
+        ?int $selectedClinicId = null,
+        ?int $selectedDoctorId = null,
+    ): array {
         $today = now()->toDateString();
+        $dayOfWeek = (int) now()->dayOfWeek;
         $availableDoctors = [];
         $clinicPeriods = [];
+        $availableClinics = [];
 
-        foreach ($doctors as $doctor) {
-            $doctorId = (int) ($doctor['id'] ?? 0);
-            $doctorClinicId = (int) ($doctor['clinic_id'] ?? $clinicId);
+        $todayClinicIds = ClinicWorkingHour::query()
+            ->where('day_of_week', $dayOfWeek)
+            ->where('is_active', true)
+            ->whereNotNull('start_time')
+            ->whereNotNull('end_time')
+            ->pluck('clinic_id')
+            ->unique()
+            ->values();
 
-            if ($doctorId <= 0 || $doctorClinicId <= 0) {
-                continue;
-            }
+        if ($todayClinicIds->isEmpty()) {
+            return [
+                'date' => $today,
+                'clinics' => [],
+                'clinic_options' => [],
+                'doctors' => [],
+                'clinic_periods' => [],
+            ];
+        }
 
-            $availability = $this->doctorAvailabilityService->availabilityForDay(
-                clinicId: $doctorClinicId,
-                doctorId: $doctorId,
-                date: $today,
-            );
+        $clinics = Clinic::query()
+            ->clinical()
+            ->where('is_active', true)
+            ->whereKey($todayClinicIds)
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-            if (! $availability['is_available']) {
-                continue;
-            }
+        $doctorClinicIds = $selectedClinicId !== null
+            ? $clinics->where('id', $selectedClinicId)->pluck('id')
+            : $clinics->pluck('id');
 
-            $availableDoctors[] = [
-                'id' => $doctorId,
-                'clinic_id' => $doctorClinicId,
-                'available_periods' => $availability['available_periods'],
+        foreach ($clinics as $clinic) {
+            $availableClinics[] = [
+                'id' => (int) $clinic->id,
+                'name' => $clinic->name,
             ];
 
-            $clinicPeriods[$doctorClinicId] = $this->mergePeriods([
-                ...($clinicPeriods[$doctorClinicId] ?? []),
-                ...$availability['available_periods'],
-            ]);
+            if (! $doctorClinicIds->contains($clinic->id)) {
+                continue;
+            }
+
+            $doctorProfileIds = DoctorSchedule::query()
+                ->withoutGlobalScope('clinic')
+                ->where('clinic_id', $clinic->id)
+                ->where('day_of_week', $dayOfWeek)
+                ->where('is_available', true)
+                ->pluck('doctor_profile_id')
+                ->unique()
+                ->values();
+
+            if ($doctorProfileIds->isEmpty()) {
+                continue;
+            }
+
+            $doctors = DoctorProfile::query()
+                ->withoutGlobalScope('clinic')
+                ->forClinic((int) $clinic->id)
+                ->whereKey($doctorProfileIds)
+                ->where('is_active', true)
+                ->whereNotNull('user_id')
+                ->when($selectedDoctorId !== null, fn ($query) => $query->where('user_id', $selectedDoctorId))
+                ->with('user:id,name')
+                ->orderBy('full_name')
+                ->get(['id', 'clinic_id', 'user_id', 'full_name']);
+
+            foreach ($doctors as $doctor) {
+                $doctorId = (int) $doctor->user_id;
+
+                if ($doctorId <= 0) {
+                    continue;
+                }
+
+                $availability = $this->doctorAvailabilityService->availabilityForDay(
+                    clinicId: (int) $clinic->id,
+                    doctorId: $doctorId,
+                    date: $today,
+                );
+
+                if (! $availability['is_available']) {
+                    continue;
+                }
+
+                $availableDoctors[] = [
+                    'id' => $doctorId,
+                    'name' => $doctor->user?->name ?? $doctor->full_name,
+                    'clinic_id' => (int) $clinic->id,
+                    'specialty' => $doctor->specialty,
+                    'clinic' => [
+                        'id' => (int) $clinic->id,
+                        'name' => $clinic->name,
+                    ],
+                    'available_periods' => $availability['available_periods'],
+                ];
+
+                $clinicPeriods[$clinic->id] = $this->mergePeriods([
+                    ...($clinicPeriods[$clinic->id] ?? []),
+                    ...$availability['available_periods'],
+                ]);
+            }
+
         }
 
         return [
             'date' => $today,
-            'clinics' => array_values(array_unique(array_column($availableDoctors, 'clinic_id'))),
+            'clinics' => array_column($availableClinics, 'id'),
+            'clinic_options' => $availableClinics,
             'doctors' => $availableDoctors,
             'clinic_periods' => $clinicPeriods,
         ];

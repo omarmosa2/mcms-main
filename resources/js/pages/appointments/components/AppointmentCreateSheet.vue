@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { CalendarPlus, Plus } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import InputError from '@/components/InputError.vue';
@@ -33,6 +33,7 @@ import type {
     Option,
     TodayAvailability,
 } from './types';
+import { useAppointmentBookingOptions } from './useAppointmentBookingOptions';
 
 const props = defineProps<{
     open: boolean;
@@ -51,6 +52,11 @@ const selectedClinicId = ref('');
 const selectedDoctorId = ref('');
 const selectedDuration = ref('30');
 const formResetKey = ref(0);
+const {
+    bookingOptions,
+    isLoadingBookingOptions,
+    loadBookingOptions,
+} = useAppointmentBookingOptions(props.todayAvailability);
 
 const noDoctorSelected = computed(() => {
     const doctorId = Number(selectedDoctorId.value);
@@ -58,33 +64,18 @@ const noDoctorSelected = computed(() => {
     return !Number.isFinite(doctorId) || doctorId <= 0;
 });
 
-const todayAvailableClinicIds = computed(
-    () => new Set(props.todayAvailability.clinics),
-);
-
 const availableClinics = computed(() =>
-    props.clinics.filter((clinic) =>
-        todayAvailableClinicIds.value.has(clinic.id),
-    ),
+    bookingOptions.value.clinic_options ?? [],
 );
 
 const filteredDoctors = computed(() => {
-    const todayAvailableDoctorIds = new Set(
-        props.todayAvailability.doctors.map((doctor) => doctor.id),
-    );
-    const availableDoctors = props.doctors.filter((doctor) =>
-        todayAvailableDoctorIds.has(doctor.id),
-    );
-
-    if (!selectedClinicId.value) {
-        return availableDoctors;
-    }
-
-    const clinicId = Number(selectedClinicId.value);
-
-    return availableDoctors.filter(
-        (doctor) => doctor.clinic_id === clinicId,
-    );
+    return bookingOptions.value.doctors.map((doctor) => ({
+        id: doctor.id,
+        name: doctor.name,
+        clinic_id: doctor.clinic_id,
+        specialty: doctor.specialty,
+        clinic: doctor.clinic,
+    }));
 });
 
 const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
@@ -92,7 +83,7 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
 
     if (Number.isFinite(doctorId) && doctorId > 0) {
         return (
-            props.todayAvailability.doctors.find(
+            bookingOptions.value.doctors.find(
                 (doctor) => doctor.id === doctorId,
             )?.available_periods ?? []
         );
@@ -106,12 +97,17 @@ const handleClinicChange = (value: unknown): void => {
 
     selectedClinicId.value = clinicId === '__all__' ? '' : clinicId;
     selectedDoctorId.value = '';
+    void loadBookingOptions({ clinicId: selectedClinicId.value });
 };
 
 const handleDoctorChange = (value: unknown): void => {
     const doctorId = String(value ?? '');
 
     selectedDoctorId.value = doctorId === '__none__' ? '' : doctorId;
+    void loadBookingOptions({
+        clinicId: selectedClinicId.value,
+        doctorId: selectedDoctorId.value,
+    });
 };
 
 const resetFormState = (): void => {
@@ -119,6 +115,7 @@ const resetFormState = (): void => {
     selectedDoctorId.value = '';
     selectedDuration.value = '30';
     formResetKey.value += 1;
+    void loadBookingOptions();
 };
 
 const handleSuccess = (): void => {
@@ -136,6 +133,15 @@ const defaultScheduledFor = computed(() => {
 
     return `${year}-${month}-${day}T${hours}:${minutes}`;
 });
+
+watch(
+    () => props.open,
+    (open) => {
+        if (open) {
+            void loadBookingOptions();
+        }
+    },
+);
 </script>
 
 <template>
@@ -273,6 +279,18 @@ const defaultScheduledFor = computed(() => {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
+                                <p
+                                    v-if="isLoadingBookingOptions"
+                                    class="text-[0.68rem] text-muted-foreground"
+                                >
+                                    جار تحديث العيادات من قاعدة البيانات...
+                                </p>
+                                <p
+                                    v-else-if="availableClinics.length === 0"
+                                    class="text-[0.68rem] text-destructive"
+                                >
+                                    لا توجد عيادات مداومة اليوم
+                                </p>
                             </div>
 
                             <div class="grid gap-1.5">
@@ -340,7 +358,7 @@ const defaultScheduledFor = computed(() => {
                                         selectedAvailablePeriods
                                     "
                                     :availability-date="
-                                        props.todayAvailability.date
+                                        bookingOptions.date
                                     "
                                     :default-value="defaultScheduledFor"
                                     :duration-minutes="Number(selectedDuration)"

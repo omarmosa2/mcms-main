@@ -74,49 +74,49 @@ class AppointmentControllerTest extends TestCase
             ->where('clinics.0.id', $clinic->id));
     }
 
-    public function test_index_passes_only_today_available_departments_and_doctors(): void
+    public function test_index_passes_only_today_available_clinics_and_doctors(): void
     {
         Carbon::setTestNow('2026-06-15 08:00:00');
 
         $clinic = Clinic::factory()->create();
+        $closedClinic = Clinic::factory()->create(['name' => 'Closed Clinic']);
         $admin = $this->authenticateForClinic($clinic);
-        $unavailableDepartment = Department::factory()->create([
-            'clinic_id' => $clinic->id,
-            'is_active' => true,
-            'name' => 'Unavailable Clinic',
-        ]);
-        $availableDepartment = Department::factory()->create([
-            'clinic_id' => $clinic->id,
-            'is_active' => true,
-            'name' => 'Available Clinic',
-        ]);
         $unavailableDoctor = User::factory()->create(['clinic_id' => $clinic->id]);
         $availableDoctor = User::factory()->create(['clinic_id' => $clinic->id]);
 
         app(AssignUserRoleAction::class)->handle($unavailableDoctor, 'doctor', $admin->id);
         app(AssignUserRoleAction::class)->handle($availableDoctor, 'doctor', $admin->id);
 
-        DoctorProfile::factory()->create([
+        $unavailableProfile = DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $unavailableDoctor->id,
-
-            'status' => DoctorProfile::STATUS_ACTIVE,
+            'is_active' => true,
         ]);
-        DoctorProfile::factory()->create([
+        ClinicWorkingHour::query()->create([
+            'clinic_id' => $closedClinic->id,
+            'day_of_week' => Carbon::TUESDAY,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+            'is_active' => true,
+        ]);
+        $availableProfile = DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $availableDoctor->id,
-
-            'status' => DoctorProfile::STATUS_ACTIVE,
+            'is_active' => true,
         ]);
 
-        $this->setDepartmentWorkingHours($unavailableDepartment, [
-            'monday' => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ClinicWorkingHour::query()->create([
+            'clinic_id' => $clinic->id,
+            'day_of_week' => Carbon::MONDAY,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+            'is_active' => true,
         ]);
 
-        foreach ([$unavailableDoctor, $availableDoctor] as $doctor) {
+        foreach ([$unavailableProfile, $availableProfile] as $profile) {
             DoctorSchedule::query()->create([
                 'clinic_id' => $clinic->id,
-                'doctor_id' => $doctor->id,
+                'doctor_profile_id' => $profile->id,
                 'day_of_week' => Carbon::MONDAY,
                 'start_time' => '09:00',
                 'end_time' => '17:00',
@@ -137,11 +137,133 @@ class AppointmentControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('appointments/Index')
-            ->has('today_availability.departments', 1)
-            ->where('today_availability.departments.0', $availableDepartment->id)
+            ->has('today_availability.clinics', 1)
+            ->where('today_availability.clinics.0', $clinic->id)
+            ->has('today_availability.clinic_options', 1)
+            ->where('today_availability.clinic_options.0.id', $clinic->id)
             ->has('today_availability.doctors', 1)
             ->where('today_availability.doctors.0.id', $availableDoctor->id)
+            ->where('today_availability.doctors.0.clinic_id', $clinic->id)
+            ->where('today_availability.doctors.0.available_periods.0.start_time', '09:00')
         );
+
+        Carbon::setTestNow();
+    }
+
+    public function test_booking_options_are_loaded_from_current_day_database_schedules(): void
+    {
+        Carbon::setTestNow('2026-06-15 08:00:00');
+
+        $clinic = Clinic::factory()->create(['name' => 'Available Clinic']);
+        $closedClinic = Clinic::factory()->create(['name' => 'Closed Clinic']);
+        $admin = $this->authenticateForClinic($clinic);
+        $doctorUser = User::factory()->create(['clinic_id' => $clinic->id, 'name' => 'Available Doctor']);
+        app(AssignUserRoleAction::class)->handle($doctorUser, 'doctor', $admin->id);
+
+        $doctor = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'is_active' => true,
+        ]);
+
+        ClinicWorkingHour::query()->create([
+            'clinic_id' => $clinic->id,
+            'day_of_week' => Carbon::MONDAY,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+            'is_active' => true,
+        ]);
+        ClinicWorkingHour::query()->create([
+            'clinic_id' => $closedClinic->id,
+            'day_of_week' => Carbon::TUESDAY,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+            'is_active' => true,
+        ]);
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_profile_id' => $doctor->id,
+            'day_of_week' => Carbon::MONDAY,
+            'start_time' => '10:00',
+            'end_time' => '14:00',
+            'is_available' => true,
+        ]);
+
+        $response = $this->getJson(route('appointments.booking-options'));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.date', '2026-06-15');
+        $response->assertJsonPath('data.clinic_options.0.id', $clinic->id);
+        $response->assertJsonMissingPath('data.clinic_options.1');
+        $response->assertJsonPath('data.doctors.0.id', $doctorUser->id);
+        $response->assertJsonPath('data.doctors.0.clinic_id', $clinic->id);
+        $response->assertJsonPath('data.doctors.0.available_periods.0.start_time', '10:00');
+        $response->assertJsonPath('data.doctors.0.available_periods.0.end_time', '14:00');
+
+        Carbon::setTestNow();
+    }
+
+    public function test_booking_options_keep_all_today_clinics_when_filtering_doctors_by_selected_clinic(): void
+    {
+        Carbon::setTestNow('2026-06-15 08:00:00');
+
+        $clinic = Clinic::factory()->create(['name' => 'First Clinic']);
+        $otherClinic = Clinic::factory()->create(['name' => 'Second Clinic']);
+        $this->authenticateForClinic($clinic);
+
+        $doctorUser = User::factory()->create(['clinic_id' => $clinic->id, 'name' => 'First Clinic Doctor']);
+        $otherDoctorUser = User::factory()->create(['clinic_id' => $otherClinic->id, 'name' => 'Second Clinic Doctor']);
+
+        $doctor = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'is_active' => true,
+        ]);
+        $otherDoctor = DoctorProfile::factory()->create([
+            'clinic_id' => $otherClinic->id,
+            'user_id' => $otherDoctorUser->id,
+            'is_active' => true,
+        ]);
+
+        foreach ([$clinic, $otherClinic] as $openClinic) {
+            ClinicWorkingHour::query()->create([
+                'clinic_id' => $openClinic->id,
+                'day_of_week' => Carbon::MONDAY,
+                'start_time' => '09:00',
+                'end_time' => '17:00',
+                'is_active' => true,
+            ]);
+        }
+
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_profile_id' => $doctor->id,
+            'day_of_week' => Carbon::MONDAY,
+            'start_time' => '10:00',
+            'end_time' => '13:00',
+            'is_available' => true,
+        ]);
+        DoctorSchedule::query()->create([
+            'clinic_id' => $otherClinic->id,
+            'doctor_profile_id' => $otherDoctor->id,
+            'day_of_week' => Carbon::MONDAY,
+            'start_time' => '11:00',
+            'end_time' => '15:00',
+            'is_available' => true,
+        ]);
+
+        $response = $this->getJson(route('appointments.booking-options', [
+            'clinic_id' => $clinic->id,
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data.clinic_options');
+        $response->assertJsonPath('data.clinic_options.0.id', $clinic->id);
+        $response->assertJsonPath('data.clinic_options.1.id', $otherClinic->id);
+        $response->assertJsonCount(1, 'data.doctors');
+        $response->assertJsonPath('data.doctors.0.id', $doctorUser->id);
+        $response->assertJsonPath('data.doctors.0.name', 'First Clinic Doctor');
+        $response->assertJsonPath('data.doctors.0.available_periods.0.start_time', '10:00');
 
         Carbon::setTestNow();
     }

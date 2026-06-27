@@ -8,6 +8,7 @@ Route::middleware(['auth', 'verified'])->prefix('appointments')->name('appointme
     Route::get('/', [AppointmentController::class, 'index'])->middleware('permission:appointment.view')->name('index');
     Route::get('/export', [AppointmentExportController::class, 'export'])->middleware('permission:appointment.view')->name('export');
     Route::get('/export/pdf', [AppointmentExportController::class, 'exportPdf'])->middleware('permission:appointment.view')->name('export.pdf');
+    Route::get('/booking-options', [AppointmentController::class, 'bookingOptions'])->middleware('permission:appointment.create')->name('booking-options');
     Route::post('/', [AppointmentController::class, 'store'])->middleware('permission:appointment.create')->name('store');
     Route::delete('/bulk', [AppointmentController::class, 'bulkDestroy'])->middleware('permission:appointment.delete')->name('bulk-destroy');
     Route::get('/{appointmentId}', [AppointmentController::class, 'show'])->middleware('permission:appointment.view')->name('show');

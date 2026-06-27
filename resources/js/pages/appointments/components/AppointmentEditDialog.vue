@@ -75,9 +75,11 @@ const todayAvailableClinicIds = computed(
 );
 
 const availableClinics = computed(() =>
-    props.clinics.filter((clinic) =>
-        todayAvailableClinicIds.value.has(clinic.id),
-    ),
+    props.todayAvailability.clinic_options?.length
+        ? props.todayAvailability.clinic_options
+        : props.clinics.filter((clinic) =>
+              todayAvailableClinicIds.value.has(clinic.id),
+          ),
 );
 
 const filteredDoctors = computed(() => {

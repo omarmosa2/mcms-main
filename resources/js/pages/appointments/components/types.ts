@@ -33,13 +33,20 @@ export type AvailabilityPeriod = {
 
 export type DoctorTodayAvailability = {
     id: number;
+    name: string;
     clinic_id: number;
+    specialty: string | null;
+    clinic: {
+        id: number;
+        name: string;
+    };
     available_periods: AvailabilityPeriod[];
 };
 
 export type TodayAvailability = {
     date: string;
     clinics: number[];
+    clinic_options: ClinicOption[];
     doctors: DoctorTodayAvailability[];
     clinic_periods: Record<number, AvailabilityPeriod[]>;
 };

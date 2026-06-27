@@ -37,7 +37,11 @@ class PayrollControllerTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('salaries/Index')
+            ->has('clinics', 1)
+            ->where('clinics.0.id', $clinic->id)
+            ->missing('departments')
             ->where('employee_salaries.0.name', 'Payroll Employee')
+            ->where('employee_salaries.0.clinic', $clinic->name)
             ->where('employee_salaries.0.status', 'unpaid')
             ->where('employee_salaries.0.due_amount', 1500)
             ->where('employee_salaries.0.remaining_amount', 1500)
@@ -153,7 +157,7 @@ class PayrollControllerTest extends TestCase
             'user_id' => $doctorUser->id,
             'compensation_type' => DoctorProfile::COMPENSATION_PERCENTAGE,
             'compensation_value' => 40,
-            'status' => DoctorProfile::STATUS_ACTIVE,
+            'is_active' => true,
         ]);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
         $appointment = Appointment::factory()->create([
@@ -202,7 +206,7 @@ class PayrollControllerTest extends TestCase
             'user_id' => $doctorUser->id,
             'compensation_type' => DoctorProfile::COMPENSATION_PERCENTAGE,
             'compensation_value' => 40,
-            'status' => DoctorProfile::STATUS_ACTIVE,
+            'is_active' => true,
         ]);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
         $appointment = Appointment::factory()->create([
@@ -321,16 +325,16 @@ class PayrollControllerTest extends TestCase
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctorUser->id,
-            'compensation_type' => DoctorProfile::COMPENSATION_WEEKLY,
+            'compensation_type' => DoctorProfile::COMPENSATION_WEEKLY_FIXED,
             'compensation_value' => 300,
-            'status' => DoctorProfile::STATUS_ACTIVE,
+            'is_active' => true,
         ]);
 
         $response = $this->getJson(route('salaries.index', ['month' => '2026-06', 'person_type' => 'doctor']));
 
         $response->assertOk();
         $doctorDue = $response->json('doctor_dues.0');
-        $this->assertEquals('weekly', $doctorDue['payment_type']);
+        $this->assertEquals('weekly_fixed', $doctorDue['payment_type']);
         $this->assertEquals(300, $doctorDue['fixed_weekly_amount']);
         $this->assertGreaterThan(0, $doctorDue['due_amount']);
     }
@@ -343,16 +347,16 @@ class PayrollControllerTest extends TestCase
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctorUser->id,
-            'compensation_type' => DoctorProfile::COMPENSATION_MONTHLY,
+            'compensation_type' => DoctorProfile::COMPENSATION_MONTHLY_FIXED,
             'compensation_value' => 1500,
-            'status' => DoctorProfile::STATUS_ACTIVE,
+            'is_active' => true,
         ]);
 
         $response = $this->getJson(route('salaries.index', ['month' => '2026-06', 'person_type' => 'doctor']));
 
         $response->assertOk();
         $response->assertJsonPath('doctor_dues.0.due_amount', 1500);
-        $response->assertJsonPath('doctor_dues.0.payment_type', 'monthly');
+        $response->assertJsonPath('doctor_dues.0.payment_type', 'monthly_fixed');
         $response->assertJsonPath('doctor_dues.0.fixed_monthly_amount', 1500);
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Payroll;
 
 use App\Http\Controllers\Controller;
+use App\Models\Clinic;
 use App\Models\DoctorAppointmentEntitlement;
 use App\Models\DoctorDeduction;
 use App\Models\DoctorDuePayment;
@@ -41,6 +42,7 @@ class PayrollController extends Controller
             'employee_salaries' => $employeeRows->values()->all(),
             'doctor_dues' => $doctorRows->values()->all(),
             'summaries' => $this->summaries($employeeRows, $doctorRows),
+            'clinics' => $this->clinicOptions(),
             'filters' => $filters,
         ];
 
@@ -156,7 +158,12 @@ class PayrollController extends Controller
             ->all();
 
         $activeEmployees = Employee::query()
-            ->forClinic($clinicId)
+            ->withoutClinicScope()
+            ->where(function ($query) use ($clinicId): void {
+                $query
+                    ->where('clinic_id', $clinicId)
+                    ->orWhereNull('clinic_id');
+            })
             ->where('status', Employee::STATUS_ACTIVE)
             ->when($existingEmployeeIds, fn ($q) => $q->whereNotIn('id', $existingEmployeeIds))
             ->get();
@@ -187,7 +194,7 @@ class PayrollController extends Controller
 
         $activeDoctors = DoctorProfile::query()
             ->forClinic($clinicId)
-            ->where('status', DoctorProfile::STATUS_ACTIVE)
+            ->where('is_active', true)
             ->when($existingDoctorIds, fn ($q) => $q->whereNotIn('id', $existingDoctorIds))
             ->get();
 
@@ -202,10 +209,10 @@ class PayrollController extends Controller
                 'clinic_id' => $clinicId,
                 'doctor_id' => $doctor->id,
                 'salary_month' => $month,
-                'payment_type' => $doctor->compensation_type ?? DoctorProfile::COMPENSATION_MONTHLY,
+                'payment_type' => $doctor->compensation_type ?? DoctorProfile::COMPENSATION_MONTHLY_FIXED,
                 'percentage' => $doctor->compensation_type === DoctorProfile::COMPENSATION_PERCENTAGE ? $doctor->compensation_value : null,
-                'fixed_weekly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY ? $doctor->compensation_value : null,
-                'fixed_monthly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY ? $doctor->compensation_value : null,
+                'fixed_weekly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY_FIXED ? $doctor->compensation_value : null,
+                'fixed_monthly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY_FIXED ? $doctor->compensation_value : null,
                 'visits_total_amount' => $calculation['visits_total_amount'],
                 'deductions_amount' => $calculation['deductions_amount'],
                 'due_amount' => $calculation['due_amount'],
@@ -233,11 +240,11 @@ class PayrollController extends Controller
 
             $visitsTotalAmount = (float) ($entitlementStats->total_revenue ?? 0);
             $gross = (float) ($entitlementStats->total_entitlement ?? 0);
-        } elseif ($doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY) {
+        } elseif ($doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY_FIXED) {
             $visitsTotalAmount = 0.0;
             $weeksInMonth = (int) ceil($carbonMonth->daysInMonth / 7);
             $gross = $compensationValue * $weeksInMonth;
-        } elseif ($doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY) {
+        } elseif ($doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY_FIXED) {
             $visitsTotalAmount = 0.0;
             $gross = $compensationValue;
         } else {
@@ -272,9 +279,21 @@ class PayrollController extends Controller
         return EmployeeMonthlySalary::query()
             ->forClinic($clinicId)
             ->where('salary_month', $month)
-            ->with(['employee:id,full_name,employee_type,job_title'])
+            ->with(['employee:id,clinic_id,full_name,employee_type,job_title', 'employee.clinic:id,name'])
             ->withCount('payments')
             ->when($filters['status'] !== null, fn ($query) => $query->where('status', $filters['status']))
+            ->when($filters['employee_type'] !== null, fn ($query) => $query->whereHas('employee', fn ($employeeQuery) => $employeeQuery->where('employee_type', $filters['employee_type'])))
+            ->when($filters['clinic_id'] !== null, function ($query) use ($filters): void {
+                $query->whereHas('employee', function ($employeeQuery) use ($filters): void {
+                    if ($filters['clinic_id'] === 'unassigned') {
+                        $employeeQuery->whereNull('clinic_id');
+
+                        return;
+                    }
+
+                    $employeeQuery->where('clinic_id', (int) $filters['clinic_id']);
+                });
+            })
             ->orderBy('id')
             ->get()
             ->map(fn (EmployeeMonthlySalary $record): array => [
@@ -284,6 +303,8 @@ class PayrollController extends Controller
                 'name' => $record->employee?->full_name ?? 'Employee #'.$record->employee_id,
                 'employee_type' => $record->employee?->employee_type,
                 'job_title' => $record->employee?->job_title,
+                'clinic_id' => $record->employee?->clinic_id,
+                'clinic' => $record->employee?->clinic?->name,
                 'base_salary' => (float) $record->base_salary,
                 'salary_month' => $record->salary_month,
                 'due_amount' => (float) $record->due_amount,
@@ -304,6 +325,10 @@ class PayrollController extends Controller
             return collect();
         }
 
+        if ($filters['clinic_id'] === 'unassigned') {
+            return collect();
+        }
+
         $carbonMonth = CarbonImmutable::createFromFormat('Y-m', $month)?->startOfMonth() ?? CarbonImmutable::now()->startOfMonth();
         $periodStart = $carbonMonth->toDateString();
         $periodEnd = $carbonMonth->endOfMonth()->toDateString();
@@ -317,8 +342,9 @@ class PayrollController extends Controller
         return DoctorMonthlyDue::query()
             ->forClinic($clinicId)
             ->where('salary_month', $month)
-            ->with(['doctor:id,user_id,compensation_type,compensation_value', 'doctor.user:id,name'])
+            ->with(['doctor:id,clinic_id,user_id,compensation_type,compensation_value', 'doctor.clinic:id,name', 'doctor.user:id,name'])
             ->when($filters['status'] !== null, fn ($query) => $query->where('status', $filters['status']))
+            ->when(is_int($filters['clinic_id']), fn ($query) => $query->whereHas('doctor', fn ($doctorQuery) => $doctorQuery->where('clinic_id', $filters['clinic_id'])))
             ->orderBy('id')
             ->get()
             ->map(fn (DoctorMonthlyDue $record): array => [
@@ -326,6 +352,8 @@ class PayrollController extends Controller
                 'doctor_monthly_due_id' => $record->id,
                 'doctor_id' => $record->doctor_id,
                 'name' => $record->doctor?->user?->name ?? 'Doctor #'.$record->doctor_id,
+                'clinic_id' => $record->doctor?->clinic_id,
+                'clinic' => $record->doctor?->clinic?->name,
                 'payment_type' => $record->payment_type,
                 'percentage' => $record->percentage !== null ? (float) $record->percentage : null,
                 'fixed_weekly_amount' => $record->fixed_weekly_amount !== null ? (float) $record->fixed_weekly_amount : null,
@@ -435,6 +463,43 @@ class PayrollController extends Controller
             'month' => $this->nullableString($request->query('month')) ?? now()->format('Y-m'),
             'person_type' => $this->allowedNullableString($request->query('person_type'), ['employee', 'doctor']),
             'status' => $this->allowedNullableString($request->query('status'), ['unpaid', 'partially_paid', 'paid']),
+            'clinic_id' => $this->nullableClinicFilter($request->query('clinic_id')),
+            'employee_type' => $this->allowedNullableString($request->query('employee_type'), $this->employeeTypes()),
+        ];
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function clinicOptions(): array
+    {
+        return Clinic::query()
+            ->clinical()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Clinic $clinic): array => [
+                'id' => (int) $clinic->id,
+                'name' => $clinic->name,
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function employeeTypes(): array
+    {
+        return [
+            Employee::TYPE_RECEPTION,
+            Employee::TYPE_NURSE,
+            Employee::TYPE_LAB,
+            Employee::TYPE_USER,
+            Employee::TYPE_CLEANER,
+            Employee::TYPE_GUARD,
+            Employee::TYPE_ACCOUNTANT,
+            Employee::TYPE_ADMINISTRATIVE,
+            Employee::TYPE_OTHER,
         ];
     }
 
@@ -475,5 +540,14 @@ class PayrollController extends Controller
         $value = (int) $value;
 
         return $value > 0 ? $value : null;
+    }
+
+    private function nullableClinicFilter(mixed $value): int|string|null
+    {
+        if ($value === 'unassigned') {
+            return 'unassigned';
+        }
+
+        return $this->nullableInteger($value);
     }
 }

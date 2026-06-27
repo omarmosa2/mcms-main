@@ -26,7 +26,7 @@ import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
 import PayrollStatsCards from './components/PayrollStatsCards.vue';
 
-type DepartmentOption = { id: number; name: string };
+type ClinicOption = { id: number; name: string };
 type SalaryStatus = 'unpaid' | 'partially_paid' | 'paid';
 
 type EmployeeSalaryRow = {
@@ -36,7 +36,8 @@ type EmployeeSalaryRow = {
     name: string;
     employee_type: string | null;
     job_title: string | null;
-    department: string | null;
+    clinic_id: number | null;
+    clinic: string | null;
     base_salary: number;
     salary_month: string;
     due_amount: number;
@@ -52,7 +53,8 @@ type DoctorDueRow = {
     doctor_monthly_due_id: number;
     doctor_id: number;
     name: string;
-    department: string | null;
+    clinic_id: number | null;
+    clinic: string | null;
     payment_type: string;
     percentage: number | null;
     fixed_weekly_amount: number | null;
@@ -88,7 +90,7 @@ const props = defineProps<{
         total_remaining: number;
         total_count: number;
     };
-    departments: DepartmentOption[];
+    clinics: ClinicOption[];
     filters: Record<string, string | number | null>;
 }>();
 
@@ -109,9 +111,11 @@ const month = ref(
 );
 const personType = ref(String(props.filters.person_type ?? ''));
 const status = ref(String(props.filters.status ?? ''));
-const departmentId = ref(String(props.filters.department_id ?? ''));
+const clinicId = ref(String(props.filters.clinic_id ?? ''));
+const employeeType = ref(String(props.filters.employee_type ?? ''));
 const doctorPaymentType = ref('');
 const expandedDoctorDueId = ref<number | null>(null);
+const unassignedClinicLabel = 'غير مرتبط بعيادة';
 
 const labels: Record<string, string> = {
     reception: 'استقبال',
@@ -123,8 +127,8 @@ const labels: Record<string, string> = {
     administrative: 'إداري',
     other: 'أخرى',
     percentage: 'نسبة مئوية',
-    weekly: 'أجر أسبوعي',
-    monthly: 'أجر شهري',
+    weekly_fixed: 'أجر أسبوعي',
+    monthly_fixed: 'أجر شهري',
     unpaid: 'غير مدفوع',
     partially_paid: 'مدفوع جزئيا',
     paid: 'مدفوع بالكامل',
@@ -208,13 +212,14 @@ const reload = (): void => {
             month: month.value || undefined,
             person_type: personType.value || undefined,
             status: status.value || undefined,
-            department_id: departmentId.value || undefined,
+            clinic_id: clinicId.value || undefined,
+            employee_type: employeeType.value || undefined,
         },
         { preserveScroll: true, preserveState: true, replace: true },
     );
 };
 
-watch([month, personType, status, departmentId], () => {
+watch([month, personType, status, clinicId, employeeType], () => {
     if (personType.value === 'employee') {
         activeTab.value = 'employees';
     }
@@ -272,11 +277,17 @@ const doctorCompensationDisplay = (row: DoctorDueRow): string => {
         return `نسبة ${row.percentage}%`;
     }
 
-    if (row.payment_type === 'weekly' && row.fixed_weekly_amount !== null) {
+    if (
+        row.payment_type === 'weekly_fixed' &&
+        row.fixed_weekly_amount !== null
+    ) {
         return `أسبوعي: ${formatMoney(row.fixed_weekly_amount)}`;
     }
 
-    if (row.payment_type === 'monthly' && row.fixed_monthly_amount !== null) {
+    if (
+        row.payment_type === 'monthly_fixed' &&
+        row.fixed_monthly_amount !== null
+    ) {
         return `شهري: ${formatMoney(row.fixed_monthly_amount)}`;
     }
 
@@ -337,7 +348,7 @@ const paymentHelpText = computed(() =>
                 <Filter class="size-4 text-primary" />
                 <span>الفلاتر</span>
             </div>
-            <div class="grid gap-3 md:grid-cols-4">
+            <div class="grid gap-3 md:grid-cols-5">
                 <div class="grid gap-1.5">
                     <Label>الشهر المالي</Label>
                     <Input
@@ -370,19 +381,40 @@ const paymentHelpText = computed(() =>
                     </select>
                 </div>
                 <div class="grid gap-1.5">
-                    <Label>القسم / العيادة</Label>
+                    <Label>العيادة</Label>
                     <select
-                        v-model="departmentId"
+                        v-model="clinicId"
                         class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
                     >
                         <option value="">الكل</option>
-                        <option
-                            v-for="department in departments"
-                            :key="department.id"
-                            :value="department.id"
-                        >
-                            {{ department.name }}
+                        <option value="unassigned">
+                            {{ unassignedClinicLabel }}
                         </option>
+                        <option
+                            v-for="clinic in clinics"
+                            :key="clinic.id"
+                            :value="clinic.id"
+                        >
+                            {{ clinic.name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="grid gap-1.5">
+                    <Label>نوع الموظف</Label>
+                    <select
+                        v-model="employeeType"
+                        class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
+                    >
+                        <option value="">كل الأنواع</option>
+                        <option value="reception">استقبال</option>
+                        <option value="nurse">ممرض</option>
+                        <option value="lab">مخبري</option>
+                        <option value="user">مستخدم</option>
+                        <option value="cleaner">عامل نظافة</option>
+                        <option value="guard">حارس</option>
+                        <option value="accountant">محاسب</option>
+                        <option value="administrative">إداري</option>
+                        <option value="other">أخرى</option>
                     </select>
                 </div>
             </div>
@@ -506,7 +538,7 @@ const paymentHelpText = computed(() =>
                                 </td>
                                 <td class="px-3 py-3 align-top text-foreground">
                                     <span class="block truncate">
-                                        {{ row.department ?? '-' }}
+                                        {{ row.clinic ?? unassignedClinicLabel }}
                                     </span>
                                 </td>
                                 <td
@@ -658,16 +690,16 @@ const paymentHelpText = computed(() =>
                         <div class="grid gap-1.5">
                             <Label>العيادة</Label>
                             <select
-                                v-model="departmentId"
+                                v-model="clinicId"
                                 class="h-10 rounded-lg border border-input bg-muted px-3 text-sm"
                             >
                                 <option value="">كل العيادات</option>
                                 <option
-                                    v-for="department in departments"
-                                    :key="department.id"
-                                    :value="department.id"
+                                    v-for="clinic in clinics"
+                                    :key="clinic.id"
+                                    :value="clinic.id"
                                 >
-                                    {{ department.name }}
+                                    {{ clinic.name }}
                                 </option>
                             </select>
                         </div>
@@ -679,8 +711,8 @@ const paymentHelpText = computed(() =>
                             >
                                 <option value="">كل الأنواع</option>
                                 <option value="percentage">نسبة</option>
-                                <option value="weekly">أسبوعي</option>
-                                <option value="monthly">شهري</option>
+                                <option value="weekly_fixed">أسبوعي</option>
+                                <option value="monthly_fixed">شهري</option>
                             </select>
                         </div>
                         <div class="grid gap-1.5">
@@ -745,11 +777,11 @@ const paymentHelpText = computed(() =>
                                     <p
                                         class="truncate text-xs text-muted-foreground"
                                     >
-                                        {{ row.department ?? '-' }}
+                                        {{ row.clinic ?? unassignedClinicLabel }}
                                     </p>
                                 </td>
                                 <td class="px-4 py-3 text-muted-foreground">
-                                    {{ row.department ?? '-' }}
+                                    {{ row.clinic ?? unassignedClinicLabel }}
                                 </td>
                                 <td
                                     class="px-4 py-3 font-semibold text-foreground"
@@ -836,7 +868,7 @@ const paymentHelpText = computed(() =>
                                 <p
                                     class="truncate text-sm text-muted-foreground"
                                 >
-                                    {{ row.department ?? '-' }}
+                                    {{ row.clinic ?? unassignedClinicLabel }}
                                 </p>
                             </div>
                             <span

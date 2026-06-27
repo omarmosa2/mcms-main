@@ -93,7 +93,7 @@ const reload = (): void => {
     );
 };
 
-watch([month, dateFrom, dateTo, status, departmentId, appointmentType], () => {
+watch([month, dateFrom, dateTo, status, appointmentType], () => {
     reload();
 });
 </script>

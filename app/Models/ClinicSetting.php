@@ -34,8 +34,13 @@ class ClinicSetting extends BaseModel
             ->get();
 
         $result = [];
+        $defaults = static::defaults($group);
+
         foreach ($settings as $setting) {
-            $result[$setting->key] = $setting->value;
+            $result[$setting->key] = static::normalizeStoredValue(
+                $setting->value,
+                $defaults[$setting->key] ?? null,
+            );
         }
 
         return $result;
@@ -50,7 +55,9 @@ class ClinicSetting extends BaseModel
             ->where('key', $key)
             ->first();
 
-        return $setting?->value ?? $default;
+        return $setting !== null
+            ? static::normalizeStoredValue($setting->value, $default)
+            : $default;
     }
 
     /**
@@ -134,5 +141,22 @@ class ClinicSetting extends BaseModel
             ],
             default => [],
         };
+    }
+
+    private static function normalizeStoredValue(mixed $value, mixed $default = null): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (is_array($default)) {
+            return $value;
+        }
+
+        if (array_is_list($value) && count($value) === 1) {
+            return $value[0];
+        }
+
+        return $value;
     }
 }

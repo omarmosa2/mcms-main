@@ -232,15 +232,16 @@ class AdminSettingsController extends Controller
 
         $recentLogs = AuditLog::query()
             ->where('clinic_id', $clinicId)
+            ->with('user:id,name')
             ->orderByDesc('created_at')
             ->limit(20)
-            ->get(['id', 'user_id', 'action', 'description', 'created_at'])
+            ->get(['id', 'user_id', 'action', 'metadata', 'auditable_type', 'auditable_id', 'occurred_at', 'created_at'])
             ->map(fn (AuditLog $log) => [
                 'id' => $log->id,
                 'user_name' => $log->user?->name ?? 'النظام',
                 'action' => $log->action,
-                'description' => $log->description,
-                'created_at' => $log->created_at?->diffForHumans(),
+                'description' => $this->auditLogDescription($log),
+                'created_at' => ($log->occurred_at ?? $log->created_at)?->diffForHumans(),
             ])
             ->all();
 
@@ -332,5 +333,21 @@ class AdminSettingsController extends Controller
         }
 
         return (int) $clinicId;
+    }
+
+    private function auditLogDescription(AuditLog $log): string
+    {
+        $metadata = $log->metadata ?? [];
+        $description = $metadata['description'] ?? $metadata['reason'] ?? $metadata['source'] ?? null;
+
+        if (is_string($description) && $description !== '') {
+            return $description;
+        }
+
+        if ($log->auditable_type !== null && $log->auditable_id !== null) {
+            return "{$log->action}: {$log->auditable_type} #{$log->auditable_id}";
+        }
+
+        return $log->action;
     }
 }

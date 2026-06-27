@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Actions\Rbac\SyncClinicRbacAction;
+use App\Models\AuditLog;
 use App\Models\Clinic;
+use App\Models\ClinicSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -62,6 +64,41 @@ class AdminSettingsTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('settings/admin/ClinicSettings')
             ->has('settings'));
+    }
+
+    public function test_clinic_settings_unwrap_legacy_single_value_arrays(): void
+    {
+        $admin = $this->createAdminUser();
+        $this->actingAs($admin);
+
+        ClinicSetting::query()->withoutClinicScope()->create([
+            'clinic_id' => $admin->clinic_id,
+            'group' => 'clinic',
+            'key' => 'name',
+            'value' => ['Legacy Clinic Name'],
+        ]);
+        ClinicSetting::query()->withoutClinicScope()->create([
+            'clinic_id' => $admin->clinic_id,
+            'group' => 'clinic',
+            'key' => 'director_name',
+            'value' => [null],
+        ]);
+        ClinicSetting::query()->withoutClinicScope()->create([
+            'clinic_id' => $admin->clinic_id,
+            'group' => 'clinic',
+            'key' => 'decimal_places',
+            'value' => [2],
+        ]);
+
+        $response = $this->get(route('admin-settings.clinic'));
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('settings/admin/ClinicSettings')
+            ->where('settings.name', 'Legacy Clinic Name')
+            ->where('settings.director_name', null)
+            ->where('settings.decimal_places', 2)
+            ->where('clinic_name', 'Legacy Clinic Name'));
     }
 
     public function test_admin_can_update_clinic_settings(): void
@@ -155,11 +192,22 @@ class AdminSettingsTest extends TestCase
         $admin = $this->createAdminUser();
         $this->actingAs($admin);
 
+        AuditLog::factory()->create([
+            'clinic_id' => $admin->clinic_id,
+            'user_id' => $admin->id,
+            'action' => 'update',
+            'metadata' => ['description' => 'Adjusted policy'],
+            'occurred_at' => now(),
+        ]);
+
         $response = $this->get(route('admin-settings.security'));
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('settings/admin/SecuritySettings')
-            ->has('activityLogs'));
+            ->has('activityLogs', 1)
+            ->where('activityLogs.0.user_name', 'Test Admin')
+            ->where('activityLogs.0.action', 'update')
+            ->where('activityLogs.0.description', 'Adjusted policy'));
     }
 
     public function test_admin_can_view_diagnostics(): void

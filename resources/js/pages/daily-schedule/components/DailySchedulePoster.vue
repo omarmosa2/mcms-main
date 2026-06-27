@@ -294,12 +294,9 @@ function formatTime(time: string): string {
                 <div class="flex items-center gap-3 rounded-2xl bg-[#fbfdff]/10 px-4 py-3">
                     <Phone class="size-6 text-[#ffb7d6]" />
                     <div>
-                        <p class="text-xs font-bold text-[#d9e6ee]">
-                            للتواصل والاستفسار
-                        </p>
-                        <p dir="ltr" class="text-lg font-extrabold tabular-nums text-center">
+                        <p dir="ltr" class="text-lg font-extrabold tabular-nums text-right">
                             {{
-                                scheduleData.clinic_settings.phone || '+963 968 842 338'
+                                scheduleData.clinic_settings.phone || ''
                             }}
                         </p>
                     </div>

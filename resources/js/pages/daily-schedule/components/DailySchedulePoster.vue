@@ -129,11 +129,11 @@ function formatTime(time: string): string {
             +
         </div>
 
-        <div class="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-6 sm:px-8 lg:px-10"
+        <div class="mx-auto flex w-full max-w-7xl flex-col gap-8 px-5 py-6 sm:px-8 lg:px-10 [@media_(min-width:768px)_and_(max-width:1023px)]:gap-10 [@media_(min-width:768px)_and_(max-width:1023px)]:px-6 [@media_(min-width:768px)_and_(max-width:1023px)]:py-7"
             :class="displayMode ? 'justify-center lg:py-10' : 'lg:py-8'">
             <header
-                class="grid gap-6 rounded-[1.75rem] border border-[#dbe8ef] bg-[#f7fbfd]/90 px-5 py-5 shadow-[0_12px_32px_rgba(29,125,233,0.07)] sm:px-7 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
-                <div class="flex items-center gap-4">
+                class="grid gap-6 rounded-[1.75rem] border border-[#dbe8ef] bg-[#f7fbfd]/90 px-5 py-5 shadow-[0_12px_32px_rgba(29,125,233,0.07)] transition-[gap,padding] duration-200 ease-out sm:px-7 lg:grid-cols-[1fr_auto_1fr] lg:items-center [@media_(min-width:768px)_and_(max-width:1023px)]:justify-items-center [@media_(min-width:768px)_and_(max-width:1023px)]:gap-7 [@media_(min-width:768px)_and_(max-width:1023px)]:px-8 [@media_(min-width:768px)_and_(max-width:1023px)]:py-8">
+                <div class="flex items-center gap-4 transition-[gap] duration-200 ease-out [@media_(min-width:768px)_and_(max-width:1023px)]:order-3 [@media_(min-width:768px)_and_(max-width:1023px)]:flex-col [@media_(min-width:768px)_and_(max-width:1023px)]:justify-center [@media_(min-width:768px)_and_(max-width:1023px)]:text-center">
                     <div v-if="logoPath"
                         class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-3xl border border-[#d5e4ed] bg-[#fbfdff] p-2 shadow-[0_10px_24px_rgba(23,32,51,0.08)]">
                         <img :src="`/storage/${logoPath}`" :alt="clinicName" class="size-full object-contain" />
@@ -155,8 +155,8 @@ function formatTime(time: string): string {
                     </div>
                 </div>
 
-                <div class="text-center">
-                    <h1 class="text-4xl leading-tight font-black text-[#12345a] sm:text-5xl">
+                <div class="text-center [@media_(min-width:768px)_and_(max-width:1023px)]:order-2">
+                    <h1 class="text-4xl leading-tight font-black text-[#12345a] transition-[font-size,line-height] duration-200 ease-out sm:text-5xl [@media_(min-width:768px)_and_(max-width:1023px)]:text-4xl">
                         العيادات المناوبة
                     </h1>
                     <div
@@ -166,8 +166,8 @@ function formatTime(time: string): string {
                     </div>
                 </div>
 
-                <div class="flex justify-start lg:justify-end">
-                    <div class="rounded-3xl border border-[#cfe2f3] bg-[#eef7ff] px-5 py-4 text-start">
+                <div class="flex justify-start lg:justify-end [@media_(min-width:768px)_and_(max-width:1023px)]:order-1 [@media_(min-width:768px)_and_(max-width:1023px)]:justify-center">
+                    <div class="rounded-3xl border border-[#cfe2f3] bg-[#eef7ff] px-5 py-4 text-start [@media_(min-width:768px)_and_(max-width:1023px)]:px-7 [@media_(min-width:768px)_and_(max-width:1023px)]:text-center">
                         <p class="text-xs font-bold text-[#5f7891]">
                             تاريخ اليوم
                         </p>
@@ -178,11 +178,11 @@ function formatTime(time: string): string {
                 </div>
             </header>
 
-            <div v-if="scheduleData.clinics.length > 0" class="grid grid-cols-1 gap-5 lg:grid-cols-2"
+            <div v-if="scheduleData.clinics.length > 0" class="grid grid-cols-1 gap-5 transition-[gap] duration-200 ease-out lg:grid-cols-2 [@media_(min-width:768px)_and_(max-width:1023px)]:gap-7"
                 :class="displayMode ? 'xl:gap-6' : ''">
                 <article v-for="clinic in scheduleData.clinics" :key="clinic.id"
-                    class="flex min-h-[220px] flex-col rounded-[1.5rem] border border-[#d9e6ee] bg-[#fbfdff] p-5 shadow-[0_14px_34px_rgba(18,52,90,0.08)]">
-                    <div class="flex items-start gap-4">
+                    class="flex min-h-[220px] flex-col rounded-[1.5rem] border border-[#d9e6ee] bg-[#fbfdff] p-5 shadow-[0_14px_34px_rgba(18,52,90,0.08)] transition-[padding,min-height] duration-200 ease-out [@media_(min-width:768px)_and_(max-width:1023px)]:min-h-[260px] [@media_(min-width:768px)_and_(max-width:1023px)]:p-7">
+                    <div class="flex items-start gap-4 [@media_(min-width:768px)_and_(max-width:1023px)]:gap-5">
                         <div
                             class="flex size-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#1d7de9] via-[#2a9ce8] to-[#e02f89] shadow-[0_14px_28px_rgba(29,125,233,0.18)]">
                             <component :is="iconForClinic(clinic)" class="size-8 text-[#fbfdff]" />
@@ -214,10 +214,10 @@ function formatTime(time: string): string {
                         </div>
                     </div>
 
-                    <div class="mt-5 flex flex-1 flex-col gap-3">
+                    <div class="mt-5 flex flex-1 flex-col gap-3 [@media_(min-width:768px)_and_(max-width:1023px)]:mt-7 [@media_(min-width:768px)_and_(max-width:1023px)]:gap-4">
                         <div v-for="doctor in clinic.doctors" :key="doctor.doctor_id"
-                            class="rounded-2xl border border-[#e1ebf1] bg-[#f7fbfd] p-4">
-                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            class="rounded-2xl border border-[#e1ebf1] bg-[#f7fbfd] p-4 transition-[padding] duration-200 ease-out [@media_(min-width:768px)_and_(max-width:1023px)]:p-5">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between [@media_(min-width:768px)_and_(max-width:1023px)]:items-start [@media_(min-width:768px)_and_(max-width:1023px)]:gap-4">
                                 <div class="flex min-w-0 items-center gap-3">
                                     <div
                                         class="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#12345a] text-base font-extrabold text-[#fbfdff]">
@@ -233,7 +233,7 @@ function formatTime(time: string): string {
                                     </div>
                                 </div>
                                 <div
-                                    class="inline-flex w-fit items-center gap-2 rounded-full border border-[#f2bfd8] bg-[#fff3f8] px-4 py-2 text-sm font-extrabold text-[#af1e66] tabular-nums">
+                                    class="inline-flex w-fit items-center gap-2 rounded-full border border-[#f2bfd8] bg-[#fff3f8] px-4 py-2 text-sm font-extrabold text-[#af1e66] tabular-nums [@media_(min-width:768px)_and_(max-width:1023px)]:self-start">
                                     <Clock class="size-4" />
                                     <span>
                                         {{ formatTime(doctor.start_time) }}

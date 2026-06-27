@@ -30,6 +30,9 @@ class DailyScheduleController extends Controller
             date: is_string($date) ? $date : null,
             clinicFilter: $clinicFilter,
             doctorFilter: $doctorFilter,
+            settingsClinicId: $request->user()?->clinic_id !== null
+                ? (int) $request->user()->clinic_id
+                : null,
         );
 
         $allClinics = Clinic::query()
@@ -64,7 +67,11 @@ class DailyScheduleController extends Controller
 
     public function display(Request $request): InertiaResponse
     {
-        $scheduleData = $this->listDailyScheduleAction->handle();
+        $scheduleData = $this->listDailyScheduleAction->handle(
+            settingsClinicId: $request->user()?->clinic_id !== null
+                ? (int) $request->user()->clinic_id
+                : null,
+        );
 
         return Inertia::render('daily-schedule/Display', [
             'scheduleData' => $scheduleData,

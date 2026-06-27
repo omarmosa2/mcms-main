@@ -5,6 +5,7 @@ namespace App\Actions\DailySchedule;
 use App\Actions\BaseAction;
 use App\Models\BrandingSetting;
 use App\Models\Clinic;
+use App\Models\ClinicSetting;
 use App\Models\ClinicWorkingHour;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
@@ -27,7 +28,7 @@ class ListDailyScheduleAction extends BaseAction
      *     clinics: array<int, array<string, mixed>>
      * }
      */
-    public function handle(?string $date = null, ?int $clinicFilter = null, ?int $doctorFilter = null): array
+    public function handle(?string $date = null, ?int $clinicFilter = null, ?int $doctorFilter = null, ?int $settingsClinicId = null): array
     {
         $carbonDate = $date !== null && $date !== ''
             ? Carbon::createFromFormat('Y-m-d', $date)
@@ -39,7 +40,9 @@ class ListDailyScheduleAction extends BaseAction
             ->withoutClinicScope()
             ->first();
 
-        $clinicSettings = [];
+        $clinicSettings = $settingsClinicId !== null
+            ? ClinicSetting::getGroupSettings($settingsClinicId, 'clinic')
+            : [];
 
         $clinics = $this->getActiveClinics($clinicFilter);
 

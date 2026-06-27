@@ -4,6 +4,7 @@ namespace Tests\Feature\DailySchedule;
 
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Clinic;
+use App\Models\ClinicSetting;
 use App\Models\ClinicWorkingHour;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
@@ -19,6 +20,9 @@ class DailyScheduleControllerTest extends TestCase
     {
         $clinic = Clinic::factory()->create();
         $user = User::factory()->create(['clinic_id' => $clinic->id]);
+        ClinicSetting::setGroup($clinic->id, 'clinic', [
+            'phone' => '0968842338',
+        ]);
         app(AssignUserRoleAction::class)->handle($user, 'clinic_admin');
         $this->actingAs($user);
 
@@ -28,6 +32,7 @@ class DailyScheduleControllerTest extends TestCase
         $response->assertInertia(fn ($page) => $page
             ->component('daily-schedule/Index')
             ->has('scheduleData')
+            ->where('scheduleData.clinic_settings.phone', '0968842338')
             ->has('clinics')
             ->has('doctors'));
     }

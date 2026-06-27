@@ -585,7 +585,7 @@ watch(
 
                 <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <div class="info-box">
-                        <span>اسم المشروع أو المركز</span>
+                        <span>اسم المجمع الطبي</span>
                         <strong>{{ projectName }}</strong>
                     </div>
                     <div class="info-box">

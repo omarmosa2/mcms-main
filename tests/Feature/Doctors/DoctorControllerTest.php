@@ -247,7 +247,7 @@ class DoctorControllerTest extends TestCase
         $payload = [
             'full_name' => 'Dr. Updated Name',
             'specialty' => 'Neurology',
-            'compensation_type' => 'weekly_fixed',
+            'compensation_type' => 'fixed_weekly',
             'compensation_value' => '1000',
             'schedules' => [
                 ['day_of_week' => 1, 'is_available' => true, 'start_time' => '10:00', 'end_time' => '13:00'],

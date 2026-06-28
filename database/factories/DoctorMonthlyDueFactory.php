@@ -29,7 +29,7 @@ class DoctorMonthlyDueFactory extends Factory
                 ])->id;
             },
             'salary_month' => now()->format('Y-m'),
-            'payment_type' => DoctorProfile::COMPENSATION_MONTHLY,
+            'payment_type' => DoctorProfile::COMPENSATION_MONTHLY_FIXED,
             'percentage' => null,
             'fixed_weekly_amount' => null,
             'fixed_monthly_amount' => $dueAmount,

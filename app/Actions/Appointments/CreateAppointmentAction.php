@@ -8,6 +8,7 @@ use App\Actions\GenerateNumberAction;
 use App\Models\Appointment;
 use App\Models\DoctorAppointmentEntitlement;
 use App\Models\DoctorProfile;
+use App\Models\Invoice;
 use App\Models\Patient;
 use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
@@ -77,6 +78,8 @@ class CreateAppointmentAction extends BaseAction
                 'cost',
             ]),
         );
+
+        $this->createInvoiceForAppointmentIfNeeded($clinicId, $userId, $appointment);
 
         $this->createDoctorEntitlementIfNeeded($clinicId, $appointment);
 
@@ -241,6 +244,58 @@ class CreateAppointmentAction extends BaseAction
         }
     }
 
+    private function createInvoiceForAppointmentIfNeeded(int $clinicId, int $userId, Appointment $appointment): void
+    {
+        $cost = (float) ($appointment->cost ?? 0);
+
+        if ($cost <= 0) {
+            return;
+        }
+
+        $invoiceNumber = $this->generateInvoiceNumber($clinicId);
+
+        $invoice = Invoice::query()->create([
+            'clinic_id' => $clinicId,
+            'patient_id' => $appointment->patient_id,
+            'visit_id' => null,
+            'appointment_id' => $appointment->id,
+            'issued_by' => $userId,
+            'invoice_number' => $invoiceNumber,
+            'status' => Invoice::STATUS_ISSUED,
+            'issued_at' => now(),
+            'due_at' => null,
+            'subtotal_amount' => $cost,
+            'discount_amount' => 0,
+            'tax_amount' => 0,
+            'total_amount' => $cost,
+            'paid_amount' => 0,
+            'balance_amount' => $cost,
+            'notes' => null,
+        ]);
+
+        $invoice->items()->create([
+            'clinic_id' => $clinicId,
+            'service_code' => $appointment->appointment_type ?? 'first_visit',
+            'description' => $appointment->appointment_type === 'review' ? 'مراجعة' : 'كشفية أولى',
+            'quantity' => 1,
+            'unit_price' => $cost,
+            'discount_amount' => 0,
+            'tax_amount' => 0,
+            'line_total' => $cost,
+        ]);
+    }
+
+    private function generateInvoiceNumber(int $clinicId): string
+    {
+        $today = now()->toDateString();
+        $sequence = (int) Invoice::query()
+            ->forClinic($clinicId)
+            ->whereDate('created_at', $today)
+            ->count() + 1;
+
+        return sprintf('INV-%s-%04d', now()->format('Ymd'), $sequence);
+    }
+
     private function createDoctorEntitlementIfNeeded(int $clinicId, Appointment $appointment): void
     {
         if ($appointment->doctor_id === null) {
@@ -266,7 +321,7 @@ class CreateAppointmentAction extends BaseAction
             return;
         }
 
-        $percentage = (float) ($doctorProfile->compensation_value ?? 0);
+        $percentage = (float) ($doctorProfile->compensationAmount() ?? 0);
 
         if ($percentage <= 0) {
             return;
@@ -281,6 +336,8 @@ class CreateAppointmentAction extends BaseAction
             'appointment_cost' => $cost,
             'percentage' => $percentage,
             'entitlement_amount' => $entitlementAmount,
+            'compensation_type' => $doctorProfile->compensation_type,
+            'compensation_value' => $percentage,
             'status' => DoctorAppointmentEntitlement::STATUS_UNPAID,
             'appointment_date' => Carbon::parse($appointment->scheduled_for)->toDateString(),
         ]);

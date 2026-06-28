@@ -11,6 +11,7 @@ class GetDailyIncomeAction extends BaseAction
     {
         return (float) Payment::query()
             ->forClinic($clinicId)
+            ->whereNotNull('invoice_id')
             ->whereDate('paid_at', $date)
             ->where('status', 'recorded')
             ->sum('amount');

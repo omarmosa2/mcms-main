@@ -56,7 +56,7 @@ class DoctorController extends Controller
 
     public function store(StoreDoctorRequest $request, AssignUserRoleAction $assignUserRoleAction): RedirectResponse
     {
-        $validated = $request->validated();
+        $validated = $this->normalizeCompensation($request->validated());
 
         $doctor = DB::transaction(function () use ($assignUserRoleAction, $request, $validated): DoctorProfile {
             $scheduleData = collect($validated['schedules'] ?? [])
@@ -109,7 +109,7 @@ class DoctorController extends Controller
     public function update(UpdateDoctorRequest $request, int $doctorId, AssignUserRoleAction $assignUserRoleAction): RedirectResponse
     {
         $doctor = $this->resolveDoctor($doctorId);
-        $validated = $request->validated();
+        $validated = $this->normalizeCompensation($request->validated(), $doctor);
 
         DB::transaction(function () use ($assignUserRoleAction, $request, $validated, $doctor): void {
             $account = $this->syncDoctorAccount($doctor, $validated, $request->user(), $assignUserRoleAction);
@@ -172,6 +172,47 @@ class DoctorController extends Controller
         $assignUserRoleAction->handle($account, 'doctor', $creator?->id);
 
         return $account;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function normalizeCompensation(array $validated, ?DoctorProfile $doctor = null): array
+    {
+        $type = $validated['compensation_type'] ?? $doctor?->compensation_type ?? DoctorProfile::COMPENSATION_PERCENTAGE;
+        $fallbackValue = $validated['compensation_value'] ?? $doctor?->compensationAmount();
+
+        $percentageValue = $validated['percentage_value'] ?? null;
+        $fixedWeeklyAmount = $validated['fixed_weekly_amount'] ?? null;
+        $fixedMonthlyAmount = $validated['fixed_monthly_amount'] ?? null;
+
+        if ($type === DoctorProfile::COMPENSATION_PERCENTAGE) {
+            $percentageValue ??= $fallbackValue;
+            $fallbackValue = $percentageValue;
+            $fixedWeeklyAmount = null;
+            $fixedMonthlyAmount = null;
+        } elseif ($type === DoctorProfile::COMPENSATION_WEEKLY_FIXED) {
+            $fixedWeeklyAmount ??= $fallbackValue;
+            $fallbackValue = $fixedWeeklyAmount;
+            $percentageValue = null;
+            $fixedMonthlyAmount = null;
+        } elseif ($type === DoctorProfile::COMPENSATION_MONTHLY_FIXED) {
+            $fixedMonthlyAmount ??= $fallbackValue;
+            $fallbackValue = $fixedMonthlyAmount;
+            $percentageValue = null;
+            $fixedWeeklyAmount = null;
+        }
+
+        return [
+            ...$validated,
+            'compensation_type' => $type,
+            'compensation_value' => $fallbackValue,
+            'percentage_value' => $percentageValue,
+            'fixed_weekly_amount' => $fixedWeeklyAmount,
+            'fixed_monthly_amount' => $fixedMonthlyAmount,
+            'currency' => $validated['currency'] ?? $doctor?->currency ?? 'SYP',
+        ];
     }
 
     public function show(Request $request, int $doctorId): JsonResponse

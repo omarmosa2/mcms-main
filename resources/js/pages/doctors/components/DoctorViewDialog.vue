@@ -34,11 +34,11 @@ const compensationLabel = computed(() => {
     }
     switch (props.doctor.compensation_type) {
         case 'percentage':
-            return `${props.doctor.compensation_value ?? 0}% نسبة مئوية`;
-        case 'weekly_fixed':
-            return `${props.doctor.compensation_value ?? 0} أجر أسبوعي ثابت`;
-        case 'monthly_fixed':
-            return `${props.doctor.compensation_value ?? 0} أجر شهري ثابت`;
+            return `${props.doctor.percentage_value ?? props.doctor.compensation_value ?? 0}% نسبة مئوية`;
+        case 'fixed_weekly':
+            return `${props.doctor.fixed_weekly_amount ?? props.doctor.compensation_value ?? 0} أجر أسبوعي ثابت`;
+        case 'fixed_monthly':
+            return `${props.doctor.fixed_monthly_amount ?? props.doctor.compensation_value ?? 0} أجر شهري ثابت`;
         default:
             return '—';
     }

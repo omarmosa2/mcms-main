@@ -40,11 +40,39 @@ class DoctorProfileFactory extends Factory
                 DoctorProfile::COMPENSATION_WEEKLY_FIXED,
                 DoctorProfile::COMPENSATION_MONTHLY_FIXED,
             ]),
+            'percentage_value' => function (array $attributes): ?string {
+                if (($attributes['compensation_type'] ?? null) !== DoctorProfile::COMPENSATION_PERCENTAGE) {
+                    return null;
+                }
+
+                $legacyValue = $attributes['compensation_value'] ?? null;
+
+                return is_numeric($legacyValue) ? (string) $legacyValue : (string) fake()->numberBetween(10, 60);
+            },
+            'fixed_weekly_amount' => function (array $attributes): ?string {
+                if (($attributes['compensation_type'] ?? null) !== DoctorProfile::COMPENSATION_WEEKLY_FIXED) {
+                    return null;
+                }
+
+                $legacyValue = $attributes['compensation_value'] ?? null;
+
+                return is_numeric($legacyValue) ? (string) $legacyValue : (string) fake()->numberBetween(1000, 50000);
+            },
+            'fixed_monthly_amount' => function (array $attributes): ?string {
+                if (($attributes['compensation_type'] ?? null) !== DoctorProfile::COMPENSATION_MONTHLY_FIXED) {
+                    return null;
+                }
+
+                $legacyValue = $attributes['compensation_value'] ?? null;
+
+                return is_numeric($legacyValue) ? (string) $legacyValue : (string) fake()->numberBetween(1000, 50000);
+            },
             'compensation_value' => fn (array $attributes): ?string => match ($attributes['compensation_type'] ?? null) {
                 DoctorProfile::COMPENSATION_PERCENTAGE => (string) fake()->numberBetween(10, 60),
                 DoctorProfile::COMPENSATION_WEEKLY_FIXED, DoctorProfile::COMPENSATION_MONTHLY_FIXED => (string) fake()->numberBetween(1000, 50000),
                 default => null,
             },
+            'currency' => 'SYP',
             'is_active' => true,
             'notes' => fake()->optional()->sentence(),
         ];

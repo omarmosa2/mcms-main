@@ -50,6 +50,10 @@ class UpdateDoctorRequest extends FormRequest
                 DoctorProfile::COMPENSATION_MONTHLY_FIXED,
             ])],
             'compensation_value' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'percentage_value' => ['sometimes', 'nullable', 'numeric', 'min:0', 'max:100'],
+            'fixed_weekly_amount' => ['sometimes', 'nullable', 'numeric', 'min:0.01'],
+            'fixed_monthly_amount' => ['sometimes', 'nullable', 'numeric', 'min:0.01'],
+            'currency' => ['sometimes', 'nullable', 'string', 'size:3'],
             'is_active' => ['sometimes', 'boolean'],
             'notes' => ['sometimes', 'nullable', 'string'],
             'schedules' => ['sometimes', 'array'],
@@ -65,6 +69,7 @@ class UpdateDoctorRequest extends FormRequest
         return [
             function (Validator $validator): void {
                 $this->validateCompensationValue($validator);
+                $this->validateCompensationTypeChange($validator);
                 $this->validateAccountDetails($validator);
                 if ($this->has('schedules')) {
                     $this->validateSchedules($validator);
@@ -95,9 +100,63 @@ class UpdateDoctorRequest extends FormRequest
 
     private function validateCompensationValue(Validator $validator): void
     {
-        if ($this->input('compensation_type') === DoctorProfile::COMPENSATION_PERCENTAGE
-            && (float) $this->input('compensation_value', 0) > 100) {
-            $validator->errors()->add('compensation_value', 'نسبة الطبيب يجب ألا تتجاوز 100%.');
+        $doctor = $this->resolveDoctor();
+        $type = $this->input('compensation_type', $doctor?->compensation_type);
+
+        $percentageValue = $this->input(
+            'percentage_value',
+            $this->input('compensation_value', $doctor?->percentage_value ?? $doctor?->compensation_value),
+        );
+        $weeklyAmount = $this->input(
+            'fixed_weekly_amount',
+            $this->input('compensation_value', $doctor?->fixed_weekly_amount ?? $doctor?->compensation_value),
+        );
+        $monthlyAmount = $this->input(
+            'fixed_monthly_amount',
+            $this->input('compensation_value', $doctor?->fixed_monthly_amount ?? $doctor?->compensation_value),
+        );
+
+        if ($type === DoctorProfile::COMPENSATION_PERCENTAGE && ($percentageValue === null || $percentageValue === '')) {
+            $validator->errors()->add('percentage_value', 'نسبة الطبيب مطلوبة.');
+        }
+
+        if ($type === DoctorProfile::COMPENSATION_PERCENTAGE && (float) $percentageValue > 100) {
+            $validator->errors()->add('percentage_value', 'نسبة الطبيب يجب ألا تتجاوز 100%.');
+        }
+
+        if ($type === DoctorProfile::COMPENSATION_WEEKLY_FIXED && ($weeklyAmount === null || $weeklyAmount === '' || (float) $weeklyAmount <= 0)) {
+            $validator->errors()->add('fixed_weekly_amount', 'قيمة الأجر الأسبوعي مطلوبة ويجب أن تكون أكبر من صفر.');
+        }
+
+        if ($type === DoctorProfile::COMPENSATION_MONTHLY_FIXED && ($monthlyAmount === null || $monthlyAmount === '' || (float) $monthlyAmount <= 0)) {
+            $validator->errors()->add('fixed_monthly_amount', 'قيمة الأجر الشهري مطلوبة ويجب أن تكون أكبر من صفر.');
+        }
+    }
+
+    private function validateCompensationTypeChange(Validator $validator): void
+    {
+        $doctor = $this->resolveDoctor();
+
+        if ($doctor === null) {
+            return;
+        }
+
+        $newCompensationType = $this->input('compensation_type');
+
+        if ($newCompensationType === null || $newCompensationType === $doctor->compensation_type) {
+            return;
+        }
+
+        if ($doctor->compensation_type !== DoctorProfile::COMPENSATION_PERCENTAGE) {
+            return;
+        }
+
+        $unpaidEntitlements = $doctor->appointmentEntitlements()
+            ->whereIn('status', ['pending', 'unpaid'])
+            ->exists();
+
+        if ($unpaidEntitlements) {
+            $validator->errors()->add('compensation_type', 'لا يمكن تغيير نوع الأجر بينما توجد مستحقات غير مدفوعة. يجب تسوية المستحقات أولاً.');
         }
     }
 

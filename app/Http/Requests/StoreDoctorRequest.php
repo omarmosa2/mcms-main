@@ -47,6 +47,10 @@ class StoreDoctorRequest extends FormRequest
                 DoctorProfile::COMPENSATION_MONTHLY_FIXED,
             ])],
             'compensation_value' => ['nullable', 'numeric', 'min:0'],
+            'percentage_value' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'fixed_weekly_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'fixed_monthly_amount' => ['nullable', 'numeric', 'min:0.01'],
+            'currency' => ['nullable', 'string', 'size:3'],
             'is_active' => ['boolean'],
             'notes' => ['nullable', 'string'],
             'schedules' => ['present', 'array'],
@@ -70,9 +74,25 @@ class StoreDoctorRequest extends FormRequest
 
     private function validateCompensationValue(Validator $validator): void
     {
-        if ($this->input('compensation_type') === DoctorProfile::COMPENSATION_PERCENTAGE
-            && (float) $this->input('compensation_value', 0) > 100) {
-            $validator->errors()->add('compensation_value', 'نسبة الطبيب يجب ألا تتجاوز 100%.');
+        $type = $this->input('compensation_type');
+        $percentageValue = $this->input('percentage_value', $this->input('compensation_value'));
+        $weeklyAmount = $this->input('fixed_weekly_amount', $this->input('compensation_value'));
+        $monthlyAmount = $this->input('fixed_monthly_amount', $this->input('compensation_value'));
+
+        if ($type === DoctorProfile::COMPENSATION_PERCENTAGE && ($percentageValue === null || $percentageValue === '')) {
+            $validator->errors()->add('percentage_value', 'نسبة الطبيب مطلوبة.');
+        }
+
+        if ($type === DoctorProfile::COMPENSATION_PERCENTAGE && (float) $percentageValue > 100) {
+            $validator->errors()->add('percentage_value', 'نسبة الطبيب يجب ألا تتجاوز 100%.');
+        }
+
+        if ($type === DoctorProfile::COMPENSATION_WEEKLY_FIXED && ($weeklyAmount === null || $weeklyAmount === '' || (float) $weeklyAmount <= 0)) {
+            $validator->errors()->add('fixed_weekly_amount', 'قيمة الأجر الأسبوعي مطلوبة ويجب أن تكون أكبر من صفر.');
+        }
+
+        if ($type === DoctorProfile::COMPENSATION_MONTHLY_FIXED && ($monthlyAmount === null || $monthlyAmount === '' || (float) $monthlyAmount <= 0)) {
+            $validator->errors()->add('fixed_monthly_amount', 'قيمة الأجر الشهري مطلوبة ويجب أن تكون أكبر من صفر.');
         }
     }
 

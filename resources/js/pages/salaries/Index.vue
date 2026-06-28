@@ -24,6 +24,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
+import { store as storeDoctorPayment } from '@/routes/salaries/doctor-payments';
+import { store as storeEmployeePayment } from '@/routes/salaries/employee-payments';
 import PayrollStatsCards from './components/PayrollStatsCards.vue';
 
 type ClinicOption = { id: number; name: string };
@@ -102,7 +104,9 @@ defineOptions({
 
 const { can } = usePermissions();
 const toast = useToast();
-const activeTab = ref<'employees' | 'doctors'>('employees');
+const activeTab = ref<'employees' | 'doctors'>(
+    props.filters.person_type === 'doctor' ? 'doctors' : 'employees',
+);
 const paymentDialogOpen = ref(false);
 const paymentTarget = ref<EmployeeSalaryRow | DoctorDueRow | null>(null);
 const paymentKind = ref<'employee' | 'doctor'>('employee');
@@ -127,8 +131,8 @@ const labels: Record<string, string> = {
     administrative: 'إداري',
     other: 'أخرى',
     percentage: 'نسبة مئوية',
-    weekly_fixed: 'أجر أسبوعي',
-    monthly_fixed: 'أجر شهري',
+    fixed_weekly: 'أجر أسبوعي',
+    fixed_monthly: 'أجر شهري',
     unpaid: 'غير مدفوع',
     partially_paid: 'مدفوع جزئيا',
     paid: 'مدفوع بالكامل',
@@ -256,20 +260,22 @@ const openDoctorPayment = (row: DoctorDueRow): void => {
 const submitPayment = (): void => {
     const options = {
         preserveScroll: true,
+        preserveState: false,
         onSuccess: () => {
             paymentDialogOpen.value = false;
+            paymentTarget.value = null;
             toast.success('تم تسجيل الدفعة بنجاح');
         },
         onError: () => toast.error('تعذر تسجيل الدفعة'),
     };
 
     if (paymentKind.value === 'employee') {
-        paymentForm.post(PayrollController.storeEmployeePayment.url(), options);
+        paymentForm.post(storeEmployeePayment.url(), options);
 
         return;
     }
 
-    paymentForm.post(PayrollController.storeDoctorPayment.url(), options);
+    paymentForm.post(storeDoctorPayment.url(), options);
 };
 
 const doctorCompensationDisplay = (row: DoctorDueRow): string => {
@@ -278,14 +284,14 @@ const doctorCompensationDisplay = (row: DoctorDueRow): string => {
     }
 
     if (
-        row.payment_type === 'weekly_fixed' &&
+        row.payment_type === 'fixed_weekly' &&
         row.fixed_weekly_amount !== null
     ) {
         return `أسبوعي: ${formatMoney(row.fixed_weekly_amount)}`;
     }
 
     if (
-        row.payment_type === 'monthly_fixed' &&
+        row.payment_type === 'fixed_monthly' &&
         row.fixed_monthly_amount !== null
     ) {
         return `شهري: ${formatMoney(row.fixed_monthly_amount)}`;
@@ -711,8 +717,8 @@ const paymentHelpText = computed(() =>
                             >
                                 <option value="">كل الأنواع</option>
                                 <option value="percentage">نسبة</option>
-                                <option value="weekly_fixed">أسبوعي</option>
-                                <option value="monthly_fixed">شهري</option>
+                                <option value="fixed_weekly">أسبوعي</option>
+                                <option value="fixed_monthly">شهري</option>
                             </select>
                         </div>
                         <div class="grid gap-1.5">

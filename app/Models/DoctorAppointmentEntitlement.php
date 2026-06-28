@@ -12,9 +12,13 @@ class DoctorAppointmentEntitlement extends BaseModel
     /** @use HasFactory<DoctorAppointmentEntitlementFactory> */
     use HasFactory;
 
-    public const STATUS_UNPAID = 'unpaid';
+    public const STATUS_PENDING = 'pending';
+
+    public const STATUS_UNPAID = self::STATUS_PENDING;
 
     public const STATUS_PAID = 'paid';
+
+    public const STATUS_CANCELLED = 'cancelled';
 
     protected function casts(): array
     {
@@ -22,6 +26,7 @@ class DoctorAppointmentEntitlement extends BaseModel
             'appointment_cost' => 'decimal:2',
             'percentage' => 'decimal:2',
             'entitlement_amount' => 'decimal:2',
+            'compensation_value' => 'decimal:2',
             'appointment_date' => 'date',
         ];
     }

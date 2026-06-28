@@ -30,11 +30,13 @@ class GetFinancialReportAction extends BaseAction
 
         $paymentsInPeriod = Payment::query()
             ->forClinic($clinicId)
+            ->whereNotNull('invoice_id')
             ->whereBetween('paid_at', [$from, $to])
             ->whereIn('status', [Payment::STATUS_RECORDED, Payment::STATUS_REFUNDED]);
 
         $refundsInPeriod = Payment::query()
             ->forClinic($clinicId)
+            ->whereNotNull('invoice_id')
             ->whereNotNull('refunded_at')
             ->whereBetween('refunded_at', [$from, $to]);
 

@@ -35,6 +35,16 @@ class DoctorResource extends JsonResource
             'compensation_value' => $this->compensation_value !== null
                 ? (float) $this->compensation_value
                 : null,
+            'percentage_value' => $this->percentage_value !== null
+                ? (float) $this->percentage_value
+                : null,
+            'fixed_weekly_amount' => $this->fixed_weekly_amount !== null
+                ? (float) $this->fixed_weekly_amount
+                : null,
+            'fixed_monthly_amount' => $this->fixed_monthly_amount !== null
+                ? (float) $this->fixed_monthly_amount
+                : null,
+            'currency' => $this->currency ?? 'SYP',
             'is_active' => (bool) $this->is_active,
             'notes' => $this->notes,
             'schedules' => $this->whenLoaded('schedules', fn () => $this->schedulesCollection()),

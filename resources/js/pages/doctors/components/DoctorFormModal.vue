@@ -58,6 +58,19 @@ const defaultsFor = (doctor: Doctor | null): DoctorFormData => ({
         doctor?.compensation_value !== null && doctor?.compensation_value !== undefined
             ? String(doctor.compensation_value)
             : '',
+    percentage_value:
+        doctor?.percentage_value !== null && doctor?.percentage_value !== undefined
+            ? String(doctor.percentage_value)
+            : '',
+    fixed_weekly_amount:
+        doctor?.fixed_weekly_amount !== null && doctor?.fixed_weekly_amount !== undefined
+            ? String(doctor.fixed_weekly_amount)
+            : '',
+    fixed_monthly_amount:
+        doctor?.fixed_monthly_amount !== null && doctor?.fixed_monthly_amount !== undefined
+            ? String(doctor.fixed_monthly_amount)
+            : '',
+    currency: doctor?.currency ?? 'SYP',
     is_active: doctor?.is_active ?? true,
     notes: doctor?.notes ?? '',
     schedules: doctor?.schedules ?? [],
@@ -72,9 +85,9 @@ const compensationLabel = computed(() => {
     switch (form.compensation_type) {
         case 'percentage':
             return 'نسبة الطبيب (%)';
-        case 'weekly_fixed':
+        case 'fixed_weekly':
             return 'قيمة الأجر الأسبوعي';
-        case 'monthly_fixed':
+        case 'fixed_monthly':
             return 'قيمة الأجر الشهري';
         default:
             return 'قيمة الأجر';
@@ -100,7 +113,40 @@ watch(
 
 const close = (): void => emit('update:open', false);
 
+const activeCompensationField = computed(() => {
+    switch (form.compensation_type) {
+        case 'percentage':
+            return 'percentage_value';
+        case 'fixed_weekly':
+            return 'fixed_weekly_amount';
+        case 'fixed_monthly':
+            return 'fixed_monthly_amount';
+        default:
+            return 'compensation_value';
+    }
+});
+
+const syncLegacyCompensationValue = (): void => {
+    form.compensation_value = String(form[activeCompensationField.value] ?? '');
+};
+
+watch(
+    () => [
+        form.compensation_type,
+        form.percentage_value,
+        form.fixed_weekly_amount,
+        form.fixed_monthly_amount,
+    ],
+    () => {
+        if (!isHydrating.value) {
+            syncLegacyCompensationValue();
+        }
+    },
+);
+
 const submit = (): void => {
+    syncLegacyCompensationValue();
+
     const options = {
         preserveScroll: true,
         onSuccess: () => {
@@ -319,8 +365,8 @@ const submit = (): void => {
                                 class="h-11 rounded-lg border border-input bg-muted px-3 text-sm"
                             >
                                 <option value="percentage">نسبة مئوية</option>
-                                <option value="weekly_fixed">أجر أسبوعي ثابت</option>
-                                <option value="monthly_fixed">أجر شهري ثابت</option>
+                                <option value="fixed_weekly">أجر أسبوعي ثابت</option>
+                                <option value="fixed_monthly">أجر شهري ثابت</option>
                             </select>
                             <InputError :message="form.errors.compensation_type" />
                         </div>
@@ -328,14 +374,39 @@ const submit = (): void => {
                         <div class="grid gap-2">
                             <Label for="doctor_compensation_value">{{ compensationLabel }}</Label>
                             <Input
+                                v-if="form.compensation_type === 'percentage'"
                                 id="doctor_compensation_value"
-                                v-model="form.compensation_value"
+                                v-model="form.percentage_value"
                                 type="number"
                                 min="0"
+                                max="100"
                                 step="0.01"
                                 class="h-11 rounded-lg"
                             />
-                            <InputError :message="form.errors.compensation_value" />
+                            <Input
+                                v-else-if="form.compensation_type === 'fixed_weekly'"
+                                id="doctor_compensation_value"
+                                v-model="form.fixed_weekly_amount"
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                class="h-11 rounded-lg"
+                            />
+                            <Input
+                                v-else
+                                id="doctor_compensation_value"
+                                v-model="form.fixed_monthly_amount"
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                class="h-11 rounded-lg"
+                            />
+                            <InputError
+                                :message="
+                                    form.errors[activeCompensationField] ??
+                                    form.errors.compensation_value
+                                "
+                            />
                         </div>
                     </div>
                 </section>

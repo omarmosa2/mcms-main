@@ -85,6 +85,7 @@ class GetFinancialStatementsReportAction extends BaseAction
 
         $cashInflow = (float) Payment::query()
             ->forClinic($clinicId)
+            ->whereNotNull('invoice_id')
             ->whereBetween('paid_at', [$from, $to])
             ->whereIn('status', [Payment::STATUS_RECORDED, Payment::STATUS_REFUNDED])
             ->sum('amount');

@@ -5,7 +5,9 @@ namespace App\Actions\Appointments;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\Appointment;
+use App\Models\DoctorAppointmentEntitlement;
 use App\Models\DoctorProfile;
+use App\Models\Invoice;
 use App\Models\Patient;
 use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
@@ -85,6 +87,8 @@ class UpdateAppointmentAction extends BaseAction
             'appointment_number',
             'scheduled_for',
             'duration_minutes',
+            'appointment_type',
+            'cost',
             'notes',
             'status',
         ]);
@@ -104,10 +108,15 @@ class UpdateAppointmentAction extends BaseAction
                 'appointment_number',
                 'scheduled_for',
                 'duration_minutes',
+                'appointment_type',
+                'cost',
                 'notes',
                 'status',
             ]),
         );
+
+        $this->syncRelatedInvoice($clinicId, $appointment, $oldValues);
+        $this->syncDoctorEntitlement($clinicId, $appointment, $oldValues);
 
         $this->cacheService->invalidateDashboardStats($clinicId);
         $this->cacheService->invalidateDropdowns($clinicId);
@@ -270,5 +279,102 @@ class UpdateAppointmentAction extends BaseAction
                 'doctor_id' => 'الطبيب المحدد غير متاح لهذه العيادة.',
             ]);
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $oldValues
+     */
+    private function syncRelatedInvoice(int $clinicId, Appointment $appointment, array $oldValues): void
+    {
+        $invoice = Invoice::query()
+            ->forClinic($clinicId)
+            ->where('appointment_id', $appointment->id)
+            ->whereNotIn('status', [Invoice::STATUS_VOID])
+            ->first();
+
+        if ($invoice === null) {
+            return;
+        }
+
+        $costChanged = array_key_exists('cost', $oldValues) && (float) ($oldValues['cost'] ?? 0) !== (float) ($appointment->cost ?? 0);
+        $patientChanged = array_key_exists('patient_id', $oldValues) && (int) ($oldValues['patient_id'] ?? 0) !== (int) $appointment->patient_id;
+
+        if (! $costChanged && ! $patientChanged) {
+            return;
+        }
+
+        if ($costChanged) {
+            $newCost = (float) ($appointment->cost ?? 0);
+            $paidAmount = (float) $invoice->paid_amount;
+            $newBalance = max(0, round($newCost - $paidAmount, 2));
+
+            $invoice->subtotal_amount = $newCost;
+            $invoice->total_amount = $newCost;
+            $invoice->balance_amount = $newBalance;
+        }
+
+        if ($patientChanged) {
+            $invoice->patient_id = $appointment->patient_id;
+        }
+
+        $invoice->save();
+    }
+
+    /**
+     * @param  array<string, mixed>  $oldValues
+     */
+    private function syncDoctorEntitlement(int $clinicId, Appointment $appointment, array $oldValues): void
+    {
+        $doctorChanged = array_key_exists('doctor_id', $oldValues) && (int) ($oldValues['doctor_id'] ?? 0) !== (int) ($appointment->doctor_id ?? 0);
+        $costChanged = array_key_exists('cost', $oldValues) && (float) ($oldValues['cost'] ?? 0) !== (float) ($appointment->cost ?? 0);
+        $dateChanged = array_key_exists('scheduled_for', $oldValues)
+            && Carbon::parse($oldValues['scheduled_for'])->toDateString() !== $appointment->scheduled_for?->toDateString();
+
+        if (! $doctorChanged && ! $costChanged && ! $dateChanged) {
+            return;
+        }
+
+        DoctorAppointmentEntitlement::query()
+            ->forClinic($clinicId)
+            ->where('appointment_id', $appointment->id)
+            ->delete();
+
+        if ($appointment->doctor_id === null) {
+            return;
+        }
+
+        $cost = (float) ($appointment->cost ?? 0);
+
+        if ($cost <= 0) {
+            return;
+        }
+
+        $doctorProfile = DoctorProfile::query()
+            ->forClinic($clinicId)
+            ->where('user_id', $appointment->doctor_id)
+            ->first();
+
+        if ($doctorProfile === null || $doctorProfile->compensation_type !== DoctorProfile::COMPENSATION_PERCENTAGE) {
+            return;
+        }
+
+        $percentage = (float) ($doctorProfile->compensationAmount() ?? 0);
+
+        if ($percentage <= 0) {
+            return;
+        }
+
+        DoctorAppointmentEntitlement::query()->create([
+            'clinic_id' => $clinicId,
+            'doctor_profile_id' => $doctorProfile->id,
+            'appointment_id' => $appointment->id,
+            'appointment_cost' => $cost,
+            'percentage' => $percentage,
+            'entitlement_amount' => $cost * ($percentage / 100),
+            'compensation_type' => DoctorProfile::COMPENSATION_PERCENTAGE,
+            'compensation_value' => $percentage,
+            'status' => DoctorAppointmentEntitlement::STATUS_UNPAID,
+            'appointment_date' => $appointment->scheduled_for?->toDateString(),
+        ]);
     }
 }

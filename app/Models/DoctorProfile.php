@@ -19,9 +19,9 @@ class DoctorProfile extends BaseModel
 
     public const COMPENSATION_PERCENTAGE = 'percentage';
 
-    public const COMPENSATION_WEEKLY_FIXED = 'weekly_fixed';
+    public const COMPENSATION_WEEKLY_FIXED = 'fixed_weekly';
 
-    public const COMPENSATION_MONTHLY_FIXED = 'monthly_fixed';
+    public const COMPENSATION_MONTHLY_FIXED = 'fixed_monthly';
 
     protected $fillable = [
         'clinic_id',
@@ -35,6 +35,10 @@ class DoctorProfile extends BaseModel
         'employment_start_date',
         'compensation_type',
         'compensation_value',
+        'percentage_value',
+        'fixed_weekly_amount',
+        'fixed_monthly_amount',
+        'currency',
         'is_active',
         'notes',
     ];
@@ -44,8 +48,21 @@ class DoctorProfile extends BaseModel
         return [
             'is_active' => 'boolean',
             'compensation_value' => 'decimal:2',
+            'percentage_value' => 'decimal:2',
+            'fixed_weekly_amount' => 'decimal:2',
+            'fixed_monthly_amount' => 'decimal:2',
             'employment_start_date' => 'date',
         ];
+    }
+
+    public function compensationAmount(): ?string
+    {
+        return match ($this->compensation_type) {
+            self::COMPENSATION_PERCENTAGE => $this->percentage_value ?? $this->compensation_value,
+            self::COMPENSATION_WEEKLY_FIXED => $this->fixed_weekly_amount ?? $this->compensation_value,
+            self::COMPENSATION_MONTHLY_FIXED => $this->fixed_monthly_amount ?? $this->compensation_value,
+            default => $this->compensation_value,
+        };
     }
 
     public function clinic(): BelongsTo

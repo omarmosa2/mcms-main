@@ -34,4 +34,9 @@ class EmployeeSalaryPayment extends BaseModel
     {
         return $this->belongsTo(User::class, 'paid_by');
     }
+
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class);
+    }
 }

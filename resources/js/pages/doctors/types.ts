@@ -1,6 +1,6 @@
 export type DoctorGender = 'male' | 'female';
 
-export type CompensationType = 'percentage' | 'weekly_fixed' | 'monthly_fixed';
+export type CompensationType = 'percentage' | 'fixed_weekly' | 'fixed_monthly';
 
 export type Clinic = {
     id: number;
@@ -42,6 +42,10 @@ export type Doctor = {
     employment_start_date: string | null;
     compensation_type: CompensationType;
     compensation_value: number | null;
+    percentage_value: number | null;
+    fixed_weekly_amount: number | null;
+    fixed_monthly_amount: number | null;
+    currency: string;
     is_active: boolean;
     notes: string | null;
     schedules: DoctorSchedule[];
@@ -62,6 +66,10 @@ export type DoctorFormData = {
     employment_start_date: string;
     compensation_type: CompensationType;
     compensation_value: string;
+    percentage_value: string;
+    fixed_weekly_amount: string;
+    fixed_monthly_amount: string;
+    currency: string;
     is_active: boolean;
     notes: string;
     schedules: DoctorSchedule[];

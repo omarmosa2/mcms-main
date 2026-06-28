@@ -6,7 +6,6 @@ use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\ClinicWorkingHour;
-use App\Models\Department;
 use App\Models\DoctorLeave;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
@@ -1421,35 +1420,6 @@ class AppointmentControllerTest extends TestCase
 
             ClinicWorkingHour::query()->create([
                 'clinic_id' => $clinic->id,
-                'day_of_week' => $day,
-                'is_active' => $hours !== null,
-                'start_time' => $hours['start_time'] ?? null,
-                'end_time' => $hours['end_time'] ?? null,
-            ]);
-        }
-    }
-
-    /**
-     * @param  array<string, array{start_time: string, end_time: string}>  $activeDays
-     */
-    private function setDepartmentWorkingHours(Department $department, array $activeDays): void
-    {
-        $nameToIndex = [
-            'sunday' => 0, 'monday' => 1, 'tuesday' => 2,
-            'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6,
-        ];
-
-        $normalized = [];
-        foreach ($activeDays as $day => $hours) {
-            $index = is_int($day) ? $day : ($nameToIndex[$day] ?? $day);
-            $normalized[$index] = $hours;
-        }
-
-        foreach (ClinicWorkingHour::DAYS as $day) {
-            $hours = $normalized[$day] ?? null;
-
-            ClinicWorkingHour::query()->create([
-                'clinic_id' => $department->clinic_id,
                 'day_of_week' => $day,
                 'is_active' => $hours !== null,
                 'start_time' => $hours['start_time'] ?? null,

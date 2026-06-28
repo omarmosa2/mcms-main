@@ -51,7 +51,7 @@ return new class extends Migration
             $table->string('email', 150)->nullable();
             $table->string('username')->nullable()->unique();
             $table->date('employment_start_date')->nullable();
-            $table->enum('compensation_type', ['percentage', 'weekly_fixed', 'monthly_fixed'])->default('percentage');
+            $table->enum('compensation_type', ['percentage', 'fixed_weekly', 'fixed_monthly'])->default('percentage');
             $table->decimal('compensation_value', 12, 2)->nullable();
             $table->boolean('is_active')->default(true);
             $table->text('notes')->nullable();

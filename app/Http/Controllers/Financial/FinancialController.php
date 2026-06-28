@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Financial;
 
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
+use App\Models\Clinic;
+use App\Models\DoctorProfile;
 use App\Models\Invoice;
+use App\Models\Patient;
 use App\Models\Payment;
+use App\Services\Cache\CacheService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,13 +21,23 @@ use Symfony\Component\HttpFoundation\Response;
 
 class FinancialController extends Controller
 {
+    public function __construct(private CacheService $cacheService) {}
+
     public function index(Request $request): JsonResponse|InertiaResponse
     {
-        $clinicId = $this->resolveClinicId($request);
         $filters = $this->resolveFilters($request);
         [$periodStart, $periodEnd] = $this->resolvePeriod($filters);
 
-        $rows = $this->appointmentFinancialRows($clinicId, $filters, $periodStart, $periodEnd);
+        $selectedClinicId = $this->nullableInteger($filters['clinic_id'] ?? null);
+        $userClinicId = $this->getUserClinicId($request);
+        $includeAllClinics = $this->canViewAllClinics($request) && $selectedClinicId === null;
+
+        $clinicId = $selectedClinicId ?? $userClinicId;
+
+        $clinic = Clinic::query()->find($clinicId);
+        $clinicName = $clinic?->name ?? '-';
+
+        $rows = $this->appointmentFinancialRows($clinicId, $clinicName, $filters, $periodStart, $periodEnd, $includeAllClinics);
         $summaries = $this->summaries($rows);
 
         $payload = [
@@ -34,6 +48,9 @@ class FinancialController extends Controller
                 'period_start' => $periodStart->toDateString(),
                 'period_end' => $periodEnd->toDateString(),
             ],
+            'clinics' => $this->clinicOptions(),
+            'doctors' => $this->doctorsDropdown($clinicId, $includeAllClinics),
+            'patients' => $this->patientsDropdown($clinicId, $includeAllClinics),
         ];
 
         if ($request->expectsJson()) {
@@ -43,15 +60,30 @@ class FinancialController extends Controller
         return Inertia::render('financial/Index', $payload);
     }
 
-    private function resolveClinicId(Request $request): int
+    private function getUserClinicId(Request $request): ?int
     {
         $clinicId = $request->user()?->clinic_id;
+
+        return $clinicId !== null ? (int) $clinicId : null;
+    }
+
+    private function canViewAllClinics(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user !== null
+            && ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('clinic_admin'));
+    }
+
+    private function resolveClinicId(Request $request): int
+    {
+        $clinicId = $this->getUserClinicId($request);
 
         if ($clinicId === null) {
             abort(Response::HTTP_FORBIDDEN, 'Clinic context is required.');
         }
 
-        return (int) $clinicId;
+        return $clinicId;
     }
 
     /**
@@ -64,8 +96,11 @@ class FinancialController extends Controller
             'date_from' => $this->nullableString($request->query('date_from')),
             'date_to' => $this->nullableString($request->query('date_to')),
             'status' => $this->allowedNullableString($request->query('status'), ['unpaid', 'partially_paid', 'paid']),
+            'clinic_id' => $this->nullableInteger($request->query('clinic_id')),
             'doctor_id' => $this->nullableInteger($request->query('doctor_id')),
+            'patient_id' => $this->nullableInteger($request->query('patient_id')),
             'appointment_type' => $this->allowedNullableString($request->query('appointment_type'), ['first_visit', 'review']),
+            'payment_method' => $this->allowedNullableString($request->query('payment_method'), ['cash', 'card', 'bank_transfer', 'insurance', 'online']),
         ];
     }
 
@@ -91,20 +126,28 @@ class FinancialController extends Controller
      * @param  array<string, mixed>  $filters
      * @return Collection<int, array<string, mixed>>
      */
-    private function appointmentFinancialRows(int $clinicId, array $filters, CarbonImmutable $periodStart, CarbonImmutable $periodEnd): Collection
+    private function appointmentFinancialRows(int $clinicId, string $clinicName, array $filters, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, bool $includeAllClinics = false): Collection
     {
         $query = Appointment::query()
-            ->forClinic($clinicId)
             ->withoutTrashed()
             ->with([
-                'patient:id,clinic_id,first_name,last_name,file_number',
-                'doctor:id,clinic_id,name',
+                'clinic:id,name',
+                'patient' => fn ($q) => $q->withoutGlobalScope('clinic')->select('id', 'clinic_id', 'first_name', 'last_name', 'file_number'),
+                'doctor' => fn ($q) => $q->withoutGlobalScope('clinic')->select('id', 'clinic_id', 'name'),
             ])
             ->whereBetween('scheduled_for', [$periodStart, $periodEnd])
             ->whereNotIn('status', [Appointment::STATUS_CANCELED, Appointment::STATUS_NO_SHOW]);
 
+        if (! $includeAllClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
+
         if ($filters['doctor_id'] !== null) {
             $query->where('doctor_id', $filters['doctor_id']);
+        }
+
+        if ($filters['patient_id'] !== null) {
+            $query->where('patient_id', $filters['patient_id']);
         }
 
         if ($filters['appointment_type'] !== null) {
@@ -113,9 +156,9 @@ class FinancialController extends Controller
 
         $appointments = $query->orderBy('scheduled_for', 'desc')->get();
 
-        $paymentData = $this->paymentDataForAppointments($clinicId, $appointments->pluck('id')->all());
+        $paymentData = $this->paymentDataForAppointments($appointments->pluck('id')->all());
 
-        return $appointments->map(function (Appointment $appointment) use ($paymentData): array {
+        $rows = $appointments->map(function (Appointment $appointment) use ($clinicName, $paymentData): array {
             $appointmentId = $appointment->id;
             $paidAmount = (float) ($paymentData[$appointmentId]['paid'] ?? 0);
             $cost = (float) ($appointment->cost ?? 0);
@@ -124,6 +167,7 @@ class FinancialController extends Controller
 
             return [
                 'appointment_id' => $appointmentId,
+                'clinic_name' => $appointment->clinic?->name ?? $clinicName,
                 'patient_name' => trim(($appointment->patient?->first_name ?? '').' '.($appointment->patient?->last_name ?? '')),
                 'file_number' => $appointment->patient?->file_number,
                 'doctor_name' => $appointment->doctor?->name ?? '-',
@@ -135,27 +179,35 @@ class FinancialController extends Controller
                 'appointment_date' => $appointment->scheduled_for?->toDateString(),
                 'payment_method' => $lastPaymentMethod,
             ];
-        })->filter(function (array $row) use ($filters): bool {
-            if ($filters['status'] === null) {
-                return true;
+        });
+
+        $rows = $rows->filter(function (array $row) use ($filters): bool {
+            if ($filters['status'] !== null && $row['payment_status'] !== $filters['status']) {
+                return false;
             }
 
-            return $row['payment_status'] === $filters['status'];
+            if ($filters['payment_method'] !== null && $row['payment_method'] !== $filters['payment_method']) {
+                return false;
+            }
+
+            return true;
         })->values();
+
+        return $rows;
     }
 
     /**
      * @param  array<int>  $appointmentIds
      * @return array<int, array{paid: float, last_method: string|null}>
      */
-    private function paymentDataForAppointments(int $clinicId, array $appointmentIds): array
+    private function paymentDataForAppointments(array $appointmentIds): array
     {
         if (empty($appointmentIds)) {
             return [];
         }
 
         $invoicePayments = Invoice::query()
-            ->forClinic($clinicId)
+            ->withoutGlobalScope('clinic')
             ->join('payments', 'payments.invoice_id', '=', 'invoices.id')
             ->whereIn('invoices.appointment_id', $appointmentIds)
             ->whereNotIn('payments.status', Payment::TERMINAL_STATUSES)
@@ -179,6 +231,67 @@ class FinancialController extends Controller
         }
 
         return $result;
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function doctorsDropdown(int $clinicId, bool $includeAllClinics = false): array
+    {
+        $query = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
+            ->where('doctor_profiles.is_active', true)
+            ->join('users', 'users.id', '=', 'doctor_profiles.user_id')
+            ->select('users.id', 'users.name');
+
+        if (! $includeAllClinics) {
+            $query->where('doctor_profiles.clinic_id', $clinicId);
+        }
+
+        return $query
+            ->orderBy('users.name')
+            ->get()
+            ->map(fn ($row) => ['id' => (int) $row->id, 'name' => $row->name])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{id: int, full_name: string}>
+     */
+    private function patientsDropdown(int $clinicId, bool $includeAllClinics = false): array
+    {
+        $query = Patient::query()
+            ->withoutGlobalScope('clinic')
+            ->withoutTrashed();
+
+        if (! $includeAllClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
+
+        return $query
+            ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as full_name"))
+            ->orderBy('first_name')
+            ->limit(500)
+            ->get()
+            ->map(fn ($row) => ['id' => (int) $row->id, 'full_name' => $row->full_name])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function clinicOptions(): array
+    {
+        return Clinic::query()
+            ->clinical()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Clinic $clinic): array => [
+                'id' => (int) $clinic->id,
+                'name' => $clinic->name,
+            ])
+            ->all();
     }
 
     /**

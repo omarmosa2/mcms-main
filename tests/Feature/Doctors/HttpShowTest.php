@@ -79,7 +79,7 @@ class HttpShowTest extends TestCase
         $payload = [
             'full_name' => 'Cross Clinic Updated',
             'specialty' => 'Neuro',
-            'compensation_type' => 'weekly_fixed',
+            'compensation_type' => 'fixed_weekly',
             'compensation_value' => '500',
             'schedules' => [
                 ['day_of_week' => 2, 'is_available' => true, 'start_time' => '10:00', 'end_time' => '13:00'],

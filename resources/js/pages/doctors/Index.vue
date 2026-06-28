@@ -60,11 +60,11 @@ const totalLabel = computed(() => {
 const compensationLabel = (doctor: Doctor): string => {
     switch (doctor.compensation_type) {
         case 'percentage':
-            return `${doctor.compensation_value ?? 0}% نسبة`;
-        case 'weekly_fixed':
-            return `${doctor.compensation_value ?? 0} أسبوعي`;
-        case 'monthly_fixed':
-            return `${doctor.compensation_value ?? 0} شهري`;
+            return `${doctor.percentage_value ?? doctor.compensation_value ?? 0}% نسبة`;
+        case 'fixed_weekly':
+            return `${doctor.fixed_weekly_amount ?? doctor.compensation_value ?? 0} أسبوعي`;
+        case 'fixed_monthly':
+            return `${doctor.fixed_monthly_amount ?? doctor.compensation_value ?? 0} شهري`;
         default:
             return '—';
     }

@@ -9,6 +9,7 @@ import FinancialStatsCards from './components/FinancialStatsCards.vue';
 
 type FinancialRow = {
     appointment_id: number;
+    clinic_name: string;
     patient_name: string;
     file_number: number | null;
     doctor_name: string;
@@ -19,6 +20,21 @@ type FinancialRow = {
     payment_status: 'unpaid' | 'partially_paid' | 'paid';
     appointment_date: string | null;
     payment_method: string | null;
+};
+
+type DoctorOption = {
+    id: number;
+    name: string;
+};
+
+type PatientOption = {
+    id: number;
+    full_name: string;
+};
+
+type ClinicOption = {
+    id: number;
+    name: string;
 };
 
 const props = defineProps<{
@@ -32,6 +48,9 @@ const props = defineProps<{
         partially_paid_count: number;
     };
     filters: Record<string, string | number | null>;
+    clinics: ClinicOption[];
+    doctors: DoctorOption[];
+    patients: PatientOption[];
 }>();
 
 defineOptions({
@@ -46,7 +65,11 @@ const month = ref(
 const dateFrom = ref(String(props.filters.date_from ?? ''));
 const dateTo = ref(String(props.filters.date_to ?? ''));
 const status = ref(String(props.filters.status ?? ''));
+const clinicId = ref(String(props.filters.clinic_id ?? ''));
 const appointmentType = ref(String(props.filters.appointment_type ?? ''));
+const doctorId = ref(String(props.filters.doctor_id ?? ''));
+const patientId = ref(String(props.filters.patient_id ?? ''));
+const paymentMethod = ref(String(props.filters.payment_method ?? ''));
 
 const labels: Record<string, string> = {
     first_visit: 'كشفية أولى',
@@ -87,15 +110,22 @@ const reload = (): void => {
             date_from: dateFrom.value || undefined,
             date_to: dateTo.value || undefined,
             status: status.value || undefined,
+            clinic_id: clinicId.value || undefined,
             appointment_type: appointmentType.value || undefined,
+            doctor_id: doctorId.value || undefined,
+            patient_id: patientId.value || undefined,
+            payment_method: paymentMethod.value || undefined,
         },
         { preserveScroll: true, preserveState: true, replace: true },
     );
 };
 
-watch([month, dateFrom, dateTo, status, appointmentType], () => {
-    reload();
-});
+watch(
+    [month, dateFrom, dateTo, status, clinicId, appointmentType, doctorId, patientId, paymentMethod],
+    () => {
+        reload();
+    },
+);
 </script>
 
 <template>
@@ -122,7 +152,7 @@ watch([month, dateFrom, dateTo, status, appointmentType], () => {
         <FinancialStatsCards :summaries="summaries" />
 
         <section class="rounded-lg border bg-card p-4">
-            <div class="grid gap-3 md:grid-cols-5">
+            <div class="grid gap-3 md:grid-cols-4 lg:grid-cols-9">
                 <div class="grid gap-1">
                     <Label>الشهر</Label
                     ><Input v-model="month" type="month" class="h-10" />
@@ -134,6 +164,22 @@ watch([month, dateFrom, dateTo, status, appointmentType], () => {
                 <div class="grid gap-1">
                     <Label>إلى تاريخ</Label
                     ><Input v-model="dateTo" type="date" class="h-10" />
+                </div>
+                <div class="grid gap-1">
+                    <Label>العيادة</Label
+                    ><select
+                        v-model="clinicId"
+                        class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
+                    >
+                        <option value="">كل العيادات</option>
+                        <option
+                            v-for="clinic in clinics"
+                            :key="clinic.id"
+                            :value="clinic.id"
+                        >
+                            {{ clinic.name }}
+                        </option>
+                    </select>
                 </div>
                 <div class="grid gap-1">
                     <Label>الحالة</Label
@@ -158,14 +204,61 @@ watch([month, dateFrom, dateTo, status, appointmentType], () => {
                         <option value="review">مراجعة</option>
                     </select>
                 </div>
+                <div class="grid gap-1">
+                    <Label>الطبيب</Label
+                    ><select
+                        v-model="doctorId"
+                        class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
+                    >
+                        <option value="">الكل</option>
+                        <option
+                            v-for="doctor in doctors"
+                            :key="doctor.id"
+                            :value="doctor.id"
+                        >
+                            {{ doctor.name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="grid gap-1">
+                    <Label>المريض</Label
+                    ><select
+                        v-model="patientId"
+                        class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
+                    >
+                        <option value="">الكل</option>
+                        <option
+                            v-for="patient in patients"
+                            :key="patient.id"
+                            :value="patient.id"
+                        >
+                            {{ patient.full_name }}
+                        </option>
+                    </select>
+                </div>
+                <div class="grid gap-1">
+                    <Label>طريقة الدفع</Label
+                    ><select
+                        v-model="paymentMethod"
+                        class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
+                    >
+                        <option value="">الكل</option>
+                        <option value="cash">نقداً</option>
+                        <option value="card">بطاقة</option>
+                        <option value="bank_transfer">حوالة بنكية</option>
+                        <option value="insurance">تأمين</option>
+                        <option value="online">إلكتروني</option>
+                    </select>
+                </div>
             </div>
         </section>
 
         <section class="overflow-hidden rounded-lg border bg-card">
             <div class="overflow-x-auto">
-                <table class="w-full min-w-[1240px] text-right text-sm">
+                <table class="w-full min-w-[1400px] text-right text-sm">
                     <thead class="bg-muted text-xs text-muted-foreground">
                         <tr>
+                            <th class="px-4 py-3">العيادة</th>
                             <th class="px-4 py-3">اسم المريض</th>
                             <th class="px-4 py-3">رقم الملف</th>
                             <th class="px-4 py-3">اسم الطبيب</th>
@@ -184,6 +277,9 @@ watch([month, dateFrom, dateTo, status, appointmentType], () => {
                             :key="row.appointment_id"
                             class="border-t"
                         >
+                            <td class="px-4 py-3 text-foreground">
+                                {{ row.clinic_name }}
+                            </td>
                             <td class="px-4 py-3 font-semibold text-foreground">
                                 {{ row.patient_name }}
                             </td>
@@ -221,7 +317,7 @@ watch([month, dateFrom, dateTo, status, appointmentType], () => {
                         </tr>
                         <tr v-if="financial_rows.length === 0">
                             <td
-                                colspan="10"
+                                colspan="11"
                                 class="px-4 py-10 text-center text-muted-foreground"
                             >
                                 لا توجد بيانات مالية ضمن الفلاتر الحالية.

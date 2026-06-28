@@ -40,6 +40,10 @@ class Appointment extends BaseModel
     protected function casts(): array
     {
         return [
+            'clinic_id' => 'integer',
+            'patient_id' => 'integer',
+            'doctor_id' => 'integer',
+            'created_by' => 'integer',
             'scheduled_for' => 'datetime',
             'arrived_at' => 'datetime',
             'completed_at' => 'datetime',

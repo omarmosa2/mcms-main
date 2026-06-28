@@ -62,7 +62,7 @@ class ClinicWorkingHoursService
             ->exists();
 
         if (! $hasSchedule) {
-            return true;
+            return false;
         }
 
         $start = Carbon::parse($scheduledFor);

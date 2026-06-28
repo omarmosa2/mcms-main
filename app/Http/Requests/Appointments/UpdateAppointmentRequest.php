@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Appointments;
 
-use App\Models\User;
+use App\Models\DoctorProfile;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,10 +25,20 @@ class UpdateAppointmentRequest extends FormRequest
         $appointmentId = (int) $this->route('appointmentId');
 
         return [
+            'clinic_id' => [
+                'sometimes',
+                'required',
+                'integer',
+                Rule::exists('clinics', 'id')->where(
+                    fn ($query) => $query->where('is_active', true),
+                ),
+            ],
             'patient_id' => [
                 'sometimes',
                 'required',
                 'integer',
+                // المرضى دائماً مرتبطون بـ clinic_id الخاص بالمستخدم (العيادة الأم)
+                // وليس بالعيادة الفرعية المُختارة في الفورم
                 Rule::exists('patients', 'id')->where(
                     fn ($query) => $query->where('clinic_id', $clinicId),
                 ),
@@ -37,22 +47,19 @@ class UpdateAppointmentRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'integer',
-                Rule::exists('users', 'id')->where(
-                    fn ($query) => $query->where('clinic_id', $clinicId),
-                ),
+                Rule::exists('users', 'id'),
                 function (string $attribute, mixed $value, Closure $fail) use ($clinicId): void {
-                    if ($value === null || $clinicId === null) {
+                    $targetClinicId = $this->targetClinicId($clinicId);
+
+                    if ($value === null || $targetClinicId === null) {
                         return;
                     }
 
-                    $doctorExists = User::query()
-                        ->where('clinic_id', $clinicId)
-                        ->whereKey((int) $value)
-                        ->whereHas('roles', function ($query) use ($clinicId): void {
-                            $query
-                                ->where('roles.clinic_id', $clinicId)
-                                ->where('roles.name', 'doctor');
-                        })
+                    $doctorExists = DoctorProfile::query()
+                        ->withoutGlobalScope('clinic')
+                        ->where('clinic_id', $targetClinicId)
+                        ->where('user_id', (int) $value)
+                        ->where('is_active', true)
                         ->exists();
 
                     if (! $doctorExists) {
@@ -67,7 +74,7 @@ class UpdateAppointmentRequest extends FormRequest
                 'max:50',
                 Rule::unique('appointments', 'appointment_number')
                     ->ignore($appointmentId)
-                    ->where(fn ($query) => $query->where('clinic_id', $clinicId)),
+                    ->where(fn ($query) => $query->where('clinic_id', $this->targetClinicId($clinicId))),
             ],
             'scheduled_for' => [
                 'sometimes',
@@ -79,13 +86,13 @@ class UpdateAppointmentRequest extends FormRequest
                     $today = $now->toDateString();
                     $scheduledDate = $scheduledFor->toDateString();
 
-                    if ($scheduledDate !== $today) {
+                    if ($scheduledDate < $today) {
                         $fail('يمكن تعديل المواعيد لليوم الحالي فقط.');
 
                         return;
                     }
 
-                    if ($scheduledFor->lte($now)) {
+                    if ($scheduledDate === $today && $scheduledFor->lte($now)) {
                         $fail('الوقت المختار قد مضى بالفعل.');
                     }
                 },
@@ -95,5 +102,12 @@ class UpdateAppointmentRequest extends FormRequest
             'cost' => ['sometimes', 'required', 'numeric', 'min:0'],
             'notes' => ['sometimes', 'nullable', 'string'],
         ];
+    }
+
+    private function targetClinicId(?int $fallbackClinicId): ?int
+    {
+        $selectedClinicId = $this->integer('clinic_id');
+
+        return $selectedClinicId > 0 ? $selectedClinicId : $fallbackClinicId;
     }
 }

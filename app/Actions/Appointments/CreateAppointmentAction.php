@@ -9,7 +9,6 @@ use App\Models\Appointment;
 use App\Models\DoctorAppointmentEntitlement;
 use App\Models\DoctorProfile;
 use App\Models\Patient;
-use App\Models\User;
 use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
 use App\Services\DoctorScheduleService;
@@ -29,12 +28,16 @@ class CreateAppointmentAction extends BaseAction
 
     /**
      * @param  array<string, mixed>  $payload
+     * @param  int|null  $userClinicId  العيادة الأم للمستخدم (للتحقق من ملكية المريض)
      */
-    public function handle(int $clinicId, int $userId, array $payload): Appointment
+    public function handle(int $clinicId, int $userId, array $payload, ?int $userClinicId = null): Appointment
     {
-        $this->ensurePatientBelongsToClinic($clinicId, (int) $payload['patient_id']);
+        // المريض يُتحقق منه بـ clinic_id الخاص بالمستخدم (العيادة الأم)
+        // وليس بالعيادة الفرعية المُختارة للحجز
+        $patientClinicId = $userClinicId ?? $clinicId;
+        $this->ensurePatientBelongsToClinic($patientClinicId, (int) $payload['patient_id']);
         $this->ensureDoctorBelongsToClinicIfProvided($clinicId, $payload['doctor_id'] ?? null);
-        $this->ensureScheduledForToday($payload['scheduled_for']);
+        $this->ensureScheduledIsNotInThePast($payload['scheduled_for']);
         $this->checkAppointmentConflicts($clinicId, $payload);
         $this->checkClinicWorkingHours($clinicId, $payload);
         $this->checkDoctorSchedule($clinicId, $payload);
@@ -184,14 +187,22 @@ class CreateAppointmentAction extends BaseAction
         }
     }
 
-    private function ensureScheduledForToday(mixed $scheduledFor): void
+    private function ensureScheduledIsNotInThePast(mixed $scheduledFor): void
     {
-        $scheduledDate = Carbon::parse($scheduledFor)->toDateString();
-        $today = now()->toDateString();
+        $scheduledAt = Carbon::parse($scheduledFor);
+        $scheduledDate = $scheduledAt->toDateString();
+        $now = now();
+        $today = $now->toDateString();
 
-        if ($scheduledDate !== $today) {
+        if ($scheduledDate < $today) {
             throw ValidationException::withMessages([
                 'scheduled_for' => 'يمكن حجز مواعيد لليوم الحالي فقط.',
+            ]);
+        }
+
+        if ($scheduledDate === $today && $scheduledAt->lte($now)) {
+            throw ValidationException::withMessages([
+                'scheduled_for' => 'الوقت المختار قد مضى بالفعل.',
             ]);
         }
     }
@@ -216,14 +227,11 @@ class CreateAppointmentAction extends BaseAction
             return;
         }
 
-        $doctorExists = User::query()
+        $doctorExists = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
             ->where('clinic_id', $clinicId)
-            ->whereKey((int) $doctorId)
-            ->whereHas('roles', function ($query) use ($clinicId): void {
-                $query
-                    ->where('roles.clinic_id', $clinicId)
-                    ->where('roles.name', 'doctor');
-            })
+            ->where('user_id', (int) $doctorId)
+            ->where('is_active', true)
             ->exists();
 
         if (! $doctorExists) {

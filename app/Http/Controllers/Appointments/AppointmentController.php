@@ -27,6 +27,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -52,6 +53,9 @@ class AppointmentController extends Controller
         $clinicId = $this->resolveClinicId($request);
         $filters = $this->resolveIndexFilters($request);
         $doctorScopeUserId = $this->resolveDoctorScopeUserId($request);
+        $includeAllClinics = $this->canViewAllAppointmentClinics($request)
+            && $doctorScopeUserId === null
+            && $filters['clinic_id'] === null;
 
         $appointments = $this->listAppointmentsAction->handle(
             clinicId: $clinicId,
@@ -65,6 +69,7 @@ class AppointmentController extends Controller
             clinicFilterId: $filters['clinic_id'],
             dateFrom: $filters['date_from'],
             dateTo: $filters['date_to'],
+            includeAllClinics: $includeAllClinics,
         );
 
         $appointmentsResource = AppointmentResource::collection($appointments);
@@ -88,13 +93,21 @@ class AppointmentController extends Controller
             ->values()
             ->all();
 
-        $todayAppointments = Appointment::query()
-            ->forClinic($clinicId)
+        $todayAppointments = ($includeAllClinics
+            ? Appointment::query()->withoutGlobalScope('clinic')
+            : Appointment::query()->forClinic($filters['clinic_id'] ?? $clinicId))
             ->withoutTrashed()
             ->with([
-                'patient:id,clinic_id,first_name,last_name,file_number,phone,date_of_birth',
-                'doctor:id,clinic_id,name',
-                'doctor.doctorProfile:id,clinic_id,user_id,specialty,status',
+                'clinic:id,name',
+                'patient' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'first_name', 'last_name', 'file_number', 'phone', 'date_of_birth'),
+                'doctor' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'name'),
+                'doctor.doctorProfile' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'user_id', 'specialty', 'is_active'),
                 'doctor.doctorProfile.clinic:id,name',
             ])
             ->whereDate('scheduled_for', now()->toDateString())
@@ -124,12 +137,13 @@ class AppointmentController extends Controller
 
     public function store(StoreAppointmentRequest $request): JsonResponse|RedirectResponse
     {
-        $clinicId = $this->resolveClinicId($request);
+        $clinicId = $this->resolveAppointmentClinicId($request);
 
         $appointment = $this->createAppointmentAction->handle(
             clinicId: $clinicId,
             userId: (int) $request->user()->id,
             payload: $request->validated(),
+            userClinicId: (int) $request->user()->clinic_id,
         );
 
         if ($request->expectsJson()) {
@@ -148,12 +162,14 @@ class AppointmentController extends Controller
         $clinicId = $this->resolveClinicId($request);
         $selectedClinicId = $this->normalizeNullableInteger($request->query('clinic_id'));
         $selectedDoctorId = $this->normalizeNullableInteger($request->query('doctor_id'));
+        $selectedDate = $this->normalizeNullableDate($request->query('date'));
 
         return response()->json([
             'data' => $this->resolveTodayAvailability(
                 clinicId: $clinicId,
                 selectedClinicId: $selectedClinicId,
                 selectedDoctorId: $selectedDoctorId,
+                selectedDate: $selectedDate,
             ),
         ]);
     }
@@ -350,16 +366,44 @@ class AppointmentController extends Controller
         return (int) $clinicId;
     }
 
+    private function resolveAppointmentClinicId(Request $request): int
+    {
+        $selectedClinicId = $this->normalizeNullableInteger($request->input('clinic_id'));
+
+        if ($selectedClinicId === null) {
+            return $this->resolveClinicId($request);
+        }
+
+        $clinicExists = Clinic::query()
+            ->clinical()
+            ->where('is_active', true)
+            ->whereKey($selectedClinicId)
+            ->exists();
+
+        if (! $clinicExists) {
+            abort(Response::HTTP_FORBIDDEN, 'Selected clinic is not available.');
+        }
+
+        return $selectedClinicId;
+    }
+
     /**
      * @return array{
      *     date: string,
+     *     current_date: string,
+     *     current_time: string,
      *     clinics: array<int, int>,
      *     clinic_options: array<int, array{id: int, name: string}>,
      *     doctors: array<int, array{
      *         id: int,
+     *         doctor_id: int,
+     *         doctor_profile_id: int,
      *         name: string,
+     *         full_name: string,
      *         clinic_id: int,
      *         specialty: ?string,
+     *         start_time: ?string,
+     *         end_time: ?string,
      *         clinic: array{id: int, name: string},
      *         available_periods: array<int, array{start_time: string, end_time: string}>
      *     }>,
@@ -370,9 +414,11 @@ class AppointmentController extends Controller
         int $clinicId,
         ?int $selectedClinicId = null,
         ?int $selectedDoctorId = null,
+        ?string $selectedDate = null,
     ): array {
-        $today = now()->toDateString();
-        $dayOfWeek = (int) now()->dayOfWeek;
+        $now = now();
+        $date = $selectedDate ?? $now->toDateString();
+        $dayOfWeek = (int) Carbon::parse($date)->dayOfWeek;
         $availableDoctors = [];
         $clinicPeriods = [];
         $availableClinics = [];
@@ -388,7 +434,9 @@ class AppointmentController extends Controller
 
         if ($todayClinicIds->isEmpty()) {
             return [
-                'date' => $today,
+                'date' => $date,
+                'current_date' => $now->toDateString(),
+                'current_time' => $now->format('H:i'),
                 'clinics' => [],
                 'clinic_options' => [],
                 'doctors' => [],
@@ -451,18 +499,25 @@ class AppointmentController extends Controller
                 $availability = $this->doctorAvailabilityService->availabilityForDay(
                     clinicId: (int) $clinic->id,
                     doctorId: $doctorId,
-                    date: $today,
+                    date: $date,
                 );
 
                 if (! $availability['is_available']) {
                     continue;
                 }
 
+                $firstPeriod = $availability['available_periods'][0] ?? null;
+
                 $availableDoctors[] = [
                     'id' => $doctorId,
+                    'doctor_id' => $doctorId,
+                    'doctor_profile_id' => (int) $doctor->id,
                     'name' => $doctor->user?->name ?? $doctor->full_name,
+                    'full_name' => $doctor->full_name,
                     'clinic_id' => (int) $clinic->id,
                     'specialty' => $doctor->specialty,
+                    'start_time' => $firstPeriod['start_time'] ?? null,
+                    'end_time' => $firstPeriod['end_time'] ?? null,
                     'clinic' => [
                         'id' => (int) $clinic->id,
                         'name' => $clinic->name,
@@ -479,7 +534,9 @@ class AppointmentController extends Controller
         }
 
         return [
-            'date' => $today,
+            'date' => $date,
+            'current_date' => $now->toDateString(),
+            'current_time' => $now->format('H:i'),
             'clinics' => array_column($availableClinics, 'id'),
             'clinic_options' => $availableClinics,
             'doctors' => $availableDoctors,
@@ -523,6 +580,14 @@ class AppointmentController extends Controller
         }
 
         return null;
+    }
+
+    private function canViewAllAppointmentClinics(Request $request): bool
+    {
+        $user = $request->user();
+
+        return $user !== null
+            && ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('clinic_admin') || $user->hasRole('receptionist'));
     }
 
     /**

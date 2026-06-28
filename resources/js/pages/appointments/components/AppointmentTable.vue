@@ -378,7 +378,9 @@ const sortIconFor = (field: AppointmentSortField) => {
                             </td>
                             <td class="px-4 py-3 text-sm" data-label="العيادة">
                                 {{
-                                    appointment.doctor?.clinic?.name ?? '-'
+                                    appointment.clinic?.name ??
+                                    appointment.doctor?.clinic?.name ??
+                                    '-'
                                 }}
                             </td>
                             <td class="px-4 py-3" data-label="الطبيب">

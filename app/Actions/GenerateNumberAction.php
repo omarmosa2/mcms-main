@@ -94,12 +94,12 @@ class GenerateNumberAction extends BaseAction
         };
 
         $today = now()->toDateString();
-        $sequence = $this->getNextSequence($entityType, $today);
+        $sequence = $this->getNextSequence($clinicId, $entityType, $today);
 
         return sprintf('%s-%s-%04d', $prefix, str_replace('-', '', $today), $sequence);
     }
 
-    private function getNextSequence(string $entityType, string $date): int
+    private function getNextSequence(int $clinicId, string $entityType, string $date): int
     {
         $model = match ($entityType) {
             self::ENTITY_PATIENT => Patient::class,
@@ -122,10 +122,32 @@ class GenerateNumberAction extends BaseAction
             default => 'number',
         };
 
-        $latest = (int) $model::withTrashed()
+        $latest = $model::withTrashed()
+            ->withoutGlobalScope('clinic')
+            ->where('clinic_id', $clinicId)
             ->where($column, 'like', '%'.str_replace('-', '', $date).'%')
-            ->max(DB::raw("CAST(SUBSTRING_INDEX($column, '-', -1) AS UNSIGNED)"));
+            ->pluck($column)
+            ->map(fn (mixed $number): int => $this->sequenceFromNumber($number))
+            ->max() ?? 0;
 
         return $latest + 1;
+    }
+
+    private function sequenceFromNumber(mixed $number): int
+    {
+        if (is_int($number)) {
+            return $number;
+        }
+
+        if (! is_string($number) || trim($number) === '') {
+            return 0;
+        }
+
+        $lastDashPosition = strrpos($number, '-');
+        $sequence = $lastDashPosition === false
+            ? $number
+            : substr($number, $lastDashPosition + 1);
+
+        return ctype_digit($sequence) ? (int) $sequence : 0;
     }
 }

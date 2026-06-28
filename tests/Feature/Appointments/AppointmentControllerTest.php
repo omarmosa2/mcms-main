@@ -21,16 +21,85 @@ class AppointmentControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_index_returns_only_clinic_appointments(): void
+    public function test_index_returns_only_doctor_own_appointments(): void
     {
         $clinic = Clinic::factory()->create();
         $otherClinic = Clinic::factory()->create();
-        $user = $this->authenticateForClinic($clinic);
+        $doctor = $this->authenticateForClinic($clinic, 'doctor');
+
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'is_active' => true,
+        ]);
 
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
         $otherPatient = Patient::factory()->create(['clinic_id' => $otherClinic->id]);
 
         $appointment = Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'appointment_number' => 'APT-1000',
+        ]);
+
+        Appointment::factory()->create([
+            'clinic_id' => $otherClinic->id,
+            'patient_id' => $otherPatient->id,
+            'doctor_id' => $doctor->id,
+            'appointment_number' => 'APT-2000',
+        ]);
+
+        $response = $this->getJson(route('appointments.index'));
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $appointment->id);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'action' => 'appointments.index',
+        ]);
+    }
+
+    public function test_clinic_admin_can_view_appointments_from_all_clinics(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $otherClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'clinic_admin');
+
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        $otherPatient = Patient::factory()->create(['clinic_id' => $otherClinic->id]);
+
+        $appointment = Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'appointment_number' => 'APT-1000',
+        ]);
+
+        $otherAppointment = Appointment::factory()->create([
+            'clinic_id' => $otherClinic->id,
+            'patient_id' => $otherPatient->id,
+            'appointment_number' => 'APT-2000',
+        ]);
+
+        $response = $this->getJson(route('appointments.index'));
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data');
+    }
+
+    public function test_receptionist_can_view_appointments_from_all_clinics(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $otherClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'receptionist');
+
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        $otherPatient = Patient::factory()->create(['clinic_id' => $otherClinic->id]);
+
+        Appointment::factory()->create([
             'clinic_id' => $clinic->id,
             'patient_id' => $patient->id,
             'appointment_number' => 'APT-1000',
@@ -45,14 +114,91 @@ class AppointmentControllerTest extends TestCase
         $response = $this->getJson(route('appointments.index'));
 
         $response->assertOk();
-        $response->assertJsonCount(1, 'data');
-        $response->assertJsonPath('data.0.id', $appointment->id);
+        $response->assertJsonCount(2, 'data');
+    }
 
-        $this->assertDatabaseHas('audit_logs', [
-            'clinic_id' => $clinic->id,
-            'user_id' => $user->id,
-            'action' => 'appointments.index',
-        ]);
+    public function test_index_selected_clinic_filter_populates_table_and_today_appointments(): void
+    {
+        Carbon::setTestNow('2026-06-28 08:00:00');
+
+        try {
+            $userClinic = Clinic::factory()->create(['name' => 'User Clinic']);
+            $selectedClinic = Clinic::factory()->create(['name' => 'Selected Clinic']);
+            $this->authenticateForClinic($userClinic);
+
+            $patient = Patient::factory()->create([
+                'clinic_id' => $selectedClinic->id,
+                'first_name' => 'Omar',
+                'last_name' => 'Saleh',
+            ]);
+
+            $appointment = Appointment::factory()->create([
+                'clinic_id' => $selectedClinic->id,
+                'patient_id' => $patient->id,
+                'scheduled_for' => Carbon::parse('2026-06-28 12:00:00'),
+                'status' => Appointment::STATUS_SCHEDULED,
+            ]);
+
+            Appointment::factory()->create([
+                'clinic_id' => $userClinic->id,
+                'patient_id' => Patient::factory()->create(['clinic_id' => $userClinic->id])->id,
+                'scheduled_for' => Carbon::parse('2026-06-28 11:00:00'),
+                'status' => Appointment::STATUS_SCHEDULED,
+            ]);
+
+            $response = $this->get(route('appointments.index', [
+                'clinic_id' => $selectedClinic->id,
+            ]));
+
+            $response->assertOk();
+            $response->assertInertia(fn (Assert $page) => $page
+                ->where('appointments.data.0.id', $appointment->id)
+                ->where('appointments.data.0.clinic.id', $selectedClinic->id)
+                ->where('appointments.data.0.clinic.name', 'Selected Clinic')
+                ->where('appointments.data.0.patient.full_name', 'Omar Saleh')
+                ->where('today_appointments.0.id', $appointment->id)
+                ->where('today_appointments.0.clinic.id', $selectedClinic->id)
+                ->where('today_appointments.0.patient.full_name', 'Omar Saleh'));
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_admin_index_without_clinic_filter_populates_table_and_today_appointments_from_all_clinics(): void
+    {
+        Carbon::setTestNow('2026-06-28 08:00:00');
+
+        try {
+            $adminClinic = Clinic::factory()->create(['name' => 'Admin Clinic']);
+            $otherClinic = Clinic::factory()->create(['name' => 'Dermatology Clinic']);
+            $this->authenticateForClinic($adminClinic, 'admin');
+
+            $patient = Patient::factory()->create([
+                'clinic_id' => $otherClinic->id,
+                'first_name' => 'Omar',
+                'last_name' => 'Saleh',
+            ]);
+
+            $appointment = Appointment::factory()->create([
+                'clinic_id' => $otherClinic->id,
+                'patient_id' => $patient->id,
+                'scheduled_for' => Carbon::parse('2026-06-28 12:00:00'),
+                'status' => Appointment::STATUS_SCHEDULED,
+            ]);
+
+            $response = $this->get(route('appointments.index'));
+
+            $response->assertOk();
+            $response->assertInertia(fn (Assert $page) => $page
+                ->where('appointments.data.0.id', $appointment->id)
+                ->where('appointments.data.0.clinic.id', $otherClinic->id)
+                ->where('appointments.data.0.patient.full_name', 'Omar Saleh')
+                ->where('today_appointments.0.id', $appointment->id)
+                ->where('today_appointments.0.clinic.id', $otherClinic->id)
+                ->where('today_appointments.0.patient.full_name', 'Omar Saleh'));
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 
     public function test_index_excludes_administrative_clinics_from_clinic_options(): void
@@ -270,17 +416,35 @@ class AppointmentControllerTest extends TestCase
 
     public function test_store_creates_scheduled_appointment_with_audit_log(): void
     {
+        Carbon::setTestNow('2026-06-28 08:00:00');
+
         $clinic = Clinic::factory()->create();
         $user = $this->authenticateForClinic($clinic);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
         $doctor = User::factory()->create(['clinic_id' => $clinic->id]);
         app(AssignUserRoleAction::class)->handle($doctor, 'doctor', $user->id);
+        $doctorProfile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'is_active' => true,
+        ]);
+        $this->setClinicWorkingHours($clinic, [
+            Carbon::MONDAY => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_profile_id' => $doctorProfile->id,
+            'day_of_week' => Carbon::MONDAY,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+            'is_available' => true,
+        ]);
 
         $payload = [
             'patient_id' => $patient->id,
             'doctor_id' => $doctor->id,
             'appointment_number' => 'APT-3000',
-            'scheduled_for' => now()->addHours(3)->seconds(0)->millisecond(0)->toISOString(),
+            'scheduled_for' => '2026-06-29T11:00:00',
             'duration_minutes' => 45,
             'appointment_type' => 'first_visit',
             'cost' => 500,
@@ -310,6 +474,322 @@ class AppointmentControllerTest extends TestCase
             'action' => 'appointments.create',
             'auditable_id' => $appointment->id,
         ]);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_store_generates_next_appointment_number_for_selected_clinic(): void
+    {
+        Carbon::setTestNow('2026-06-28 08:00:00');
+
+        try {
+            $userClinic = Clinic::factory()->create();
+            $selectedClinic = Clinic::factory()->create();
+            $admin = $this->authenticateForClinic($userClinic);
+            $patient = Patient::factory()->create(['clinic_id' => $userClinic->id]);
+            [$doctor, $doctorProfile] = $this->createActiveDoctorForClinic($selectedClinic, $admin);
+
+            $this->setClinicWorkingHours($selectedClinic, [
+                Carbon::SUNDAY => ['start_time' => '09:00', 'end_time' => '17:00'],
+            ]);
+
+            DoctorSchedule::query()->create([
+                'clinic_id' => $selectedClinic->id,
+                'doctor_profile_id' => $doctorProfile->id,
+                'day_of_week' => Carbon::SUNDAY,
+                'start_time' => '09:00',
+                'end_time' => '17:00',
+                'is_available' => true,
+            ]);
+
+            Appointment::factory()->create([
+                'clinic_id' => $selectedClinic->id,
+                'patient_id' => $patient->id,
+                'doctor_id' => $doctor->id,
+                'appointment_number' => 'APT-20260628-0001',
+                'scheduled_for' => '2026-06-28 10:00:00',
+                'duration_minutes' => 30,
+                'status' => Appointment::STATUS_SCHEDULED,
+            ]);
+
+            $response = $this->postJson(route('appointments.store'), [
+                'clinic_id' => $selectedClinic->id,
+                'patient_id' => $patient->id,
+                'doctor_id' => $doctor->id,
+                'scheduled_for' => '2026-06-28T12:30:00',
+                'duration_minutes' => 30,
+                'appointment_type' => 'first_visit',
+                'cost' => 250,
+            ]);
+
+            $response->assertCreated();
+            $response->assertJsonPath('data.appointment_number', 'APT-20260628-0002');
+
+            $this->assertDatabaseHas('appointments', [
+                'clinic_id' => $selectedClinic->id,
+                'appointment_number' => 'APT-20260628-0002',
+            ]);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_store_rejects_patient_label_instead_of_patient_id(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+
+        $response = $this->postJson(route('appointments.store'), [
+            'patient_id' => 'مريض تجريبي 1 - 2',
+            'doctor_id' => null,
+            'appointment_number' => 'APT-PATIENT-LABEL',
+            'scheduled_for' => now()->addHours(3)->seconds(0)->millisecond(0)->toISOString(),
+            'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['patient_id']);
+
+        $this->assertDatabaseMissing('appointments', [
+            'appointment_number' => 'APT-PATIENT-LABEL',
+        ]);
+    }
+
+    public function test_store_allows_future_appointment_inside_clinic_and_doctor_hours(): void
+    {
+        Carbon::setTestNow('2026-06-15 08:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        [$doctor, $profile] = $this->createActiveDoctorForClinic($clinic, $admin);
+
+        $this->setClinicWorkingHours($clinic, [
+            Carbon::TUESDAY => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_profile_id' => $profile->id,
+            'day_of_week' => Carbon::TUESDAY,
+            'start_time' => '10:00',
+            'end_time' => '14:00',
+            'is_available' => true,
+        ]);
+
+        $response = $this->postJson(route('appointments.store'), [
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'appointment_number' => 'APT-FUTURE-001',
+            'scheduled_for' => '2026-06-16T10:30:00+00:00',
+            'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.doctor_id', $doctor->id);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_store_rejects_past_time_on_current_day(): void
+    {
+        Carbon::setTestNow('2026-06-15 10:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        [$doctor, $profile] = $this->createActiveDoctorForClinic($clinic, $admin);
+
+        $this->setClinicWorkingHours($clinic, [
+            Carbon::MONDAY => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_profile_id' => $profile->id,
+            'day_of_week' => Carbon::MONDAY,
+            'start_time' => '09:00',
+            'end_time' => '17:00',
+            'is_available' => true,
+        ]);
+
+        $response = $this->postJson(route('appointments.store'), [
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'scheduled_for' => '2026-06-15T09:30:00+00:00',
+            'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['scheduled_for']);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_store_rejects_overlapping_doctor_or_patient_appointment(): void
+    {
+        Carbon::setTestNow('2026-06-15 08:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($clinic);
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        $otherPatient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        [$doctor, $profile] = $this->createActiveDoctorForClinic($clinic, $admin);
+        [$otherDoctor, $otherProfile] = $this->createActiveDoctorForClinic($clinic, $admin);
+
+        $this->setClinicWorkingHours($clinic, [
+            Carbon::MONDAY => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+
+        foreach ([$profile, $otherProfile] as $doctorProfile) {
+            DoctorSchedule::query()->create([
+                'clinic_id' => $clinic->id,
+                'doctor_profile_id' => $doctorProfile->id,
+                'day_of_week' => Carbon::MONDAY,
+                'start_time' => '09:00',
+                'end_time' => '17:00',
+                'is_available' => true,
+            ]);
+        }
+
+        Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'scheduled_for' => '2026-06-15 10:00:00',
+            'duration_minutes' => 60,
+            'status' => Appointment::STATUS_SCHEDULED,
+        ]);
+
+        $doctorConflict = $this->postJson(route('appointments.store'), [
+            'patient_id' => $otherPatient->id,
+            'doctor_id' => $doctor->id,
+            'scheduled_for' => '2026-06-15T10:30:00+00:00',
+            'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
+        ]);
+
+        $doctorConflict->assertUnprocessable();
+        $doctorConflict->assertJsonValidationErrors(['scheduled_for']);
+
+        $patientConflict = $this->postJson(route('appointments.store'), [
+            'patient_id' => $patient->id,
+            'doctor_id' => $otherDoctor->id,
+            'scheduled_for' => '2026-06-15T10:30:00+00:00',
+            'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
+        ]);
+
+        $patientConflict->assertUnprocessable();
+        $patientConflict->assertJsonValidationErrors(['scheduled_for']);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_booking_options_can_be_loaded_for_selected_future_date(): void
+    {
+        Carbon::setTestNow('2026-06-15 08:00:00');
+
+        $clinic = Clinic::factory()->create(['name' => 'Tuesday Clinic']);
+        $admin = $this->authenticateForClinic($clinic);
+        [$doctor, $profile] = $this->createActiveDoctorForClinic($clinic, $admin, ['name' => 'Tuesday Doctor']);
+
+        $this->setClinicWorkingHours($clinic, [
+            Carbon::TUESDAY => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_profile_id' => $profile->id,
+            'day_of_week' => Carbon::TUESDAY,
+            'start_time' => '11:00',
+            'end_time' => '15:00',
+            'is_available' => true,
+        ]);
+
+        $response = $this->getJson(route('appointments.booking-options', [
+            'date' => '2026-06-16',
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.date', '2026-06-16');
+        $response->assertJsonPath('data.clinic_options.0.id', $clinic->id);
+        $response->assertJsonPath('data.doctors.0.id', $doctor->id);
+        $response->assertJsonPath('data.doctors.0.available_periods.0.start_time', '11:00');
+
+        Carbon::setTestNow();
+    }
+
+    public function test_booking_options_and_store_use_user_id_not_doctor_profile_id_for_doctor_id(): void
+    {
+        Carbon::setTestNow('2026-06-15 08:00:00');
+
+        $clinic = Clinic::factory()->create(['name' => 'Internal Medicine']);
+        $this->authenticateForClinic($clinic);
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        $doctorUser = User::factory()->create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Abdulrahman Afoni',
+        ]);
+        $doctorProfile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'full_name' => 'عبدالرحمن أفوني',
+            'specialty' => 'داخلية',
+            'is_active' => true,
+        ]);
+
+        $this->setClinicWorkingHours($clinic, [
+            Carbon::MONDAY => ['start_time' => '09:00', 'end_time' => '20:00'],
+        ]);
+        DoctorSchedule::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_profile_id' => $doctorProfile->id,
+            'day_of_week' => Carbon::MONDAY,
+            'start_time' => '17:00',
+            'end_time' => '20:00',
+            'is_available' => true,
+        ]);
+
+        $optionsResponse = $this->getJson(route('appointments.booking-options', [
+            'clinic_id' => $clinic->id,
+            'date' => '2026-06-15',
+        ]));
+
+        $optionsResponse->assertOk();
+        $optionsResponse->assertJsonPath('data.doctors.0.id', $doctorUser->id);
+        $optionsResponse->assertJsonPath('data.doctors.0.doctor_id', $doctorUser->id);
+        $optionsResponse->assertJsonPath('data.doctors.0.doctor_profile_id', $doctorProfile->id);
+        $optionsResponse->assertJsonPath('data.doctors.0.full_name', 'عبدالرحمن أفوني');
+        $optionsResponse->assertJsonPath('data.doctors.0.start_time', '17:00');
+        $optionsResponse->assertJsonPath('data.doctors.0.end_time', '20:00');
+
+        $storeResponse = $this->postJson(route('appointments.store'), [
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctorUser->id,
+            'appointment_number' => 'APT-USER-ID-001',
+            'scheduled_for' => '2026-06-15T17:30:00+00:00',
+            'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
+        ]);
+
+        $storeResponse->assertCreated();
+        $storeResponse->assertJsonPath('data.doctor_id', $doctorUser->id);
+
+        $this->assertDatabaseHas('appointments', [
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctorUser->id,
+        ]);
+
+        Carbon::setTestNow();
     }
 
     public function test_store_rejects_appointment_on_inactive_clinic_day(): void
@@ -378,7 +858,7 @@ class AppointmentControllerTest extends TestCase
 
     public function test_store_allows_appointment_inside_clinic_working_hours(): void
     {
-        Carbon::setTestNow(Carbon::parse('2026-06-15 08:00:00'));
+        Carbon::setTestNow(Carbon::parse('2026-06-29 08:00:00'));
 
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
@@ -405,6 +885,52 @@ class AppointmentControllerTest extends TestCase
         ]);
 
         $response->assertCreated();
+
+        Carbon::setTestNow();
+    }
+
+    public function test_store_uses_selected_clinic_for_doctor_schedule_validation(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-06-15 08:00:00'));
+
+        $userClinic = Clinic::factory()->create();
+        $selectedClinic = Clinic::factory()->create();
+        $admin = $this->authenticateForClinic($userClinic);
+        $patient = Patient::factory()->create(['clinic_id' => $userClinic->id]);
+        [$doctor, $doctorProfile] = $this->createActiveDoctorForClinic($selectedClinic, $admin);
+
+        $this->setClinicWorkingHours($selectedClinic, [
+            Carbon::MONDAY => ['start_time' => '09:00', 'end_time' => '17:00'],
+        ]);
+
+        DoctorSchedule::query()->create([
+            'clinic_id' => $selectedClinic->id,
+            'doctor_profile_id' => $doctorProfile->id,
+            'day_of_week' => Carbon::MONDAY,
+            'start_time' => '10:00',
+            'end_time' => '14:00',
+            'is_available' => true,
+        ]);
+
+        $response = $this->postJson(route('appointments.store'), [
+            'clinic_id' => $selectedClinic->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'appointment_number' => 'APT-SELECTED-CLINIC',
+            'scheduled_for' => '2026-06-29T10:30:00',
+            'duration_minutes' => 30,
+            'appointment_type' => 'first_visit',
+            'cost' => 100,
+        ]);
+
+        $response->assertCreated();
+
+        $this->assertDatabaseHas('appointments', [
+            'clinic_id' => $selectedClinic->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'appointment_number' => 'APT-SELECTED-CLINIC',
+        ]);
 
         Carbon::setTestNow();
     }
@@ -861,6 +1387,46 @@ class AppointmentControllerTest extends TestCase
         $this->actingAs($user);
 
         return $user;
+    }
+
+    /**
+     * @param  array<string, mixed>  $userAttributes
+     * @return array{0: User, 1: DoctorProfile}
+     */
+    private function createActiveDoctorForClinic(Clinic $clinic, User $actor, array $userAttributes = []): array
+    {
+        $doctor = User::factory()->create([
+            'clinic_id' => $clinic->id,
+            ...$userAttributes,
+        ]);
+
+        app(AssignUserRoleAction::class)->handle($doctor, 'doctor', $actor->id);
+
+        $profile = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'is_active' => true,
+        ]);
+
+        return [$doctor, $profile];
+    }
+
+    /**
+     * @param  array<int, array{start_time: string, end_time: string}>  $activeDays
+     */
+    private function setClinicWorkingHours(Clinic $clinic, array $activeDays): void
+    {
+        foreach (ClinicWorkingHour::DAYS as $day) {
+            $hours = $activeDays[$day] ?? null;
+
+            ClinicWorkingHour::query()->create([
+                'clinic_id' => $clinic->id,
+                'day_of_week' => $day,
+                'is_active' => $hours !== null,
+                'start_time' => $hours['start_time'] ?? null,
+                'end_time' => $hours['end_time'] ?? null,
+            ]);
+        }
     }
 
     /**

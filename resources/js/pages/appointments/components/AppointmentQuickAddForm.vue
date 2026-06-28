@@ -44,14 +44,17 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-    success: [];
+    success: [clinicId: string];
     error: [];
     reset: [];
 }>();
 
 const selectedClinicId = ref('');
 const selectedDoctorId = ref('');
+const selectedDoctorKey = ref('');
+const selectedPatientId = ref('');
 const selectedDuration = ref('30');
+const selectedDate = ref(props.todayAvailability.date);
 const formResetKey = ref(0);
 const {
     bookingOptions,
@@ -71,50 +74,103 @@ const availableClinics = computed(() =>
 
 const filteredDoctors = computed(() => {
     return bookingOptions.value.doctors.map((doctor) => ({
-        id: doctor.id,
+        id: doctor.doctor_id,
+        doctor_id: doctor.doctor_id,
+        doctor_profile_id: doctor.doctor_profile_id,
         name: doctor.name,
+        full_name: doctor.full_name,
         clinic_id: doctor.clinic_id,
         specialty: doctor.specialty,
         clinic: doctor.clinic,
     }));
 });
 
-const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
-    const doctorId = Number(selectedDoctorId.value);
-
-    if (Number.isFinite(doctorId) && doctorId > 0) {
-        return (
-            bookingOptions.value.doctors.find(
-                (doctor) => doctor.id === doctorId,
-            )?.available_periods ?? []
-        );
+const selectedDoctor = computed(() => {
+    if (!selectedDoctorKey.value) {
+        return null;
     }
 
-    return [];
+    const [clinicId, doctorId] = selectedDoctorKey.value.split(':').map(Number);
+
+    return (
+        bookingOptions.value.doctors.find(
+            (doctor) =>
+                doctor.clinic_id === clinicId && doctor.doctor_id === doctorId,
+        ) ?? null
+    );
+});
+
+const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
+    return selectedDoctor.value?.available_periods ?? [];
 });
 
 const handleClinicChange = (value: unknown): void => {
     const strValue = String(value ?? '');
     selectedClinicId.value = strValue === '__all__' ? '' : strValue;
     selectedDoctorId.value = '';
-    void loadBookingOptions({ clinicId: selectedClinicId.value });
+    selectedDoctorKey.value = '';
+    void loadBookingOptions({
+        clinicId: selectedClinicId.value,
+        date: selectedDate.value,
+    });
+};
+
+const handlePatientChange = (value: unknown): void => {
+    selectedPatientId.value = String(value ?? '');
 };
 
 const handleDoctorChange = (value: unknown): void => {
     const strValue = String(value ?? '');
-    selectedDoctorId.value = strValue === '__none__' ? '' : strValue;
+
+    if (strValue === '__none__') {
+        selectedDoctorId.value = '';
+        selectedDoctorKey.value = '';
+
+        void loadBookingOptions({
+            clinicId: selectedClinicId.value,
+            date: selectedDate.value,
+        });
+
+        return;
+    }
+
+    const [clinicId, doctorId] = strValue.split(':').map(Number);
+
+    if (!Number.isFinite(clinicId) || !Number.isFinite(doctorId)) {
+        selectedDoctorId.value = '';
+        selectedDoctorKey.value = '';
+
+        return;
+    }
+
+    selectedClinicId.value = String(clinicId);
+    selectedDoctorId.value = String(doctorId);
+    selectedDoctorKey.value = strValue;
+
     void loadBookingOptions({
         clinicId: selectedClinicId.value,
         doctorId: selectedDoctorId.value,
+        date: selectedDate.value,
     });
+};
+
+const handleDateChange = (date: string): void => {
+    selectedDate.value = date;
+    selectedClinicId.value = '';
+    selectedDoctorId.value = '';
+    selectedDoctorKey.value = '';
+    void loadBookingOptions({ date });
 };
 
 const resetFormState = (): void => {
     selectedClinicId.value = '';
     selectedDoctorId.value = '';
+    selectedDoctorKey.value = '';
+    selectedPatientId.value = '';
     selectedDuration.value = '30';
+    selectedDate.value = props.todayAvailability.date;
     formResetKey.value += 1;
-    void loadBookingOptions();
+    void loadBookingOptions({ date: selectedDate.value });
 };
 
 const handleReset = (): void => {
@@ -123,26 +179,14 @@ const handleReset = (): void => {
 };
 
 const handleSuccess = (): void => {
+    const createdClinicId = selectedClinicId.value;
+
     resetFormState();
-    emit('success');
-};
-
-const handleSubmit = (event: SubmitEvent): void => {
-    const form = event.target as HTMLFormElement;
-    const doctorSelect = form.querySelector(
-        'select[name="doctor_id"]',
-    ) as HTMLSelectElement | null;
-
-    if (doctorSelect && doctorSelect.value === '__none__') {
-        doctorSelect.disabled = true;
-        setTimeout(() => {
-            doctorSelect.disabled = false;
-        }, 0);
-    }
+    emit('success', createdClinicId);
 };
 
 onMounted(() => {
-    void loadBookingOptions();
+    void loadBookingOptions({ date: selectedDate.value });
 });
 </script>
 
@@ -185,10 +229,25 @@ onMounted(() => {
             class="p-5"
             v-slot="{ errors, processing }"
             reset-on-success
-            @submit="handleSubmit"
             @success="handleSuccess"
             @error="emit('error')"
         >
+            <input
+                type="hidden"
+                name="clinic_id"
+                :value="selectedClinicId"
+            />
+            <input
+                type="hidden"
+                name="doctor_id"
+                :value="selectedDoctorId"
+            />
+            <input
+                type="hidden"
+                name="patient_id"
+                :value="selectedPatientId"
+            />
+
             <div class="space-y-4">
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <div class="grid gap-1.5">
@@ -200,7 +259,11 @@ onMounted(() => {
                             المريض
                             <span class="text-xs text-destructive">*</span>
                         </Label>
-                        <Select name="patient_id" required>
+                        <Select
+                            :model-value="selectedPatientId"
+                            required
+                            @update:model-value="handlePatientChange"
+                        >
                             <SelectTrigger
                                 id="quick_patient"
                                 class="h-10 w-full rounded-xl bg-secondary/50"
@@ -281,8 +344,7 @@ onMounted(() => {
                             الطبيب
                         </Label>
                         <Select
-                            name="doctor_id"
-                            :model-value="selectedDoctorId"
+                            :model-value="selectedDoctorKey"
                             @update:model-value="handleDoctorChange"
                         >
                             <SelectTrigger
@@ -300,8 +362,8 @@ onMounted(() => {
                                 </SelectItem>
                                 <SelectItem
                                     v-for="doctor in filteredDoctors"
-                                    :key="doctor.id"
-                                    :value="String(doctor.id)"
+                                    :key="`${doctor.clinic_id}:${doctor.doctor_id}`"
+                                    :value="`${doctor.clinic_id}:${doctor.doctor_id}`"
                                 >
                                     {{
                                         doctor.clinic?.name
@@ -328,9 +390,12 @@ onMounted(() => {
                             :working-hours="props.clinicWorkingHours"
                             :available-periods="selectedAvailablePeriods"
                             :availability-date="bookingOptions.date"
+                            :current-date="bookingOptions.current_date"
+                            :current-time="bookingOptions.current_time"
                             :duration-minutes="Number(selectedDuration)"
                             :no-doctor-selected="noDoctorSelected"
                             label=""
+                            @date-change="handleDateChange"
                         />
                         <InputError :message="errors.scheduled_for" class="text-[0.68rem]" />
                     </div>

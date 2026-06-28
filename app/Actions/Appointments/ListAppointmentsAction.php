@@ -25,14 +25,23 @@ class ListAppointmentsAction extends BaseAction
         ?int $clinicFilterId = null,
         ?string $dateFrom = null,
         ?string $dateTo = null,
+        bool $includeAllClinics = false,
     ): LengthAwarePaginator {
-        $query = Appointment::query()
-            ->forClinic($clinicId)
+        $query = ($clinicFilterId !== null || ! $includeAllClinics
+            ? Appointment::query()->forClinic($clinicFilterId ?? $clinicId)
+            : Appointment::query()->withoutGlobalScope('clinic'))
             ->withoutTrashed()
             ->with([
-                'patient:id,clinic_id,first_name,last_name,file_number,phone,date_of_birth',
-                'doctor:id,clinic_id,name',
-                'doctor.doctorProfile:id,clinic_id,user_id,specialty,status',
+                'clinic:id,name',
+                'patient' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'first_name', 'last_name', 'file_number', 'phone', 'date_of_birth'),
+                'doctor' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'name'),
+                'doctor.doctorProfile' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'user_id', 'specialty', 'is_active'),
                 'doctor.doctorProfile.clinic:id,name',
             ])
             ->orderByDesc('scheduled_for');
@@ -46,10 +55,6 @@ class ListAppointmentsAction extends BaseAction
 
         if ($status !== null) {
             $query->where('status', $status);
-        }
-
-        if ($clinicFilterId !== null) {
-            $query->where('clinic_id', $clinicFilterId);
         }
 
         if ($dateFrom !== null) {
@@ -97,6 +102,7 @@ class ListAppointmentsAction extends BaseAction
                 'sort_direction' => $sortDirection,
                 'doctor_filter_id' => $doctorId,
                 'clinic_filter_id' => $clinicFilterId,
+                'include_all_clinics' => $includeAllClinics,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'returned' => $appointments->count(),

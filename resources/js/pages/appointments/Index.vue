@@ -2,14 +2,11 @@
 import { Head, router, usePage } from '@inertiajs/vue3';
 import {
     CalendarDays,
-    ChevronDown,
     Download,
     FileText,
-    Filter,
     ListFilter,
     Plus,
     Table2,
-    X,
 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
@@ -194,7 +191,6 @@ const localSortBy = ref<AppointmentSortField>(resolveInitialSortBy());
 const localSortDirection = ref<SortDirection>(
     filters.sort_direction === 'asc' ? 'asc' : 'desc',
 );
-const visibleAppointments = computed<Appointment[]>(() => appointments.data);
 const totalLocalPages = computed<number>(() => {
     return Math.max(1, appointments.meta.last_page);
 });
@@ -287,7 +283,7 @@ const reloadAppointments = (
             AppointmentController.index.url(),
             buildIndexQuery(overrides),
             {
-                only: ['appointments', 'filters'],
+                only: ['appointments', 'filters', 'today_appointments'],
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
@@ -465,44 +461,6 @@ const appointmentStatusLabel = (status: string): string => {
     return labels[status] ?? status;
 };
 
-const selectedAppointmentIds = ref<number[]>([]);
-
-const deletableAppointmentIds = computed<number[]>(() =>
-    visibleAppointments.value
-        .filter((appointment) => appointment.status === 'scheduled')
-        .map((appointment) => appointment.id),
-);
-
-const areAllDeletableAppointmentsSelected = computed<boolean>(() => {
-    if (deletableAppointmentIds.value.length === 0) {
-        return false;
-    }
-
-    return deletableAppointmentIds.value.every((appointmentId) =>
-        selectedAppointmentIds.value.includes(appointmentId),
-    );
-});
-
-watch(
-    () => deletableAppointmentIds.value,
-    (ids) => {
-        selectedAppointmentIds.value = selectedAppointmentIds.value.filter(
-            (id) => ids.includes(id),
-        );
-    },
-);
-
-const toggleAllAppointmentsSelection = (event: Event): void => {
-    const target = event.target as HTMLInputElement;
-    selectedAppointmentIds.value = target.checked
-        ? [...deletableAppointmentIds.value]
-        : [];
-};
-
-const clearSelectedAppointments = (): void => {
-    selectedAppointmentIds.value = [];
-};
-
 const canEditAppointment = computed<boolean>(() => can('appointment.update'));
 
 const openViewAppointment = (appointment: Appointment): void => {
@@ -644,10 +602,25 @@ const resetQuickAdd = () => {
     // quickAddFormSuccess ref was not declared in original code
 };
 
-const handleQuickAddSuccess = () => {
+const handleQuickAddSuccess = (clinicId = '') => {
     toast.success('تم إضافة الموعد بنجاح');
     resetQuickAdd();
-    reloadAppointments({ page: 1 });
+
+    const normalizedClinicId = clinicId.trim();
+
+    if (
+        normalizedClinicId !== '' &&
+        normalizedClinicId !== localClinicId.value.trim()
+    ) {
+        localClinicId.value = normalizedClinicId;
+
+        return;
+    }
+
+    reloadAppointments({
+        page: 1,
+        clinic_id: normalizedClinicId || localClinicId.value.trim(),
+    });
 };
 
 const handleQuickAddError = () => {
@@ -671,32 +644,6 @@ const deleteAppointment = async (appointment: Appointment) => {
             },
             onError: () => {
                 toast.error('فشل حذف الموعد');
-            },
-        });
-    }
-};
-
-const handleBulkDelete = async () => {
-    const confirmed = await confirm({
-        title: 'حذف المواعيد',
-        description: `هل أنت متأكد من حذف ${selectedAppointmentIds.value.length} موعد؟ لا يمكن التراجع عن هذا الإجراء.`,
-        confirmText: 'حذف',
-        cancelText: 'إلغاء',
-        variant: 'destructive',
-    });
-
-    if (confirmed) {
-        router.delete(AppointmentController.bulkDestroy.url(), {
-            data: { ids: selectedAppointmentIds.value },
-            onSuccess: () => {
-                closeConfirm();
-                clearSelectedAppointments();
-                toast.success(
-                    `تم حذف ${selectedAppointmentIds.value.length} موعد بنجاح`,
-                );
-            },
-            onError: () => {
-                toast.error('فشل حذف المواعيد');
             },
         });
     }
@@ -945,6 +892,7 @@ const todaySummary = computed(() => ({
             :clinic-working-hours="clinic_working_hours"
             :today-availability="today_availability"
             @update:open="isCreateSheetOpen = $event"
+            @success="handleQuickAddSuccess"
         />
 
         <AppointmentViewDialog

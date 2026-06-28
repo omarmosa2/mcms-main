@@ -5,8 +5,8 @@ namespace App\Actions\Appointments;
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
 use App\Models\Appointment;
+use App\Models\DoctorProfile;
 use App\Models\Patient;
-use App\Models\User;
 use App\Services\Cache\CacheService;
 use App\Services\ClinicWorkingHoursService;
 use App\Services\DoctorScheduleService;
@@ -25,8 +25,9 @@ class UpdateAppointmentAction extends BaseAction
 
     /**
      * @param  array<string, mixed>  $payload
+     * @param  int|null  $userClinicId  العيادة الأم للمستخدم (للتحقق من ملكية المريض)
      */
-    public function handle(int $clinicId, int $appointmentId, int $userId, array $payload): Appointment
+    public function handle(int $clinicId, int $appointmentId, int $userId, array $payload, ?int $userClinicId = null): Appointment
     {
         $appointment = Appointment::query()
             ->forClinic($clinicId)
@@ -39,7 +40,9 @@ class UpdateAppointmentAction extends BaseAction
         }
 
         if (array_key_exists('patient_id', $payload)) {
-            $this->ensurePatientBelongsToClinic($clinicId, (int) $payload['patient_id']);
+            // المريض يُتحقق منه بـ clinic_id الخاص بالمستخدم (العيادة الأم)
+            $patientClinicId = $userClinicId ?? $clinicId;
+            $this->ensurePatientBelongsToClinic($patientClinicId, (int) $payload['patient_id']);
         }
 
         if (array_key_exists('doctor_id', $payload)) {
@@ -48,7 +51,7 @@ class UpdateAppointmentAction extends BaseAction
 
         if (array_key_exists('scheduled_for', $payload) || array_key_exists('duration_minutes', $payload) || array_key_exists('doctor_id', $payload)) {
             $newScheduledFor = $payload['scheduled_for'] ?? $appointment->scheduled_for;
-            $this->ensureScheduledForToday($newScheduledFor);
+            $this->ensureScheduledIsNotInThePast($newScheduledFor);
             $this->checkAppointmentConflicts(
                 $clinicId,
                 $appointmentId,
@@ -215,14 +218,22 @@ class UpdateAppointmentAction extends BaseAction
         }
     }
 
-    private function ensureScheduledForToday(mixed $scheduledFor): void
+    private function ensureScheduledIsNotInThePast(mixed $scheduledFor): void
     {
-        $scheduledDate = Carbon::parse($scheduledFor)->toDateString();
-        $today = now()->toDateString();
+        $scheduledAt = Carbon::parse($scheduledFor);
+        $scheduledDate = $scheduledAt->toDateString();
+        $now = now();
+        $today = $now->toDateString();
 
-        if ($scheduledDate !== $today) {
+        if ($scheduledDate < $today) {
             throw ValidationException::withMessages([
                 'scheduled_for' => 'يمكن تعديل المواعيد لليوم الحالي فقط.',
+            ]);
+        }
+
+        if ($scheduledDate === $today && $scheduledAt->lte($now)) {
+            throw ValidationException::withMessages([
+                'scheduled_for' => 'الوقت المختار قد مضى بالفعل.',
             ]);
         }
     }
@@ -247,14 +258,11 @@ class UpdateAppointmentAction extends BaseAction
             return;
         }
 
-        $doctorExists = User::query()
+        $doctorExists = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
             ->where('clinic_id', $clinicId)
-            ->whereKey((int) $doctorId)
-            ->whereHas('roles', function ($query) use ($clinicId): void {
-                $query
-                    ->where('roles.clinic_id', $clinicId)
-                    ->where('roles.name', 'doctor');
-            })
+            ->where('user_id', (int) $doctorId)
+            ->where('is_active', true)
             ->exists();
 
         if (! $doctorExists) {

@@ -205,6 +205,7 @@ class DoctorAvailabilityService
             ->withoutGlobalScope('clinic')
             ->where('clinic_id', $clinicId)
             ->where('user_id', $doctorUserId)
+            ->where('is_active', true)
             ->value('id');
     }
 }

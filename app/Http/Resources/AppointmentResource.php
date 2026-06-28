@@ -31,6 +31,10 @@ class AppointmentResource extends JsonResource
             'canceled_at' => $this->canceled_at?->toISOString(),
             'cancel_reason' => $this->cancel_reason,
             'notes' => $this->notes,
+            'clinic' => $this->whenLoaded('clinic', fn () => [
+                'id' => $this->clinic?->id,
+                'name' => $this->clinic?->name,
+            ]),
             'patient' => $this->whenLoaded('patient', fn () => [
                 'id' => $this->patient?->id,
                 'first_name' => $this->patient?->first_name,

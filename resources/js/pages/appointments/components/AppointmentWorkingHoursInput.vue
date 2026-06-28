@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { AlertCircle, Calendar, Clock } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -25,6 +25,8 @@ const props = withDefaults(
         name?: string;
         durationMinutes?: number;
         noDoctorSelected?: boolean;
+        currentDate?: string | null;
+        currentTime?: string | null;
     }>(),
     {
         availablePeriods: null,
@@ -34,14 +36,61 @@ const props = withDefaults(
         name: 'scheduled_for',
         durationMinutes: 30,
         noDoctorSelected: false,
+        currentDate: null,
+        currentTime: null,
     },
 );
 
-const todayDate = computed(() => new Date().toISOString().slice(0, 10));
-const selectedDate = ref(todayDate.value);
-const selectedTime = ref('');
+const emit = defineEmits<{
+    'date-change': [value: string];
+}>();
+
+const localDate = (): string => {
+    const now = new Date();
+
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+const mountedAt = Date.now();
+const minuteTick = ref(Date.now());
+const minuteInterval =
+    typeof window !== 'undefined'
+        ? window.setInterval(() => {
+              minuteTick.value = Date.now();
+          }, 30_000)
+        : null;
+
+onBeforeUnmount(() => {
+    if (minuteInterval !== null) {
+        window.clearInterval(minuteInterval);
+    }
+});
+
+const todayDate = computed(() => props.currentDate ?? localDate());
+const defaultDate = computed(
+    () => props.defaultValue?.slice(0, 10) ?? props.availabilityDate ?? todayDate.value,
+);
+const defaultTime = computed(() => props.defaultValue?.slice(11, 16) ?? '');
+const selectedDate = ref(defaultDate.value);
+const selectedTime = ref(defaultTime.value);
 
 const minimumTimeForToday = computed(() => {
+    if (props.currentTime) {
+        const [serverHour, serverMinute] = props.currentTime.split(':').map(Number);
+        const elapsedMinutes = Math.floor((minuteTick.value - mountedAt) / 60_000);
+        const totalMinutes = serverHour * 60 + serverMinute + elapsedMinutes;
+        const interval = props.durationMinutes;
+        const roundedMinutes = Math.ceil(totalMinutes / interval) * interval;
+        const hour = Math.floor(roundedMinutes / 60);
+        const minute = roundedMinutes % 60;
+
+        if (hour >= 24) {
+            return '23:59';
+        }
+
+        return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    }
+
     const now = new Date();
     const totalMinutes = now.getHours() * 60 + now.getMinutes();
     const interval = props.durationMinutes;
@@ -57,7 +106,12 @@ const minimumTimeForToday = computed(() => {
 });
 
 const filterPastSlots = (slots: string[]): string[] => {
+    if (selectedDate.value !== todayDate.value) {
+        return slots;
+    }
+
     const minimumTime = minimumTimeForToday.value;
+
     return slots.filter((slot) => slot >= minimumTime);
 };
 
@@ -98,6 +152,35 @@ watch(
     },
     { immediate: true },
 );
+
+watch(
+    () => props.availabilityDate,
+    (date) => {
+        const nextDate = props.defaultValue?.slice(0, 10) ?? date ?? todayDate.value;
+
+        if (selectedDate.value !== nextDate) {
+            selectedDate.value = nextDate;
+            selectedTime.value = '';
+        }
+    },
+);
+
+watch(
+    () => props.defaultValue,
+    () => {
+        selectedDate.value = defaultDate.value;
+        selectedTime.value = defaultTime.value;
+    },
+);
+
+const handleDateChange = (event: Event): void => {
+    const target = event.target as HTMLInputElement;
+    const nextDate = target.value || todayDate.value;
+
+    selectedDate.value = nextDate;
+    selectedTime.value = '';
+    emit('date-change', nextDate);
+};
 
 function buildSlots(startTime: string, endTime: string): string[] {
     const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -142,11 +225,11 @@ const formatSlotLabel = (slot: string): string => {
 
         <div class="grid gap-2 sm:grid-cols-2">
             <Input
-                :model-value="todayDate"
+                :model-value="selectedDate"
                 class="h-10 rounded-xl bg-background text-sm"
                 type="date"
-                readonly
-                disabled
+                :min="todayDate"
+                @input="handleDateChange"
             />
 
             <Select

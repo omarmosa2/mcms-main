@@ -147,7 +147,25 @@ class PatientCardControllerTest extends TestCase
         ]);
     }
 
-    public function test_patient_card_is_scoped_to_authenticated_users_clinic(): void
+    public function test_patient_card_is_scoped_to_authenticated_users_clinic_for_doctor(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $otherClinic = Clinic::factory()->create();
+        $doctor = $this->authenticateForClinic($clinic, 'doctor');
+
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctor->id,
+            'is_active' => true,
+        ]);
+
+        $otherPatient = Patient::factory()->create(['clinic_id' => $otherClinic->id]);
+
+        $this->get(route('patients.card.show', ['patientId' => $otherPatient->id]))
+            ->assertNotFound();
+    }
+
+    public function test_clinic_admin_can_view_patient_card_from_any_clinic(): void
     {
         $clinic = Clinic::factory()->create();
         $otherClinic = Clinic::factory()->create();
@@ -155,7 +173,18 @@ class PatientCardControllerTest extends TestCase
         $otherPatient = Patient::factory()->create(['clinic_id' => $otherClinic->id]);
 
         $this->get(route('patients.card.show', ['patientId' => $otherPatient->id]))
-            ->assertNotFound();
+            ->assertOk();
+    }
+
+    public function test_receptionist_can_view_patient_card_from_any_clinic(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $otherClinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'receptionist');
+        $otherPatient = Patient::factory()->create(['clinic_id' => $otherClinic->id]);
+
+        $this->get(route('patients.card.show', ['patientId' => $otherPatient->id]))
+            ->assertOk();
     }
 
     public function test_patient_card_pdf_can_be_exported(): void

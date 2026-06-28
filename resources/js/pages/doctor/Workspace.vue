@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import {
     CalendarClock,
     CalendarDays,
@@ -7,7 +7,6 @@ import {
     Clock,
     FileText,
     Stethoscope,
-    UserCircle,
 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -40,11 +39,11 @@ type Appointment = {
     scheduled_for: string;
     status: string;
     appointment_type: string | null;
-    patient: Patient;
+    patient: Patient | null;
     medical_record_id: number | null;
 };
 
-const props = defineProps<{
+defineProps<{
     clinic: ClinicInfo;
     doctor: DoctorInfo;
     stats: Stats;
@@ -59,8 +58,6 @@ defineOptions({
         ],
     },
 });
-
-const page = usePage();
 
 const currentDate = computed(() => {
     const now = new Date();
@@ -118,10 +115,39 @@ const getStatusBadgeClass = (status: string) => {
 };
 
 const getVisitTypeLabel = (type: string | null) => {
-    if (type === 'first_visit') return 'زيارة أولى';
-    if (type === 'review') return 'متابعة';
+    if (type === 'first_visit') {
+        return 'زيارة أولى';
+    }
+
+    if (type === 'review') {
+        return 'متابعة';
+    }
 
     return '—';
+};
+
+const patientName = (patient: Patient | null): string => {
+    if (!patient) {
+        return 'مريض غير مرتبط';
+    }
+
+    return `${patient.first_name} ${patient.last_name}`.trim() || 'مريض غير مرتبط';
+};
+
+const patientFileNumber = (patient: Patient | null): string => {
+    return patient?.file_number ? `ملف #${patient.file_number}` : 'بدون رقم ملف';
+};
+
+const medicalRecordHref = (apt: Appointment): string => {
+    if (apt.medical_record_id) {
+        return `/medical-records/${apt.medical_record_id}`;
+    }
+
+    if (apt.patient?.id) {
+        return `/medical-records/create?patient_id=${apt.patient.id}`;
+    }
+
+    return '/medical-records';
 };
 </script>
 
@@ -244,10 +270,10 @@ const getVisitTypeLabel = (type: string | null) => {
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-slate-900">
-                                    {{ apt.patient.first_name }} {{ apt.patient.last_name }}
+                                    {{ patientName(apt.patient) }}
                                 </p>
                                 <p class="text-xs text-slate-500">
-                                    ملف #{{ apt.patient.file_number }} • {{ getVisitTypeLabel(apt.appointment_type) }}
+                                    {{ patientFileNumber(apt.patient) }} • {{ getVisitTypeLabel(apt.appointment_type) }}
                                 </p>
                             </div>
                         </div>
@@ -259,7 +285,7 @@ const getVisitTypeLabel = (type: string | null) => {
                                 {{ getStatusLabel(apt.status) }}
                             </span>
                             <Link
-                                :href="apt.medical_record_id ? `/medical-records/${apt.medical_record_id}` : `/medical-records/create?patient_id=${apt.patient.id}`"
+                                :href="medicalRecordHref(apt)"
                                 class="rounded-lg p-1.5 text-slate-400 transition hover:bg-white hover:text-[#0284C7]"
                             >
                                 <Stethoscope class="size-4" />
@@ -294,7 +320,7 @@ const getVisitTypeLabel = (type: string | null) => {
                             </div>
                             <div>
                                 <p class="text-sm font-medium text-slate-900">
-                                    {{ apt.patient.first_name }} {{ apt.patient.last_name }}
+                                    {{ patientName(apt.patient) }}
                                 </p>
                                 <p class="text-xs text-slate-500">
                                     {{ new Date(apt.scheduled_for).toLocaleDateString('ar-SA') }}

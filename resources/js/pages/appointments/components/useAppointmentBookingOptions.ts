@@ -9,6 +9,7 @@ type BookingOptionsResponse = {
 type BookingOptionsFilters = {
     clinicId?: string | number | null;
     doctorId?: string | number | null;
+    date?: string | null;
 };
 
 export function useAppointmentBookingOptions(initialOptions: TodayAvailability) {
@@ -32,6 +33,10 @@ export function useAppointmentBookingOptions(initialOptions: TodayAvailability) 
 
         if (filters.doctorId) {
             query.doctor_id = String(filters.doctorId);
+        }
+
+        if (filters.date) {
+            query.date = filters.date;
         }
 
         try {

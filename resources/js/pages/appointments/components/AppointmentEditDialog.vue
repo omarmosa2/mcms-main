@@ -54,10 +54,15 @@ const emit = defineEmits<{
 
 const selectedClinicId = ref('');
 const selectedDoctorId = ref('');
+const selectedPatientId = ref('');
 
 watch(
     () => props.appointment,
     (appointment) => {
+        selectedPatientId.value =
+            appointment?.patient_id !== null && appointment?.patient_id !== undefined
+                ? String(appointment.patient_id)
+                : '';
         selectedClinicId.value =
             appointment?.doctor?.clinic?.id !== undefined
                 ? String(appointment.doctor.clinic.id)
@@ -84,7 +89,7 @@ const availableClinics = computed(() =>
 
 const filteredDoctors = computed(() => {
     const todayAvailableDoctorIds = new Set(
-        props.todayAvailability.doctors.map((doctor) => doctor.id),
+        props.todayAvailability.doctors.map((doctor) => doctor.doctor_id),
     );
     const availableDoctors = props.doctors.filter((doctor) =>
         todayAvailableDoctorIds.has(doctor.id),
@@ -106,7 +111,7 @@ const selectedAvailablePeriods = computed<AvailabilityPeriod[]>(() => {
 
     if (Number.isFinite(doctorId) && doctorId > 0) {
         return (
-            props.todayAvailability.doctors.find((doctor) => doctor.id === doctorId)
+            props.todayAvailability.doctors.find((doctor) => doctor.doctor_id === doctorId)
                 ?.available_periods ?? []
         );
     }
@@ -125,6 +130,10 @@ const handleClinicChange = (value: unknown): void => {
 
     selectedClinicId.value = clinicId === '__all__' ? '' : clinicId;
     selectedDoctorId.value = '';
+};
+
+const handlePatientChange = (value: unknown): void => {
+    selectedPatientId.value = String(value ?? '');
 };
 
 const handleDoctorChange = (value: unknown): void => {
@@ -158,6 +167,12 @@ const handleDoctorChange = (value: unknown): void => {
                     v-slot="{ errors, processing }"
                     @success="emit('close')"
                 >
+                    <input
+                        type="hidden"
+                        name="patient_id"
+                        :value="selectedPatientId"
+                    />
+
                     <div class="grid gap-4 sm:grid-cols-2">
                         <div class="grid gap-1.5">
                             <Label
@@ -205,11 +220,9 @@ const handleDoctorChange = (value: unknown): void => {
                                 <span class="text-destructive">*</span>
                             </Label>
                             <Select
-                                name="patient_id"
-                                :model-value="
-                                    String(props.appointment.patient_id)
-                                "
+                                :model-value="selectedPatientId"
                                 required
+                                @update:model-value="handlePatientChange"
                             >
                                 <SelectTrigger
                                     :class="{

@@ -29,7 +29,7 @@ type Appointment = {
     duration_minutes: number;
     cost: string | null;
     notes: string | null;
-    patient: Patient;
+    patient: Patient | null;
     medical_record_id: number | null;
 };
 
@@ -65,14 +65,19 @@ const filteredAppointments = computed(() => {
         results = results.filter((a) => a.status === 'completed');
     }
 
-    if (!search.value) return results;
+    if (!search.value) {
+        return results;
+    }
 
     const term = search.value.toLowerCase();
 
     return results.filter((apt) => {
-        const fullName = `${apt.patient.first_name} ${apt.patient.last_name}`.toLowerCase();
+        const fullName = patientName(apt.patient).toLowerCase();
+        const fileNumber = apt.patient?.file_number
+            ? String(apt.patient.file_number)
+            : '';
 
-        return fullName.includes(term) || String(apt.patient.file_number).includes(term);
+        return fullName.includes(term) || fileNumber.includes(term);
     });
 });
 
@@ -112,21 +117,58 @@ const getStatusBadgeClass = (status: string) => {
 };
 
 const getVisitTypeLabel = (type: string | null) => {
-    if (type === 'first_visit') return 'زيارة أولى';
-    if (type === 'review') return 'متابعة';
+    if (type === 'first_visit') {
+        return 'زيارة أولى';
+    }
+
+    if (type === 'review') {
+        return 'متابعة';
+    }
 
     return '—';
 };
 
 const getGenderLabel = (gender: string | null) => {
-    if (gender === 'male') return 'ذكر';
-    if (gender === 'female') return 'أنثى';
+    if (gender === 'male') {
+        return 'ذكر';
+    }
+
+    if (gender === 'female') {
+        return 'أنثى';
+    }
 
     return '—';
 };
 
+const patientName = (patient: Patient | null): string => {
+    if (!patient) {
+        return 'مريض غير مرتبط';
+    }
+
+    return `${patient.first_name} ${patient.last_name}`.trim() || 'مريض غير مرتبط';
+};
+
+const patientFileNumber = (patient: Patient | null): string => {
+    return patient?.file_number ? `ملف #${patient.file_number}` : 'بدون رقم ملف';
+};
+
+const medicalRecordHref = (apt: Appointment): string => {
+    if (apt.medical_record_id) {
+        return `/medical-records/${apt.medical_record_id}`;
+    }
+
+    if (apt.patient?.id) {
+        return `/medical-records/create?patient_id=${apt.patient.id}`;
+    }
+
+    return '/medical-records';
+};
+
 const calculateAge = (dob: string | null) => {
-    if (!dob) return null;
+    if (!dob) {
+        return null;
+    }
+
     const birthDate = new Date(dob);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -153,6 +195,7 @@ const displayDate = computed(() => {
 const stats = computed(() => ({
     total: props.appointments.length,
     completed: props.appointments.filter((a) => a.status === 'completed').length,
+    arrived: props.appointments.filter((a) => a.status === 'arrived').length,
     pending: props.appointments.filter((a) => ['scheduled', 'confirmed', 'arrived'].includes(a.status)).length,
 }));
 </script>
@@ -244,15 +287,15 @@ const stats = computed(() => ({
                             <td class="px-4 py-3">
                                 <div>
                                     <p class="font-medium text-slate-900">
-                                        {{ apt.patient.first_name }} {{ apt.patient.last_name }}
+                                        {{ patientName(apt.patient) }}
                                     </p>
                                     <p class="text-xs text-slate-500">
-                                        ملف #{{ apt.patient.file_number }}
-                                        <span v-if="apt.patient.gender" class="mx-1">•</span>
-                                        <span v-if="apt.patient.gender">{{ getGenderLabel(apt.patient.gender) }}</span>
-                                        <template v-if="calculateAge(apt.patient.date_of_birth)">
+                                        {{ patientFileNumber(apt.patient) }}
+                                        <span v-if="apt.patient?.gender" class="mx-1">•</span>
+                                        <span v-if="apt.patient?.gender">{{ getGenderLabel(apt.patient.gender) }}</span>
+                                        <template v-if="calculateAge(apt.patient?.date_of_birth ?? null)">
                                             <span class="mx-1">•</span>
-                                            {{ calculateAge(apt.patient.date_of_birth) }} سنة
+                                            {{ calculateAge(apt.patient?.date_of_birth ?? null) }} سنة
                                         </template>
                                     </p>
                                 </div>
@@ -271,7 +314,7 @@ const stats = computed(() => ({
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-1.5">
                                     <Link
-                                        :href="apt.medical_record_id ? `/medical-records/${apt.medical_record_id}` : `/medical-records/create?patient_id=${apt.patient.id}`"
+                                        :href="medicalRecordHref(apt)"
                                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition"
                                         :class="apt.status === 'completed'
                                             ? 'bg-teal-50 text-teal-700 hover:bg-teal-100'
@@ -281,6 +324,7 @@ const stats = computed(() => ({
                                         {{ apt.status === 'completed' ? 'عرض السجل' : 'فتح السجل' }}
                                     </Link>
                                     <Link
+                                        v-if="apt.patient?.id"
                                         :href="`/patients/${apt.patient.id}/card`"
                                         class="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
                                     >

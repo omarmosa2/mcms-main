@@ -80,7 +80,7 @@ class DatabaseSchemaTest extends TestCase
 
         $this->assertTrue(Schema::hasColumn('payments', 'status'));
         $this->assertTrue(Schema::hasColumn('queue_entries', 'status'));
-        $this->assertTrue(Schema::hasColumn('doctor_profiles', 'status'));
+        $this->assertTrue(Schema::hasColumn('doctor_profiles', 'is_active'));
     }
 
     public function test_doctor_profile_factory_generates_clinic_scoped_relations(): void

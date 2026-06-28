@@ -27,22 +27,26 @@ class PatientCardController extends Controller
     {
         $clinicId = $this->resolveClinicId($request);
         $user = $request->user();
+        $includeAllClinics = $this->canViewAllClinics($request);
 
         $this->authorizeView($request);
 
-        $patient = $this->patientQuery($clinicId)
+        $patient = $this->patientQuery($clinicId, $includeAllClinics)
             ->whereKey($patientId)
             ->firstOrFail();
 
-        $visits = $this->visitsQuery($clinicId, $patientId)
+        $visits = $this->visitsQuery($clinicId, $patientId, $includeAllClinics)
             ->get();
 
         $appointmentId = $request->query('appointment_id');
         $activeAppointment = null;
 
         if ($appointmentId !== null) {
-            $activeAppointment = Appointment::query()
-                ->forClinic($clinicId)
+            $appointmentQuery = $includeAllClinics
+                ? Appointment::query()->withoutGlobalScope('clinic')
+                : Appointment::query()->forClinic($clinicId);
+
+            $activeAppointment = $appointmentQuery
                 ->with([
                     'doctor:id,clinic_id,name',
                     'doctor.doctorProfile:id,clinic_id,user_id,specialty',
@@ -59,8 +63,8 @@ class PatientCardController extends Controller
         return Inertia::render('patients/Card', [
             'patient' => PatientResource::make($patient)->response()->getData(true),
             'visits' => PatientCardVisitResource::collection($visits)->response()->getData(true),
-            'doctors' => $this->doctorOptions($clinicId, $user),
-            'clinics' => $this->clinicOptions($clinicId, $user),
+            'doctors' => $this->doctorOptions($clinicId, $user, $includeAllClinics),
+            'clinics' => $this->clinicOptions($clinicId, $user, $includeAllClinics),
             'card' => $this->cardMeta($request, $patient, $visits->first()),
             'permissions' => [
                 'can_manage_visits' => $this->canManageVisits($request),
@@ -76,14 +80,18 @@ class PatientCardController extends Controller
     public function store(StorePatientCardVisitRequest $request, int $patientId): RedirectResponse
     {
         $clinicId = $this->resolveClinicId($request);
-        $patient = $this->patientQuery($clinicId)->whereKey($patientId)->firstOrFail();
+        $includeAllClinics = $this->canViewAllClinics($request);
+        $patient = $this->patientQuery($clinicId, $includeAllClinics)->whereKey($patientId)->firstOrFail();
         $payload = $this->normalizedPayload($request, $request->validated());
 
         $appointmentId = $request->validated('appointment_id');
 
         if ($appointmentId !== null) {
-            $existingVisit = PatientCardVisit::query()
-                ->forClinic($clinicId)
+            $visitCheckQuery = $includeAllClinics
+                ? PatientCardVisit::query()->withoutGlobalScope('clinic')
+                : PatientCardVisit::query()->forClinic($clinicId);
+
+            $existingVisit = $visitCheckQuery
                 ->where('appointment_id', $appointmentId)
                 ->exists();
 
@@ -93,8 +101,11 @@ class PatientCardController extends Controller
                 return to_route('patients.card.show', $patient->id, ['appointment_id' => $appointmentId]);
             }
 
-            $appointment = Appointment::query()
-                ->forClinic($clinicId)
+            $appointmentQuery = $includeAllClinics
+                ? Appointment::query()->withoutGlobalScope('clinic')
+                : Appointment::query()->forClinic($clinicId);
+
+            $appointment = $appointmentQuery
                 ->with(['doctor:id,clinic_id,name', 'doctor.doctorProfile:id,clinic_id,user_id'])
                 ->whereKey($appointmentId)
                 ->first();
@@ -108,7 +119,7 @@ class PatientCardController extends Controller
 
         PatientCardVisit::query()->create([
             ...$payload,
-            'clinic_id' => $clinicId,
+            'clinic_id' => $patient->clinic_id,
             'patient_id' => $patient->id,
             'appointment_id' => $appointmentId,
             'created_by' => $request->user()->id,
@@ -122,10 +133,14 @@ class PatientCardController extends Controller
     public function update(UpdatePatientCardVisitRequest $request, int $patientId, int $visitId): RedirectResponse
     {
         $clinicId = $this->resolveClinicId($request);
-        $this->patientQuery($clinicId)->whereKey($patientId)->firstOrFail();
+        $includeAllClinics = $this->canViewAllClinics($request);
+        $this->patientQuery($clinicId, $includeAllClinics)->whereKey($patientId)->firstOrFail();
 
-        $visit = PatientCardVisit::query()
-            ->forClinic($clinicId)
+        $visitQuery = $includeAllClinics
+            ? PatientCardVisit::query()->withoutGlobalScope('clinic')
+            : PatientCardVisit::query()->forClinic($clinicId);
+
+        $visit = $visitQuery
             ->where('patient_id', $patientId)
             ->whereKey($visitId)
             ->firstOrFail();
@@ -143,15 +158,19 @@ class PatientCardController extends Controller
     public function destroy(Request $request, int $patientId, int $visitId): RedirectResponse|JsonResponse
     {
         $clinicId = $this->resolveClinicId($request);
+        $includeAllClinics = $this->canViewAllClinics($request);
 
         if (! $this->canManageVisits($request)) {
             abort(SymfonyResponse::HTTP_FORBIDDEN, 'You do not have the required permission.');
         }
 
-        $this->patientQuery($clinicId)->whereKey($patientId)->firstOrFail();
+        $this->patientQuery($clinicId, $includeAllClinics)->whereKey($patientId)->firstOrFail();
 
-        $visit = PatientCardVisit::query()
-            ->forClinic($clinicId)
+        $visitQuery = $includeAllClinics
+            ? PatientCardVisit::query()->withoutGlobalScope('clinic')
+            : PatientCardVisit::query()->forClinic($clinicId);
+
+        $visit = $visitQuery
             ->where('patient_id', $patientId)
             ->whereKey($visitId)
             ->firstOrFail();
@@ -170,13 +189,14 @@ class PatientCardController extends Controller
     public function exportPdf(Request $request, int $patientId): SymfonyResponse
     {
         $clinicId = $this->resolveClinicId($request);
+        $includeAllClinics = $this->canViewAllClinics($request);
         $this->authorizeView($request);
 
-        $patient = $this->patientQuery($clinicId)
+        $patient = $this->patientQuery($clinicId, $includeAllClinics)
             ->whereKey($patientId)
             ->firstOrFail();
 
-        $visits = $this->visitsQuery($clinicId, $patientId)->get();
+        $visits = $this->visitsQuery($clinicId, $patientId, $includeAllClinics)->get();
 
         $pdf = Pdf::loadView('exports.patient-card', [
             'patient' => $patient,
@@ -223,26 +243,40 @@ class PatientCardController extends Controller
             && ($user->hasPermission('medical_record.update') || $user->hasPermission('patient_card.update'));
     }
 
-    private function patientQuery(int $clinicId)
+    private function canViewAllClinics(Request $request): bool
     {
-        return Patient::query()
-            ->forClinic($clinicId)
-            ->with([
-                'appointments' => fn ($query) => $query
-                    ->with([
-                        'doctor:id,clinic_id,name',
-                        'doctor.doctorProfile:id,clinic_id,user_id,specialty',
-                        'doctor.doctorProfile.clinic:id,name',
-                    ])
-                    ->latest('scheduled_for')
-                    ->limit(1),
-            ]);
+        $user = $request->user();
+
+        return $user !== null
+            && ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('clinic_admin') || $user->hasRole('receptionist'));
     }
 
-    private function visitsQuery(int $clinicId, int $patientId)
+    private function patientQuery(int $clinicId, bool $includeAllClinics = false)
     {
-        return PatientCardVisit::query()
-            ->forClinic($clinicId)
+        $query = $includeAllClinics
+            ? Patient::query()->withoutGlobalScope('clinic')
+            : Patient::query()->forClinic($clinicId);
+
+        return $query->with([
+            'appointments' => fn ($query) => $query
+                ->withoutGlobalScope('clinic')
+                ->with([
+                    'doctor:id,clinic_id,name',
+                    'doctor.doctorProfile:id,clinic_id,user_id,specialty',
+                    'doctor.doctorProfile.clinic:id,name',
+                ])
+                ->latest('scheduled_for')
+                ->limit(1),
+        ]);
+    }
+
+    private function visitsQuery(int $clinicId, int $patientId, bool $includeAllClinics = false)
+    {
+        $query = $includeAllClinics
+            ? PatientCardVisit::query()->withoutGlobalScope('clinic')
+            : PatientCardVisit::query()->forClinic($clinicId);
+
+        return $query
             ->where('patient_id', $patientId)
             ->with(['doctor:id,clinic_id,name', 'clinic:id,name', 'appointment:id,clinic_id,patient_id,doctor_id,scheduled_for,appointment_number,status'])
             ->orderByDesc('visit_date')
@@ -276,14 +310,21 @@ class PatientCardController extends Controller
         ];
     }
 
-    private function doctorOptions(int $clinicId, ?User $user): array
+    private function doctorOptions(int $clinicId, ?User $user, bool $includeAllClinics = false): array
     {
-        return User::query()
-            ->forClinic($clinicId)
+        $query = $includeAllClinics
+            ? User::query()->withoutGlobalScope('clinic')
+            : User::query()->forClinic($clinicId);
+
+        return $query
             ->with(['doctorProfile:id,clinic_id,user_id,specialty'])
-            ->whereHas('roles', function ($query) use ($clinicId): void {
-                $query->where('roles.clinic_id', $clinicId)
-                    ->where('roles.name', 'doctor');
+            ->whereHas('roles', function ($query) use ($clinicId, $includeAllClinics): void {
+                if ($includeAllClinics) {
+                    $query->where('roles.name', 'doctor');
+                } else {
+                    $query->where('roles.clinic_id', $clinicId)
+                        ->where('roles.name', 'doctor');
+                }
             })
             ->when($user?->hasRole('doctor') === true, fn ($query) => $query->whereKey($user->id))
             ->orderBy('name')
@@ -297,10 +338,14 @@ class PatientCardController extends Controller
             ->all();
     }
 
-    private function clinicOptions(int $clinicId, ?User $user): array
+    private function clinicOptions(int $clinicId, ?User $user = null, bool $includeAllClinics = false): array
     {
-        return Clinic::query()
-            ->whereKey($clinicId)
+        $query = $includeAllClinics
+            ? Clinic::query()
+            : Clinic::query()->whereKey($clinicId);
+
+        return $query
+            ->clinical()
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name'])

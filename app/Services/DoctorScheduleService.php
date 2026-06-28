@@ -15,19 +15,20 @@ class DoctorScheduleService
             ->withoutGlobalScope('clinic')
             ->where('clinic_id', $clinicId)
             ->where('user_id', $doctorId)
+            ->where('is_active', true)
             ->value('id');
 
         if ($doctorProfileId === null) {
-            return true;
+            return false;
         }
 
         $hasSchedule = DoctorSchedule::query()
-            ->where('clinic_id', $clinicId)
+            ->forClinic($clinicId)
             ->where('doctor_profile_id', $doctorProfileId)
             ->exists();
 
         if (! $hasSchedule) {
-            return true;
+            return false;
         }
 
         return $this->doctorAvailabilityService->isDoctorAvailableForAppointment(

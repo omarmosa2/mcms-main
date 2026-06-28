@@ -14,7 +14,15 @@ class ShowAppointmentAction extends BaseAction
     {
         $query = Appointment::query()
             ->forClinic($clinicId)
-            ->with(['patient:id,clinic_id,first_name,last_name', 'doctor:id,clinic_id,name']);
+            ->with([
+                'clinic:id,name',
+                'patient' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'first_name', 'last_name'),
+                'doctor' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'name'),
+            ]);
 
         if ($doctorId !== null) {
             $query->where('doctor_id', $doctorId);

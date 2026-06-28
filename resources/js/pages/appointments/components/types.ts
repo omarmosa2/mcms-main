@@ -33,9 +33,14 @@ export type AvailabilityPeriod = {
 
 export type DoctorTodayAvailability = {
     id: number;
+    doctor_id: number;
+    doctor_profile_id: number;
     name: string;
+    full_name: string;
     clinic_id: number;
     specialty: string | null;
+    start_time: string | null;
+    end_time: string | null;
     clinic: {
         id: number;
         name: string;
@@ -45,6 +50,8 @@ export type DoctorTodayAvailability = {
 
 export type TodayAvailability = {
     date: string;
+    current_date?: string;
+    current_time?: string;
     clinics: number[];
     clinic_options: ClinicOption[];
     doctors: DoctorTodayAvailability[];
@@ -62,6 +69,10 @@ export type Appointment = {
     status: string;
     cancel_reason: string | null;
     notes: string | null;
+    clinic?: {
+        id: number;
+        name: string;
+    } | null;
     patient?: {
         id?: number;
         first_name?: string;

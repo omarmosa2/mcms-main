@@ -52,7 +52,11 @@ class DoctorWorkspaceController extends Controller
             ->forClinic($clinicId)
             ->where('doctor_id', $doctorId)
             ->whereDate('scheduled_for', $today)
-            ->with(['patient:id,clinic_id,first_name,last_name,file_number'])
+            ->with([
+                'patient' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'first_name', 'last_name', 'file_number'),
+            ])
             ->orderBy('scheduled_for')
             ->get()
             ->map(function ($appointment) {
@@ -73,7 +77,11 @@ class DoctorWorkspaceController extends Controller
             ->where('doctor_id', $doctorId)
             ->where('scheduled_for', '>', now())
             ->whereDate('scheduled_for', '>', $today)
-            ->with(['patient:id,clinic_id,first_name,last_name,file_number'])
+            ->with([
+                'patient' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'first_name', 'last_name', 'file_number'),
+            ])
             ->orderBy('scheduled_for')
             ->limit(10)
             ->get()
@@ -118,7 +126,11 @@ class DoctorWorkspaceController extends Controller
             ->forClinic($clinicId)
             ->where('doctor_id', $doctorId)
             ->whereDate('scheduled_for', $today)
-            ->with(['patient:id,clinic_id,first_name,last_name,file_number,phone,date_of_birth,gender'])
+            ->with([
+                'patient' => fn ($query) => $query
+                    ->withoutGlobalScope('clinic')
+                    ->select('id', 'clinic_id', 'first_name', 'last_name', 'file_number', 'phone', 'date_of_birth', 'gender'),
+            ])
             ->orderBy('scheduled_for')
             ->get()
             ->map(function ($appointment) {

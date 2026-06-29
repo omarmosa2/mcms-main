@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\Cachable;
 use App\Domain\Shared\Models\BaseModel;
+use App\Support\MoneyFormatter;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ClinicSetting extends BaseModel
@@ -97,10 +98,7 @@ class ClinicSetting extends BaseModel
                 'invoice_clinic_name' => null,
                 'invoice_footer' => null,
                 'invoice_default_notes' => null,
-                'currency_syp' => 1,
-                'currency_try' => 1,
-                'currency_usd' => 1,
-                'currency_iqd' => 1,
+                'currency' => MoneyFormatter::DefaultCurrency,
                 'thousands_separator' => ',',
                 'decimal_places' => 2,
             ],
@@ -119,7 +117,6 @@ class ClinicSetting extends BaseModel
                 'salary_generation_day' => 1,
                 'salary_due_date' => 5,
                 'doctor_earning_mode' => 'appointment_only',
-                'currency_display_format' => 'symbol',
                 'rounding_rule' => 'none',
             ],
             'appearance' => [

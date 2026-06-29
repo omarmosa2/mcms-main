@@ -21,6 +21,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { useMoneyFormatter } from '@/lib/money';
 
 type Expense = {
     id: number;
@@ -102,13 +103,7 @@ const sortIconFor = (field: ExpenseSortField) => {
     return props.sortDirection === 'asc' ? ArrowUp : ArrowDown;
 };
 
-const formatAmount = (amount: number | string): string => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-    }).format(num);
-};
+const { formatMoney: formatAmount } = useMoneyFormatter();
 
 const statusClass = (status: string): string => {
     if (status === 'approved') {

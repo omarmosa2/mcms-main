@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Invoice;
+use App\Support\MoneyFormatter;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -98,12 +99,12 @@ class InvoiceExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMapp
             $invoice->invoice_number,
             $patientName,
             $statusLabels[$invoice->status] ?? $invoice->status,
-            number_format((float) $invoice->subtotal_amount, 2),
-            number_format((float) $invoice->discount_amount, 2),
-            number_format((float) $invoice->tax_amount, 2),
-            number_format((float) $invoice->total_amount, 2),
-            number_format((float) $invoice->paid_amount, 2),
-            number_format((float) $invoice->balance_amount, 2),
+            MoneyFormatter::formatForClinic($invoice->subtotal_amount, $this->clinicId),
+            MoneyFormatter::formatForClinic($invoice->discount_amount, $this->clinicId),
+            MoneyFormatter::formatForClinic($invoice->tax_amount, $this->clinicId),
+            MoneyFormatter::formatForClinic($invoice->total_amount, $this->clinicId),
+            MoneyFormatter::formatForClinic($invoice->paid_amount, $this->clinicId),
+            MoneyFormatter::formatForClinic($invoice->balance_amount, $this->clinicId),
             $invoice->issued_at?->format('Y-m-d H:i:s') ?? '',
             $invoice->due_at?->format('Y-m-d') ?? '',
             $invoice->created_at?->format('Y-m-d H:i:s') ?? '',

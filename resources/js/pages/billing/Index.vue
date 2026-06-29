@@ -6,6 +6,7 @@ import InvoiceController from '@/actions/App/Http/Controllers/Billing/InvoiceCon
 import InvoiceExportController from '@/actions/App/Http/Controllers/Billing/InvoiceExportController';
 import { Button } from '@/components/ui/button';
 import { usePermissions } from '@/composables/usePermissions';
+import { useMoneyFormatter } from '@/lib/money';
 import InvoiceCreateSheet from './components/InvoiceCreateSheet.vue';
 import InvoiceEditDialog from './components/InvoiceEditDialog.vue';
 import InvoiceTable from './components/InvoiceTable.vue';
@@ -87,6 +88,7 @@ const roleLabels: Record<string, string> = {
 const activeRoleLabel = computed<string>(() => roleLabels[primaryRole.value] ?? roleLabels.staff);
 
 const { can } = usePermissions();
+const { formatMoney } = useMoneyFormatter();
 
 const viewingInvoice = ref<Invoice | null>(null);
 const editingInvoice = ref<Invoice | null>(null);
@@ -515,13 +517,13 @@ const handleNextPage = (): void => {
                 <div class="flex items-center gap-2">
                     <span class="size-2 rounded-full bg-[var(--accent-amber)]" aria-hidden="true"></span>
                     <span class="text-sm text-muted-foreground">المبلغ المستحق</span>
-                    <span class="text-lg font-bold tabular-nums text-[var(--accent-amber-strong)]">{{ visibleOutstandingAmount.toFixed(2) }}</span>
+                    <span class="text-lg font-bold tabular-nums text-[var(--accent-amber-strong)]">{{ formatMoney(visibleOutstandingAmount) }}</span>
                 </div>
                 <div v-if="visibleCollectedAmount > 0" class="hidden h-5 w-px bg-border/60 md:block" aria-hidden="true"></div>
                 <div v-if="visibleCollectedAmount > 0" class="flex items-center gap-2">
                     <span class="size-2 rounded-full bg-[var(--accent-mint)]" aria-hidden="true"></span>
                     <span class="text-sm text-muted-foreground">المبلغ المحصّل</span>
-                    <span class="text-lg font-bold tabular-nums text-[var(--accent-mint-strong)]">{{ visibleCollectedAmount.toFixed(2) }}</span>
+                    <span class="text-lg font-bold tabular-nums text-[var(--accent-mint-strong)]">{{ formatMoney(visibleCollectedAmount) }}</span>
                 </div>
             </div>
         </section>

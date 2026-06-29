@@ -14,6 +14,7 @@ import ReportController from '@/actions/App/Http/Controllers/Reports/ReportContr
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useMoneyFormatter } from '@/lib/money';
 
 type StatusCounts = Record<string, number>;
 
@@ -76,6 +77,7 @@ defineOptions({
 });
 
 const page = usePage();
+const { formatMoney: formatAmount } = useMoneyFormatter();
 
 const roleNames = computed<string[]>(() => {
     return (
@@ -126,13 +128,6 @@ const formatStatus = (status: string): string => {
     };
 
     return labels[status] ?? status.replace(/_/g, ' ');
-};
-
-const formatAmount = (amount: number): string => {
-    return amount.toLocaleString('ar-SA', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
 };
 
 const auditExportUrl = computed(() => {

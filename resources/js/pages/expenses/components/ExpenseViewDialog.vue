@@ -2,6 +2,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
+import { useMoneyFormatter } from '@/lib/money';
 import { CheckCircle, XCircle } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -30,14 +31,7 @@ type Expense = {
 
 const props = defineProps<{ expense: Expense | null }>();
 const emit = defineEmits<{ close: [] }>();
-
-const formatAmount = (amount: number | string): string => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-    }).format(num);
-};
+const { formatMoney: formatAmount } = useMoneyFormatter();
 
 const statusClass = (status: string): string => {
     if (status === 'approved') {

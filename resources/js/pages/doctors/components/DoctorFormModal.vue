@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { useMoneyFormatter } from '@/lib/money';
 import type {
     Clinic,
     Doctor,
@@ -33,6 +34,8 @@ const emit = defineEmits<{
     'update:open': [value: boolean];
     saved: [];
 }>();
+
+const { currency } = useMoneyFormatter();
 
 const selectedClinic = computed<Clinic | null>(() => {
     if (form.clinic_id === '' || form.clinic_id === null) {
@@ -70,7 +73,7 @@ const defaultsFor = (doctor: Doctor | null): DoctorFormData => ({
         doctor?.fixed_monthly_amount !== null && doctor?.fixed_monthly_amount !== undefined
             ? String(doctor.fixed_monthly_amount)
             : '',
-    currency: doctor?.currency ?? 'SYP',
+    currency: doctor?.currency ?? currency.value,
     is_active: doctor?.is_active ?? true,
     notes: doctor?.notes ?? '',
     schedules: doctor?.schedules ?? [],

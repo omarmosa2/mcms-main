@@ -15,7 +15,6 @@ const props = defineProps<{
         salary_generation_day: number;
         salary_due_date: number;
         doctor_earning_mode: string;
-        currency_display_format: string;
         rounding_rule: string;
     };
 }>();
@@ -44,7 +43,6 @@ const form = useForm({
     salary_generation_day: props.settings.salary_generation_day ?? 1,
     salary_due_date: props.settings.salary_due_date ?? 5,
     doctor_earning_mode: props.settings.doctor_earning_mode ?? 'appointment_only',
-    currency_display_format: props.settings.currency_display_format ?? 'symbol',
     rounding_rule: props.settings.rounding_rule ?? 'none',
 });
 
@@ -142,19 +140,6 @@ function submit() {
                 <h3 class="text-sm font-semibold text-foreground">الدقة المالية</h3>
 
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="space-y-2">
-                        <Label>تنسيق عرض العملة</Label>
-                        <Select v-model="form.currency_display_format">
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر التنسيق" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="symbol">رمز العملة</SelectItem>
-                                <SelectItem value="code">كود العملة</SelectItem>
-                                <SelectItem value="name">اسم العملة</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
                     <div class="space-y-2">
                         <Label>قاعدة التقريب</Label>
                         <Select v-model="form.rounding_rule">

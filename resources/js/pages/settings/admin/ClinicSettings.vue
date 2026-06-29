@@ -6,6 +6,7 @@ import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const props = defineProps<{
     settings: {
@@ -18,13 +19,14 @@ const props = defineProps<{
         invoice_clinic_name: string | null;
         invoice_footer: string | null;
         invoice_default_notes: string | null;
-        currency_syp: number;
-        currency_try: number;
-        currency_usd: number;
-        currency_iqd: number;
+        currency: string;
         thousands_separator: string;
         decimal_places: number;
     };
+    currencyOptions: Array<{
+        value: string;
+        label: string;
+    }>;
 }>();
 
 defineOptions({
@@ -49,10 +51,7 @@ const form = useForm({
     invoice_clinic_name: props.settings.invoice_clinic_name ?? '',
     invoice_footer: props.settings.invoice_footer ?? '',
     invoice_default_notes: props.settings.invoice_default_notes ?? '',
-    currency_syp: props.settings.currency_syp ?? 1,
-    currency_try: props.settings.currency_try ?? 1,
-    currency_usd: props.settings.currency_usd ?? 1,
-    currency_iqd: props.settings.currency_iqd ?? 1,
+    currency: props.settings.currency ?? props.currencyOptions[0]?.value ?? '',
     thousands_separator: props.settings.thousands_separator ?? ',',
     decimal_places: props.settings.decimal_places ?? 2,
 });
@@ -135,20 +134,21 @@ function submit() {
 
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="space-y-2">
-                        <Label for="currency_syp">الليرة السورية (SYP)</Label>
-                        <Input id="currency_syp" v-model="form.currency_syp" type="number" step="0.01" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="currency_try">الليرة التركية (TRY)</Label>
-                        <Input id="currency_try" v-model="form.currency_try" type="number" step="0.01" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="currency_usd">الدولار الأمريكي (USD)</Label>
-                        <Input id="currency_usd" v-model="form.currency_usd" type="number" step="0.01" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="currency_iqd">الدينار العراقي (IQD)</Label>
-                        <Input id="currency_iqd" v-model="form.currency_iqd" type="number" step="0.01" />
+                        <Label>?????? ???????? ?? ??????</Label>
+                        <Select v-model="form.currency">
+                            <SelectTrigger>
+                                <SelectValue placeholder="???? ??????" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem
+                                    v-for="option in currencyOptions"
+                                    :key="option.value"
+                                    :value="option.value"
+                                >
+                                    {{ option.label }}
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </div>

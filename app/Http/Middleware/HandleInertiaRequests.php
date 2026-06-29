@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\ClinicSetting;
 use App\Models\User;
 use App\Services\Cache\CacheService;
+use App\Support\MoneyFormatter;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -49,6 +50,7 @@ class HandleInertiaRequests extends Middleware
         $canManageSecurityPolicies = false;
         $doctorClinic = null;
         $clinicName = null;
+        $currency = MoneyFormatter::DefaultCurrency;
 
         if ($request->user() !== null) {
             $user = $request->user();
@@ -76,6 +78,7 @@ class HandleInertiaRequests extends Middleware
                 $securityPolicy = $this->cacheService->getSecurityPolicy($clinicIdInt);
 
                 $clinicName = ClinicSetting::get($clinicIdInt, 'clinic', 'name');
+                $currency = MoneyFormatter::currencyForClinic($clinicIdInt);
             }
 
             if (in_array('doctor', $roles, true) && $user->doctorProfile !== null) {
@@ -96,6 +99,9 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'clinic_name' => $clinicName ?? null,
+            'settings' => [
+                'currency' => $currency,
+            ],
             'auth' => [
                 'user' => $request->user() !== null ? $this->sharedUser($request->user()) : null,
                 'roles' => $roles,

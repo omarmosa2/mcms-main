@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
+import { useMoneyFormatter } from '@/lib/money';
 import { store as storeDoctorPayment } from '@/routes/salaries/doctor-payments';
 import { store as storeEmployeePayment } from '@/routes/salaries/employee-payments';
 import PayrollStatsCards from './components/PayrollStatsCards.vue';
@@ -104,6 +105,7 @@ defineOptions({
 
 const { can } = usePermissions();
 const toast = useToast();
+const { formatMoney } = useMoneyFormatter();
 const activeTab = ref<'employees' | 'doctors'>(
     props.filters.person_type === 'doctor' ? 'doctors' : 'employees',
 );
@@ -149,11 +151,6 @@ const paymentForm = useForm({
     payment_date: new Date().toISOString().slice(0, 10),
     notes: '',
 });
-
-const formatMoney = (value: number): string =>
-    new Intl.NumberFormat('en-US-u-nu-latn', {
-        maximumFractionDigits: 0,
-    }).format(value);
 
 const labelFor = (value: string | null): string =>
     value !== null ? (labels[value] ?? value) : '-';
@@ -811,7 +808,7 @@ const paymentHelpText = computed(() =>
                                     {{ doctorCompensationDisplay(row) }}
                                 </td>
                                 <td class="px-4 py-3 font-mono tabular-nums">
-                                    {{ formatMoney(row.visits_count) }}
+                                    {{ row.visits_count }}
                                 </td>
                                 <td class="px-4 py-3 font-mono tabular-nums">
                                     {{ formatMoney(row.deductions_amount) }}
@@ -921,7 +918,7 @@ const paymentHelpText = computed(() =>
                                 <span
                                     class="font-mono font-bold text-foreground tabular-nums"
                                 >
-                                    {{ formatMoney(row.visits_count) }} زيارة
+                                    {{ row.visits_count }} زيارة
                                 </span>
                             </div>
                             <div

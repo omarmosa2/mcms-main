@@ -27,6 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
+import { useMoneyFormatter } from '@/lib/money';
 import EmployeeStatsCards from './components/EmployeeStatsCards.vue';
 
 type DepartmentOption = { id: number; name: string };
@@ -212,10 +213,7 @@ const defaults = (employee: Employee | null = null): EmployeeForm => ({
 
 const form = useForm<EmployeeForm>(defaults());
 const isEditing = computed(() => editing.value !== null);
-const formatMoney = (value: number): string =>
-    new Intl.NumberFormat('en-US-u-nu-latn', {
-        maximumFractionDigits: 0,
-    }).format(value);
+const { formatMoney } = useMoneyFormatter();
 const labelFor = (value: string | null): string =>
     value !== null ? (labels[value] ?? value) : '-';
 

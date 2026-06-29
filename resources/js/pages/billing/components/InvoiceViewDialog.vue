@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
+import { useMoneyFormatter } from '@/lib/money';
 import type { Invoice, Option } from './types';
 
 const props = defineProps<{
@@ -31,6 +32,7 @@ const emit = defineEmits<{
 
 const { can } = usePermissions();
 const toast = useToast();
+const { formatMoney } = useMoneyFormatter();
 
 const statusLabels: Record<string, string> = {
     draft: 'مسودة',
@@ -149,7 +151,7 @@ const handleClose = (): void => {
                             المجموع الفرعي
                         </dt>
                         <dd class="text-sm">
-                            {{ invoice.subtotal_amount.toFixed(2) }}
+                            {{ formatMoney(invoice.subtotal_amount) }}
                         </dd>
                     </div>
                     <div class="space-y-1">
@@ -159,8 +161,8 @@ const handleClose = (): void => {
                             الخصم / الضريبة
                         </dt>
                         <dd class="text-sm">
-                            -{{ invoice.discount_amount.toFixed(2) }} /
-                            +{{ invoice.tax_amount.toFixed(2) }}
+                            -{{ formatMoney(invoice.discount_amount) }} /
+                            +{{ formatMoney(invoice.tax_amount) }}
                         </dd>
                     </div>
                     <div class="space-y-1">
@@ -170,7 +172,7 @@ const handleClose = (): void => {
                             الإجمالي
                         </dt>
                         <dd class="text-sm">
-                            {{ invoice.total_amount.toFixed(2) }}
+                            {{ formatMoney(invoice.total_amount) }}
                         </dd>
                     </div>
                     <div class="space-y-1">
@@ -180,8 +182,8 @@ const handleClose = (): void => {
                             المدفوع / الرصيد
                         </dt>
                         <dd class="text-sm">
-                            {{ invoice.paid_amount.toFixed(2) }} /
-                            {{ invoice.balance_amount.toFixed(2) }}
+                            {{ formatMoney(invoice.paid_amount) }} /
+                            {{ formatMoney(invoice.balance_amount) }}
                         </dd>
                     </div>
                     <div class="space-y-1 sm:col-span-2">
@@ -213,7 +215,7 @@ const handleClose = (): void => {
                                     {{ item.description }}
                                 </span>
                                 <span class="font-medium">
-                                    {{ item.line_total.toFixed(2) }}
+                                    {{ formatMoney(item.line_total) }}
                                 </span>
                             </li>
                         </ul>
@@ -238,7 +240,7 @@ const handleClose = (): void => {
                                 step="0.01"
                                 min="0.01"
                                 :max="invoice.balance_amount"
-                                :placeholder="`الرصيد: ${invoice.balance_amount.toFixed(2)}`"
+                                :placeholder="`الرصيد: ${formatMoney(invoice.balance_amount)}`"
                                 class="pattern-field-clay h-10 text-sm"
                                 required
                             />

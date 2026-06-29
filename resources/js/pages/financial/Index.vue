@@ -4,6 +4,7 @@ import { Banknote } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useMoneyFormatter } from '@/lib/money';
 import { index as financialIndex } from '@/routes/financial';
 import FinancialStatsCards from './components/FinancialStatsCards.vue';
 
@@ -70,6 +71,7 @@ const appointmentType = ref(String(props.filters.appointment_type ?? ''));
 const doctorId = ref(String(props.filters.doctor_id ?? ''));
 const patientId = ref(String(props.filters.patient_id ?? ''));
 const paymentMethod = ref(String(props.filters.payment_method ?? ''));
+const { formatMoney } = useMoneyFormatter();
 
 const labels: Record<string, string> = {
     first_visit: 'كشفية أولى',
@@ -84,10 +86,6 @@ const labels: Record<string, string> = {
     online: 'إلكتروني',
 };
 
-const formatMoney = (value: number): string =>
-    new Intl.NumberFormat('en-US-u-nu-latn', {
-        maximumFractionDigits: 0,
-    }).format(value);
 const labelFor = (value: string | null): string =>
     value !== null ? (labels[value] ?? value) : '-';
 const statusClass = (value: string): string => {

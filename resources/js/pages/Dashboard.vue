@@ -19,6 +19,7 @@ import PatientController from '@/actions/App/Http/Controllers/Patients/PatientCo
 import ReportController from '@/actions/App/Http/Controllers/Reports/ReportController';
 import Chart from '@/components/Chart.vue';
 import { usePermissions } from '@/composables/usePermissions';
+import { useMoneyFormatter } from '@/lib/money';
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
@@ -57,6 +58,7 @@ defineOptions({
 
 const { can } = usePermissions();
 const page = usePage();
+const { formatMoney } = useMoneyFormatter();
 
 const auth = computed(() => page.props.auth as { user?: { name: string }; roles?: string[] } | undefined);
 
@@ -348,7 +350,7 @@ const appointmentsByStatusDatasets = computed(() => [{
                         <h2 class="text-sm font-semibold text-slate-900">الإيرادات (آخر 7 أيام)</h2>
                         <div class="flex items-center gap-1.5 text-[#0284C7]">
                             <TrendingUp class="size-4" />
-                            <span class="text-xs font-semibold tabular-nums">{{ totalRevenue7Days.toLocaleString('ar-SA') }}</span>
+                            <span class="text-xs font-semibold tabular-nums">{{ formatMoney(totalRevenue7Days) }}</span>
                         </div>
                     </div>
                     <Chart type="line" :labels="revenueChartLabels" :datasets="revenueChartDatasets" />

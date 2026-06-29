@@ -12,6 +12,7 @@ use App\Models\Patient;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\MoneyFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,7 @@ class AdminSettingsController extends Controller
 
         return Inertia::render('settings/admin/ClinicSettings', [
             'settings' => $merged,
+            'currencyOptions' => MoneyFormatter::currencyOptions(),
         ]);
     }
 
@@ -48,10 +50,7 @@ class AdminSettingsController extends Controller
             'invoice_clinic_name' => ['nullable', 'string', 'max:255'],
             'invoice_footer' => ['nullable', 'string', 'max:500'],
             'invoice_default_notes' => ['nullable', 'string', 'max:1000'],
-            'currency_syp' => ['nullable', 'numeric', 'min:0'],
-            'currency_try' => ['nullable', 'numeric', 'min:0'],
-            'currency_usd' => ['nullable', 'numeric', 'min:0'],
-            'currency_iqd' => ['nullable', 'numeric', 'min:0'],
+            'currency' => ['required', Rule::in(MoneyFormatter::currencyCodes())],
             'thousands_separator' => ['nullable', 'string', 'max:1'],
             'decimal_places' => ['nullable', 'integer', 'min:0', 'max:6'],
         ]);
@@ -118,7 +117,6 @@ class AdminSettingsController extends Controller
             'salary_generation_day' => ['required', 'integer', 'min:1', 'max:28'],
             'salary_due_date' => ['required', 'integer', 'min:1', 'max:28'],
             'doctor_earning_mode' => ['required', Rule::in(['appointment_only', 'appointment_and_procedures'])],
-            'currency_display_format' => ['required', Rule::in(['symbol', 'code', 'name'])],
             'rounding_rule' => ['required', Rule::in(['none', 'round_up', 'round_down', 'round_nearest'])],
         ]);
 

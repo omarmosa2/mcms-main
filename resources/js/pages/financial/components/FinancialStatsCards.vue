@@ -6,6 +6,7 @@ import {
     TrendingDown,
     TrendingUp,
 } from 'lucide-vue-next';
+import { useMoneyFormatter } from '@/lib/money';
 
 defineProps<{
     summaries: {
@@ -18,10 +19,7 @@ defineProps<{
     };
 }>();
 
-const formatMoney = (value: number): string =>
-    new Intl.NumberFormat('en-US-u-nu-latn', {
-        maximumFractionDigits: 0,
-    }).format(value);
+const { formatMoney } = useMoneyFormatter();
 </script>
 
 <template>

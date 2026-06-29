@@ -7,6 +7,7 @@ import InternalPageHero from '@/components/InternalPageHero.vue';
 import { Button } from '@/components/ui/button';
 import { FilterBar, FilterSearch } from '@/components/ui/filter';
 import { Label } from '@/components/ui/label';
+import { useMoneyFormatter } from '@/lib/money';
 
 type Drug = {
     id: number;
@@ -44,6 +45,7 @@ const { drugs, filters } = defineProps<{
         sort_direction: SortDirection | null;
     };
 }>();
+const { formatMoney } = useMoneyFormatter();
 
 defineOptions({
     layout: {
@@ -204,7 +206,7 @@ const heroMetrics = computed(() => [
                         <tr v-for="drug in visibleDrugs" :key="drug.id" class="ui-table-row">
                             <td class="px-3 py-2 font-medium">{{ drug.trade_name }}</td>
                             <td class="px-3 py-2 text-sm">{{ drug.generic_name }}</td>
-                            <td class="px-3 py-2 font-mono text-sm">{{ drug.unit_price.toFixed(2) }}</td>
+                            <td class="px-3 py-2 font-mono text-sm">{{ formatMoney(drug.unit_price) }}</td>
                             <td class="px-3 py-2">
                                 <span class="inline-flex items-center gap-1.5">
                                     <span class="font-mono text-sm">{{ drug.current_stock }}</span>

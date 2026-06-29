@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
+import { useMoneyFormatter } from '@/lib/money';
 import type { Invoice, InvoiceSortField, Option } from './types';
 
 const props = defineProps<{
@@ -58,6 +59,7 @@ const emit = defineEmits<{
 const { can } = usePermissions();
 const { confirm, isOpen: isConfirmOpen, options: confirmOptions, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 const toast = useToast();
+const { formatMoney } = useMoneyFormatter();
 
 const statusLabels: Record<string, string> = {
     draft: 'مسودة',
@@ -387,13 +389,13 @@ const deleteInvoice = async (invoice: Invoice) => {
                                 {{ invoice.due_at ?? '-' }}
                             </td>
                             <td class="px-3 py-2" data-label="الإجمالي">
-                                {{ invoice.total_amount.toFixed(2) }}
+                                {{ formatMoney(invoice.total_amount) }}
                             </td>
                             <td class="px-3 py-2" data-label="المدفوع">
-                                {{ invoice.paid_amount.toFixed(2) }}
+                                {{ formatMoney(invoice.paid_amount) }}
                             </td>
                             <td class="px-3 py-2" data-label="الرصيد">
-                                {{ invoice.balance_amount.toFixed(2) }}
+                                {{ formatMoney(invoice.balance_amount) }}
                             </td>
                             <td
                                 class="table-cell-actions px-3 py-2"
@@ -547,7 +549,7 @@ const deleteInvoice = async (invoice: Invoice) => {
                                         >
                                             {{ payment.method }}
                                             ({{
-                                                payment.amount.toFixed(2)
+                                                formatMoney(payment.amount)
                                             }})
                                         </span>
                                         <Input

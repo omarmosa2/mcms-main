@@ -18,6 +18,9 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            settings: {
+                currency: string;
+            };
             auth: Auth;
             branding: {
                 company_name: string | null;

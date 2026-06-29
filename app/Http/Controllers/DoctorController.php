@@ -10,6 +10,7 @@ use App\Models\Clinic;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\User;
+use App\Support\MoneyFormatter;
 use App\Support\WeekDay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -211,7 +212,9 @@ class DoctorController extends Controller
             'percentage_value' => $percentageValue,
             'fixed_weekly_amount' => $fixedWeeklyAmount,
             'fixed_monthly_amount' => $fixedMonthlyAmount,
-            'currency' => $validated['currency'] ?? $doctor?->currency ?? 'SYP',
+            'currency' => $validated['currency']
+                ?? $doctor?->currency
+                ?? MoneyFormatter::currencyForClinic((int) ($validated['clinic_id'] ?? $doctor?->clinic_id)),
         ];
     }
 

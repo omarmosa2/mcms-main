@@ -63,7 +63,10 @@ class AdminSettingsTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('settings/admin/ClinicSettings')
-            ->has('settings'));
+            ->has('settings')
+            ->has('currencyOptions')
+            ->where('settings.currency', 'SYP')
+            ->missing('settings.currency_syp'));
     }
 
     public function test_clinic_settings_unwrap_legacy_single_value_arrays(): void
@@ -114,9 +117,15 @@ class AdminSettingsTest extends TestCase
             'address' => '123 Test St',
             'decimal_places' => 2,
             'thousands_separator' => ',',
+            'currency' => 'USD',
         ]);
 
         $response->assertRedirect(route('admin-settings.clinic'));
+
+        $this->assertSame(
+            'USD',
+            ClinicSetting::get((int) $admin->clinic_id, 'clinic', 'currency'),
+        );
     }
 
     public function test_admin_can_view_appointment_settings(): void

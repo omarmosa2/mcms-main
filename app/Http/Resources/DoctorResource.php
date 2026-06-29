@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\DoctorProfile;
+use App\Support\MoneyFormatter;
 use App\Support\WeekDay;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -44,7 +45,7 @@ class DoctorResource extends JsonResource
             'fixed_monthly_amount' => $this->fixed_monthly_amount !== null
                 ? (float) $this->fixed_monthly_amount
                 : null,
-            'currency' => $this->currency ?? 'SYP',
+            'currency' => $this->currency ?? MoneyFormatter::DefaultCurrency,
             'is_active' => (bool) $this->is_active,
             'notes' => $this->notes,
             'schedules' => $this->whenLoaded('schedules', fn () => $this->schedulesCollection()),

@@ -26,6 +26,7 @@ import {
 import { useConfirm } from '@/composables/useConfirm';
 import { usePermissions } from '@/composables/usePermissions';
 import { useToast } from '@/composables/useToast';
+import { useMoneyFormatter } from '@/lib/money';
 
 type CashboxOpener = {
     id: number;
@@ -106,6 +107,7 @@ const { can } = usePermissions();
 const { isOpen: isConfirmOpen, options: confirmOptions, confirm, close: closeConfirm, handleConfirm: handleConfirmDelete, handleCancel: handleConfirmCancel } = useConfirm();
 const toast = useToast();
 const page = usePage();
+const { formatMoney: formatAmount } = useMoneyFormatter();
 
 const roleNames = computed<string[]>(() => {
     return (
@@ -264,12 +266,6 @@ const toggleAllBoxesSelection = (event: Event) => {
 
 const clearSelectedBoxes = () => {
     selectedBoxIds.value = [];
-};
-
-const formatAmount = (amount: number | string): string => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
-
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
 };
 
 const statusLabel = (status: string): string => {

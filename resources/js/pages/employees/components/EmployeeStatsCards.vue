@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { UserCheck, UserX, UsersRound, WalletCards } from 'lucide-vue-next';
+import { useMoneyFormatter } from '@/lib/money';
 
 defineProps<{
     stats: {
@@ -10,10 +11,7 @@ defineProps<{
     };
 }>();
 
-const formatMoney = (value: number): string =>
-    new Intl.NumberFormat('en-US-u-nu-latn', {
-        maximumFractionDigits: 0,
-    }).format(value);
+const { formatMoney } = useMoneyFormatter();
 </script>
 
 <template>

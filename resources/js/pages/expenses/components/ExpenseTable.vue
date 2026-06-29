@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import ExpenseController from '@/actions/App/Http/Controllers/Expenses/ExpenseController';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
-import { computed } from 'vue';
-import InputError from '@/components/InputError.vue';
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, Pencil, Trash2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import {
     FilterBar,
@@ -62,8 +59,6 @@ const props = defineProps<{
     localDateTo: string
     localPaymentMethod: string
     localRowsPerPage: number
-    selectedIds: number[]
-    areAllSelected: boolean
     canDelete: boolean
     canView: boolean
     canUpdate: boolean
@@ -78,7 +73,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     'toggle-sort': [field: ExpenseSortField]
-    'toggle-all-selection': [event: Event]
+    'update-search': [value: string]
+    'update-status': [value: string]
+    'update-category-id': [value: number | null]
+    'update-clinic-id': [value: number | null]
+    'update-date-from': [value: string]
+    'update-date-to': [value: string]
+    'update-payment-method': [value: string]
     'change-page': [page: number]
     'change-rows-per-page': [value: number]
     'open-view': [expense: Expense]
@@ -92,6 +93,7 @@ const sortIconFor = (field: ExpenseSortField) => {
     if (props.sortBy !== field) {
         return ArrowUpDown;
     }
+
     return props.sortDirection === 'asc' ? ArrowUp : ArrowDown;
 };
 
@@ -101,9 +103,11 @@ const statusClass = (status: string): string => {
     if (status === 'paid') {
         return 'border-success-300/70 bg-success-50 text-success-800 dark:border-success-500/40 dark:bg-success-500/15 dark:text-success-100';
     }
+
     if (status === 'cancelled') {
         return 'border-destructive/70 bg-destructive/10 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive-foreground';
     }
+
     return 'border-warning-300/70 bg-warning-50 text-warning-800 dark:border-warning-500/40 dark:bg-warning-500/15 dark:text-warning-100';
 };
 
@@ -113,158 +117,151 @@ const statusLabel = (status: string): string => {
         paid: 'مدفوع',
         cancelled: 'ملغي',
     };
+
     return labels[status] ?? status;
 };
 
 const paymentMethodLabel = (method: string | null): string => {
-    if (!method) return '-';
+    if (!method) {
+return '-';
+}
+
     const labels: Record<string, string> = {
         cash: 'نقداً',
         transfer: 'تحويل',
         card: 'بطاقة',
         other: 'أخرى',
     };
+
     return labels[method] ?? method;
 };
 </script>
 
 <template>
-    <div class="glass-panel-soft p-5">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-            <h3 class="pattern-typographic-title text-[0.76rem]">قائمة المصاريف</h3>
-            <span class="text-xs text-muted-foreground">الإجمالي: {{ total }}</span>
+    <section class="glass-panel-soft overflow-hidden">
+        <div class="flex flex-col gap-3 border-b border-border/70 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+                <h2 class="text-base font-bold text-foreground">قائمة المصاريف</h2>
+                <p class="text-xs text-muted-foreground">
+                    عرض {{ visibleFrom }}-{{ visibleTo }} من {{ total }} مصروف
+                </p>
+            </div>
+            <div class="flex items-center gap-2 rounded-xl border border-border/70 bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
+                <span>الصفحة</span>
+                <strong class="text-foreground">{{ localPage }}</strong>
+                <span>/</span>
+                <strong class="text-foreground">{{ totalPages }}</strong>
+            </div>
         </div>
 
-        <div class="space-y-3 rounded-2xl border border-border/70 bg-background/60 p-4">
-            <div class="grid gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))] md:items-end">
-                <div class="grid gap-2">
+        <div class="border-b border-border/70 bg-secondary/20 p-5">
+            <div class="grid gap-3 lg:grid-cols-12 lg:items-end">
+                <div class="grid gap-2 lg:col-span-4">
                     <Label for="expenses_search">بحث</Label>
                     <FilterSearch
                         id="expenses_search"
                         :model-value="localSearch"
                         placeholder="العنوان، الجهة، الرقم المرجعي..."
+                        @update:model-value="(value) => emit('update-search', value)"
                     />
                 </div>
 
-                <div class="grid gap-2">
-                    <Label for="expenses_status">الحالة</Label>
-                    <FilterSelect
-                        id="expenses_status"
-                        :model-value="localStatus"
-                        :options="statusOptions"
-                        placeholder="الكل"
-                    />
+                <div class="grid gap-2 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-3">
+                    <div class="grid gap-2">
+                        <Label for="expenses_status">الحالة</Label>
+                        <FilterSelect
+                            id="expenses_status"
+                            :model-value="localStatus"
+                            :options="statusOptions"
+                            placeholder="الكل"
+                            @update:model-value="(value) => emit('update-status', String(value ?? 'all'))"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="expenses_category">التصنيف</Label>
+                        <FilterSelect
+                            id="expenses_category"
+                            :model-value="localCategoryId"
+                            :options="categoryOptions"
+                            placeholder="الكل"
+                            @update:model-value="(value) => emit('update-category-id', value === null ? null : Number(value))"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="expenses_clinic">العيادة</Label>
+                        <FilterSelect
+                            id="expenses_clinic"
+                            :model-value="localClinicId"
+                            :options="clinicOptions"
+                            placeholder="الكل"
+                            @update:model-value="(value) => emit('update-clinic-id', value === null ? null : Number(value))"
+                        />
+                    </div>
                 </div>
 
-                <div class="grid gap-2">
-                    <Label for="expenses_category">التصنيف</Label>
-                    <FilterSelect
-                        id="expenses_category"
-                        :model-value="localCategoryId"
-                        :options="categoryOptions"
-                        placeholder="الكل"
-                    />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="expenses_clinic">العيادة</Label>
-                    <FilterSelect
-                        id="expenses_clinic"
-                        :model-value="localClinicId"
-                        :options="clinicOptions"
-                        placeholder="الكل"
-                    />
+                <div class="grid gap-2 sm:grid-cols-2 lg:col-span-3">
+                    <div class="grid gap-2">
+                        <Label for="expenses_payment_method">طريقة الدفع</Label>
+                        <FilterSelect
+                            id="expenses_payment_method"
+                            :model-value="localPaymentMethod"
+                            :options="paymentMethodOptions"
+                            placeholder="الكل"
+                            @update:model-value="(value) => emit('update-payment-method', String(value ?? ''))"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="expenses_per_page">الصفوف</Label>
+                        <select
+                            id="expenses_per_page"
+                            :value="localRowsPerPage"
+                            class="pattern-field-clay h-9 px-3 py-1.5"
+                            @change="emit('change-rows-per-page', Number(($event.target as HTMLSelectElement).value))"
+                        >
+                            <option :value="10">10</option>
+                            <option :value="15">15</option>
+                            <option :value="25">25</option>
+                            <option :value="50">50</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))] md:items-end">
+            <div class="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                 <div class="grid gap-2">
-                    <Label for="expenses_payment_method">طريقة الدفع</Label>
-                    <FilterSelect
-                        id="expenses_payment_method"
-                        :model-value="localPaymentMethod"
-                        :options="paymentMethodOptions"
-                        placeholder="الكل"
-                    />
-                </div>
-
-                <div class="grid gap-2">
-                    <Label for="expenses_date">نطاق التاريخ</Label>
+                    <Label>نطاق التاريخ</Label>
                     <FilterDateRange
                         :from="localDateFrom"
                         :to="localDateTo"
+                        @update:from="(value) => emit('update-date-from', value)"
+                        @update:to="(value) => emit('update-date-to', value)"
                     />
                 </div>
-
-                <div class="grid gap-2">
-                    <Label for="expenses_per_page">صفوف</Label>
-                    <select
-                        id="expenses_per_page"
-                        :model-value="localRowsPerPage"
-                        @change="emit('change-rows-per-page', Number(($event.target as HTMLSelectElement).value))"
-                        class="pattern-field-clay h-9 px-3 py-1.5"
-                    >
-                        <option :value="10">10</option>
-                        <option :value="15">15</option>
-                        <option :value="25">25</option>
-                        <option :value="50">50</option>
-                    </select>
-                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    class="h-9 rounded-xl px-4 text-xs"
+                    @click="emit('clear-filters')"
+                >
+                    تصفية جديدة
+                </Button>
             </div>
 
             <FilterBar
                 v-if="activeFilters.length > 0"
+                class="mt-3"
                 :active-filters="activeFilters"
                 @remove="(key) => emit('remove-filter', key)"
                 @clear-all="emit('clear-filters')"
             />
         </div>
 
-        <Form
-            v-if="canDelete && selectedIds.length > 0"
-            v-bind="ExpenseController.bulkDestroy.form()"
-            class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
-            v-slot="{ processing }"
-        >
-            <input
-                v-for="expenseId in selectedIds"
-                :key="`selected-expense-${expenseId}`"
-                type="hidden"
-                name="ids[]"
-                :value="expenseId"
-            />
-            <Button
-                type="submit"
-                variant="destructive"
-                size="sm"
-                :disabled="processing"
-            >
-                حذف المحدد ({{ selectedIds.length }})
-            </Button>
-            <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                @click="emit('toggle-all-selection', new Event('change'))"
-            >
-                إلغاء التحديد
-            </Button>
-        </Form>
-
-        <div class="ui-table-shell">
-            <table class="ui-table">
+        <div class="overflow-x-auto px-5 py-4">
+            <table class="w-full min-w-[960px] border-separate border-spacing-0 text-sm">
                 <thead>
-                    <tr>
-                        <th v-if="canDelete" class="px-3 py-2">
-                            <input
-                                type="checkbox"
-                                class="size-4 rounded border-border"
-                                :checked="areAllSelected"
-                                @change="emit('toggle-all-selection', $event)"
-                            />
-                        </th>
-                        <th class="px-3 py-2">رقم المصروف</th>
-                        <th class="px-3 py-2">
+                    <tr class="text-xs font-bold text-muted-foreground">
+                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start first:rounded-s-xl">#</th>
+                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">
                             <button
                                 type="button"
                                 class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
@@ -274,10 +271,9 @@ const paymentMethodLabel = (method: string | null): string => {
                                 <component :is="sortIconFor('expense_date')" class="size-3.5" />
                             </button>
                         </th>
-                        <th class="px-3 py-2">العنوان</th>
-                        <th class="px-3 py-2">التصنيف</th>
-                        <th class="px-3 py-2">العيادة</th>
-                        <th class="px-3 py-2">
+                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">العنوان</th>
+                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">العيادة</th>
+                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">
                             <button
                                 type="button"
                                 class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
@@ -287,9 +283,8 @@ const paymentMethodLabel = (method: string | null): string => {
                                 <component :is="sortIconFor('amount')" class="size-3.5" />
                             </button>
                         </th>
-                        <th class="px-3 py-2">طريقة الدفع</th>
-                        <th class="px-3 py-2">الجهة المستلمة</th>
-                        <th class="px-3 py-2">
+                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">طريقة الدفع</th>
+                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">
                             <button
                                 type="button"
                                 class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
@@ -299,76 +294,65 @@ const paymentMethodLabel = (method: string | null): string => {
                                 <component :is="sortIconFor('status')" class="size-3.5" />
                             </button>
                         </th>
-                        <th class="px-3 py-2">أضيف بواسطة</th>
-                        <th class="px-3 py-2 text-right">الإجراءات</th>
+                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">أضيف بواسطة</th>
+                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-end last:rounded-e-xl">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
-                        v-for="expense in expenses"
+                        v-for="(expense, index) in expenses"
                         :key="expense.id"
-                        class="ui-table-row"
+                        class="group border-b border-border/60 transition-colors hover:bg-primary/5"
                     >
-                        <td v-if="canDelete" class="px-3 py-2" data-label="تحديد">
-                            <input
-                                type="checkbox"
-                                class="size-4 rounded border-border"
-                                :checked="selectedIds.includes(expense.id)"
-                                @change="$event.target.checked ? emit('toggle-all-selection', $event) : null"
-                                :value="expense.id"
-                            />
+                        <td class="border-b border-border/60 px-3 py-3 align-middle font-mono text-xs tabular-nums" data-label="الرقم">
+                            {{ visibleFrom + index }}
                         </td>
-                        <td class="px-3 py-2 font-mono text-xs" data-label="رقم المصروف">
-                            {{ expense.expense_number ?? '-' }}
-                        </td>
-                        <td class="px-3 py-2" data-label="التاريخ">
+                        <td class="border-b border-border/60 px-3 py-3 align-middle tabular-nums" data-label="التاريخ">
                             {{ expense.expense_date ?? '-' }}
                         </td>
-                        <td class="px-3 py-2 font-medium" data-label="العنوان">
-                            {{ expense.title }}
+                        <td class="border-b border-border/60 px-3 py-3 align-middle" data-label="العنوان">
+                            <div class="max-w-[190px]">
+                                <p class="font-semibold text-foreground">{{ expense.title }}</p>
+                                <p v-if="expense.reference_number" class="text-xs text-muted-foreground">
+                                    {{ expense.reference_number }}
+                                </p>
+                            </div>
                         </td>
-                        <td class="px-3 py-2" data-label="التصنيف">
-                            <span v-if="expense.category" class="text-sm">
-                                {{ expense.category.name }}
-                            </span>
-                            <span v-else class="text-muted-foreground">-</span>
-                        </td>
-                        <td class="px-3 py-2" data-label="العيادة">
+                        <td class="border-b border-border/60 px-3 py-3 align-middle" data-label="العيادة">
                             <span v-if="expense.clinic" class="text-sm">
                                 {{ expense.clinic.name }}
                             </span>
                             <span v-else class="text-xs text-muted-foreground">عام</span>
                         </td>
-                        <td class="px-3 py-2 font-mono font-semibold" data-label="المبلغ">
+                        <td class="border-b border-border/60 px-3 py-3 align-middle font-mono font-semibold tabular-nums" data-label="المبلغ">
                             {{ formatAmount(expense.amount) }}
                         </td>
-                        <td class="px-3 py-2 text-sm" data-label="طريقة الدفع">
+                        <td class="border-b border-border/60 px-3 py-3 align-middle text-sm" data-label="طريقة الدفع">
                             {{ paymentMethodLabel(expense.payment_method) }}
                         </td>
-                        <td class="px-3 py-2 text-sm" data-label="الجهة المستلمة">
-                            {{ expense.paid_to ?? '-' }}
-                        </td>
-                        <td class="px-3 py-2" data-label="الحالة">
+                        <td class="border-b border-border/60 px-3 py-3 align-middle" data-label="الحالة">
                             <span
-                                class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold capitalize"
+                                class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold capitalize"
                                 :class="statusClass(expense.status)"
                             >
+                                <span class="size-1.5 rounded-full bg-current" />
                                 {{ statusLabel(expense.status) }}
                             </span>
                         </td>
-                        <td class="px-3 py-2 text-sm" data-label="أضيف بواسطة">
+                        <td class="border-b border-border/60 px-3 py-3 align-middle text-sm" data-label="أضيف بواسطة">
                             {{ expense.creator?.name ?? expense.user?.name ?? '-' }}
                         </td>
-                        <td class="table-cell-actions px-3 py-2 md:text-right" data-label="الإجراءات">
-                            <div class="flex flex-wrap justify-end gap-2">
+                        <td class="border-b border-border/60 px-3 py-3 align-middle text-end" data-label="الإجراءات">
+                            <div class="flex flex-wrap justify-end gap-1.5">
                                 <Button
                                     v-if="canView"
                                     type="button"
                                     variant="neumorphic"
                                     size="sm"
-                                    class="h-8 px-3 text-xs"
+                                    class="h-8 rounded-lg px-2.5 text-xs"
                                     @click="emit('open-view', expense)"
                                 >
+                                    <Eye class="size-3.5" />
                                     عرض
                                 </Button>
                                 <Button
@@ -376,9 +360,10 @@ const paymentMethodLabel = (method: string | null): string => {
                                     type="button"
                                     variant="clay"
                                     size="sm"
-                                    class="h-8 px-3 text-xs"
+                                    class="h-8 rounded-lg px-2.5 text-xs"
                                     @click="emit('open-edit', expense)"
                                 >
+                                    <Pencil class="size-3.5" />
                                     تعديل
                                 </Button>
                                 <Button
@@ -386,9 +371,10 @@ const paymentMethodLabel = (method: string | null): string => {
                                     type="button"
                                     variant="destructive"
                                     size="sm"
-                                    class="h-8 px-3 text-xs"
+                                    class="h-8 rounded-lg px-2.5 text-xs"
                                     @click="emit('delete-expense', expense)"
                                 >
+                                    <Trash2 class="size-3.5" />
                                     حذف
                                 </Button>
                             </div>
@@ -396,17 +382,17 @@ const paymentMethodLabel = (method: string | null): string => {
                     </tr>
                     <tr v-if="expenses.length === 0" class="table-empty-state">
                         <td
-                            :colspan="canDelete ? 12 : 11"
-                            class="px-3 py-10 text-center text-muted-foreground"
+                            colspan="9"
+                            class="px-3 py-14 text-center text-muted-foreground"
                         >
-                            لا توجد مصاريف.
+                            لا توجد مصاريف مطابقة للفلاتر الحالية.
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 bg-secondary/20 px-5 py-4">
             <p class="text-xs text-muted-foreground">
                 عرض {{ visibleFrom }}-{{ visibleTo }} من {{ total }}
             </p>
@@ -436,5 +422,5 @@ const paymentMethodLabel = (method: string | null): string => {
                 </Button>
             </div>
         </div>
-    </div>
+    </section>
 </template>

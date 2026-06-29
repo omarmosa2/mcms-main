@@ -19,9 +19,8 @@ import {
 import { computed, ref, watch } from 'vue';
 import PatientCardController from '@/actions/App/Http/Controllers/Patients/PatientCardController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
-import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
-import { Button } from '@/components/ui/button';
 import InputError from '@/components/InputError.vue';
+import { Button } from '@/components/ui/button';
 import type { Patient } from './components/types';
 
 type Resource<T> = { data: T };
@@ -56,6 +55,10 @@ type AppointmentData = {
     duration_minutes: number;
     appointment_type: string | null;
     status: string;
+    clinic?: {
+        id: number;
+        name: string;
+    } | null;
     patient?: {
         id?: number;
         full_name?: string;
@@ -122,6 +125,8 @@ const clinicName = computed(() => display(props.card.clinic_name ?? page.props.c
 const projectName = computed(() => display(props.card.project_name ?? page.props.name));
 const patientName = computed(() => display(patient.value.full_name));
 const latestVisit = computed(() => visits.value[0] ?? null);
+const displayedDoctorName = computed(() => display(props.card.doctor ?? props.activeAppointment?.doctor?.name));
+const displayedClinicName = computed(() => display(props.card.clinic ?? props.activeAppointment?.doctor?.clinic?.name ?? props.activeAppointment?.clinic?.name));
 
 const genderLabel = computed(() => {
     const labels: Record<string, string> = {
@@ -134,34 +139,79 @@ const genderLabel = computed(() => {
 });
 
 const appointmentDoctorName = computed(() => props.activeAppointment?.doctor?.name ?? dash);
-const appointmentClinicName = computed(() => props.activeAppointment?.doctor?.clinic?.name ?? dash);
+const appointmentClinicName = computed(() => props.activeAppointment?.doctor?.clinic?.name ?? props.activeAppointment?.clinic?.name ?? dash);
 const appointmentDate = computed(() => {
     const iso = props.activeAppointment?.scheduled_for;
-    if (!iso) return dash;
+
+    if (!iso) {
+        return dash;
+    }
+
     return new Date(iso).toISOString().slice(0, 10);
 });
 const appointmentTime = computed(() => {
     const iso = props.activeAppointment?.scheduled_for;
-    if (!iso) return dash;
+
+    if (!iso) {
+        return dash;
+    }
+
     const d = new Date(iso);
+
     return d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', hour12: true });
 });
 const appointmentType = computed(() => {
     const t = props.activeAppointment?.appointment_type;
-    if (t === 'review') return 'مراجعة';
-    if (t === 'first_visit') return 'كشفية أولى';
+
+    if (t === 'review') {
+        return 'مراجعة';
+    }
+
+    if (t === 'first_visit') {
+        return 'كشفية أولى';
+    }
+
     return dash;
+});
+const appointmentStatus = computed(() => {
+    const labels: Record<string, string> = {
+        arrived: 'وصل',
+        canceled: 'ملغى',
+        completed: 'مكتمل',
+        confirmed: 'مؤكد',
+        no_show: 'لم يحضر',
+        scheduled: 'محجوز',
+    };
+
+    return labels[props.activeAppointment?.status ?? ''] ?? dash;
+});
+const appointmentSummary = computed(() => {
+    if (!props.activeAppointment) {
+        return null;
+    }
+
+    return [props.activeAppointment.appointment_number, appointmentDate.value, appointmentTime.value]
+        .filter((value) => value && value !== dash)
+        .join(' - ');
 });
 
 const currentUserDoctorName = computed(() => {
-    if (!props.currentUser?.is_doctor) return null;
+    if (!props.currentUser?.is_doctor) {
+        return null;
+    }
+
     const doctor = props.doctors.find((d) => d.id === props.currentUser!.doctor_id);
+
     return doctor?.name ?? props.currentUser?.name ?? null;
 });
 
 const currentUserClinicName = computed(() => {
-    if (!props.currentUser?.is_doctor || !props.currentUser?.clinic_id) return null;
+    if (!props.currentUser?.is_doctor || !props.currentUser?.clinic_id) {
+        return null;
+    }
+
     const dept = props.clinics.find((d) => d.id === props.currentUser!.clinic_id);
+
     return dept?.name ?? null;
 });
 
@@ -213,9 +263,10 @@ function openCreateForm(): void {
     if (props.activeAppointment) {
         form.appointment_id = props.activeAppointment.id.toString();
         form.doctor_id = props.activeAppointment.doctor_id?.toString() ?? '';
-        form.clinic_id = props.activeAppointment.doctor?.clinic?.id?.toString() ?? '';
+        form.clinic_id = (props.activeAppointment.doctor?.clinic?.id ?? props.activeAppointment.clinic?.id)?.toString() ?? '';
         form.visit_date = appointmentDate.value;
         const iso = props.activeAppointment.scheduled_for;
+
         if (iso) {
             const d = new Date(iso);
             form.visit_time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -316,7 +367,10 @@ function printCard(): void {
 watch(
     () => form.doctor_id,
     (doctorId) => {
-        if (isLinkedToAppointment.value) return;
+        if (isLinkedToAppointment.value) {
+            return;
+        }
+
         const selectedDoctor = props.doctors.find((doctor) => doctor.id.toString() === doctorId);
 
         if (selectedDoctor?.clinic_id) {
@@ -607,11 +661,11 @@ watch(
                     </div>
                     <div class="info-box">
                         <span>الطبيب</span>
-                        <strong>{{ display(card.doctor) }}</strong>
+                        <strong>{{ displayedDoctorName }}</strong>
                     </div>
                     <div class="info-box">
                         <span>العيادة</span>
-                        <strong>{{ display(card.clinic) }}</strong>
+                        <strong>{{ displayedClinicName }}</strong>
                     </div>
                     <div class="info-box">
                         <span>تاريخ الميلاد</span>
@@ -625,10 +679,50 @@ watch(
                     <FileText class="size-5 text-primary" />
                     <h2 class="text-lg font-bold">معلومات الزيارة</h2>
                 </div>
+                <div
+                    v-if="activeAppointment"
+                    class="mb-4 rounded-xl border border-primary/20 bg-primary/5 p-4"
+                >
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 text-sm font-semibold text-primary">
+                            <Calendar class="size-4" />
+                            <span>بيانات الموعد المحجوز اليوم</span>
+                        </div>
+                        <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                            {{ appointmentStatus }}
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-sm md:grid-cols-3 xl:grid-cols-6">
+                        <div>
+                            <span class="block text-[0.65rem] font-semibold text-muted-foreground">رقم الموعد</span>
+                            <strong>{{ display(activeAppointment.appointment_number) }}</strong>
+                        </div>
+                        <div>
+                            <span class="block text-[0.65rem] font-semibold text-muted-foreground">التاريخ</span>
+                            <strong>{{ appointmentDate }}</strong>
+                        </div>
+                        <div>
+                            <span class="block text-[0.65rem] font-semibold text-muted-foreground">الوقت</span>
+                            <strong>{{ appointmentTime }}</strong>
+                        </div>
+                        <div>
+                            <span class="block text-[0.65rem] font-semibold text-muted-foreground">نوع الموعد</span>
+                            <strong>{{ appointmentType }}</strong>
+                        </div>
+                        <div>
+                            <span class="block text-[0.65rem] font-semibold text-muted-foreground">الطبيب</span>
+                            <strong>{{ appointmentDoctorName }}</strong>
+                        </div>
+                        <div>
+                            <span class="block text-[0.65rem] font-semibold text-muted-foreground">العيادة</span>
+                            <strong>{{ appointmentClinicName }}</strong>
+                        </div>
+                    </div>
+                </div>
                 <div class="grid grid-cols-1 gap-3 lg:grid-cols-3">
                     <div class="info-box min-h-24">
                         <span>السبب للزيارة</span>
-                        <strong>{{ display(latestVisit?.visit_reason) }}</strong>
+                        <strong>{{ display(latestVisit?.visit_reason ?? appointmentSummary) }}</strong>
                     </div>
                     <div class="info-box min-h-24">
                         <span>الشكوى الرئيسية</span>
@@ -705,7 +799,10 @@ watch(
                             </tr>
                             <tr v-if="visits.length === 0">
                                 <td :colspan="permissions.can_manage_visits ? 11 : 10" class="paper-td py-12 text-center text-muted-foreground">
-                                    لا توجد زيارات مسجلة لهذا المريض.
+                                    <span v-if="activeAppointment">
+                                        يوجد موعد محجوز اليوم لهذا المريض، ولم يتم تسجيل زيارة طبية مرتبطة به بعد.
+                                    </span>
+                                    <span v-else>لا توجد زيارات مسجلة لهذا المريض.</span>
                                 </td>
                             </tr>
                         </tbody>

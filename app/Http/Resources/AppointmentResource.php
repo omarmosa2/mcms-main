@@ -45,17 +45,22 @@ class AppointmentResource extends JsonResource
                 'date_of_birth' => $this->patient?->date_of_birth?->toDateString(),
                 'age' => $this->patient?->date_of_birth?->age,
             ]),
-            'doctor' => $this->whenLoaded('doctor', fn () => [
-                'id' => $this->doctor?->id,
-                'name' => $this->doctor?->name,
-                'specialty' => $this->doctor?->doctorProfile?->specialty,
-                'clinic' => $this->doctor?->doctorProfile?->clinic !== null
-                    ? [
-                        'id' => $this->doctor->doctorProfile->clinic->id,
-                        'name' => $this->doctor->doctorProfile->clinic->name,
-                    ]
-                    : null,
-            ]),
+            'doctor' => $this->whenLoaded('doctor', function (): array {
+                $clinic = $this->doctor?->doctorProfile?->clinic
+                    ?? ($this->relationLoaded('clinic') ? $this->clinic : null);
+
+                return [
+                    'id' => $this->doctor?->id,
+                    'name' => $this->doctor?->name,
+                    'specialty' => $this->doctor?->doctorProfile?->specialty,
+                    'clinic' => $clinic !== null
+                        ? [
+                            'id' => $clinic->id,
+                            'name' => $clinic->name,
+                        ]
+                        : null,
+                ];
+            }),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

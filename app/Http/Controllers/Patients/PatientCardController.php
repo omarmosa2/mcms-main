@@ -38,34 +38,14 @@ class PatientCardController extends Controller
         $visits = $this->visitsQuery($clinicId, $patientId, $includeAllClinics)
             ->get();
 
-        $appointmentId = $request->query('appointment_id');
-        $activeAppointment = null;
-
-        if ($appointmentId !== null) {
-            $appointmentQuery = $includeAllClinics
-                ? Appointment::query()->withoutGlobalScope('clinic')
-                : Appointment::query()->forClinic($clinicId);
-
-            $activeAppointment = $appointmentQuery
-                ->with([
-                    'doctor:id,clinic_id,name',
-                    'doctor.doctorProfile:id,clinic_id,user_id,specialty',
-                    'doctor.doctorProfile.clinic:id,name',
-                ])
-                ->whereKey((int) $appointmentId)
-                ->first();
-
-            if ($activeAppointment !== null && $activeAppointment->patient_id !== (int) $patientId) {
-                $activeAppointment = null;
-            }
-        }
+        $activeAppointment = $this->activeAppointment($request, $clinicId, $patientId, $includeAllClinics);
 
         return Inertia::render('patients/Card', [
             'patient' => PatientResource::make($patient)->response()->getData(true),
             'visits' => PatientCardVisitResource::collection($visits)->response()->getData(true),
             'doctors' => $this->doctorOptions($clinicId, $user, $includeAllClinics),
             'clinics' => $this->clinicOptions($clinicId, $user, $includeAllClinics),
-            'card' => $this->cardMeta($request, $patient, $visits->first()),
+            'card' => $this->cardMeta($request, $patient, $visits->first(), $activeAppointment),
             'permissions' => [
                 'can_manage_visits' => $this->canManageVisits($request),
                 'can_manage_appointments' => $user?->hasPermission('appointment.view') ?? false,
@@ -283,6 +263,37 @@ class PatientCardController extends Controller
             ->orderByDesc('id');
     }
 
+    private function activeAppointment(Request $request, int $clinicId, int $patientId, bool $includeAllClinics): ?Appointment
+    {
+        $appointmentQuery = $includeAllClinics
+            ? Appointment::query()->withoutGlobalScope('clinic')
+            : Appointment::query()->forClinic($clinicId);
+
+        $appointmentQuery
+            ->with([
+                'clinic:id,name',
+                'doctor:id,clinic_id,name',
+                'doctor.doctorProfile:id,clinic_id,user_id,specialty',
+                'doctor.doctorProfile.clinic:id,name',
+            ])
+            ->where('patient_id', $patientId);
+
+        $appointmentId = $request->query('appointment_id');
+
+        if ($appointmentId !== null) {
+            return $appointmentQuery
+                ->whereKey((int) $appointmentId)
+                ->first();
+        }
+
+        return $appointmentQuery
+            ->whereDate('scheduled_for', now()->toDateString())
+            ->whereNotIn('status', [Appointment::STATUS_CANCELED, Appointment::STATUS_NO_SHOW])
+            ->orderBy('scheduled_for')
+            ->orderByDesc('id')
+            ->first();
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
@@ -356,11 +367,11 @@ class PatientCardController extends Controller
             ->all();
     }
 
-    private function cardMeta(Request $request, Patient $patient, ?PatientCardVisit $latestVisit): array
+    private function cardMeta(Request $request, Patient $patient, ?PatientCardVisit $latestVisit, ?Appointment $activeAppointment = null): array
     {
-        $latestAppointment = $patient->appointments->first();
+        $latestAppointment = $activeAppointment ?? $patient->appointments->first();
         $doctor = $latestVisit?->doctor ?? $latestAppointment?->doctor;
-        $clinic = $latestVisit?->clinic ?? $doctor?->doctorProfile?->clinic;
+        $clinic = $latestVisit?->clinic ?? $doctor?->doctorProfile?->clinic ?? $latestAppointment?->clinic;
 
         return [
             'clinic_name' => $request->attributes->get('clinic_name') ?? $request->user()?->clinic?->name ?? config('app.name'),

@@ -4,13 +4,14 @@ namespace Tests\Feature\Patients;
 
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Actions\Rbac\SyncClinicRbacAction;
+use App\Models\Appointment;
 use App\Models\Clinic;
-use App\Models\Department;
 use App\Models\DoctorProfile;
 use App\Models\Patient;
 use App\Models\PatientCardVisit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -58,18 +59,56 @@ class PatientCardControllerTest extends TestCase
         );
     }
 
+    public function test_patient_card_loads_todays_booked_appointment_when_opened_directly(): void
+    {
+        Carbon::setTestNow('2026-06-29 09:00:00');
+
+        try {
+            $clinic = Clinic::factory()->create(['name' => 'Today Clinic']);
+            $this->authenticateForClinic($clinic, 'clinic_admin');
+            $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+            $doctor = User::factory()->create(['clinic_id' => $clinic->id, 'name' => 'Dr Today']);
+
+            Appointment::factory()->create([
+                'clinic_id' => $clinic->id,
+                'patient_id' => $patient->id,
+                'doctor_id' => $doctor->id,
+                'scheduled_for' => '2026-06-28 10:00:00',
+            ]);
+
+            $todaysAppointment = Appointment::factory()->create([
+                'clinic_id' => $clinic->id,
+                'patient_id' => $patient->id,
+                'doctor_id' => $doctor->id,
+                'appointment_number' => 'APT-TODAY',
+                'scheduled_for' => '2026-06-29 11:00:00',
+                'status' => Appointment::STATUS_CONFIRMED,
+            ]);
+
+            $response = $this->get(route('patients.card.show', ['patientId' => $patient->id]));
+
+            $response->assertOk();
+            $response->assertInertia(fn (Assert $page) => $page
+                ->where('activeAppointment.id', $todaysAppointment->id)
+                ->where('activeAppointment.appointment_number', 'APT-TODAY')
+                ->where('activeAppointment.doctor.name', 'Dr Today')
+                ->where('activeAppointment.doctor.clinic.name', 'Today Clinic')
+                ->where('activeAppointment.clinic.name', 'Today Clinic')
+                ->where('card.doctor', 'Dr Today')
+                ->where('card.clinic', 'Today Clinic')
+            );
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
     public function test_doctor_can_store_update_and_delete_patient_card_visit_for_their_clinic(): void
     {
         $clinic = Clinic::factory()->create();
         $doctor = $this->authenticateForClinic($clinic, 'doctor');
-        $department = Department::factory()->create([
-            'clinic_id' => $clinic->id,
-            'is_active' => true,
-        ]);
         DoctorProfile::factory()->create([
             'clinic_id' => $clinic->id,
             'user_id' => $doctor->id,
-            'department_id' => $department->id,
         ]);
         $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
 
@@ -94,7 +133,6 @@ class PatientCardControllerTest extends TestCase
             'clinic_id' => $clinic->id,
             'patient_id' => $patient->id,
             'doctor_id' => $doctor->id,
-            'department_id' => $department->id,
             'diagnosis' => 'Viral infection',
         ]);
 

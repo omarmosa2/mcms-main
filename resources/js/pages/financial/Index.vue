@@ -148,11 +148,15 @@ const transactionType = ref(String(props.filters.transaction_type ?? ''));
 const expenseCategoryId = ref(String(props.filters.expense_category_id ?? ''));
 
 const expenseForm = ref({
+    title: '',
     category_id: null as number | null,
     description: '',
     amount: '',
     expense_date: new Date().toISOString().slice(0, 10),
     payment_method: 'cash',
+    status: 'paid',
+    paid_to: '',
+    reference_number: '',
     notes: '',
 });
 
@@ -209,11 +213,15 @@ watch(
 const openAddExpense = (): void => {
     editingExpense.value = null;
     expenseForm.value = {
+        title: '',
         category_id: null,
         description: '',
         amount: '',
         expense_date: new Date().toISOString().slice(0, 10),
         payment_method: 'cash',
+        status: 'paid',
+        paid_to: '',
+        reference_number: '',
         notes: '',
     };
     expenseDialogOpen.value = true;
@@ -222,11 +230,15 @@ const openAddExpense = (): void => {
 const openEditExpense = (row: ExpenseRow): void => {
     editingExpense.value = row;
     expenseForm.value = {
+        title: row.description,
         category_id: null,
-        description: row.description,
+        description: row.notes ?? '',
         amount: String(row.amount),
         expense_date: row.expense_date ?? new Date().toISOString().slice(0, 10),
         payment_method: row.payment_method ?? 'cash',
+        status: 'paid',
+        paid_to: '',
+        reference_number: '',
         notes: row.notes ?? '',
     };
     expenseDialogOpen.value = true;
@@ -234,10 +246,14 @@ const openEditExpense = (row: ExpenseRow): void => {
 
 const submitExpense = (): void => {
     const data = {
+        title: expenseForm.value.title,
         description: expenseForm.value.description,
         amount: expenseForm.value.amount,
         expense_date: expenseForm.value.expense_date,
         payment_method: expenseForm.value.payment_method,
+        status: expenseForm.value.status,
+        paid_to: expenseForm.value.paid_to || null,
+        reference_number: expenseForm.value.reference_number || null,
         notes: expenseForm.value.notes || null,
         category_id: expenseForm.value.category_id,
     };
@@ -747,8 +763,8 @@ const exportPdf = (): void => {
                 </DialogHeader>
                 <div class="space-y-4">
                     <div class="grid gap-2">
-                        <Label>الوصف</Label>
-                        <Input v-model="expenseForm.description" placeholder="وصف المصروف" />
+                        <Label>عنوان المصروف</Label>
+                        <Input v-model="expenseForm.title" placeholder="عنوان المصروف" />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="grid gap-2">
@@ -760,7 +776,7 @@ const exportPdf = (): void => {
                             <Input v-model="expenseForm.expense_date" type="date" />
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-3 gap-4">
                         <div class="grid gap-2">
                             <Label>التصنيف</Label>
                             <select v-model="expenseForm.category_id" class="h-10 rounded-md border border-input bg-muted px-3 text-sm">
@@ -772,9 +788,28 @@ const exportPdf = (): void => {
                             <Label>طريقة الدفع</Label>
                             <select v-model="expenseForm.payment_method" class="h-10 rounded-md border border-input bg-muted px-3 text-sm">
                                 <option value="cash">نقداً</option>
+                                <option value="transfer">تحويل</option>
                                 <option value="card">بطاقة</option>
-                                <option value="bank_transfer">حوالة بنكية</option>
+                                <option value="other">أخرى</option>
                             </select>
+                        </div>
+                        <div class="grid gap-2">
+                            <Label>الحالة</Label>
+                            <select v-model="expenseForm.status" class="h-10 rounded-md border border-input bg-muted px-3 text-sm">
+                                <option value="pending">معلق</option>
+                                <option value="paid">مدفوع</option>
+                                <option value="cancelled">ملغي</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="grid gap-2">
+                            <Label>الجهة المستلمة</Label>
+                            <Input v-model="expenseForm.paid_to" placeholder="اسم الشخص أو الجهة" />
+                        </div>
+                        <div class="grid gap-2">
+                            <Label>الرقم المرجعي</Label>
+                            <Input v-model="expenseForm.reference_number" placeholder="رقم الفاتورة أو المرجع" />
                         </div>
                     </div>
                     <div class="grid gap-2">

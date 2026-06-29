@@ -620,6 +620,122 @@ class PayrollControllerTest extends TestCase
             ->assertJsonValidationErrors('doctor_monthly_due_id');
     }
 
+    public function test_doctor_dues_with_date_range_filter(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $doctorUser = User::factory()->create(['clinic_id' => $clinic->id]);
+        $doctor = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'compensation_type' => DoctorProfile::COMPENSATION_PERCENTAGE,
+            'compensation_value' => 40,
+            'is_active' => true,
+        ]);
+        $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+        $appointment = Appointment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctorUser->id,
+            'scheduled_for' => '2026-06-02 09:00:00',
+            'cost' => 1000,
+            'appointment_type' => 'first_visit',
+        ]);
+        DoctorAppointmentEntitlement::query()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_profile_id' => $doctor->id,
+            'appointment_id' => $appointment->id,
+            'appointment_cost' => 1000,
+            'percentage' => 40,
+            'entitlement_amount' => 400,
+            'compensation_type' => DoctorProfile::COMPENSATION_PERCENTAGE,
+            'compensation_value' => 40,
+            'status' => DoctorAppointmentEntitlement::STATUS_UNPAID,
+            'appointment_date' => '2026-06-02',
+        ]);
+
+        $response = $this->getJson(route('salaries.index', [
+            'date_from' => '2026-06-01',
+            'date_to' => '2026-06-30',
+            'person_type' => 'doctor',
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('doctor_dues.0.due_amount', 400);
+        $response->assertJsonPath('doctor_dues.0.payment_type', 'percentage');
+        $response->assertJsonPath('doctor_dues.0.visits_count', 1);
+
+        $this->assertDatabaseHas('doctor_monthly_dues', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'salary_month' => '2026-06',
+            'payment_type' => 'percentage',
+            'due_amount' => 400,
+            'status' => 'unpaid',
+        ]);
+    }
+
+    public function test_doctor_dues_date_range_creates_records_for_multiple_months(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $doctorUser = User::factory()->create(['clinic_id' => $clinic->id]);
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'compensation_type' => DoctorProfile::COMPENSATION_MONTHLY_FIXED,
+            'compensation_value' => 1500,
+            'is_active' => true,
+        ]);
+
+        $response = $this->getJson(route('salaries.index', [
+            'date_from' => '2026-05-15',
+            'date_to' => '2026-07-10',
+            'person_type' => 'doctor',
+        ]));
+
+        $response->assertOk();
+        $this->assertDatabaseHas('doctor_monthly_dues', [
+            'clinic_id' => $clinic->id,
+            'salary_month' => '2026-05',
+        ]);
+        $this->assertDatabaseHas('doctor_monthly_dues', [
+            'clinic_id' => $clinic->id,
+            'salary_month' => '2026-06',
+        ]);
+        $this->assertDatabaseHas('doctor_monthly_dues', [
+            'clinic_id' => $clinic->id,
+            'salary_month' => '2026-07',
+        ]);
+    }
+
+    public function test_doctor_dues_date_from_without_date_to_defaults_to_current_month(): void
+    {
+        Carbon::setTestNow('2026-06-28 08:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $doctorUser = User::factory()->create(['clinic_id' => $clinic->id]);
+        DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'compensation_type' => DoctorProfile::COMPENSATION_MONTHLY_FIXED,
+            'compensation_value' => 1500,
+            'is_active' => true,
+        ]);
+
+        $response = $this->getJson(route('salaries.index', [
+            'date_from' => '2026-06-01',
+            'person_type' => 'doctor',
+        ]));
+
+        $response->assertOk();
+        $this->assertDatabaseHas('doctor_monthly_dues', [
+            'clinic_id' => $clinic->id,
+            'salary_month' => '2026-06',
+        ]);
+    }
+
     private function authenticateForClinic(Clinic $clinic, string $roleName = 'clinic_admin'): User
     {
         app(SyncClinicRbacAction::class)->handle($clinic->id);

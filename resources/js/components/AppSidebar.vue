@@ -14,6 +14,7 @@ import {
     LayoutGrid,
     Lock,
     LogOut,
+    Receipt,
     Settings,
     Shield,
     UserCircle,
@@ -52,6 +53,7 @@ import {
 } from '@/routes/admin-settings';
 import { index as doctorLeavesIndex } from '@/routes/doctor-leaves';
 import { index as financialIndex } from '@/routes/financial';
+import ExpenseController from '@/actions/App/Http/Controllers/Expenses/ExpenseController';
 import type { NavItem, NavSection, User } from '@/types';
 
 type MainNavItem = NavItem & {
@@ -141,6 +143,7 @@ const roleItemOrder: Record<string, string[]> = {
         'الأطباء',
         'إدارة الموظفين',
         'الرواتب',
+        'المصاريف',
         'المالية',
         'الإعدادات',
         'الأمان',
@@ -158,6 +161,7 @@ const roleItemOrder: Record<string, string[]> = {
         'الأطباء',
         'إدارة الموظفين',
         'الرواتب',
+        'المصاريف',
         'المالية',
         'الإعدادات',
         'الأمان',
@@ -175,6 +179,7 @@ const roleItemOrder: Record<string, string[]> = {
         'الأطباء',
         'إدارة الموظفين',
         'الرواتب',
+        'المصاريف',
         'المالية',
         'الإعدادات',
         'الأمان',
@@ -291,6 +296,13 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                     'reports.financial',
                     'salaries.view',
                 ],
+            },
+            {
+                title: 'المصاريف',
+                href: ExpenseController.index(),
+                icon: Receipt,
+                group: 'management',
+                permission: 'expenses.view',
             },
             {
                 title: 'الإعدادات',

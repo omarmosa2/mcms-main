@@ -11,25 +11,25 @@ import {
     FilterDateRange,
 } from '@/components/ui/filter';
 import { Label } from '@/components/ui/label';
-import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { useMoneyFormatter } from '@/lib/money';
 
 type Expense = {
     id: number;
-    description: string;
+    expense_number: string | null;
+    title: string;
+    description: string | null;
     amount: number;
     expense_date: string | null;
-    status: 'pending' | 'approved' | 'rejected';
+    status: 'pending' | 'paid' | 'cancelled';
+    payment_method: string | null;
+    paid_to: string | null;
+    reference_number: string | null;
+    attachment_path: string | null;
     category: {
+        id: number;
+        name: string;
+    } | null;
+    clinic: {
         id: number;
         name: string;
     } | null;
@@ -37,20 +37,11 @@ type Expense = {
         id: number;
         name: string;
     } | null;
-    approver: {
+    creator: {
         id: number;
         name: string;
     } | null;
-    approved_at: string | null;
-    notes: string | null;
     created_at: string | null;
-};
-
-type ExpenseCategory = {
-    id: number;
-    name: string;
-    description: string | null;
-    is_active: boolean;
 };
 
 type ExpenseSortField = 'amount' | 'expense_date' | 'status' | 'created_at';
@@ -66,18 +57,21 @@ const props = defineProps<{
     localSearch: string
     localStatus: string
     localCategoryId: number | null
+    localClinicId: number | null
     localDateFrom: string
     localDateTo: string
+    localPaymentMethod: string
     localRowsPerPage: number
     selectedIds: number[]
     areAllSelected: boolean
     canDelete: boolean
     canView: boolean
     canUpdate: boolean
-    canApprove: boolean
     activeFilters: { key: string; label: string; value: string | null }[]
     statusOptions: { label: string; value: string }[]
     categoryOptions: { label: string; value: number }[]
+    clinicOptions: { label: string; value: number | null }[]
+    paymentMethodOptions: { label: string; value: string }[]
     sortBy: ExpenseSortField
     sortDirection: SortDirection
 }>();
@@ -92,8 +86,6 @@ const emit = defineEmits<{
     'delete-expense': [expense: Expense]
     'remove-filter': [key: string]
     'clear-filters': []
-    'toggle-status': [expense: Expense]
-    'approve-expense': [expense: Expense]
 }>();
 
 const sortIconFor = (field: ExpenseSortField) => {
@@ -106,10 +98,10 @@ const sortIconFor = (field: ExpenseSortField) => {
 const { formatMoney: formatAmount } = useMoneyFormatter();
 
 const statusClass = (status: string): string => {
-    if (status === 'approved') {
+    if (status === 'paid') {
         return 'border-success-300/70 bg-success-50 text-success-800 dark:border-success-500/40 dark:bg-success-500/15 dark:text-success-100';
     }
-    if (status === 'rejected') {
+    if (status === 'cancelled') {
         return 'border-destructive/70 bg-destructive/10 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive-foreground';
     }
     return 'border-warning-300/70 bg-warning-50 text-warning-800 dark:border-warning-500/40 dark:bg-warning-500/15 dark:text-warning-100';
@@ -117,18 +109,29 @@ const statusClass = (status: string): string => {
 
 const statusLabel = (status: string): string => {
     const labels: Record<string, string> = {
-        pending: 'قيد الانتظار',
-        approved: 'موافق عليه',
-        rejected: 'مرفوض',
+        pending: 'معلق',
+        paid: 'مدفوع',
+        cancelled: 'ملغي',
     };
     return labels[status] ?? status;
+};
+
+const paymentMethodLabel = (method: string | null): string => {
+    if (!method) return '-';
+    const labels: Record<string, string> = {
+        cash: 'نقداً',
+        transfer: 'تحويل',
+        card: 'بطاقة',
+        other: 'أخرى',
+    };
+    return labels[method] ?? method;
 };
 </script>
 
 <template>
     <div class="glass-panel-soft p-5">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
-            <h3 class="pattern-typographic-title text-[0.76rem]">قائمة المصروفات</h3>
+            <h3 class="pattern-typographic-title text-[0.76rem]">قائمة المصاريف</h3>
             <span class="text-xs text-muted-foreground">الإجمالي: {{ total }}</span>
         </div>
 
@@ -139,7 +142,7 @@ const statusLabel = (status: string): string => {
                     <FilterSearch
                         id="expenses_search"
                         :model-value="localSearch"
-                        placeholder="الوصف..."
+                        placeholder="العنوان، الجهة، الرقم المرجعي..."
                     />
                 </div>
 
@@ -164,15 +167,35 @@ const statusLabel = (status: string): string => {
                 </div>
 
                 <div class="grid gap-2">
+                    <Label for="expenses_clinic">العيادة</Label>
+                    <FilterSelect
+                        id="expenses_clinic"
+                        :model-value="localClinicId"
+                        :options="clinicOptions"
+                        placeholder="الكل"
+                    />
+                </div>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))] md:items-end">
+                <div class="grid gap-2">
+                    <Label for="expenses_payment_method">طريقة الدفع</Label>
+                    <FilterSelect
+                        id="expenses_payment_method"
+                        :model-value="localPaymentMethod"
+                        :options="paymentMethodOptions"
+                        placeholder="الكل"
+                    />
+                </div>
+
+                <div class="grid gap-2">
                     <Label for="expenses_date">نطاق التاريخ</Label>
                     <FilterDateRange
                         :from="localDateFrom"
                         :to="localDateTo"
                     />
                 </div>
-            </div>
 
-            <div class="grid gap-3 md:grid-cols-[repeat(2,minmax(0,1fr))] md:items-end">
                 <div class="grid gap-2">
                     <Label for="expenses_per_page">صفوف</Label>
                     <select
@@ -202,7 +225,6 @@ const statusLabel = (status: string): string => {
             v-bind="ExpenseController.bulkDestroy.form()"
             class="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3"
             v-slot="{ processing }"
-            @submit.prevent="emit('approve-expense', selectedIds[0])"
         >
             <input
                 v-for="expenseId in selectedIds"
@@ -241,6 +263,7 @@ const statusLabel = (status: string): string => {
                                 @change="emit('toggle-all-selection', $event)"
                             />
                         </th>
+                        <th class="px-3 py-2">رقم المصروف</th>
                         <th class="px-3 py-2">
                             <button
                                 type="button"
@@ -251,8 +274,9 @@ const statusLabel = (status: string): string => {
                                 <component :is="sortIconFor('expense_date')" class="size-3.5" />
                             </button>
                         </th>
-                        <th class="px-3 py-2">الوصف</th>
+                        <th class="px-3 py-2">العنوان</th>
                         <th class="px-3 py-2">التصنيف</th>
+                        <th class="px-3 py-2">العيادة</th>
                         <th class="px-3 py-2">
                             <button
                                 type="button"
@@ -263,6 +287,8 @@ const statusLabel = (status: string): string => {
                                 <component :is="sortIconFor('amount')" class="size-3.5" />
                             </button>
                         </th>
+                        <th class="px-3 py-2">طريقة الدفع</th>
+                        <th class="px-3 py-2">الجهة المستلمة</th>
                         <th class="px-3 py-2">
                             <button
                                 type="button"
@@ -273,6 +299,7 @@ const statusLabel = (status: string): string => {
                                 <component :is="sortIconFor('status')" class="size-3.5" />
                             </button>
                         </th>
+                        <th class="px-3 py-2">أضيف بواسطة</th>
                         <th class="px-3 py-2 text-right">الإجراءات</th>
                     </tr>
                 </thead>
@@ -284,7 +311,6 @@ const statusLabel = (status: string): string => {
                     >
                         <td v-if="canDelete" class="px-3 py-2" data-label="تحديد">
                             <input
-                                :model-value="selectedIds"
                                 type="checkbox"
                                 class="size-4 rounded border-border"
                                 :checked="selectedIds.includes(expense.id)"
@@ -292,11 +318,14 @@ const statusLabel = (status: string): string => {
                                 :value="expense.id"
                             />
                         </td>
+                        <td class="px-3 py-2 font-mono text-xs" data-label="رقم المصروف">
+                            {{ expense.expense_number ?? '-' }}
+                        </td>
                         <td class="px-3 py-2" data-label="التاريخ">
                             {{ expense.expense_date ?? '-' }}
                         </td>
-                        <td class="px-3 py-2 font-medium" data-label="الوصف">
-                            {{ expense.description }}
+                        <td class="px-3 py-2 font-medium" data-label="العنوان">
+                            {{ expense.title }}
                         </td>
                         <td class="px-3 py-2" data-label="التصنيف">
                             <span v-if="expense.category" class="text-sm">
@@ -304,8 +333,20 @@ const statusLabel = (status: string): string => {
                             </span>
                             <span v-else class="text-muted-foreground">-</span>
                         </td>
+                        <td class="px-3 py-2" data-label="العيادة">
+                            <span v-if="expense.clinic" class="text-sm">
+                                {{ expense.clinic.name }}
+                            </span>
+                            <span v-else class="text-xs text-muted-foreground">عام</span>
+                        </td>
                         <td class="px-3 py-2 font-mono font-semibold" data-label="المبلغ">
                             {{ formatAmount(expense.amount) }}
+                        </td>
+                        <td class="px-3 py-2 text-sm" data-label="طريقة الدفع">
+                            {{ paymentMethodLabel(expense.payment_method) }}
+                        </td>
+                        <td class="px-3 py-2 text-sm" data-label="الجهة المستلمة">
+                            {{ expense.paid_to ?? '-' }}
                         </td>
                         <td class="px-3 py-2" data-label="الحالة">
                             <span
@@ -314,6 +355,9 @@ const statusLabel = (status: string): string => {
                             >
                                 {{ statusLabel(expense.status) }}
                             </span>
+                        </td>
+                        <td class="px-3 py-2 text-sm" data-label="أضيف بواسطة">
+                            {{ expense.creator?.name ?? expense.user?.name ?? '-' }}
                         </td>
                         <td class="table-cell-actions px-3 py-2 md:text-right" data-label="الإجراءات">
                             <div class="flex flex-wrap justify-end gap-2">
@@ -352,10 +396,10 @@ const statusLabel = (status: string): string => {
                     </tr>
                     <tr v-if="expenses.length === 0" class="table-empty-state">
                         <td
-                            :colspan="canDelete ? 7 : 6"
+                            :colspan="canDelete ? 12 : 11"
                             class="px-3 py-10 text-center text-muted-foreground"
                         >
-                            لا توجد مصروفات.
+                            لا توجد مصاريف.
                         </td>
                     </tr>
                 </tbody>

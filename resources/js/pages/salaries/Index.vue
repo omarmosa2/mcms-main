@@ -120,6 +120,8 @@ const status = ref(String(props.filters.status ?? ''));
 const clinicId = ref(String(props.filters.clinic_id ?? ''));
 const employeeType = ref(String(props.filters.employee_type ?? ''));
 const doctorPaymentType = ref('');
+const dateFrom = ref(String(props.filters.date_from ?? ''));
+const dateTo = ref(String(props.filters.date_to ?? ''));
 const expandedDoctorDueId = ref<number | null>(null);
 const unassignedClinicLabel = 'غير مرتبط بعيادة';
 
@@ -211,6 +213,8 @@ const reload = (): void => {
         PayrollController.index.url(),
         {
             month: month.value || undefined,
+            date_from: dateFrom.value || undefined,
+            date_to: dateTo.value || undefined,
             person_type: personType.value || undefined,
             status: status.value || undefined,
             clinic_id: clinicId.value || undefined,
@@ -220,7 +224,7 @@ const reload = (): void => {
     );
 };
 
-watch([month, personType, status, clinicId, employeeType], () => {
+watch([month, personType, status, clinicId, employeeType, dateFrom, dateTo], () => {
     if (personType.value === 'employee') {
         activeTab.value = 'employees';
     }
@@ -699,10 +703,18 @@ const paymentHelpText = computed(() =>
 
                     <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <div class="grid gap-1.5">
-                            <Label>الفترة الزمنية</Label>
+                            <Label>من تاريخ</Label>
                             <Input
-                                v-model="month"
-                                type="month"
+                                v-model="dateFrom"
+                                type="date"
+                                class="h-10 rounded-lg"
+                            />
+                        </div>
+                        <div class="grid gap-1.5">
+                            <Label>إلى تاريخ</Label>
+                            <Input
+                                v-model="dateTo"
+                                type="date"
                                 class="h-10 rounded-lg"
                             />
                         </div>

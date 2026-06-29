@@ -41,7 +41,7 @@ class GetFinancialStatementsReportAction extends BaseAction
         $operatingExpenses = (float) Expense::query()
             ->forClinic($clinicId)
             ->whereBetween('expense_date', [$from->toDateString(), $to->toDateString()])
-            ->where('status', Expense::STATUS_APPROVED)
+            ->where('status', Expense::STATUS_PAID)
             ->sum('amount');
 
         $legacyPayrollExpenses = (float) Salary::query()
@@ -99,7 +99,7 @@ class GetFinancialStatementsReportAction extends BaseAction
             Expense::query()
                 ->forClinic($clinicId)
                 ->whereBetween('expense_date', [$from->toDateString(), $to->toDateString()])
-                ->where('status', Expense::STATUS_APPROVED)
+                ->where('status', Expense::STATUS_PAID)
                 ->sum('amount')
             + Salary::query()
                 ->forClinic($clinicId)

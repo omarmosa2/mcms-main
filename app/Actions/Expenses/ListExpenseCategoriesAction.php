@@ -12,17 +12,24 @@ class ListExpenseCategoriesAction extends BaseAction
     public function __construct(private CacheService $cacheService) {}
 
     public function handle(
-        int $clinicId,
+        ?int $clinicId = null,
         ?bool $activeOnly = true,
     ): Collection {
-        if ($activeOnly === true) {
-            return $this->cacheService->getClinicExpenseCategories($clinicId);
+        $query = ExpenseCategory::query()
+            ->withoutGlobalScope('clinic')
+            ->withoutTrashed();
+
+        if ($clinicId !== null) {
+            $query->where(function ($q) use ($clinicId) {
+                $q->where('clinic_id', $clinicId)
+                    ->orWhereNull('clinic_id');
+            });
         }
 
-        return ExpenseCategory::query()
-            ->forClinic($clinicId)
-            ->withoutTrashed()
-            ->orderBy('name')
-            ->get();
+        if ($activeOnly === true) {
+            $query->where('is_active', true);
+        }
+
+        return $query->orderBy('name')->get();
     }
 }

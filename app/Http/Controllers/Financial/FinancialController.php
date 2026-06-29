@@ -92,23 +92,30 @@ class FinancialController extends Controller
 
         $validated = $request->validate([
             'category_id' => ['nullable', 'integer', 'exists:expense_categories,id'],
-            'description' => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'expense_date' => ['required', 'date'],
-            'payment_method' => ['nullable', 'string', 'max:50'],
+            'payment_method' => ['required', 'string', 'in:cash,transfer,card,other'],
+            'status' => ['required', 'string', 'in:pending,paid,cancelled'],
+            'paid_to' => ['nullable', 'string', 'max:255'],
+            'reference_number' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $expense = Expense::query()->create([
             'clinic_id' => $clinicId,
             'user_id' => $request->user()?->id,
+            'created_by' => $request->user()?->id,
             'category_id' => $validated['category_id'] ?? null,
-            'description' => $validated['description'],
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
             'amount' => $validated['amount'],
             'expense_date' => $validated['expense_date'],
-            'payment_method' => $validated['payment_method'] ?? null,
-            'notes' => $validated['notes'] ?? null,
-            'status' => 'approved',
+            'payment_method' => $validated['payment_method'],
+            'status' => $validated['status'],
+            'paid_to' => $validated['paid_to'] ?? null,
+            'reference_number' => $validated['reference_number'] ?? null,
         ]);
 
         return response()->json(['data' => $expense, 'message' => 'تم تسجيل المصروف بنجاح.'], Response::HTTP_CREATED);
@@ -122,20 +129,28 @@ class FinancialController extends Controller
 
         $validated = $request->validate([
             'category_id' => ['nullable', 'integer', 'exists:expense_categories,id'],
-            'description' => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'expense_date' => ['required', 'date'],
-            'payment_method' => ['nullable', 'string', 'max:50'],
+            'payment_method' => ['required', 'string', 'in:cash,transfer,card,other'],
+            'status' => ['required', 'string', 'in:pending,paid,cancelled'],
+            'paid_to' => ['nullable', 'string', 'max:255'],
+            'reference_number' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $expense->update([
             'category_id' => $validated['category_id'] ?? null,
-            'description' => $validated['description'],
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
             'amount' => $validated['amount'],
             'expense_date' => $validated['expense_date'],
-            'payment_method' => $validated['payment_method'] ?? null,
-            'notes' => $validated['notes'] ?? null,
+            'payment_method' => $validated['payment_method'],
+            'status' => $validated['status'],
+            'paid_to' => $validated['paid_to'] ?? null,
+            'reference_number' => $validated['reference_number'] ?? null,
+            'updated_by' => $request->user()?->id,
         ]);
 
         return response()->json(['data' => $expense, 'message' => 'تم تعديل المصروف بنجاح.']);
@@ -300,6 +315,7 @@ class FinancialController extends Controller
     {
         $query = Expense::query()
             ->withoutGlobalScope('clinic')
+            ->where('status', Expense::STATUS_PAID)
             ->whereBetween('expense_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
             ->with([
                 'category:id,name',
@@ -326,12 +342,12 @@ class FinancialController extends Controller
                 'id' => $expense->id,
                 'expense_date' => $expense->expense_date?->toDateString(),
                 'category_name' => $expense->category?->name ?? '-',
-                'description' => $expense->description,
+                'description' => $expense->title ?? $expense->description,
                 'amount' => (float) $expense->amount,
                 'payment_method' => $expense->payment_method,
-                'user_name' => $expense->user?->name ?? '-',
+                'user_name' => $expense->creator?->name ?? ($expense->user?->name ?? '-'),
                 'clinic_name' => $expense->clinic?->name ?? '-',
-                'notes' => $expense->notes,
+                'notes' => $expense->description,
             ]);
     }
 
@@ -549,6 +565,7 @@ class FinancialController extends Controller
     {
         $query = Expense::query()
             ->withoutGlobalScope('clinic')
+            ->where('status', Expense::STATUS_PAID)
             ->leftJoin('expense_categories', 'expense_categories.id', '=', 'expenses.category_id')
             ->whereBetween('expenses.expense_date', [$periodStart->toDateString(), $periodEnd->toDateString()]);
 
@@ -596,6 +613,7 @@ class FinancialController extends Controller
 
             $expenseQuery = Expense::query()
                 ->withoutGlobalScope('clinic')
+                ->where('status', Expense::STATUS_PAID)
                 ->whereBetween('expense_date', [$mStart->toDateString(), $mEnd->toDateString()]);
 
             if (! $includeAllClinics) {

@@ -5,7 +5,6 @@ namespace Database\Factories;
 use App\Models\Clinic;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -25,23 +24,46 @@ class ExpenseFactory extends Factory
         return [
             'clinic_id' => $clinic,
             'user_id' => null,
+            'created_by' => null,
+            'updated_by' => null,
             'category_id' => ExpenseCategory::factory()->for($clinic),
-            'description' => fake()->sentence(3),
+            'title' => fake()->sentence(3),
+            'description' => fake()->sentence(),
             'amount' => fake()->randomFloat(2, 10, 1000),
             'expense_date' => fake()->date(),
+            'payment_method' => fake()->randomElement(['cash', 'transfer', 'card', 'other']),
             'status' => 'pending',
-            'approved_by' => null,
-            'approved_at' => null,
-            'notes' => fake()->optional()->sentence(),
+            'paid_to' => fake()->optional()->name(),
+            'reference_number' => fake()->optional()->numerify('REF-#####'),
+            'notes' => null,
         ];
     }
 
-    public function approved(): static
+    public function paid(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => Expense::STATUS_APPROVED,
-            'approved_by' => User::factory(),
-            'approved_at' => now(),
+            'status' => Expense::STATUS_PAID,
+        ]);
+    }
+
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => Expense::STATUS_PENDING,
+        ]);
+    }
+
+    public function cancelled(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => Expense::STATUS_CANCELLED,
+        ]);
+    }
+
+    public function general(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'clinic_id' => null,
         ]);
     }
 }

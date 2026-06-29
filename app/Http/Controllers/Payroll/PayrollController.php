@@ -31,7 +31,7 @@ class PayrollController extends Controller
     public function index(Request $request): JsonResponse|InertiaResponse
     {
         $filters = $this->resolveFilters($request);
-        $month = $filters['month'];
+        $months = $this->resolveDoctorMonths($filters);
 
         $selectedClinicId = is_int($filters['clinic_id']) ? $filters['clinic_id'] : null;
         $userClinicId = $this->getUserClinicId($request);
@@ -40,15 +40,15 @@ class PayrollController extends Controller
         $clinicId = $selectedClinicId ?? $userClinicId;
 
         if ($includeAllClinics) {
-            $this->ensureEmployeeMonthlySalariesAllClinics($month);
-            $this->ensureDoctorMonthlyDuesAllClinics($month);
+            $this->ensureEmployeeMonthlySalariesAllClinics($filters['month']);
+            $this->ensureDoctorMonthlyDuesAllClinics($months);
         } else {
-            $this->ensureEmployeeMonthlySalaries($clinicId, $month);
-            $this->ensureDoctorMonthlyDues($clinicId, $month);
+            $this->ensureEmployeeMonthlySalaries($clinicId, $filters['month']);
+            $this->ensureDoctorMonthlyDues($clinicId, $months);
         }
 
-        $employeeRows = $this->employeeRows($clinicId, $month, $filters, $includeAllClinics);
-        $doctorRows = $this->doctorRows($clinicId, $month, $filters, $includeAllClinics);
+        $employeeRows = $this->employeeRows($clinicId, $filters['month'], $filters, $includeAllClinics);
+        $doctorRows = $this->doctorRows($clinicId, $months, $filters, $includeAllClinics);
 
         $payload = [
             'employee_salaries' => $employeeRows->values()->all(),
@@ -295,48 +295,50 @@ class PayrollController extends Controller
         }
     }
 
-    private function ensureDoctorMonthlyDues(int $clinicId, string $month): void
+    private function ensureDoctorMonthlyDues(int $clinicId, array $months): void
     {
         $activeDoctors = DoctorProfile::query()
             ->forClinic($clinicId)
             ->where('is_active', true)
             ->get();
 
-        $carbonMonth = CarbonImmutable::createFromFormat('Y-m', $month)?->startOfMonth() ?? CarbonImmutable::now()->startOfMonth();
-        $periodStart = $carbonMonth->toDateString();
-        $periodEnd = $carbonMonth->endOfMonth()->toDateString();
+        foreach ($months as $month) {
+            $carbonMonth = CarbonImmutable::createFromFormat('Y-m', $month)?->startOfMonth() ?? CarbonImmutable::now()->startOfMonth();
+            $periodStart = $carbonMonth->toDateString();
+            $periodEnd = $carbonMonth->endOfMonth()->toDateString();
 
-        foreach ($activeDoctors as $doctor) {
-            $calculation = $this->calculateDoctorDue($clinicId, $doctor, $periodStart, $periodEnd);
+            foreach ($activeDoctors as $doctor) {
+                $calculation = $this->calculateDoctorDue($clinicId, $doctor, $periodStart, $periodEnd);
 
-            $record = DoctorMonthlyDue::query()
-                ->forClinic($clinicId)
-                ->where('doctor_id', $doctor->id)
-                ->where('salary_month', $month)
-                ->first();
+                $record = DoctorMonthlyDue::query()
+                    ->forClinic($clinicId)
+                    ->where('doctor_id', $doctor->id)
+                    ->where('salary_month', $month)
+                    ->first();
 
-            $paidAmount = $record !== null ? $this->doctorDuePaidAmount($record) : 0.0;
-            $remainingAmount = max(0, $calculation['due_amount'] - $paidAmount);
+                $paidAmount = $record !== null ? $this->doctorDuePaidAmount($record) : 0.0;
+                $remainingAmount = max(0, $calculation['due_amount'] - $paidAmount);
 
-            DoctorMonthlyDue::query()->updateOrCreate([
-                'clinic_id' => $clinicId,
-                'doctor_id' => $doctor->id,
-                'salary_month' => $month,
-            ], [
-                'clinic_id' => $clinicId,
-                'doctor_id' => $doctor->id,
-                'salary_month' => $month,
-                'payment_type' => $doctor->compensation_type ?? DoctorProfile::COMPENSATION_MONTHLY_FIXED,
-                'percentage' => $doctor->compensation_type === DoctorProfile::COMPENSATION_PERCENTAGE ? $doctor->compensationAmount() : null,
-                'fixed_weekly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY_FIXED ? $doctor->compensationAmount() : null,
-                'fixed_monthly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY_FIXED ? $doctor->compensationAmount() : null,
-                'visits_total_amount' => $calculation['visits_total_amount'],
-                'deductions_amount' => $calculation['deductions_amount'],
-                'due_amount' => $calculation['due_amount'],
-                'paid_amount' => $paidAmount,
-                'remaining_amount' => $remainingAmount,
-                'status' => $this->monthlyDueStatus($calculation['due_amount'], $paidAmount),
-            ]);
+                DoctorMonthlyDue::query()->updateOrCreate([
+                    'clinic_id' => $clinicId,
+                    'doctor_id' => $doctor->id,
+                    'salary_month' => $month,
+                ], [
+                    'clinic_id' => $clinicId,
+                    'doctor_id' => $doctor->id,
+                    'salary_month' => $month,
+                    'payment_type' => $doctor->compensation_type ?? DoctorProfile::COMPENSATION_MONTHLY_FIXED,
+                    'percentage' => $doctor->compensation_type === DoctorProfile::COMPENSATION_PERCENTAGE ? $doctor->compensationAmount() : null,
+                    'fixed_weekly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY_FIXED ? $doctor->compensationAmount() : null,
+                    'fixed_monthly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY_FIXED ? $doctor->compensationAmount() : null,
+                    'visits_total_amount' => $calculation['visits_total_amount'],
+                    'deductions_amount' => $calculation['deductions_amount'],
+                    'due_amount' => $calculation['due_amount'],
+                    'paid_amount' => $paidAmount,
+                    'remaining_amount' => $remainingAmount,
+                    'status' => $this->monthlyDueStatus($calculation['due_amount'], $paidAmount),
+                ]);
+            }
         }
     }
 
@@ -375,49 +377,51 @@ class PayrollController extends Controller
         }
     }
 
-    private function ensureDoctorMonthlyDuesAllClinics(string $month): void
+    private function ensureDoctorMonthlyDuesAllClinics(array $months): void
     {
         $activeDoctors = DoctorProfile::query()
             ->withoutGlobalScope('clinic')
             ->where('is_active', true)
             ->get();
 
-        $carbonMonth = CarbonImmutable::createFromFormat('Y-m', $month)?->startOfMonth() ?? CarbonImmutable::now()->startOfMonth();
-        $periodStart = $carbonMonth->toDateString();
-        $periodEnd = $carbonMonth->endOfMonth()->toDateString();
+        foreach ($months as $month) {
+            $carbonMonth = CarbonImmutable::createFromFormat('Y-m', $month)?->startOfMonth() ?? CarbonImmutable::now()->startOfMonth();
+            $periodStart = $carbonMonth->toDateString();
+            $periodEnd = $carbonMonth->endOfMonth()->toDateString();
 
-        foreach ($activeDoctors as $doctor) {
-            $calculation = $this->calculateDoctorDue((int) $doctor->clinic_id, $doctor, $periodStart, $periodEnd);
+            foreach ($activeDoctors as $doctor) {
+                $calculation = $this->calculateDoctorDue((int) $doctor->clinic_id, $doctor, $periodStart, $periodEnd);
 
-            $record = DoctorMonthlyDue::query()
-                ->withoutGlobalScope('clinic')
-                ->where('clinic_id', (int) $doctor->clinic_id)
-                ->where('doctor_id', $doctor->id)
-                ->where('salary_month', $month)
-                ->first();
+                $record = DoctorMonthlyDue::query()
+                    ->withoutGlobalScope('clinic')
+                    ->where('clinic_id', (int) $doctor->clinic_id)
+                    ->where('doctor_id', $doctor->id)
+                    ->where('salary_month', $month)
+                    ->first();
 
-            $paidAmount = $record !== null ? $this->doctorDuePaidAmount($record) : 0.0;
-            $remainingAmount = max(0, $calculation['due_amount'] - $paidAmount);
+                $paidAmount = $record !== null ? $this->doctorDuePaidAmount($record) : 0.0;
+                $remainingAmount = max(0, $calculation['due_amount'] - $paidAmount);
 
-            DoctorMonthlyDue::query()->withoutGlobalScope('clinic')->updateOrCreate([
-                'clinic_id' => (int) $doctor->clinic_id,
-                'doctor_id' => $doctor->id,
-                'salary_month' => $month,
-            ], [
-                'clinic_id' => (int) $doctor->clinic_id,
-                'doctor_id' => $doctor->id,
-                'salary_month' => $month,
-                'payment_type' => $doctor->compensation_type ?? DoctorProfile::COMPENSATION_MONTHLY_FIXED,
-                'percentage' => $doctor->compensation_type === DoctorProfile::COMPENSATION_PERCENTAGE ? $doctor->compensationAmount() : null,
-                'fixed_weekly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY_FIXED ? $doctor->compensationAmount() : null,
-                'fixed_monthly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY_FIXED ? $doctor->compensationAmount() : null,
-                'visits_total_amount' => $calculation['visits_total_amount'],
-                'deductions_amount' => $calculation['deductions_amount'],
-                'due_amount' => $calculation['due_amount'],
-                'paid_amount' => $paidAmount,
-                'remaining_amount' => $remainingAmount,
-                'status' => $this->monthlyDueStatus($calculation['due_amount'], $paidAmount),
-            ]);
+                DoctorMonthlyDue::query()->withoutGlobalScope('clinic')->updateOrCreate([
+                    'clinic_id' => (int) $doctor->clinic_id,
+                    'doctor_id' => $doctor->id,
+                    'salary_month' => $month,
+                ], [
+                    'clinic_id' => (int) $doctor->clinic_id,
+                    'doctor_id' => $doctor->id,
+                    'salary_month' => $month,
+                    'payment_type' => $doctor->compensation_type ?? DoctorProfile::COMPENSATION_MONTHLY_FIXED,
+                    'percentage' => $doctor->compensation_type === DoctorProfile::COMPENSATION_PERCENTAGE ? $doctor->compensationAmount() : null,
+                    'fixed_weekly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY_FIXED ? $doctor->compensationAmount() : null,
+                    'fixed_monthly_amount' => $doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY_FIXED ? $doctor->compensationAmount() : null,
+                    'visits_total_amount' => $calculation['visits_total_amount'],
+                    'deductions_amount' => $calculation['deductions_amount'],
+                    'due_amount' => $calculation['due_amount'],
+                    'paid_amount' => $paidAmount,
+                    'remaining_amount' => $remainingAmount,
+                    'status' => $this->monthlyDueStatus($calculation['due_amount'], $paidAmount),
+                ]);
+            }
         }
     }
 
@@ -522,7 +526,7 @@ class PayrollController extends Controller
     /**
      * @return Collection<int, array<string, mixed>>
      */
-    private function doctorRows(int $clinicId, string $month, array $filters, bool $includeAllClinics = false): Collection
+    private function doctorRows(int $clinicId, array $months, array $filters, bool $includeAllClinics = false): Collection
     {
         if ($filters['person_type'] === 'employee') {
             return collect();
@@ -532,13 +536,14 @@ class PayrollController extends Controller
             return collect();
         }
 
-        $carbonMonth = CarbonImmutable::createFromFormat('Y-m', $month)?->startOfMonth() ?? CarbonImmutable::now()->startOfMonth();
-        $periodStart = $carbonMonth->toDateString();
-        $periodEnd = $carbonMonth->endOfMonth()->toDateString();
-
         $visitQuery = DoctorAppointmentEntitlement::query()
             ->withoutGlobalScope('clinic')
-            ->whereBetween('appointment_date', [$periodStart, $periodEnd]);
+            ->where(function ($q) use ($months): void {
+                foreach ($months as $m) {
+                    $carbonMonth = CarbonImmutable::createFromFormat('Y-m', $m)?->startOfMonth() ?? CarbonImmutable::now()->startOfMonth();
+                    $q->orWhereBetween('appointment_date', [$carbonMonth->toDateString(), $carbonMonth->endOfMonth()->toDateString()]);
+                }
+            });
 
         if (! $includeAllClinics) {
             $visitQuery->where('clinic_id', $clinicId);
@@ -551,7 +556,7 @@ class PayrollController extends Controller
 
         $query = DoctorMonthlyDue::query()
             ->withoutGlobalScope('clinic')
-            ->where('salary_month', $month)
+            ->whereIn('salary_month', $months)
             ->with([
                 'doctor' => fn ($q) => $q->withoutGlobalScope('clinic')->select('id', 'clinic_id', 'user_id', 'full_name', 'compensation_type', 'compensation_value', 'percentage_value', 'fixed_weekly_amount', 'fixed_monthly_amount'),
                 'doctor.clinic:id,name',
@@ -799,10 +804,39 @@ class PayrollController extends Controller
     /**
      * @return array<string, mixed>
      */
+    private function resolveDoctorMonths(array $filters): array
+    {
+        $dateFrom = $filters['date_from'] ?? null;
+        $dateTo = $filters['date_to'] ?? null;
+
+        if ($dateFrom !== null) {
+            $from = CarbonImmutable::parse($dateFrom)->startOfMonth();
+            $to = $dateTo !== null ? CarbonImmutable::parse($dateTo)->startOfMonth() : CarbonImmutable::now()->startOfMonth();
+
+            if ($to->lt($from)) {
+                $to = $from;
+            }
+
+            $months = [];
+            $current = $from;
+
+            while ($current->lte($to)) {
+                $months[] = $current->format('Y-m');
+                $current = $current->addMonth();
+            }
+
+            return $months;
+        }
+
+        return [$filters['month']];
+    }
+
     private function resolveFilters(Request $request): array
     {
         return [
             'month' => $this->nullableString($request->query('month')) ?? now()->format('Y-m'),
+            'date_from' => $this->nullableString($request->query('date_from')),
+            'date_to' => $this->nullableString($request->query('date_to')),
             'person_type' => $this->allowedNullableString($request->query('person_type'), ['employee', 'doctor']),
             'status' => $this->allowedNullableString($request->query('status'), ['unpaid', 'partially_paid', 'paid']),
             'clinic_id' => $this->nullableClinicFilter($request->query('clinic_id')),

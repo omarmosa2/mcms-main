@@ -11,31 +11,31 @@ class ApproveExpenseAction extends BaseAction
     public function __construct(private LogAuditAction $logAuditAction) {}
 
     public function handle(
-        int $clinicId,
         int $userId,
         int $expenseId,
-        bool $approve = true,
+        string $status,
     ): Expense {
         $expense = Expense::query()
-            ->forClinic($clinicId)
             ->where('id', $expenseId)
             ->firstOrFail();
+
         $expense->update([
-            'approved_by' => $userId,
-            'approved_at' => now(),
-            'status' => $approve ? Expense::STATUS_APPROVED : Expense::STATUS_REJECTED,
+            'status' => $status,
+            'updated_by' => $userId,
         ]);
 
-        $this->logAuditAction->handle(
-            clinicId: $clinicId,
-            userId: $userId,
-            action: 'expenses.approve',
-            metadata: [
-                'expense_id' => $expense->id,
-                'approved' => $approve,
-                'amount' => $expense->amount,
-            ],
-        );
+        if ($expense->clinic_id !== null && $expense->clinic_id > 0) {
+            $this->logAuditAction->handle(
+                clinicId: (int) $expense->clinic_id,
+                userId: $userId,
+                action: 'expenses.update_status',
+                metadata: [
+                    'expense_id' => $expense->id,
+                    'status' => $status,
+                    'amount' => $expense->amount,
+                ],
+            );
+        }
 
         return $expense;
     }

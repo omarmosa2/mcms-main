@@ -23,11 +23,13 @@ class ExpenseControllerTest extends TestCase
         ]);
 
         $response = $this->postJson(route('expenses.store'), [
-            'category_id' => $category->id,
-            'description' => 'Office supplies purchase',
+            'title' => 'Office supplies purchase',
+            'description' => 'Monthly office supplies',
             'amount' => 150.50,
             'expense_date' => now()->toDateString(),
-            'notes' => 'Monthly office supplies',
+            'payment_method' => 'cash',
+            'status' => 'pending',
+            'category_id' => $category->id,
         ]);
 
         $response->assertCreated();
@@ -40,7 +42,7 @@ class ExpenseControllerTest extends TestCase
             'clinic_id' => $clinic->id,
             'user_id' => $user->id,
             'category_id' => $category->id,
-            'description' => 'Office supplies purchase',
+            'title' => 'Office supplies purchase',
             'amount' => 150.50,
             'status' => Expense::STATUS_PENDING,
         ]);
@@ -59,7 +61,7 @@ class ExpenseControllerTest extends TestCase
 
         $expense = Expense::factory()->create([
             'clinic_id' => $clinic->id,
-            'description' => 'Utility bill',
+            'title' => 'Utility bill',
             'amount' => 200,
         ]);
 
@@ -67,7 +69,7 @@ class ExpenseControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('data.id', $expense->id);
-        $response->assertJsonPath('data.description', 'Utility bill');
+        $response->assertJsonPath('data.title', 'Utility bill');
         $response->assertJsonPath('data.amount', 200);
     }
 
@@ -81,27 +83,29 @@ class ExpenseControllerTest extends TestCase
 
         $expense = Expense::factory()->create([
             'clinic_id' => $clinic->id,
-            'description' => 'Old description',
+            'title' => 'Old title',
             'amount' => 100,
         ]);
 
         $response = $this->putJson(route('expenses.update', ['expenseId' => $expense->id]), [
-            'category_id' => $category->id,
-            'description' => 'Updated description',
+            'title' => 'Updated title',
+            'description' => 'Corrected amount',
             'amount' => 250.75,
             'expense_date' => now()->toDateString(),
-            'notes' => 'Corrected amount',
+            'payment_method' => 'transfer',
+            'status' => 'paid',
+            'category_id' => $category->id,
         ]);
 
         $response->assertOk();
-        $response->assertJsonPath('data.description', 'Updated description');
+        $response->assertJsonPath('data.title', 'Updated title');
         $response->assertJsonPath('data.amount', 250.75);
 
         $this->assertDatabaseHas('expenses', [
             'id' => $expense->id,
-            'description' => 'Updated description',
+            'title' => 'Updated title',
             'amount' => 250.75,
-            'notes' => 'Corrected amount',
+            'status' => Expense::STATUS_PAID,
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
@@ -111,7 +115,7 @@ class ExpenseControllerTest extends TestCase
         ]);
     }
 
-    public function test_approve_expense(): void
+    public function test_update_expense_status(): void
     {
         $clinic = Clinic::factory()->create();
         $user = $this->authenticateForClinic($clinic, 'clinic_admin');
@@ -121,43 +125,16 @@ class ExpenseControllerTest extends TestCase
             'status' => Expense::STATUS_PENDING,
         ]);
 
-        $response = $this->postJson(route('expenses.approve', ['expenseId' => $expense->id]));
+        $response = $this->postJson(route('expenses.update-status', ['expenseId' => $expense->id]), [
+            'status' => Expense::STATUS_PAID,
+        ]);
 
         $response->assertOk();
-        $response->assertJsonPath('data.status', Expense::STATUS_APPROVED);
+        $response->assertJsonPath('data.status', Expense::STATUS_PAID);
 
         $this->assertDatabaseHas('expenses', [
             'id' => $expense->id,
-            'status' => Expense::STATUS_APPROVED,
-            'approved_by' => $user->id,
-        ]);
-
-        $this->assertDatabaseHas('audit_logs', [
-            'clinic_id' => $clinic->id,
-            'user_id' => $user->id,
-            'action' => 'expenses.approve',
-        ]);
-    }
-
-    public function test_reject_expense(): void
-    {
-        $clinic = Clinic::factory()->create();
-        $user = $this->authenticateForClinic($clinic, 'clinic_admin');
-
-        $expense = Expense::factory()->create([
-            'clinic_id' => $clinic->id,
-            'status' => Expense::STATUS_PENDING,
-        ]);
-
-        $response = $this->postJson(route('expenses.reject', ['expenseId' => $expense->id]));
-
-        $response->assertOk();
-        $response->assertJsonPath('data.status', Expense::STATUS_REJECTED);
-
-        $this->assertDatabaseHas('expenses', [
-            'id' => $expense->id,
-            'status' => Expense::STATUS_REJECTED,
-            'approved_by' => $user->id,
+            'status' => Expense::STATUS_PAID,
         ]);
     }
 
@@ -207,6 +184,43 @@ class ExpenseControllerTest extends TestCase
 
         $this->assertSoftDeleted($deletableExpense);
         $this->assertDatabaseHas('expenses', ['id' => $foreignExpense->id]);
+    }
+
+    public function test_store_expense_with_clinic(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'clinic_admin');
+
+        $response = $this->postJson(route('expenses.store'), [
+            'title' => 'Clinic-specific expense',
+            'amount' => 500,
+            'expense_date' => now()->toDateString(),
+            'payment_method' => 'card',
+            'status' => 'paid',
+            'clinic_id' => $clinic->id,
+        ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('expenses', [
+            'title' => 'Clinic-specific expense',
+            'clinic_id' => $clinic->id,
+        ]);
+    }
+
+    public function test_store_expense_general(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'clinic_admin');
+
+        $response = $this->postJson(route('expenses.store'), [
+            'title' => 'General expense',
+            'amount' => 300,
+            'expense_date' => now()->toDateString(),
+            'payment_method' => 'cash',
+            'status' => 'pending',
+        ]);
+
+        $response->assertCreated();
     }
 
     private function authenticateForClinic(Clinic $clinic, string $roleName): User

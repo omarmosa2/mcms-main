@@ -4,6 +4,7 @@ namespace App\Actions\Appointments;
 
 use App\Actions\Audit\LogAuditAction;
 use App\Actions\BaseAction;
+use App\Actions\Billing\RecordPaymentAction;
 use App\Actions\GenerateNumberAction;
 use App\Models\Appointment;
 use App\Models\DoctorAppointmentEntitlement;
@@ -25,6 +26,7 @@ class CreateAppointmentAction extends BaseAction
         private DoctorScheduleService $doctorScheduleService,
         private ClinicWorkingHoursService $clinicWorkingHoursService,
         private CacheService $cacheService,
+        private RecordPaymentAction $recordPaymentAction,
     ) {}
 
     /**
@@ -79,7 +81,11 @@ class CreateAppointmentAction extends BaseAction
             ]),
         );
 
-        $this->createInvoiceForAppointmentIfNeeded($clinicId, $userId, $appointment);
+        $invoice = $this->createInvoiceForAppointmentIfNeeded($clinicId, $userId, $appointment);
+
+        if ($invoice !== null) {
+            $this->recordPaymentForInvoice($clinicId, $userId, $invoice);
+        }
 
         $this->createDoctorEntitlementIfNeeded($clinicId, $appointment);
 
@@ -244,12 +250,12 @@ class CreateAppointmentAction extends BaseAction
         }
     }
 
-    private function createInvoiceForAppointmentIfNeeded(int $clinicId, int $userId, Appointment $appointment): void
+    private function createInvoiceForAppointmentIfNeeded(int $clinicId, int $userId, Appointment $appointment): ?Invoice
     {
         $cost = (float) ($appointment->cost ?? 0);
 
         if ($cost <= 0) {
-            return;
+            return null;
         }
 
         $invoiceNumber = $this->generateInvoiceNumber($clinicId);
@@ -283,6 +289,32 @@ class CreateAppointmentAction extends BaseAction
             'tax_amount' => 0,
             'line_total' => $cost,
         ]);
+
+        return $invoice;
+    }
+
+    private function recordPaymentForInvoice(int $clinicId, int $userId, Invoice $invoice): void
+    {
+        $cost = (float) $invoice->total_amount;
+
+        if ($cost <= 0) {
+            return;
+        }
+
+        try {
+            $this->recordPaymentAction->handle(
+                clinicId: $clinicId,
+                invoiceId: $invoice->id,
+                userId: $userId,
+                payload: [
+                    'amount' => $cost,
+                    'method' => 'cash',
+                    'paid_at' => now()->toDateTimeString(),
+                ],
+            );
+        } catch (\Throwable) {
+            // Payment recording failure should not prevent appointment creation
+        }
     }
 
     private function generateInvoiceNumber(int $clinicId): string

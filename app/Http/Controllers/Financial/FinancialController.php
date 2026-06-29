@@ -5,7 +5,11 @@ namespace App\Http\Controllers\Financial;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Clinic;
+use App\Models\DoctorMonthlyDue;
 use App\Models\DoctorProfile;
+use App\Models\EmployeeMonthlySalary;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Invoice;
 use App\Models\Patient;
 use App\Models\Payment;
@@ -37,12 +41,33 @@ class FinancialController extends Controller
         $clinic = Clinic::query()->find($clinicId);
         $clinicName = $clinic?->name ?? '-';
 
-        $rows = $this->appointmentFinancialRows($clinicId, $clinicName, $filters, $periodStart, $periodEnd, $includeAllClinics);
-        $summaries = $this->summaries($rows);
+        $transactionType = $filters['transaction_type'];
+
+        $incomeRows = collect();
+        $expenseRows = collect();
+
+        if ($transactionType === null || $transactionType === 'income') {
+            $incomeRows = $this->appointmentFinancialRows($clinicId, $clinicName, $filters, $periodStart, $periodEnd, $includeAllClinics);
+        }
+
+        if ($transactionType === null || $transactionType === 'expense') {
+            $expenseRows = $this->expenseRows($clinicId, $filters, $periodStart, $periodEnd, $includeAllClinics);
+        }
+
+        $doctorEntitlements = $this->doctorEntitlementRows($clinicId, $periodStart, $periodEnd, $includeAllClinics);
+        $employeeSalaryRows = $this->employeeSalaryRows($clinicId, $filters['month'], $includeAllClinics);
+
+        $summaries = $this->computeSummaries($incomeRows, $expenseRows, $doctorEntitlements, $employeeSalaryRows, $clinicId, $periodStart, $periodEnd, $includeAllClinics);
+
+        $chartData = $this->chartData($clinicId, $periodStart, $periodEnd, $includeAllClinics, $filters['month']);
 
         $payload = [
-            'financial_rows' => $rows->values()->all(),
+            'financial_rows' => $incomeRows->values()->all(),
+            'expense_rows' => $expenseRows->values()->all(),
+            'doctor_entitlements' => $doctorEntitlements->values()->all(),
+            'employee_salaries' => $employeeSalaryRows->values()->all(),
             'summaries' => $summaries,
+            'chart_data' => $chartData,
             'filters' => [
                 ...$filters,
                 'period_start' => $periodStart->toDateString(),
@@ -51,6 +76,7 @@ class FinancialController extends Controller
             'clinics' => $this->clinicOptions(),
             'doctors' => $this->doctorsDropdown($clinicId, $includeAllClinics),
             'patients' => $this->patientsDropdown($clinicId, $includeAllClinics),
+            'expense_categories' => $this->expenseCategoriesDropdown($clinicId, $includeAllClinics),
         ];
 
         if ($request->expectsJson()) {
@@ -58,6 +84,71 @@ class FinancialController extends Controller
         }
 
         return Inertia::render('financial/Index', $payload);
+    }
+
+    public function storeExpense(Request $request): JsonResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $validated = $request->validate([
+            'category_id' => ['nullable', 'integer', 'exists:expense_categories,id'],
+            'description' => ['required', 'string', 'max:255'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'expense_date' => ['required', 'date'],
+            'payment_method' => ['nullable', 'string', 'max:50'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $expense = Expense::query()->create([
+            'clinic_id' => $clinicId,
+            'user_id' => $request->user()?->id,
+            'category_id' => $validated['category_id'] ?? null,
+            'description' => $validated['description'],
+            'amount' => $validated['amount'],
+            'expense_date' => $validated['expense_date'],
+            'payment_method' => $validated['payment_method'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+            'status' => 'approved',
+        ]);
+
+        return response()->json(['data' => $expense, 'message' => 'تم تسجيل المصروف بنجاح.'], Response::HTTP_CREATED);
+    }
+
+    public function updateExpense(Request $request, int $expenseId): JsonResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $expense = Expense::query()->forClinic($clinicId)->findOrFail($expenseId);
+
+        $validated = $request->validate([
+            'category_id' => ['nullable', 'integer', 'exists:expense_categories,id'],
+            'description' => ['required', 'string', 'max:255'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'expense_date' => ['required', 'date'],
+            'payment_method' => ['nullable', 'string', 'max:50'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $expense->update([
+            'category_id' => $validated['category_id'] ?? null,
+            'description' => $validated['description'],
+            'amount' => $validated['amount'],
+            'expense_date' => $validated['expense_date'],
+            'payment_method' => $validated['payment_method'] ?? null,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        return response()->json(['data' => $expense, 'message' => 'تم تعديل المصروف بنجاح.']);
+    }
+
+    public function destroyExpense(Request $request, int $expenseId): JsonResponse
+    {
+        $clinicId = $this->resolveClinicId($request);
+
+        $expense = Expense::query()->forClinic($clinicId)->findOrFail($expenseId);
+        $expense->delete();
+
+        return response()->json(['message' => 'تم حذف المصروف بنجاح.']);
     }
 
     private function getUserClinicId(Request $request): ?int
@@ -101,6 +192,8 @@ class FinancialController extends Controller
             'patient_id' => $this->nullableInteger($request->query('patient_id')),
             'appointment_type' => $this->allowedNullableString($request->query('appointment_type'), ['first_visit', 'review']),
             'payment_method' => $this->allowedNullableString($request->query('payment_method'), ['cash', 'card', 'bank_transfer', 'insurance', 'online']),
+            'transaction_type' => $this->allowedNullableString($request->query('transaction_type'), ['income', 'expense']),
+            'expense_category_id' => $this->nullableInteger($request->query('expense_category_id')),
         ];
     }
 
@@ -129,11 +222,13 @@ class FinancialController extends Controller
     private function appointmentFinancialRows(int $clinicId, string $clinicName, array $filters, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, bool $includeAllClinics = false): Collection
     {
         $query = Appointment::query()
+            ->withoutGlobalScope('clinic')
             ->withoutTrashed()
             ->with([
                 'clinic:id,name',
                 'patient' => fn ($q) => $q->withoutGlobalScope('clinic')->select('id', 'clinic_id', 'first_name', 'last_name', 'file_number'),
                 'doctor' => fn ($q) => $q->withoutGlobalScope('clinic')->select('id', 'clinic_id', 'name'),
+                'creator:id,name',
             ])
             ->whereBetween('scheduled_for', [$periodStart, $periodEnd])
             ->whereNotIn('status', [Appointment::STATUS_CANCELED, Appointment::STATUS_NO_SHOW]);
@@ -178,6 +273,7 @@ class FinancialController extends Controller
                 'payment_status' => $this->paymentStatus($cost, $paidAmount),
                 'appointment_date' => $appointment->scheduled_for?->toDateString(),
                 'payment_method' => $lastPaymentMethod,
+                'created_by_name' => $appointment->creator?->name ?? '-',
             ];
         });
 
@@ -194,6 +290,351 @@ class FinancialController extends Controller
         })->values();
 
         return $rows;
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function expenseRows(int $clinicId, array $filters, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, bool $includeAllClinics = false): Collection
+    {
+        $query = Expense::query()
+            ->withoutGlobalScope('clinic')
+            ->whereBetween('expense_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+            ->with([
+                'category:id,name',
+                'user:id,name',
+                'clinic:id,name',
+            ]);
+
+        if (! $includeAllClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
+
+        if ($filters['expense_category_id'] !== null) {
+            $query->where('category_id', $filters['expense_category_id']);
+        }
+
+        if ($filters['payment_method'] !== null) {
+            $query->where('payment_method', $filters['payment_method']);
+        }
+
+        return $query
+            ->orderBy('expense_date', 'desc')
+            ->get()
+            ->map(fn (Expense $expense): array => [
+                'id' => $expense->id,
+                'expense_date' => $expense->expense_date?->toDateString(),
+                'category_name' => $expense->category?->name ?? '-',
+                'description' => $expense->description,
+                'amount' => (float) $expense->amount,
+                'payment_method' => $expense->payment_method,
+                'user_name' => $expense->user?->name ?? '-',
+                'clinic_name' => $expense->clinic?->name ?? '-',
+                'notes' => $expense->notes,
+            ]);
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function doctorEntitlementRows(int $clinicId, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, bool $includeAllClinics = false): Collection
+    {
+        $month = $periodStart->format('Y-m');
+
+        $query = DoctorMonthlyDue::query()
+            ->withoutGlobalScope('clinic')
+            ->where('salary_month', $month)
+            ->with([
+                'doctor' => fn ($q) => $q->withoutGlobalScope('clinic')->select('id', 'clinic_id', 'user_id', 'full_name', 'compensation_type', 'compensation_value', 'percentage_value', 'fixed_weekly_amount', 'fixed_monthly_amount'),
+                'doctor.clinic:id,name',
+                'doctor.user' => fn ($q) => $q->select('id', 'name'),
+            ])
+            ->whereHas('doctor', fn ($q) => $q->withoutGlobalScope('clinic')->where('is_active', true));
+
+        if (! $includeAllClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
+
+        return $query
+            ->orderBy('id')
+            ->get()
+            ->map(fn (DoctorMonthlyDue $record): array => [
+                'id' => $record->id,
+                'doctor_name' => $record->doctor?->user?->name ?? $record->doctor?->full_name ?? 'Doctor #'.$record->doctor_id,
+                'clinic_name' => $record->doctor?->clinic?->name ?? '-',
+                'payment_type' => $record->payment_type,
+                'due_amount' => (float) $record->due_amount,
+                'paid_amount' => (float) $record->paid_amount,
+                'remaining_amount' => (float) $record->remaining_amount,
+                'status' => $record->status,
+            ]);
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function employeeSalaryRows(int $clinicId, string $month, bool $includeAllClinics = false): Collection
+    {
+        $query = EmployeeMonthlySalary::query()
+            ->withoutGlobalScope('clinic')
+            ->where('salary_month', $month)
+            ->with([
+                'employee' => fn ($q) => $q->withoutClinicScope()->select('id', 'clinic_id', 'full_name', 'employee_type'),
+            ]);
+
+        if (! $includeAllClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
+
+        return $query
+            ->orderBy('id')
+            ->get()
+            ->map(fn (EmployeeMonthlySalary $record): array => [
+                'id' => $record->id,
+                'employee_name' => $record->employee?->full_name ?? 'Employee #'.$record->employee_id,
+                'base_salary' => (float) $record->base_salary,
+                'due_amount' => (float) $record->due_amount,
+                'paid_amount' => (float) $record->paid_amount,
+                'remaining_amount' => (float) $record->remaining_amount,
+                'status' => $record->status,
+            ]);
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $incomeRows
+     * @param  Collection<int, array<string, mixed>>  $expenseRows
+     * @param  Collection<int, array<string, mixed>>  $doctorEntitlements
+     * @param  Collection<int, array<string, mixed>>  $employeeSalaries
+     * @return array<string, float|int>
+     */
+    private function computeSummaries(
+        Collection $incomeRows,
+        Collection $expenseRows,
+        Collection $doctorEntitlements,
+        Collection $employeeSalaries,
+        int $clinicId,
+        CarbonImmutable $periodStart,
+        CarbonImmutable $periodEnd,
+        bool $includeAllClinics,
+    ): array {
+        $totalIncome = (float) $incomeRows->sum('cost');
+        $totalCollected = (float) $incomeRows->sum('paid_amount');
+        $totalRemaining = (float) $incomeRows->sum('remaining_amount');
+
+        $doctorDue = (float) $doctorEntitlements->sum('due_amount');
+        $doctorPaid = (float) $doctorEntitlements->sum('paid_amount');
+
+        $employeeDue = (float) $employeeSalaries->sum('due_amount');
+        $employeePaid = (float) $employeeSalaries->sum('paid_amount');
+
+        $totalExpenses = (float) $expenseRows->sum('amount');
+
+        $totalOutflow = $doctorDue + $employeeDue + $totalExpenses;
+        $netProfit = $totalIncome - $totalOutflow;
+
+        $totalActuallyPaid = $doctorPaid + $employeePaid + $totalExpenses;
+        $netLiquidity = $totalCollected - $totalActuallyPaid;
+
+        return [
+            'total_income' => $totalIncome,
+            'total_collected' => $totalCollected,
+            'total_remaining' => $totalRemaining,
+            'doctor_due' => $doctorDue,
+            'doctor_paid' => $doctorPaid,
+            'employee_salaries' => $employeeDue,
+            'total_expenses' => $totalExpenses,
+            'net_profit' => $netProfit,
+            'net_liquidity' => $netLiquidity,
+            'total_outflow' => $totalOutflow,
+            'paid_count' => $incomeRows->where('payment_status', 'paid')->count(),
+            'unpaid_count' => $incomeRows->where('payment_status', 'unpaid')->count(),
+            'partially_paid_count' => $incomeRows->where('payment_status', 'partially_paid')->count(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function chartData(int $clinicId, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, bool $includeAllClinics, string $month): array
+    {
+        $dailyIncome = $this->dailyIncomeData($clinicId, $periodStart, $periodEnd, $includeAllClinics);
+        $incomeByClinic = $this->incomeByClinicData($periodStart, $periodEnd);
+        $incomeByDoctor = $this->incomeByDoctorData($clinicId, $periodStart, $periodEnd, $includeAllClinics);
+        $expensesByCategory = $this->expensesByCategoryData($clinicId, $periodStart, $periodEnd, $includeAllClinics);
+        $monthlyProfit = $this->monthlyProfitData($clinicId, $periodStart, $includeAllClinics);
+
+        return [
+            'daily_income' => $dailyIncome,
+            'income_by_clinic' => $incomeByClinic,
+            'income_by_doctor' => $incomeByDoctor,
+            'expenses_by_category' => $expensesByCategory,
+            'monthly_profit' => $monthlyProfit,
+        ];
+    }
+
+    /**
+     * @return array<int, array{date: string, amount: float}>
+     */
+    private function dailyIncomeData(int $clinicId, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, bool $includeAllClinics): array
+    {
+        $query = Appointment::query()
+            ->withoutGlobalScope('clinic')
+            ->withoutTrashed()
+            ->whereBetween('scheduled_for', [$periodStart, $periodEnd])
+            ->whereNotIn('status', [Appointment::STATUS_CANCELED, Appointment::STATUS_NO_SHOW]);
+
+        if (! $includeAllClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
+
+        $rows = $query
+            ->selectRaw('DATE(scheduled_for) as day, COALESCE(SUM(cost), 0) as total')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get();
+
+        return $rows->map(fn ($row) => ['date' => $row->day, 'amount' => (float) $row->total])->all();
+    }
+
+    /**
+     * @return array<int, array{clinic_name: string, amount: float}>
+     */
+    private function incomeByClinicData(CarbonImmutable $periodStart, CarbonImmutable $periodEnd): array
+    {
+        return Appointment::query()
+            ->withoutGlobalScope('clinic')
+            ->withoutTrashed()
+            ->join('clinics', 'clinics.id', '=', 'appointments.clinic_id')
+            ->whereBetween('appointments.scheduled_for', [$periodStart, $periodEnd])
+            ->whereNotIn('appointments.status', [Appointment::STATUS_CANCELED, Appointment::STATUS_NO_SHOW])
+            ->selectRaw('clinics.name as clinic_name, COALESCE(SUM(appointments.cost), 0) as total')
+            ->groupBy('clinics.id', 'clinics.name')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row) => ['clinic_name' => $row->clinic_name, 'amount' => (float) $row->total])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{doctor_name: string, amount: float}>
+     */
+    private function incomeByDoctorData(int $clinicId, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, bool $includeAllClinics): array
+    {
+        $query = Appointment::query()
+            ->withoutGlobalScope('clinic')
+            ->withoutTrashed()
+            ->join('users', 'users.id', '=', 'appointments.doctor_id')
+            ->whereBetween('appointments.scheduled_for', [$periodStart, $periodEnd])
+            ->whereNotIn('appointments.status', [Appointment::STATUS_CANCELED, Appointment::STATUS_NO_SHOW]);
+
+        if (! $includeAllClinics) {
+            $query->where('appointments.clinic_id', $clinicId);
+        }
+
+        return $query
+            ->selectRaw('users.name as doctor_name, COALESCE(SUM(appointments.cost), 0) as total')
+            ->groupBy('users.id', 'users.name')
+            ->orderByDesc('total')
+            ->limit(10)
+            ->get()
+            ->map(fn ($row) => ['doctor_name' => $row->doctor_name, 'amount' => (float) $row->total])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{category_name: string, amount: float}>
+     */
+    private function expensesByCategoryData(int $clinicId, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, bool $includeAllClinics): array
+    {
+        $query = Expense::query()
+            ->withoutGlobalScope('clinic')
+            ->leftJoin('expense_categories', 'expense_categories.id', '=', 'expenses.category_id')
+            ->whereBetween('expenses.expense_date', [$periodStart->toDateString(), $periodEnd->toDateString()]);
+
+        if (! $includeAllClinics) {
+            $query->where('expenses.clinic_id', $clinicId);
+        }
+
+        return $query
+            ->selectRaw('COALESCE(expense_categories.name, \'بدون تصنيف\') as category_name, COALESCE(SUM(expenses.amount), 0) as total')
+            ->groupBy('expense_categories.id', 'expense_categories.name')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn ($row) => ['category_name' => $row->category_name, 'amount' => (float) $row->total])
+            ->all();
+    }
+
+    /**
+     * @return array<int, array{month: string, income: float, outflow: float, profit: float}>
+     */
+    private function monthlyProfitData(int $clinicId, CarbonImmutable $periodStart, bool $includeAllClinics): array
+    {
+        $months = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $m = $periodStart->subMonths($i);
+            $months[] = $m->format('Y-m');
+        }
+
+        $result = [];
+
+        foreach ($months as $m) {
+            $mStart = CarbonImmutable::createFromFormat('Y-m', $m)->startOfMonth();
+            $mEnd = $mStart->endOfMonth();
+
+            $incomeQuery = Appointment::query()
+                ->withoutGlobalScope('clinic')
+                ->withoutTrashed()
+                ->whereBetween('scheduled_for', [$mStart, $mEnd])
+                ->whereNotIn('status', [Appointment::STATUS_CANCELED, Appointment::STATUS_NO_SHOW]);
+
+            if (! $includeAllClinics) {
+                $incomeQuery->where('clinic_id', $clinicId);
+            }
+
+            $income = (float) $incomeQuery->sum('cost');
+
+            $expenseQuery = Expense::query()
+                ->withoutGlobalScope('clinic')
+                ->whereBetween('expense_date', [$mStart->toDateString(), $mEnd->toDateString()]);
+
+            if (! $includeAllClinics) {
+                $expenseQuery->where('clinic_id', $clinicId);
+            }
+
+            $expenses = (float) $expenseQuery->sum('amount');
+
+            $doctorDueQuery = DoctorMonthlyDue::query()
+                ->withoutGlobalScope('clinic')
+                ->where('salary_month', $m);
+
+            if (! $includeAllClinics) {
+                $doctorDueQuery->where('clinic_id', $clinicId);
+            }
+
+            $doctorDue = (float) $doctorDueQuery->sum('due_amount');
+
+            $employeeDueQuery = EmployeeMonthlySalary::query()
+                ->withoutGlobalScope('clinic')
+                ->where('salary_month', $m);
+
+            if (! $includeAllClinics) {
+                $employeeDueQuery->where('clinic_id', $clinicId);
+            }
+
+            $employeeDue = (float) $employeeDueQuery->sum('due_amount');
+
+            $outflow = $expenses + $doctorDue + $employeeDue;
+
+            $result[] = [
+                'month' => $m,
+                'income' => $income,
+                'outflow' => $outflow,
+                'profit' => $income - $outflow,
+            ];
+        }
+
+        return $result;
     }
 
     /**
@@ -295,26 +736,23 @@ class FinancialController extends Controller
     }
 
     /**
-     * @param  Collection<int, array<string, mixed>>  $rows
-     * @return array<string, float|int>
+     * @return array<int, array{id: int, name: string}>
      */
-    private function summaries(Collection $rows): array
+    private function expenseCategoriesDropdown(int $clinicId, bool $includeAllClinics = false): array
     {
-        $totalCost = (float) $rows->sum('cost');
-        $totalPaid = (float) $rows->sum('paid_amount');
-        $totalRemaining = (float) $rows->sum('remaining_amount');
-        $paidCount = $rows->where('payment_status', 'paid')->count();
-        $unpaidCount = $rows->where('payment_status', 'unpaid')->count();
-        $partiallyPaidCount = $rows->where('payment_status', 'partially_paid')->count();
+        $query = ExpenseCategory::query()
+            ->withoutGlobalScope('clinic')
+            ->where('is_active', true);
 
-        return [
-            'total_cost' => $totalCost,
-            'total_paid' => $totalPaid,
-            'total_remaining' => $totalRemaining,
-            'paid_count' => $paidCount,
-            'unpaid_count' => $unpaidCount,
-            'partially_paid_count' => $partiallyPaidCount,
-        ];
+        if (! $includeAllClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
+
+        return $query
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (ExpenseCategory $cat): array => ['id' => (int) $cat->id, 'name' => $cat->name])
+            ->all();
     }
 
     private function paymentStatus(float $cost, float $paid): string

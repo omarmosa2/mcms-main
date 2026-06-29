@@ -10,6 +10,18 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         ->middleware('permission:billing.view,billing.generate,payment.record,payment.refund,accounts.view,expenses.view,cashbox.view,reports.financial,salaries.view')
         ->name('financial.index');
 
+    Route::prefix('financial')->name('financial.')->group(function (): void {
+        Route::post('expenses', [FinancialController::class, 'storeExpense'])
+            ->middleware('permission:expenses.create')
+            ->name('expenses.store');
+        Route::match(['put', 'patch'], 'expenses/{expenseId}', [FinancialController::class, 'updateExpense'])
+            ->middleware('permission:expenses.update')
+            ->name('expenses.update');
+        Route::delete('expenses/{expenseId}', [FinancialController::class, 'destroyExpense'])
+            ->middleware('permission:expenses.delete')
+            ->name('expenses.destroy');
+    });
+
     Route::prefix('payment-plans')->name('payment-plans.')->group(function (): void {
         Route::get('/', [PaymentPlanController::class, 'index'])->name('index');
         Route::post('/', [PaymentPlanController::class, 'store'])->name('store');

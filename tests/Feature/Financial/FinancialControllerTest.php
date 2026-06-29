@@ -178,6 +178,49 @@ class FinancialControllerTest extends TestCase
         $response->assertJsonPath('summaries.paid_count', 1);
     }
 
+    public function test_financial_index_shows_appointments_from_all_clinics_for_admin(): void
+    {
+        Carbon::setTestNow('2026-06-28 08:00:00');
+
+        $clinic1 = Clinic::factory()->create(['name' => 'Clinic One']);
+        $clinic2 = Clinic::factory()->create(['name' => 'Clinic Two']);
+
+        $admin = $this->authenticateForClinic($clinic1, 'clinic_admin');
+
+        $patient1 = Patient::factory()->create([
+            'clinic_id' => $clinic1->id,
+            'first_name' => 'Patient',
+            'last_name' => 'One',
+        ]);
+
+        $patient2 = Patient::factory()->create([
+            'clinic_id' => $clinic2->id,
+            'first_name' => 'Patient',
+            'last_name' => 'Two',
+        ]);
+
+        Appointment::factory()->create([
+            'clinic_id' => $clinic1->id,
+            'patient_id' => $patient1->id,
+            'scheduled_for' => Carbon::parse('2026-06-28 10:00:00'),
+            'status' => Appointment::STATUS_SCHEDULED,
+            'cost' => 100,
+        ]);
+
+        Appointment::factory()->create([
+            'clinic_id' => $clinic2->id,
+            'patient_id' => $patient2->id,
+            'scheduled_for' => Carbon::parse('2026-06-28 11:00:00'),
+            'status' => Appointment::STATUS_SCHEDULED,
+            'cost' => 200,
+        ]);
+
+        $response = $this->getJson(route('financial.index'));
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'financial_rows');
+    }
+
     public function test_financial_index_returns_doctors_and_patients_dropdowns(): void
     {
         $clinic = Clinic::factory()->create();

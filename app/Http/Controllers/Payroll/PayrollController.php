@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Clinic;
 use App\Models\DoctorAppointmentEntitlement;
 use App\Models\DoctorDeduction;
-use App\Models\DoctorDuePayment;
 use App\Models\DoctorMonthlyDue;
+use App\Models\DoctorPayment;
 use App\Models\DoctorProfile;
 use App\Models\Employee;
 use App\Models\EmployeeMonthlySalary;
@@ -176,7 +176,7 @@ class PayrollController extends Controller
         $this->resolveClinicId($request);
         $validated = $request->validate([
             'doctor_monthly_due_id' => ['required', Rule::exists('doctor_monthly_dues', 'id')],
-            'amount' => ['required', 'numeric', 'min:0.01'],
+            'amount' => ['nullable', 'numeric', 'min:0.01'],
             'payment_method' => ['nullable', 'string', 'max:50'],
             'payment_date' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -189,36 +189,70 @@ class PayrollController extends Controller
 
         $this->authorizePayrollRecordAccess($request, $clinicId);
 
-        $remaining = (float) $monthlyDue->remaining_amount;
+        $doctor = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
+            ->findOrFail((int) $monthlyDue->doctor_id);
 
-        if ((float) $validated['amount'] > $remaining) {
-            throw ValidationException::withMessages([
-                'amount' => 'المبلغ المدفوع لا يمكن أن يتجاوز المبلغ المتبقي.',
-            ]);
-        }
+        DB::transaction(function () use ($monthlyDue, $doctor, $validated, $request, $clinicId): void {
+            $paymentPeriod = $this->doctorPaymentPeriod($doctor, $monthlyDue);
+            $amount = $this->payableDoctorAmount($clinicId, $doctor, $paymentPeriod['start'], $paymentPeriod['end']);
 
-        DB::transaction(function () use ($monthlyDue, $validated, $request, $clinicId): void {
-            $duePayment = DoctorDuePayment::query()->create([
+            if ($amount <= 0) {
+                throw ValidationException::withMessages([
+                    'doctor_monthly_due_id' => 'لا توجد مستحقات غير مدفوعة لهذا الطبيب ضمن الفترة المحددة.',
+                ]);
+            }
+
+            if ($paymentPeriod['dedupe_key'] !== null && DoctorPayment::query()
+                ->withoutGlobalScope('clinic')
+                ->where('doctor_id', $doctor->id)
+                ->where('payment_type', $paymentPeriod['type'])
+                ->where('dedupe_key', $paymentPeriod['dedupe_key'])
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'doctor_monthly_due_id' => 'تم تسديد هذه الفترة لهذا الطبيب مسبقاً.',
+                ]);
+            }
+
+            $doctorPayment = DoctorPayment::query()->create([
                 'clinic_id' => $clinicId,
-                'doctor_monthly_due_id' => $monthlyDue->id,
-                'doctor_id' => $monthlyDue->doctor_id,
+                'doctor_id' => $doctor->id,
                 'paid_by' => $request->user()?->id,
-                'salary_month' => $monthlyDue->salary_month,
-                'amount' => $validated['amount'],
+                'payment_type' => $paymentPeriod['type'],
+                'period_start' => $paymentPeriod['start']->toDateString(),
+                'period_end' => $paymentPeriod['end']->toDateString(),
+                'dedupe_key' => $paymentPeriod['dedupe_key'],
+                'amount' => $amount,
                 'payment_method' => $validated['payment_method'] ?? null,
-                'payment_date' => $validated['payment_date'],
+                'paid_at' => CarbonImmutable::parse((string) $validated['payment_date'])->startOfDay(),
                 'notes' => $validated['notes'] ?? null,
             ]);
 
             $payment = $this->recordPayrollPayment(
-                $duePayment,
+                $doctorPayment,
                 $clinicId,
                 $request,
-                $validated,
-                'doctor_due',
+                array_merge($validated, [
+                    'amount' => $amount,
+                    'payment_date' => $validated['payment_date'],
+                ]),
+                'doctor_payment',
             );
 
-            $duePayment->update(['payment_id' => $payment->id]);
+            $doctorPayment->update(['payment_id' => $payment->id]);
+
+            if ($doctor->compensation_type === DoctorProfile::COMPENSATION_PERCENTAGE) {
+                DoctorAppointmentEntitlement::query()
+                    ->forClinic($clinicId)
+                    ->where('doctor_profile_id', $doctor->id)
+                    ->where('compensation_type', DoctorProfile::COMPENSATION_PERCENTAGE)
+                    ->where('status', DoctorAppointmentEntitlement::STATUS_UNPAID)
+                    ->whereBetween('appointment_date', [
+                        $paymentPeriod['start']->toDateString(),
+                        $paymentPeriod['end']->toDateString(),
+                    ])
+                    ->update(['status' => DoctorAppointmentEntitlement::STATUS_PAID]);
+            }
 
             $this->refreshMonthlyDueStatus($monthlyDue);
         });
@@ -607,10 +641,90 @@ class PayrollController extends Controller
 
     private function doctorDuePaidAmount(DoctorMonthlyDue $record): float
     {
-        return (float) DoctorDuePayment::query()
+        $doctor = $record->doctor;
+
+        if (! $doctor instanceof DoctorProfile) {
+            $doctor = DoctorProfile::query()
+                ->withoutGlobalScope('clinic')
+                ->find($record->doctor_id);
+        }
+
+        if (! $doctor instanceof DoctorProfile) {
+            return 0.0;
+        }
+
+        $period = $this->doctorPaymentPeriod($doctor, $record);
+
+        return (float) DoctorPayment::query()
             ->withoutGlobalScope('clinic')
-            ->where('doctor_monthly_due_id', $record->id)
+            ->where('doctor_id', $record->doctor_id)
+            ->where('payment_type', $period['type'])
+            ->whereDate('period_start', $period['start']->toDateString())
+            ->whereDate('period_end', $period['end']->toDateString())
             ->sum('amount');
+    }
+
+    /**
+     * @return array{type: string, start: CarbonImmutable, end: CarbonImmutable, dedupe_key: ?string}
+     */
+    private function doctorPaymentPeriod(DoctorProfile $doctor, DoctorMonthlyDue $monthlyDue): array
+    {
+        if ($doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY_FIXED) {
+            $start = CarbonImmutable::now()->startOfWeek(CarbonImmutable::MONDAY);
+            $end = CarbonImmutable::now()->endOfWeek(CarbonImmutable::SUNDAY);
+
+            return [
+                'type' => DoctorPayment::TYPE_WEEKLY,
+                'start' => $start,
+                'end' => $end,
+                'dedupe_key' => 'weekly:'.$start->toDateString().':'.$end->toDateString(),
+            ];
+        }
+
+        if ($doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY_FIXED) {
+            $start = CarbonImmutable::now()->startOfMonth();
+            $end = CarbonImmutable::now()->endOfMonth();
+
+            return [
+                'type' => DoctorPayment::TYPE_MONTHLY,
+                'start' => $start,
+                'end' => $end,
+                'dedupe_key' => 'monthly:'.$start->toDateString().':'.$end->toDateString(),
+            ];
+        }
+
+        $month = CarbonImmutable::createFromFormat('Y-m', $monthlyDue->salary_month)?->startOfMonth()
+            ?? CarbonImmutable::now()->startOfMonth();
+
+        return [
+            'type' => DoctorPayment::TYPE_PERCENTAGE,
+            'start' => $month,
+            'end' => $month->endOfMonth(),
+            'dedupe_key' => null,
+        ];
+    }
+
+    private function payableDoctorAmount(int $clinicId, DoctorProfile $doctor, CarbonImmutable $periodStart, CarbonImmutable $periodEnd): float
+    {
+        if ($doctor->compensation_type === DoctorProfile::COMPENSATION_PERCENTAGE) {
+            return (float) DoctorAppointmentEntitlement::query()
+                ->forClinic($clinicId)
+                ->where('doctor_profile_id', $doctor->id)
+                ->where('compensation_type', DoctorProfile::COMPENSATION_PERCENTAGE)
+                ->where('status', DoctorAppointmentEntitlement::STATUS_UNPAID)
+                ->whereBetween('appointment_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+                ->sum('entitlement_amount');
+        }
+
+        if ($doctor->compensation_type === DoctorProfile::COMPENSATION_WEEKLY_FIXED) {
+            return (float) ($doctor->fixed_weekly_amount ?? $doctor->compensation_value ?? 0);
+        }
+
+        if ($doctor->compensation_type === DoctorProfile::COMPENSATION_MONTHLY_FIXED) {
+            return (float) ($doctor->fixed_monthly_amount ?? $doctor->compensation_value ?? 0);
+        }
+
+        return 0.0;
     }
 
     private function monthlyDueStatus(float $due, float $paid): string

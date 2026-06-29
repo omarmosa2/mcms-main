@@ -300,6 +300,22 @@ const doctorCompensationDisplay = (row: DoctorDueRow): string => {
     return labelFor(row.payment_type);
 };
 
+const doctorPaymentActionLabel = (row: DoctorDueRow): string => {
+    if (row.payment_type === 'percentage') {
+        return 'تسديد مستحقات الفترة';
+    }
+
+    if (row.payment_type === 'fixed_weekly') {
+        return 'تسديد أجر أسبوع';
+    }
+
+    if (row.payment_type === 'fixed_monthly') {
+        return 'تسديد أجر شهر';
+    }
+
+    return 'تسديد مستحقات الطبيب';
+};
+
 const toggleDoctorDetails = (row: DoctorDueRow): void => {
     expandedDoctorDueId.value =
         expandedDoctorDueId.value === row.doctor_monthly_due_id
@@ -849,7 +865,7 @@ const paymentHelpText = computed(() =>
                                             class="h-8 rounded-lg bg-primary text-xs text-primary-foreground hover:bg-primary/90"
                                             @click="openDoctorPayment(row)"
                                         >
-                                            تسجيل دفعة
+                                            {{ doctorPaymentActionLabel(row) }}
                                         </Button>
                                     </div>
                                 </td>
@@ -1008,7 +1024,7 @@ const paymentHelpText = computed(() =>
                                 @click="openDoctorPayment(row)"
                             >
                                 <CircleDollarSign class="size-4" />
-                                تسجيل دفعة
+                                {{ doctorPaymentActionLabel(row) }}
                             </Button>
                         </div>
                     </article>
@@ -1067,9 +1083,14 @@ const paymentHelpText = computed(() =>
                                 type="number"
                                 min="0.01"
                                 step="0.01"
-                                :readonly="paymentKind === 'employee'"
+                                :readonly="
+                                    paymentKind === 'employee' ||
+                                    paymentKind === 'doctor'
+                                "
                                 :class="{
-                                    'bg-muted/70': paymentKind === 'employee',
+                                    'bg-muted/70':
+                                        paymentKind === 'employee' ||
+                                        paymentKind === 'doctor',
                                 }"
                             />
                             <InputError :message="paymentForm.errors.amount" />

@@ -7,8 +7,8 @@ use App\Actions\Rbac\SyncClinicRbacAction;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\DoctorAppointmentEntitlement;
-use App\Models\DoctorDuePayment;
 use App\Models\DoctorMonthlyDue;
+use App\Models\DoctorPayment;
 use App\Models\DoctorProfile;
 use App\Models\Employee;
 use App\Models\EmployeeMonthlySalary;
@@ -17,6 +17,7 @@ use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -219,6 +220,8 @@ class PayrollControllerTest extends TestCase
 
     public function test_doctor_payment_updates_monthly_due_record(): void
     {
+        Carbon::setTestNow('2026-06-29 09:00:00');
+
         $clinic = Clinic::factory()->create();
         $admin = $this->authenticateForClinic($clinic);
         $doctorUser = User::factory()->create(['clinic_id' => $clinic->id]);
@@ -266,16 +269,17 @@ class PayrollControllerTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $this->assertDatabaseHas('doctor_due_payments', [
+        $this->assertDatabaseHas('doctor_payments', [
             'clinic_id' => $clinic->id,
-            'doctor_monthly_due_id' => $monthlyDue->id,
             'doctor_id' => $doctor->id,
-            'salary_month' => '2026-06',
-            'amount' => 250,
+            'payment_type' => DoctorPayment::TYPE_PERCENTAGE,
+            'period_start' => '2026-06-01 00:00:00',
+            'period_end' => '2026-06-30 00:00:00',
+            'amount' => 400,
         ]);
 
-        $duePayment = DoctorDuePayment::query()
-            ->where('doctor_monthly_due_id', $monthlyDue->id)
+        $doctorPayment = DoctorPayment::query()
+            ->where('doctor_id', $doctor->id)
             ->first();
 
         $this->assertDatabaseHas('payments', [
@@ -284,20 +288,26 @@ class PayrollControllerTest extends TestCase
             'received_by' => $admin->id,
             'method' => 'cash',
             'status' => Payment::STATUS_RECORDED,
-            'amount' => 250,
-            'payable_type' => DoctorDuePayment::class,
-            'payable_id' => $duePayment->id,
+            'amount' => 400,
+            'payable_type' => DoctorPayment::class,
+            'payable_id' => $doctorPayment->id,
         ]);
-        $this->assertNotNull($duePayment->payment_id);
+        $this->assertNotNull($doctorPayment->payment_id);
+        $this->assertDatabaseHas('doctor_appointment_entitlements', [
+            'doctor_profile_id' => $doctor->id,
+            'status' => DoctorAppointmentEntitlement::STATUS_PAID,
+        ]);
 
         $monthlyDue->refresh();
-        $this->assertEquals(250, $monthlyDue->paid_amount);
-        $this->assertEquals(150, $monthlyDue->remaining_amount);
-        $this->assertEquals('partially_paid', $monthlyDue->status);
+        $this->assertEquals(400, $monthlyDue->paid_amount);
+        $this->assertEquals(0, $monthlyDue->remaining_amount);
+        $this->assertEquals('paid', $monthlyDue->status);
     }
 
     public function test_admin_can_pay_doctor_due_from_another_visible_clinic(): void
     {
+        Carbon::setTestNow('2026-06-29 09:00:00');
+
         $adminClinic = Clinic::factory()->create();
         $doctorClinic = Clinic::factory()->create();
         $admin = $this->authenticateForClinic($adminClinic);
@@ -326,11 +336,11 @@ class PayrollControllerTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $this->assertDatabaseHas('doctor_due_payments', [
+        $this->assertDatabaseHas('doctor_payments', [
             'clinic_id' => $doctorClinic->id,
-            'doctor_monthly_due_id' => $monthlyDue->id,
             'doctor_id' => $doctor->id,
-            'amount' => 250,
+            'payment_type' => DoctorPayment::TYPE_MONTHLY,
+            'amount' => 500,
         ]);
         $this->assertDatabaseHas('payments', [
             'clinic_id' => $doctorClinic->id,
@@ -338,17 +348,19 @@ class PayrollControllerTest extends TestCase
             'received_by' => $admin->id,
             'method' => 'cash',
             'status' => Payment::STATUS_RECORDED,
-            'amount' => 250,
+            'amount' => 500,
         ]);
 
         $monthlyDue->refresh();
-        $this->assertEquals(250, $monthlyDue->paid_amount);
-        $this->assertEquals(250, $monthlyDue->remaining_amount);
-        $this->assertEquals(DoctorMonthlyDue::STATUS_PARTIALLY_PAID, $monthlyDue->status);
+        $this->assertEquals(500, $monthlyDue->paid_amount);
+        $this->assertEquals(0, $monthlyDue->remaining_amount);
+        $this->assertEquals(DoctorMonthlyDue::STATUS_PAID, $monthlyDue->status);
     }
 
     public function test_legacy_doctor_payment_endpoint_uses_the_salary_payment_handler(): void
     {
+        Carbon::setTestNow('2026-06-29 09:00:00');
+
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
         $doctorUser = User::factory()->create(['clinic_id' => $clinic->id]);
@@ -399,12 +411,11 @@ class PayrollControllerTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $this->assertDatabaseHas('doctor_due_payments', [
+        $this->assertDatabaseHas('doctor_payments', [
             'clinic_id' => $clinic->id,
-            'doctor_monthly_due_id' => $monthlyDue->id,
             'doctor_id' => $doctor->id,
-            'salary_month' => '2026-06',
-            'amount' => 250,
+            'payment_type' => DoctorPayment::TYPE_PERCENTAGE,
+            'amount' => 400,
         ]);
 
         $this->postJson(route('legacy.financial.doctor-payments.store'), [
@@ -412,7 +423,8 @@ class PayrollControllerTest extends TestCase
             'amount' => 100,
             'payment_method' => 'cash',
             'payment_date' => '2026-06-07',
-        ])->assertCreated();
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('doctor_monthly_due_id');
     }
 
     public function test_employee_salary_payment_cannot_be_recorded_twice_for_the_same_month(): void
@@ -516,6 +528,96 @@ class PayrollControllerTest extends TestCase
         $response->assertJsonPath('doctor_dues.0.due_amount', 1500);
         $response->assertJsonPath('doctor_dues.0.payment_type', 'fixed_monthly');
         $response->assertJsonPath('doctor_dues.0.fixed_monthly_amount', 1500);
+    }
+
+    public function test_weekly_doctor_payment_can_only_be_recorded_once_for_current_week(): void
+    {
+        Carbon::setTestNow('2026-06-29 09:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $doctorUser = User::factory()->create(['clinic_id' => $clinic->id]);
+        $doctor = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'compensation_type' => DoctorProfile::COMPENSATION_WEEKLY_FIXED,
+            'compensation_value' => 300,
+            'is_active' => true,
+        ]);
+
+        $this->get(route('salaries.index', ['month' => '2026-06']));
+
+        $monthlyDue = DoctorMonthlyDue::query()
+            ->where('doctor_id', $doctor->id)
+            ->where('salary_month', '2026-06')
+            ->first();
+
+        $payload = [
+            'doctor_monthly_due_id' => $monthlyDue->id,
+            'payment_method' => 'cash',
+            'payment_date' => '2026-06-29',
+        ];
+
+        $this->postJson(route('salaries.doctor-payments.store'), $payload)
+            ->assertCreated();
+
+        $this->assertDatabaseHas('doctor_payments', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'payment_type' => DoctorPayment::TYPE_WEEKLY,
+            'period_start' => '2026-06-29 00:00:00',
+            'period_end' => '2026-07-05 00:00:00',
+            'amount' => 300,
+        ]);
+
+        $this->postJson(route('salaries.doctor-payments.store'), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('doctor_monthly_due_id');
+    }
+
+    public function test_monthly_doctor_payment_can_only_be_recorded_once_for_current_month(): void
+    {
+        Carbon::setTestNow('2026-06-29 09:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $doctorUser = User::factory()->create(['clinic_id' => $clinic->id]);
+        $doctor = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'compensation_type' => DoctorProfile::COMPENSATION_MONTHLY_FIXED,
+            'compensation_value' => 1500,
+            'is_active' => true,
+        ]);
+
+        $this->get(route('salaries.index', ['month' => '2026-06']));
+
+        $monthlyDue = DoctorMonthlyDue::query()
+            ->where('doctor_id', $doctor->id)
+            ->where('salary_month', '2026-06')
+            ->first();
+
+        $payload = [
+            'doctor_monthly_due_id' => $monthlyDue->id,
+            'payment_method' => 'cash',
+            'payment_date' => '2026-06-29',
+        ];
+
+        $this->postJson(route('salaries.doctor-payments.store'), $payload)
+            ->assertCreated();
+
+        $this->assertDatabaseHas('doctor_payments', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'payment_type' => DoctorPayment::TYPE_MONTHLY,
+            'period_start' => '2026-06-01 00:00:00',
+            'period_end' => '2026-06-30 00:00:00',
+            'amount' => 1500,
+        ]);
+
+        $this->postJson(route('salaries.doctor-payments.store'), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('doctor_monthly_due_id');
     }
 
     private function authenticateForClinic(Clinic $clinic, string $roleName = 'clinic_admin'): User

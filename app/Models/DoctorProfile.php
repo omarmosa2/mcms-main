@@ -85,6 +85,11 @@ class DoctorProfile extends BaseModel
         return $this->hasMany(DoctorSalaryPayment::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(DoctorPayment::class, 'doctor_id');
+    }
+
     public function deductions(): HasMany
     {
         return $this->hasMany(DoctorDeduction::class);

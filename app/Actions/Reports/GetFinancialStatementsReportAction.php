@@ -5,6 +5,7 @@ namespace App\Actions\Reports;
 use App\Actions\BaseAction;
 use App\Models\Account;
 use App\Models\DoctorDuePayment;
+use App\Models\DoctorPayment;
 use App\Models\DoctorSalaryPayment;
 use App\Models\EmployeeSalaryPayment;
 use App\Models\Expense;
@@ -60,7 +61,11 @@ class GetFinancialStatementsReportAction extends BaseAction
             ->forClinic($clinicId)
             ->whereBetween('payment_date', [$from->toDateString(), $to->toDateString()])
             ->sum('amount');
-        $payrollExpenses = $legacyPayrollExpenses + $employeePayrollExpenses + $doctorPayrollExpenses + $doctorDuePayrollExpenses;
+        $doctorSimplePayrollExpenses = (float) DoctorPayment::query()
+            ->forClinic($clinicId)
+            ->whereBetween('paid_at', [$from, $to])
+            ->sum('amount');
+        $payrollExpenses = $legacyPayrollExpenses + $employeePayrollExpenses + $doctorPayrollExpenses + $doctorDuePayrollExpenses + $doctorSimplePayrollExpenses;
 
         $totalExpenses = round($operatingExpenses + $payrollExpenses, 2);
         $netIncome = round($revenue - $totalExpenses, 2);
@@ -112,6 +117,10 @@ class GetFinancialStatementsReportAction extends BaseAction
             + DoctorDuePayment::query()
                 ->forClinic($clinicId)
                 ->whereBetween('payment_date', [$from->toDateString(), $to->toDateString()])
+                ->sum('amount')
+            + DoctorPayment::query()
+                ->forClinic($clinicId)
+                ->whereBetween('paid_at', [$from, $to])
                 ->sum('amount')
         );
 

@@ -60,10 +60,9 @@ class UpdateUserAction extends BaseAction
 
         if (isset($payload['role_name'])) {
             $this->assignUserRoleAction->handle(
-                clinicId: $clinicId,
-                userId: $userId,
-                targetUserId: $user->id,
-                roleName: $payload['role_name'],
+                $user,
+                $payload['role_name'],
+                $userId,
             );
         }
 

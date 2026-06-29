@@ -22,14 +22,7 @@ type User = {
     created_at: string | null;
 };
 
-type Role = {
-    id: number;
-    name: string;
-    description: string | null;
-    is_system: boolean;
-};
-
-defineProps<{ user: User | null; roles: Role[] }>();
+defineProps<{ user: User | null }>();
 
 const emit = defineEmits<{ close: [] }>();
 </script>

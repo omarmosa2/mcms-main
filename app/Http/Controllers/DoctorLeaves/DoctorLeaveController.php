@@ -21,19 +21,18 @@ class DoctorLeaveController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection|InertiaResponse
     {
-        $clinicId = $this->resolveClinicId($request);
         $filters = $this->resolveIndexFilters($request);
 
         $query = DoctorLeave::query()
-            ->forClinic($clinicId)
+            ->withoutGlobalScope('clinic')
             ->with(['doctor', 'clinic']);
-
-        if ($filters['doctor_id'] !== null) {
-            $query->where('doctor_id', $filters['doctor_id']);
-        }
 
         if ($filters['clinic_id'] !== null) {
             $query->where('clinic_id', $filters['clinic_id']);
+        }
+
+        if ($filters['doctor_id'] !== null) {
+            $query->where('doctor_id', $filters['doctor_id']);
         }
 
         if ($filters['status'] !== null) {
@@ -61,8 +60,8 @@ class DoctorLeaveController extends Controller
 
         return Inertia::render('doctor-leaves/Index', [
             'leaves' => $leavesResource->response()->getData(true),
-            'doctors' => $this->doctorsForSelect($clinicId),
-            'clinics' => $this->clinicsForSelect($clinicId),
+            'doctors' => $this->doctorsForSelect($filters['clinic_id'] ?? 0),
+            'clinics' => $this->clinicsForSelect(),
             'filters' => $filters,
             'type_options' => [DoctorLeave::TYPE_FULL_DAY, DoctorLeave::TYPE_HOURLY],
             'status_options' => [DoctorLeave::STATUS_ACTIVE, DoctorLeave::STATUS_CANCELED],
@@ -71,10 +70,11 @@ class DoctorLeaveController extends Controller
 
     public function store(StoreDoctorLeaveRequest $request): JsonResponse|RedirectResponse
     {
-        $clinicId = $this->resolveClinicId($request);
+        $validated = $request->validated();
+        $clinicId = (int) ($validated['clinic_id'] ?? $this->resolveClinicId($request));
 
         $leave = DoctorLeave::query()->create([
-            ...$this->normalizedPayload($request->validated()),
+            ...$this->normalizedPayload($validated),
             'clinic_id' => $clinicId,
             'status' => DoctorLeave::STATUS_ACTIVE,
         ]);
@@ -92,14 +92,16 @@ class DoctorLeaveController extends Controller
 
     public function update(UpdateDoctorLeaveRequest $request, int $doctorLeaveId): DoctorLeaveResource|RedirectResponse
     {
-        $clinicId = $this->resolveClinicId($request);
+        $validated = $request->validated();
+        $clinicId = (int) ($validated['clinic_id'] ?? $this->resolveClinicId($request));
 
         $leave = DoctorLeave::query()
-            ->forClinic($clinicId)
+            ->withoutGlobalScope('clinic')
+            ->where('clinic_id', $clinicId)
             ->findOrFail($doctorLeaveId);
 
         $leave->fill([
-            ...$this->normalizedPayload($request->validated()),
+            ...$this->normalizedPayload($validated),
             'status' => DoctorLeave::STATUS_ACTIVE,
         ]);
         $leave->save();
@@ -118,7 +120,8 @@ class DoctorLeaveController extends Controller
         $clinicId = $this->resolveClinicId($request);
 
         $leave = DoctorLeave::query()
-            ->forClinic($clinicId)
+            ->withoutGlobalScope('clinic')
+            ->where('clinic_id', $clinicId)
             ->findOrFail($doctorLeaveId);
 
         $leave->forceFill(['status' => DoctorLeave::STATUS_CANCELED])->save();
@@ -137,7 +140,8 @@ class DoctorLeaveController extends Controller
         $clinicId = $this->resolveClinicId($request);
 
         $leave = DoctorLeave::query()
-            ->forClinic($clinicId)
+            ->withoutGlobalScope('clinic')
+            ->where('clinic_id', $clinicId)
             ->findOrFail($doctorLeaveId);
 
         $leave->delete();
@@ -167,13 +171,18 @@ class DoctorLeaveController extends Controller
     /**
      * @return array<int, array{id: int, name: string|null, clinic_id: int|null, clinic: array{id: int, name: string}|null}>
      */
-    private function doctorsForSelect(int $clinicId): array
+    private function doctorsForSelect(int $clinicId = 0): array
     {
-        return DoctorProfile::query()
-            ->forClinic($clinicId)
-            ->withoutTrashed()
-            ->where('status', DoctorProfile::STATUS_ACTIVE)
-            ->with(['user:id,clinic_id,name', 'clinic:id,name'])
+        $query = DoctorProfile::query()
+            ->withoutGlobalScope('clinic')
+            ->where('is_active', true)
+            ->with(['user:id,clinic_id,name', 'clinic:id,name']);
+
+        if ($clinicId > 0) {
+            $query->where('clinic_id', $clinicId);
+        }
+
+        return $query
             ->get()
             ->map(fn (DoctorProfile $profile): array => [
                 'id' => (int) $profile->user_id,
@@ -192,10 +201,10 @@ class DoctorLeaveController extends Controller
     /**
      * @return array<int, array{id: int, name: string}>
      */
-    private function clinicsForSelect(int $clinicId): array
+    private function clinicsForSelect(): array
     {
         return Clinic::query()
-            ->whereKey($clinicId)
+            ->withoutGlobalScope('clinic')
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name'])

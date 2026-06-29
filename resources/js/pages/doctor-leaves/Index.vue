@@ -177,12 +177,14 @@ function formatTime(time: string | null): string {
                     @success="toast.success('تمت إضافة الإجازة بنجاح')"
                     v-slot="{ errors, processing }"
                 >
+                    <input type="hidden" name="clinic_id" :value="selectedClinicId" />
+
                     <div class="grid gap-2 lg:col-span-2">
                         <Label>الطبيب</Label>
                         <select
                             v-model="selectedDoctorId"
                             name="doctor_id"
-                            class="pattern-field-clay h-10 w-full px-3"
+                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
                         >
                             <option value="">اختر الطبيب</option>
                             <option
@@ -201,8 +203,7 @@ function formatTime(time: string | null): string {
                         <select
                             v-model="selectedClinicId"
                             name="clinic_id"
-                            class="pattern-field-clay h-10 w-full px-3"
-                            
+                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
                         >
                             <option value="">اختر العيادة</option>
                             <option
@@ -221,7 +222,7 @@ function formatTime(time: string | null): string {
                         <select
                             v-model="leaveType"
                             name="type"
-                            class="pattern-field-clay h-10 w-full px-3"
+                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
                         >
                             <option value="full_day">كاملة</option>
                             <option value="hourly">ساعية</option>
@@ -231,25 +232,25 @@ function formatTime(time: string | null): string {
 
                     <div class="grid gap-2">
                         <Label>التاريخ</Label>
-                        <Input name="leave_date" type="date" />
+                        <Input name="leave_date" type="date" class="h-10" />
                         <InputError :message="errors.leave_date" />
                     </div>
 
                     <div v-if="leaveType === 'hourly'" class="grid gap-2">
                         <Label>وقت البداية</Label>
-                        <Input name="start_time" type="time" />
+                        <Input name="start_time" type="time" class="h-10" />
                         <InputError :message="errors.start_time" />
                     </div>
 
                     <div v-if="leaveType === 'hourly'" class="grid gap-2">
                         <Label>وقت النهاية</Label>
-                        <Input name="end_time" type="time" />
+                        <Input name="end_time" type="time" class="h-10" />
                         <InputError :message="errors.end_time" />
                     </div>
 
                     <div class="grid gap-2 lg:col-span-4">
                         <Label>السبب</Label>
-                        <Input name="reason" placeholder="اختياري" />
+                        <Input name="reason" placeholder="اختياري" class="h-10" />
                         <InputError :message="errors.reason" />
                     </div>
 
@@ -275,18 +276,18 @@ function formatTime(time: string | null): string {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div class="overflow-x-auto">
+                <div class="ui-table-shell">
                     <table class="ui-table w-full">
                         <thead>
                             <tr>
-                                <th class="text-start">الطبيب</th>
-                                <th class="text-start">العيادة</th>
-                                <th class="text-start">النوع</th>
-                                <th class="text-start">التاريخ</th>
-                                <th class="text-start">الفترة</th>
-                                <th class="text-start">الحالة</th>
-                                <th class="text-start">تنبيه</th>
-                                <th class="text-end">إجراءات</th>
+                                <th class="px-3 py-2">الطبيب</th>
+                                <th class="px-3 py-2">العيادة</th>
+                                <th class="px-3 py-2">النوع</th>
+                                <th class="px-3 py-2">التاريخ</th>
+                                <th class="px-3 py-2">الفترة</th>
+                                <th class="px-3 py-2">الحالة</th>
+                                <th class="px-3 py-2">تنبيه</th>
+                                <th class="px-3 py-2 text-end">الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -295,20 +296,26 @@ function formatTime(time: string | null): string {
                                 :key="leave.id"
                                 class="ui-table-row"
                             >
-                                <td class="font-medium">
+                                <td class="px-3 py-2 font-medium" data-label="الطبيب">
                                     {{ leave.doctor?.name ?? '-' }}
                                 </td>
-                                <td>{{ leave.clinic?.name ?? '-' }}</td>
-                                <td>{{ typeLabel(leave.type) }}</td>
-                                <td>{{ leave.leave_date }}</td>
-                                <td class="tabular-nums">
-                                    <span v-if="leave.type === 'hourly'"
-                                        >{{ formatTime(leave.start_time) }} -
-                                        {{ formatTime(leave.end_time) }}</span
-                                    >
-                                    <span v-else>طوال اليوم</span>
+                                <td class="px-3 py-2 text-sm" data-label="العيادة">
+                                    {{ leave.clinic?.name ?? '-' }}
                                 </td>
-                                <td>
+                                <td class="px-3 py-2 text-sm" data-label="النوع">
+                                    {{ typeLabel(leave.type) }}
+                                </td>
+                                <td class="px-3 py-2 font-mono text-xs" data-label="التاريخ">
+                                    {{ leave.leave_date }}
+                                </td>
+                                <td class="px-3 py-2 tabular-nums text-sm" data-label="الفترة">
+                                    <span v-if="leave.type === 'hourly'">
+                                        {{ formatTime(leave.start_time) }} -
+                                        {{ formatTime(leave.end_time) }}
+                                    </span>
+                                    <span v-else class="text-muted-foreground">طوال اليوم</span>
+                                </td>
+                                <td class="px-3 py-2" data-label="الحالة">
                                     <span
                                         class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
                                         :class="
@@ -320,14 +327,13 @@ function formatTime(time: string | null): string {
                                         {{ statusLabel(leave.status) }}
                                     </span>
                                 </td>
-                                <td>
+                                <td class="px-3 py-2" data-label="تنبيه">
                                     <span
                                         v-if="leave.appointments_count > 0"
                                         class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
                                     >
                                         <Clock class="size-3" />
                                         {{ leave.appointments_count }} موعد
-                                        للمراجعة
                                     </span>
                                     <span
                                         v-else
@@ -335,10 +341,8 @@ function formatTime(time: string | null): string {
                                         >-</span
                                     >
                                 </td>
-                                <td class="table-cell-actions">
-                                    <div
-                                        class="flex items-center justify-end gap-2"
-                                    >
+                                <td class="px-3 py-2 text-end" data-label="الإجراءات">
+                                    <div class="flex items-center justify-end gap-2">
                                         <Button
                                             variant="neumorphic"
                                             size="icon"
@@ -400,11 +404,13 @@ function formatTime(time: string | null): string {
                     @success="closeEditDialog"
                     v-slot="{ errors, processing }"
                 >
+                    <input type="hidden" name="clinic_id" :value="editingLeave.clinic_id" />
+
                     <div class="grid gap-2">
                         <Label>الطبيب</Label>
                         <select
                             name="doctor_id"
-                            class="pattern-field-clay h-10 w-full px-3"
+                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
                         >
                             <option
                                 v-for="doctor in doctorOptions"
@@ -422,7 +428,7 @@ function formatTime(time: string | null): string {
                         <Label>العيادة</Label>
                         <select
                             name="clinic_id"
-                            class="pattern-field-clay h-10 w-full px-3"
+                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
                         >
                             <option
                                 v-for="clinic in clinics"
@@ -442,7 +448,7 @@ function formatTime(time: string | null): string {
                         <Label>نوع الإجازة</Label>
                         <select
                             name="type"
-                            class="pattern-field-clay h-10 w-full px-3"
+                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
                         >
                             <option
                                 value="full_day"
@@ -466,6 +472,7 @@ function formatTime(time: string | null): string {
                             name="leave_date"
                             type="date"
                             :default-value="editingLeave.leave_date"
+                            class="h-10"
                         />
                         <InputError :message="errors.leave_date" />
                     </div>
@@ -478,6 +485,7 @@ function formatTime(time: string | null): string {
                             :default-value="
                                 editingLeave.start_time ?? undefined
                             "
+                            class="h-10"
                         />
                         <InputError :message="errors.start_time" />
                     </div>
@@ -488,6 +496,7 @@ function formatTime(time: string | null): string {
                             name="end_time"
                             type="time"
                             :default-value="editingLeave.end_time ?? undefined"
+                            class="h-10"
                         />
                         <InputError :message="errors.end_time" />
                     </div>
@@ -497,6 +506,7 @@ function formatTime(time: string | null): string {
                         <Input
                             name="reason"
                             :default-value="editingLeave.reason ?? ''"
+                            class="h-10"
                         />
                         <InputError :message="errors.reason" />
                     </div>

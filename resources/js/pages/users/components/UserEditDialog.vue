@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Form, useForm } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
+import { onMounted, watch } from 'vue';
 import UserController from '@/actions/App/Http/Controllers/Security/UserController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -34,14 +35,29 @@ type Role = {
     is_system: boolean;
 };
 
-defineProps<{ user: User | null; roles: Role[]; canResetPassword: boolean }>();
+const props = defineProps<{ user: User | null; roles: Role[]; canResetPassword: boolean }>();
 
 const emit = defineEmits<{ close: [] }>();
+
+const editForm = useForm({
+    name: '',
+    email: '',
+    role_name: '',
+    is_active: true,
+});
 
 const resetPasswordForm = useForm({
     password: '',
     password_confirmation: '',
 });
+
+const submitEdit = (): void => {
+    if (!props.user) return;
+    editForm.put(UserController.update.url(props.user.id), {
+        preserveScroll: true,
+        onSuccess: () => emit('close'),
+    });
+};
 
 const resetPassword = (userId: number): void => {
     resetPasswordForm.post(UserController.resetPassword.url(userId), {
@@ -49,6 +65,31 @@ const resetPassword = (userId: number): void => {
         onSuccess: () => resetPasswordForm.reset(),
     });
 };
+
+const populateEditForm = (): void => {
+    if (props.user) {
+        editForm.name = props.user.name;
+        editForm.email = props.user.email;
+        editForm.role_name = props.user.role_names[0] ?? '';
+        editForm.is_active = props.user.is_active;
+        editForm.clearErrors();
+    }
+};
+
+watch(
+    () => props.user,
+    (newUser) => {
+        if (newUser) {
+            populateEditForm();
+        }
+    },
+);
+
+onMounted(() => {
+    if (props.user) {
+        populateEditForm();
+    }
+});
 </script>
 
 <template>
@@ -59,11 +100,10 @@ const resetPassword = (userId: number): void => {
                 <DialogDescription class="text-sm text-muted-foreground mt-0.5">تعديل بيانات المستخدم والأدوار</DialogDescription>
             </DialogHeader>
 
-            <Form
+            <form
                 v-if="user"
-                v-bind="UserController.update.form(user.id)"
+                @submit.prevent="submitEdit"
                 class="p-6 space-y-4 max-h-[60vh] overflow-y-auto"
-                v-slot="{ errors, processing }"
             >
                 <div class="flex flex-col gap-1.5">
                     <Label for="edit_name" class="text-sm font-medium text-foreground">
@@ -72,12 +112,11 @@ const resetPassword = (userId: number): void => {
                     </Label>
                     <Input
                         id="edit_name"
-                        name="name"
-                        :default-value="user.name"
+                        v-model="editForm.name"
                         required
                         class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                     />
-                    <InputError :message="errors.name" />
+                    <InputError :message="editForm.errors.name" />
                 </div>
 
                 <div class="flex flex-col gap-1.5">
@@ -87,13 +126,12 @@ const resetPassword = (userId: number): void => {
                     </Label>
                     <Input
                         id="edit_email"
-                        name="email"
+                        v-model="editForm.email"
                         type="email"
-                        :default-value="user.email"
                         required
                         class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
                     />
-                    <InputError :message="errors.email" />
+                    <InputError :message="editForm.errors.email" />
                 </div>
 
                 <div class="flex flex-col gap-1.5">
@@ -103,7 +141,7 @@ const resetPassword = (userId: number): void => {
                     </Label>
                     <select
                         id="edit_role_name"
-                        name="role_name"
+                        v-model="editForm.role_name"
                         required
                         class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors appearance-none cursor-pointer"
                     >
@@ -112,21 +150,18 @@ const resetPassword = (userId: number): void => {
                             v-for="role in roles"
                             :key="role.id"
                             :value="role.name"
-                            :selected="user.role_names.includes(role.name)"
                         >
                             {{ role.name }}
                         </option>
                     </select>
-                    <InputError :message="errors.role_name" />
+                    <InputError :message="editForm.errors.role_name" />
                 </div>
 
                 <div class="flex items-center gap-2">
                     <input
                         id="edit_is_active"
-                        name="is_active"
+                        v-model="editForm.is_active"
                         type="checkbox"
-                        value="1"
-                        :checked="user.is_active"
                         class="size-4 rounded border-border"
                     />
                     <Label for="edit_is_active" class="text-sm font-normal text-foreground">
@@ -179,7 +214,7 @@ const resetPassword = (userId: number): void => {
                         type="button"
                         variant="ghost"
                         class="h-9 px-4 rounded-lg text-muted-foreground text-sm font-medium hover:bg-muted hover:text-foreground transition-colors duration-150 active:scale-[0.98]"
-                        :disabled="processing"
+                        :disabled="editForm.processing"
                         @click="emit('close')"
                     >
                         إلغاء
@@ -187,13 +222,13 @@ const resetPassword = (userId: number): void => {
                     <Button
                         type="submit"
                         variant="default"
-                        :disabled="processing"
+                        :disabled="editForm.processing"
                         class="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] transition-all duration-150"
                     >
                         حفظ التغييرات
                     </Button>
                 </DialogFooter>
-            </Form>
+            </form>
         </DialogContent>
     </Dialog>
 </template>

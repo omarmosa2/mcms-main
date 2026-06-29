@@ -25,7 +25,7 @@ class StoreDoctorLeaveRequest extends FormRequest
      */
     public function rules(): array
     {
-        $clinicId = $this->user()?->clinic_id;
+        $clinicId = (int) $this->input('clinic_id');
 
         return [
             'doctor_id' => [
@@ -33,6 +33,11 @@ class StoreDoctorLeaveRequest extends FormRequest
                 'integer',
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('clinic_id', $clinicId)),
                 $this->doctorRoleRule($clinicId),
+            ],
+            'clinic_id' => [
+                'required',
+                'integer',
+                Rule::exists('clinics', 'id')->where('is_active', true),
             ],
             'type' => ['required', 'string', Rule::in([DoctorLeave::TYPE_FULL_DAY, DoctorLeave::TYPE_HOURLY])],
             'leave_date' => ['required', 'date_format:Y-m-d'],
@@ -49,13 +54,11 @@ class StoreDoctorLeaveRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
-                $clinicId = $this->user()?->clinic_id;
+                $clinicId = (int) $this->input('clinic_id');
 
-                if ($clinicId === null || $validator->errors()->isNotEmpty()) {
+                if ($clinicId <= 0 || $validator->errors()->isNotEmpty()) {
                     return;
                 }
-
-                $clinicId = (int) $clinicId;
 
                 $scheduleError = $this->validateDoctorHasSchedule($clinicId);
 
@@ -116,7 +119,7 @@ class StoreDoctorLeaveRequest extends FormRequest
 
         $hasSchedule = DoctorSchedule::query()
             ->forClinic($clinicId)
-            ->where('doctor_id', $doctorProfileId)
+            ->where('doctor_profile_id', $doctorProfileId)
             ->where('day_of_week', $dayOfWeek)
             ->where('is_available', true)
             ->exists();
@@ -145,7 +148,7 @@ class StoreDoctorLeaveRequest extends FormRequest
 
         $coversLeave = DoctorSchedule::query()
             ->forClinic($clinicId)
-            ->where('doctor_id', $doctorProfileId)
+            ->where('doctor_profile_id', $doctorProfileId)
             ->where('day_of_week', $dayOfWeek)
             ->where('is_available', true)
             ->where('start_time', '<=', $startTime)

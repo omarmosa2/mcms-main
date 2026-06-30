@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Employees;
 
 use App\Actions\Rbac\AssignUserRoleAction;
+use App\Exports\EmployeeExport;
 use App\Http\Controllers\Controller;
+use App\Models\Clinic;
 use App\Models\Employee;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,36 +17,20 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EmployeeController extends Controller
 {
     public function index(Request $request): JsonResponse|InertiaResponse
     {
-        $clinicId = $this->resolveClinicId($request);
         $filters = $this->resolveFilters($request);
 
-        $employees = Employee::query()
-            ->forClinic($clinicId)
-            ->with(['user:id,name,email'])
+        $employees = $this->employeesQuery($filters)
+            ->with(['clinic:id,name,code', 'user:id,name,email'])
             ->withCount('salaryPayments')
-            ->when($filters['search'] !== null, function ($query) use ($filters): void {
-                $search = $filters['search'];
-
-                $query->where(function ($query) use ($search): void {
-                    $query
-                        ->where('full_name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%")
-                        ->orWhere('national_id', 'like', "%{$search}%")
-                        ->orWhere('job_title', 'like', "%{$search}%")
-                        ->orWhere('specialty', 'like', "%{$search}%");
-                });
-            })
-            ->when($filters['employee_type'] !== null, fn ($query) => $query->where('employee_type', $filters['employee_type']))
-            ->when($filters['status'] !== null, fn ($query) => $query->where('status', $filters['status']))
-            ->when($filters['education_level'] !== null, fn ($query) => $query->where('education_level', $filters['education_level']))
-            ->when($filters['hire_date_from'] !== null, fn ($query) => $query->whereDate('hire_date', '>=', $filters['hire_date_from']))
-            ->when($filters['hire_date_to'] !== null, fn ($query) => $query->whereDate('hire_date', '<=', $filters['hire_date_to']))
             ->orderByDesc('id')
             ->paginate($filters['per_page'])
             ->withQueryString();
@@ -52,12 +39,13 @@ class EmployeeController extends Controller
             'employees' => $employees->through(fn (Employee $employee): array => $this->employeePayload($employee))->toArray(),
             'filters' => $filters,
             'stats' => [
-                'total' => Employee::query()->forClinic($clinicId)->count(),
-                'active' => Employee::query()->forClinic($clinicId)->where('status', Employee::STATUS_ACTIVE)->count(),
-                'inactive' => Employee::query()->forClinic($clinicId)->where('status', Employee::STATUS_INACTIVE)->count(),
-                'monthly_salaries' => (float) Employee::query()->forClinic($clinicId)->where('status', Employee::STATUS_ACTIVE)->sum('base_salary'),
+                'total' => $this->employeesQuery($filters, false)->count(),
+                'active' => $this->employeesQuery($filters, false)->where('status', Employee::STATUS_ACTIVE)->count(),
+                'inactive' => $this->employeesQuery($filters, false)->where('status', Employee::STATUS_INACTIVE)->count(),
+                'monthly_salaries' => (float) $this->employeesQuery($filters, false)->where('status', Employee::STATUS_ACTIVE)->sum('base_salary'),
             ],
             'options' => [
+                'clinics' => $this->clinicOptions(),
                 'employee_types' => $this->employeeTypes(),
                 'education_levels' => $this->educationLevels(),
                 'statuses' => [Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE],
@@ -75,8 +63,8 @@ class EmployeeController extends Controller
 
     public function store(Request $request): JsonResponse|RedirectResponse
     {
-        $clinicId = $this->resolveClinicId($request);
-        $payload = $this->validatedPayload($request, $clinicId);
+        $payload = $this->validatedPayload($request);
+        $clinicId = (int) $payload['clinic_id'];
         $createAccount = $request->boolean('create_account');
         $accountData = $createAccount ? $this->validatedAccountPayload($request, $clinicId) : null;
 
@@ -99,7 +87,6 @@ class EmployeeController extends Controller
 
             return Employee::query()->create([
                 ...$payload,
-                'clinic_id' => $clinicId,
                 'user_id' => $userId,
             ]);
         });
@@ -115,9 +102,8 @@ class EmployeeController extends Controller
 
     public function update(Request $request, int $employeeId): JsonResponse|RedirectResponse
     {
-        $clinicId = $this->resolveClinicId($request);
-        $employee = Employee::query()->forClinic($clinicId)->findOrFail($employeeId);
-        $payload = $this->validatedPayload($request, $clinicId, $employee->id);
+        $employee = Employee::query()->withoutClinicScope()->findOrFail($employeeId);
+        $payload = $this->validatedPayload($request, $employee->id);
 
         $employee->update($payload);
 
@@ -130,10 +116,16 @@ class EmployeeController extends Controller
         return to_route('employees.index');
     }
 
+    public function show(int $employeeId): RedirectResponse
+    {
+        Employee::query()->withoutClinicScope()->findOrFail($employeeId);
+
+        return to_route('employees.index');
+    }
+
     public function destroy(Request $request, int $employeeId): JsonResponse|RedirectResponse
     {
-        $clinicId = $this->resolveClinicId($request);
-        $employee = Employee::query()->forClinic($clinicId)->withCount('salaryPayments')->findOrFail($employeeId);
+        $employee = Employee::query()->withoutClinicScope()->withCount('salaryPayments')->findOrFail($employeeId);
 
         DB::transaction(function () use ($employee): void {
             if ($employee->salary_payments_count > 0) {
@@ -154,15 +146,16 @@ class EmployeeController extends Controller
         return to_route('employees.index');
     }
 
-    private function resolveClinicId(Request $request): int
+    public function export(Request $request): BinaryFileResponse|StreamedResponse
     {
-        $clinicId = $request->user()?->clinic_id;
+        $filters = $this->resolveFilters($request);
+        $filename = 'employees_export_'.now()->format('Y-m-d_His').'.xlsx';
 
-        if ($clinicId === null) {
-            abort(Response::HTTP_FORBIDDEN, 'Clinic context is required.');
-        }
-
-        return (int) $clinicId;
+        return Excel::download(
+            new EmployeeExport($filters),
+            $filename,
+            \Maatwebsite\Excel\Excel::XLSX,
+        );
     }
 
     /**
@@ -172,6 +165,7 @@ class EmployeeController extends Controller
     {
         return [
             'search' => $this->nullableString($request->query('search')),
+            'clinic_id' => $this->nullableInteger($request->query('clinic_id')),
             'employee_type' => $this->allowedNullableString($request->query('employee_type'), $this->employeeTypes()),
             'status' => $this->allowedNullableString($request->query('status'), [Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE]),
             'education_level' => $this->allowedNullableString($request->query('education_level'), $this->educationLevels()),
@@ -184,26 +178,29 @@ class EmployeeController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function validatedPayload(Request $request, int $clinicId, ?int $employeeId = null): array
+    private function validatedPayload(Request $request, ?int $employeeId = null): array
     {
-        return $request->validate([
+        $validated = $request->validate([
+            'clinic_id' => [
+                'required',
+                'integer',
+                Rule::exists('clinics', 'id')->where('is_active', true),
+            ],
             'full_name' => ['required', 'string', 'max:255'],
             'gender' => ['required', Rule::in(['male', 'female'])],
             'birth_date' => ['nullable', 'date', 'before:today'],
-            'phone' => ['required', 'string', 'max:50'],
+            'phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:1000'],
             'national_id' => [
                 'nullable',
                 'string',
                 'max:100',
-                Rule::unique('employees', 'national_id')->where('clinic_id', $clinicId)->ignore($employeeId),
+                Rule::unique('employees', 'national_id')->where('clinic_id', (int) $request->input('clinic_id'))->ignore($employeeId),
             ],
             'marital_status' => ['nullable', Rule::in($this->maritalStatuses())],
             'hire_date' => ['required', 'date'],
             'status' => ['required', Rule::in([Employee::STATUS_ACTIVE, Employee::STATUS_INACTIVE])],
-            'job_title' => ['required', 'string', 'max:255'],
             'employee_type' => ['required', Rule::in($this->employeeTypes())],
-            'specialty' => ['nullable', 'string', 'max:150'],
             'job_description' => ['nullable', 'string', 'max:2000'],
             'education_level' => ['nullable', Rule::in($this->educationLevels())],
             'certificate_name' => ['nullable', 'string', 'max:255'],
@@ -214,6 +211,12 @@ class EmployeeController extends Controller
             'additional_allowance' => ['nullable', 'numeric', 'min:0'],
             'salary_notes' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        return [
+            ...$validated,
+            'job_title' => $validated['employee_type'],
+            'specialty' => null,
+        ];
     }
 
     /**
@@ -237,6 +240,12 @@ class EmployeeController extends Controller
     {
         return [
             'id' => $employee->id,
+            'clinic_id' => $employee->clinic_id,
+            'clinic' => $employee->clinic !== null ? [
+                'id' => $employee->clinic->id,
+                'name' => $employee->clinic->name,
+                'code' => $employee->clinic->code,
+            ] : null,
             'full_name' => $employee->full_name,
             'gender' => $employee->gender,
             'birth_date' => $employee->birth_date?->toDateString(),
@@ -246,9 +255,7 @@ class EmployeeController extends Controller
             'marital_status' => $employee->marital_status,
             'hire_date' => $employee->hire_date?->toDateString(),
             'status' => $employee->status,
-            'job_title' => $employee->job_title,
             'employee_type' => $employee->employee_type,
-            'specialty' => $employee->specialty,
             'job_description' => $employee->job_description,
             'education_level' => $employee->education_level,
             'certificate_name' => $employee->certificate_name,
@@ -319,6 +326,50 @@ class EmployeeController extends Controller
     private function accountRoles(): array
     {
         return ['receptionist', 'admin', 'accountant'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function employeesQuery(array $filters, bool $includeSearch = true): Builder
+    {
+        return Employee::query()
+            ->withoutClinicScope()
+            ->when($filters['clinic_id'] !== null, fn (Builder $query) => $query->where('clinic_id', $filters['clinic_id']))
+            ->when($includeSearch && $filters['search'] !== null, function (Builder $query) use ($filters): void {
+                $search = $filters['search'];
+
+                $query->where(function (Builder $inner) use ($search): void {
+                    $inner
+                        ->where('full_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('national_id', 'like', "%{$search}%");
+                });
+            })
+            ->when($filters['employee_type'] !== null, fn (Builder $query) => $query->where('employee_type', $filters['employee_type']))
+            ->when($filters['status'] !== null, fn (Builder $query) => $query->where('status', $filters['status']))
+            ->when($filters['education_level'] !== null, fn (Builder $query) => $query->where('education_level', $filters['education_level']))
+            ->when($filters['hire_date_from'] !== null, fn (Builder $query) => $query->whereDate('hire_date', '>=', $filters['hire_date_from']))
+            ->when($filters['hire_date_to'] !== null, fn (Builder $query) => $query->whereDate('hire_date', '<=', $filters['hire_date_to']));
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string, code: ?string}>
+     */
+    private function clinicOptions(): array
+    {
+        return Clinic::query()
+            ->clinical()
+            ->where('is_active', true)
+            ->select(['id', 'name', 'code'])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Clinic $clinic): array => [
+                'id' => (int) $clinic->id,
+                'name' => $clinic->name,
+                'code' => $clinic->code,
+            ])
+            ->all();
     }
 
     private function nullableString(mixed $value): ?string

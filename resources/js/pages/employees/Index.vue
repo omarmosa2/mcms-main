@@ -2,6 +2,7 @@
 import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     Eye,
+    FileSpreadsheet,
     Pencil,
     Plus,
     Search,
@@ -30,24 +31,22 @@ import { useToast } from '@/composables/useToast';
 import { useMoneyFormatter } from '@/lib/money';
 import EmployeeStatsCards from './components/EmployeeStatsCards.vue';
 
-type DepartmentOption = { id: number; name: string };
+type ClinicOption = { id: number; name: string; code: string | null };
 type UserBrief = { id: number; name: string; email: string };
 type Employee = {
     id: number;
     full_name: string;
     gender: 'male' | 'female';
     birth_date: string | null;
-    phone: string;
+    phone: string | null;
     address: string | null;
     national_id: string | null;
     marital_status: string | null;
     hire_date: string;
     status: 'active' | 'inactive';
-    job_title: string;
-    department_id: number | null;
-    department: DepartmentOption | null;
+    clinic_id: number;
+    clinic: ClinicOption | null;
     employee_type: string;
-    specialty: string | null;
     job_description: string | null;
     education_level: string | null;
     certificate_name: string | null;
@@ -73,7 +72,6 @@ type Paginated<T> = {
 
 const props = defineProps<{
     employees: Paginated<Employee>;
-    departments: DepartmentOption[];
     filters: Record<string, string | number | null>;
     stats: {
         total: number;
@@ -82,6 +80,7 @@ const props = defineProps<{
         monthly_salaries: number;
     };
     options: {
+        clinics: ClinicOption[];
         employee_types: string[];
         education_levels: string[];
         statuses: string[];
@@ -115,7 +114,7 @@ const editing = ref<Employee | null>(null);
 const search = ref(String(props.filters.search ?? ''));
 const employeeType = ref(String(props.filters.employee_type ?? ''));
 const status = ref(String(props.filters.status ?? ''));
-const departmentId = ref(String(props.filters.department_id ?? ''));
+const clinicId = ref(String(props.filters.clinic_id ?? ''));
 const educationLevel = ref(String(props.filters.education_level ?? ''));
 const hireDateFrom = ref(String(props.filters.hire_date_from ?? ''));
 const hireDateTo = ref(String(props.filters.hire_date_to ?? ''));
@@ -157,10 +156,8 @@ type EmployeeForm = {
     marital_status: string;
     hire_date: string;
     status: 'active' | 'inactive';
-    job_title: string;
-    department_id: number | '';
+    clinic_id: number | '';
     employee_type: string;
-    specialty: string;
     job_description: string;
     education_level: string;
     certificate_name: string;
@@ -186,10 +183,8 @@ const defaults = (employee: Employee | null = null): EmployeeForm => ({
     marital_status: employee?.marital_status ?? '',
     hire_date: employee?.hire_date ?? new Date().toISOString().slice(0, 10),
     status: employee?.status ?? 'active',
-    job_title: employee?.job_title ?? '',
-    department_id: employee?.department_id ?? '',
+    clinic_id: employee?.clinic_id ?? props.options.clinics[0]?.id ?? '',
     employee_type: employee?.employee_type ?? 'reception',
-    specialty: employee?.specialty ?? '',
     job_description: employee?.job_description ?? '',
     education_level: employee?.education_level ?? 'none',
     certificate_name: employee?.certificate_name ?? '',
@@ -223,9 +218,9 @@ const reload = (): void => {
         EmployeeController.index.url(),
         {
             search: search.value || undefined,
+            clinic_id: clinicId.value || undefined,
             employee_type: employeeType.value || undefined,
             status: status.value || undefined,
-            department_id: departmentId.value || undefined,
             education_level: educationLevel.value || undefined,
             hire_date_from: hireDateFrom.value || undefined,
             hire_date_to: hireDateTo.value || undefined,
@@ -238,7 +233,7 @@ watch(
     [
         employeeType,
         status,
-        departmentId,
+        clinicId,
         educationLevel,
         hireDateFrom,
         hireDateTo,
@@ -267,6 +262,20 @@ const openEdit = (employee: Employee): void => {
     form.reset();
     form.clearErrors();
     showForm.value = true;
+};
+
+const exportExcel = (): void => {
+    window.location.href = EmployeeController.export.url({
+        query: {
+            search: search.value || undefined,
+            clinic_id: clinicId.value || undefined,
+            employee_type: employeeType.value || undefined,
+            status: status.value || undefined,
+            education_level: educationLevel.value || undefined,
+            hire_date_from: hireDateFrom.value || undefined,
+            hire_date_to: hireDateTo.value || undefined,
+        },
+    });
 };
 
 const submit = (): void => {
@@ -346,35 +355,48 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                 </p>
             </div>
 
-            <Button
-                v-if="can('employees.create')"
-                type="button"
-                class="h-11 rounded-lg bg-primary px-5 text-primary-foreground hover:bg-primary/90"
-                @click="openCreate"
-            >
-                <Plus class="size-4" />
-                إضافة موظف جديد
-            </Button>
+            <div class="flex flex-wrap items-center gap-2">
+                <Button
+                    v-if="can('employees.view')"
+                    type="button"
+                    variant="outline"
+                    class="h-11 rounded-lg px-5"
+                    @click="exportExcel"
+                >
+                    <FileSpreadsheet class="size-4" />
+                    تصدير Excel
+                </Button>
+                <Button
+                    v-if="can('employees.create')"
+                    type="button"
+                    class="h-11 rounded-lg bg-primary px-5 text-primary-foreground hover:bg-primary/90"
+                    @click="openCreate"
+                >
+                    <Plus class="size-4" />
+                    إضافة موظف جديد
+                </Button>
+            </div>
         </section>
 
         <EmployeeStatsCards :stats="stats" />
 
         <section class="rounded-lg border bg-card p-4">
-            <div class="grid gap-3 md:grid-cols-7">
-                <div class="relative md:col-span-2">
+            <div class="space-y-3">
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-12">
+                    <div class="relative sm:col-span-2 lg:col-span-4">
                     <Search
                         class="absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground"
                     />
                     <Input
                         v-model="search"
                         class="h-10 pr-10"
-                        placeholder="الاسم، الهاتف، الهوية، المسمى، الاختصاص..."
+                        placeholder="الاسم، الهاتف، الهوية..."
                     />
-                </div>
-                <select
-                    v-model="employeeType"
-                    class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
-                >
+                    </div>
+                    <select
+                        v-model="employeeType"
+                        class="h-10 w-full rounded-md border border-input bg-muted px-3 text-sm lg:col-span-2"
+                    >
                     <option value="">كل الأنواع</option>
                     <option
                         v-for="type in options.employee_types"
@@ -383,32 +405,32 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                     >
                         {{ labelFor(type) }}
                     </option>
-                </select>
-                <select
-                    v-model="status"
-                    class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
-                >
+                    </select>
+                    <select
+                        v-model="status"
+                        class="h-10 w-full rounded-md border border-input bg-muted px-3 text-sm lg:col-span-2"
+                    >
                     <option value="">كل الحالات</option>
                     <option value="active">نشط</option>
                     <option value="inactive">غير نشط</option>
-                </select>
-                <select
-                    v-model="departmentId"
-                    class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
-                >
-                    <option value="">كل الأقسام</option>
-                    <option
-                        v-for="department in departments"
-                        :key="department.id"
-                        :value="department.id"
+                    </select>
+                    <select
+                        v-model="clinicId"
+                        class="h-10 w-full rounded-md border border-input bg-muted px-3 text-sm lg:col-span-2"
                     >
-                        {{ department.name }}
+                    <option value="">كل العيادات</option>
+                    <option
+                        v-for="clinic in options.clinics"
+                        :key="clinic.id"
+                        :value="clinic.id"
+                    >
+                        {{ clinic.name }}
                     </option>
-                </select>
-                <select
-                    v-model="educationLevel"
-                    class="h-10 rounded-md border border-input bg-muted px-3 text-sm"
-                >
+                    </select>
+                    <select
+                        v-model="educationLevel"
+                        class="h-10 w-full rounded-md border border-input bg-muted px-3 text-sm lg:col-span-2"
+                    >
                     <option value="">كل الشهادات</option>
                     <option
                         v-for="level in options.education_levels"
@@ -417,8 +439,9 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                     >
                         {{ labelFor(level) }}
                     </option>
-                </select>
-                <div class="grid grid-cols-2 gap-2">
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2 sm:w-[260px]">
                     <Input
                         v-model="hireDateFrom"
                         type="date"
@@ -429,19 +452,28 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
         </section>
 
         <section class="overflow-hidden rounded-lg border bg-card">
-            <div class="overflow-x-auto">
-                <table class="w-full min-w-[1400px] text-right text-sm">
+            <div class="overflow-hidden">
+                <table class="w-full table-fixed text-right text-sm">
+                    <colgroup>
+                        <col class="w-[12%]" />
+                        <col class="w-[7%]" />
+                        <col class="w-[10%]" />
+                        <col class="w-[10%]" />
+                        <col class="w-[13%]" />
+                        <col class="w-[10%]" />
+                        <col class="w-[9%]" />
+                        <col class="w-[8%]" />
+                        <col class="w-[11%]" />
+                        <col class="w-[10%]" />
+                    </colgroup>
                     <thead class="bg-muted text-xs text-muted-foreground">
                         <tr>
                             <th class="px-4 py-3">الاسم الكامل</th>
                             <th class="px-4 py-3">الجنس</th>
                             <th class="px-4 py-3">رقم الهاتف</th>
                             <th class="px-4 py-3">نوع الموظف</th>
-                            <th class="px-4 py-3">المسمى الوظيفي</th>
-                            <th class="px-4 py-3">القسم / العيادة</th>
-                            <th class="px-4 py-3">الاختصاص</th>
+                            <th class="px-4 py-3">العيادة</th>
                             <th class="px-4 py-3">المستوى العلمي</th>
-                            <th class="px-4 py-3">اسم الشهادة</th>
                             <th class="px-4 py-3">الراتب الشهري</th>
                             <th class="px-4 py-3">الحالة</th>
                             <th class="px-4 py-3">تاريخ التعيين</th>
@@ -461,25 +493,16 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                                 {{ labelFor(employee.gender) }}
                             </td>
                             <td class="px-4 py-3 text-foreground">
-                                {{ employee.phone }}
+                                {{ employee.phone ?? '-' }}
                             </td>
                             <td class="px-4 py-3 text-foreground">
                                 {{ labelFor(employee.employee_type) }}
                             </td>
                             <td class="px-4 py-3 text-foreground">
-                                {{ employee.job_title }}
-                            </td>
-                            <td class="px-4 py-3 text-foreground">
-                                {{ employee.department?.name ?? '-' }}
-                            </td>
-                            <td class="px-4 py-3 text-foreground">
-                                {{ employee.specialty ?? '-' }}
+                                {{ employee.clinic?.name ?? '-' }}
                             </td>
                             <td class="px-4 py-3 text-foreground">
                                 {{ labelFor(employee.education_level) }}
-                            </td>
-                            <td class="px-4 py-3 text-foreground">
-                                {{ employee.certificate_name ?? '-' }}
                             </td>
                             <td class="px-4 py-3 font-mono text-foreground">
                                 {{ formatMoney(employee.base_salary) }}
@@ -531,7 +554,7 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                         </tr>
                         <tr v-if="employees.data.length === 0">
                             <td
-                                colspan="13"
+                                colspan="10"
                                 class="px-4 py-10 text-center text-muted-foreground"
                             >
                                 لا توجد بيانات موظفين.
@@ -625,11 +648,7 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                                 />
                             </div>
                             <div class="grid gap-2">
-                                <Label
-                                    >رقم الهاتف
-                                    <span class="text-destructive"
-                                        >*</span
-                                    ></Label
+                                <Label>رقم الهاتف</Label
                                 ><Input v-model="form.phone" /><InputError
                                     :message="form.errors.phone"
                                 />
@@ -705,6 +724,25 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                         <div class="grid gap-4 md:grid-cols-3">
                             <div class="grid gap-2">
                                 <Label
+                                    >العيادة
+                                    <span class="text-destructive"
+                                        >*</span
+                                    ></Label
+                                ><select
+                                    v-model="form.clinic_id"
+                                    class="h-10 rounded-md border border-input bg-muted px-3"
+                                >
+                                    <option
+                                        v-for="clinic in options.clinics"
+                                        :key="clinic.id"
+                                        :value="clinic.id"
+                                    >
+                                        {{ clinic.name }}
+                                    </option></select
+                                ><InputError :message="form.errors.clinic_id" />
+                            </div>
+                            <div class="grid gap-2">
+                                <Label
                                     >نوع الموظف
                                     <span class="text-destructive"
                                         >*</span
@@ -724,44 +762,7 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                                     :message="form.errors.employee_type"
                                 />
                             </div>
-                            <div class="grid gap-2">
-                                <Label
-                                    >المسمى الوظيفي
-                                    <span class="text-destructive"
-                                        >*</span
-                                    ></Label
-                                ><Input v-model="form.job_title" /><InputError
-                                    :message="form.errors.job_title"
-                                />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label>القسم أو العيادة</Label
-                                ><select
-                                    v-model="form.department_id"
-                                    class="h-10 rounded-md border border-input bg-muted px-3"
-                                >
-                                    <option value="">بدون</option>
-                                    <option
-                                        v-for="department in departments"
-                                        :key="department.id"
-                                        :value="department.id"
-                                    >
-                                        {{ department.name }}
-                                    </option></select
-                                ><InputError
-                                    :message="form.errors.department_id"
-                                />
-                            </div>
-                            <div class="grid gap-2">
-                                <Label>الاختصاص أو مجال العمل</Label
-                                ><Input
-                                    v-model="form.specialty"
-                                    placeholder="مثال: تمريض عام، محاسبة..."
-                                /><InputError
-                                    :message="form.errors.specialty"
-                                />
-                            </div>
-                            <div class="grid gap-2 md:col-span-2">
+                            <div class="grid gap-2 md:col-span-3">
                                 <Label>وصف مهام الموظف</Label
                                 ><Input
                                     v-model="form.job_description"
@@ -1001,7 +1002,7 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                                 <b>تاريخ الميلاد:</b>
                                 {{ viewing.birth_date ?? '-' }}
                             </p>
-                            <p><b>رقم الهاتف:</b> {{ viewing.phone }}</p>
+                            <p><b>رقم الهاتف:</b> {{ viewing.phone ?? '-' }}</p>
                             <p>
                                 <b>الرقم الوطني:</b>
                                 {{ viewing.national_id ?? '-' }}
@@ -1043,14 +1044,8 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                                 {{ labelFor(viewing.employee_type) }}
                             </p>
                             <p>
-                                <b>المسمى الوظيفي:</b> {{ viewing.job_title }}
-                            </p>
-                            <p>
-                                <b>القسم / العيادة:</b>
-                                {{ viewing.department?.name ?? '-' }}
-                            </p>
-                            <p>
-                                <b>الاختصاص:</b> {{ viewing.specialty ?? '-' }}
+                                <b>العيادة:</b>
+                                {{ viewing.clinic?.name ?? '-' }}
                             </p>
                             <p class="md:col-span-2">
                                 <b>وصف المهام:</b>

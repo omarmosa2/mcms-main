@@ -5,7 +5,6 @@ namespace Tests\Feature\Employees;
 use App\Actions\Rbac\AssignUserRoleAction;
 use App\Actions\Rbac\SyncClinicRbacAction;
 use App\Models\Clinic;
-use App\Models\Department;
 use App\Models\Employee;
 use App\Models\EmployeeSalaryPayment;
 use App\Models\User;
@@ -20,10 +19,8 @@ class EmployeeControllerTest extends TestCase
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
-        $department = Department::factory()->create(['clinic_id' => $clinic->id, 'name' => 'Reception']);
         Employee::factory()->create([
             'clinic_id' => $clinic->id,
-            'department_id' => $department->id,
             'full_name' => 'Searchable Employee',
             'employee_type' => Employee::TYPE_RECEPTION,
         ]);
@@ -32,7 +29,7 @@ class EmployeeControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('employees.data.0.full_name', 'Searchable Employee');
-        $response->assertJsonPath('departments.0.name', 'Reception');
+        $response->assertJsonPath('options.clinics.0.id', $clinic->id);
     }
 
     public function test_non_admin_cannot_access_employee_management(): void
@@ -47,22 +44,18 @@ class EmployeeControllerTest extends TestCase
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
-        $department = Department::factory()->create(['clinic_id' => $clinic->id]);
 
         $response = $this->postJson(route('employees.store'), [
+            'clinic_id' => $clinic->id,
             'full_name' => 'New Reception Employee',
             'gender' => 'female',
             'birth_date' => '1995-02-10',
-            'phone' => '+963999123456',
             'address' => 'Damascus',
             'national_id' => 'EMP-100',
             'marital_status' => Employee::MARITAL_SINGLE,
             'hire_date' => '2026-06-01',
             'status' => Employee::STATUS_ACTIVE,
-            'job_title' => 'Reception Supervisor',
-            'department_id' => $department->id,
             'employee_type' => Employee::TYPE_RECEPTION,
-            'specialty' => 'General Reception',
             'job_description' => 'Manages front desk operations',
             'education_level' => Employee::EDUCATION_COLLEGE,
             'certificate_name' => 'Bachelor of Business Administration',
@@ -79,8 +72,9 @@ class EmployeeControllerTest extends TestCase
             'clinic_id' => $clinic->id,
             'full_name' => 'New Reception Employee',
             'employee_type' => Employee::TYPE_RECEPTION,
+            'job_title' => Employee::TYPE_RECEPTION,
             'marital_status' => Employee::MARITAL_SINGLE,
-            'specialty' => 'General Reception',
+            'phone' => null,
             'certificate_name' => 'Bachelor of Business Administration',
             'graduation_year' => 2018,
             'issuing_institution' => 'Damascus University',
@@ -95,12 +89,12 @@ class EmployeeControllerTest extends TestCase
         $this->authenticateForClinic($clinic);
 
         $response = $this->postJson(route('employees.store'), [
+            'clinic_id' => $clinic->id,
             'full_name' => 'Receptionist With Account',
             'gender' => 'male',
             'phone' => '+963999777888',
             'hire_date' => '2026-06-01',
             'status' => Employee::STATUS_ACTIVE,
-            'job_title' => 'Receptionist',
             'employee_type' => Employee::TYPE_RECEPTION,
             'base_salary' => 800,
             'create_account' => true,
@@ -131,12 +125,12 @@ class EmployeeControllerTest extends TestCase
         $this->authenticateForClinic($clinic);
 
         $response = $this->postJson(route('employees.store'), [
+            'clinic_id' => $clinic->id,
             'full_name' => 'Cleaner No Account',
             'gender' => 'male',
             'phone' => '+963999111222',
             'hire_date' => '2026-06-01',
             'status' => Employee::STATUS_ACTIVE,
-            'job_title' => 'Cleaner',
             'employee_type' => Employee::TYPE_CLEANER,
             'base_salary' => 500,
             'create_account' => false,
@@ -159,16 +153,15 @@ class EmployeeControllerTest extends TestCase
         ]);
 
         $response = $this->putJson(route('employees.update', $employee), [
+            'clinic_id' => $clinic->id,
             'full_name' => 'Updated Name',
             'gender' => 'male',
-            'phone' => '+963999555666',
+            'phone' => null,
             'hire_date' => '2026-01-01',
             'status' => Employee::STATUS_ACTIVE,
-            'job_title' => 'Senior Accountant',
             'employee_type' => Employee::TYPE_ACCOUNTANT,
             'base_salary' => 1500,
             'additional_allowance' => 300,
-            'specialty' => 'Financial Accounting',
             'marital_status' => Employee::MARITAL_MARRIED,
         ]);
 
@@ -177,9 +170,21 @@ class EmployeeControllerTest extends TestCase
             'id' => $employee->id,
             'full_name' => 'Updated Name',
             'base_salary' => 1500,
-            'specialty' => 'Financial Accounting',
+            'phone' => null,
+            'job_title' => Employee::TYPE_ACCOUNTANT,
             'marital_status' => Employee::MARITAL_MARRIED,
         ]);
+    }
+
+    public function test_direct_employee_get_redirects_to_index(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $employee = Employee::factory()->create(['clinic_id' => $clinic->id]);
+
+        $response = $this->get(route('employees.show', $employee));
+
+        $response->assertRedirect(route('employees.index'));
     }
 
     public function test_destroy_archives_employee_with_salary_payments(): void
@@ -218,16 +223,16 @@ class EmployeeControllerTest extends TestCase
         $this->assertSoftDeleted('employees', ['id' => $employee->id]);
     }
 
-    public function test_search_includes_specialty(): void
+    public function test_search_includes_national_id(): void
     {
         $clinic = Clinic::factory()->create();
         $this->authenticateForClinic($clinic);
         Employee::factory()->create([
             'clinic_id' => $clinic->id,
-            'specialty' => 'UniqueSpecialtyXYZ',
+            'national_id' => 'UniqueNationalXYZ',
         ]);
 
-        $response = $this->getJson(route('employees.index', ['search' => 'UniqueSpecialtyXYZ']));
+        $response = $this->getJson(route('employees.index', ['search' => 'UniqueNationalXYZ']));
 
         $response->assertOk();
         $this->assertNotEmpty($response->json('employees.data'));

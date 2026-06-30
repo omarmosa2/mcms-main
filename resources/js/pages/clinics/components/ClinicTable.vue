@@ -231,12 +231,12 @@ const sortMark = (field: ClinicSortField): string => {
                             <th
                                 class="cursor-pointer px-3 py-3 text-center text-sm font-bold text-foreground transition-colors select-none hover:text-primary"
                                 @click="
-                                    emit('toggle-sort', 'employees_count')
+                                    emit('toggle-sort', 'doctors_count')
                                 "
                             >
-                                الموظفون
+                                الأطباء
                                 <span class="ms-1 text-muted-foreground/50">{{
-                                    sortMark('employees_count')
+                                    sortMark('doctors_count')
                                 }}</span>
                             </th>
                             <th
@@ -307,7 +307,7 @@ const sortMark = (field: ClinicSortField): string => {
                                 <span
                                     class="inline-flex min-w-10 items-center justify-center rounded-full bg-muted px-3 py-1.5 text-xs font-bold text-foreground"
                                 >
-                                     {{ clinic.employees_count }}
+                                     {{ clinic.doctors_count }}
                                 </span>
                             </td>
                             <td class="px-3 py-4 text-center">

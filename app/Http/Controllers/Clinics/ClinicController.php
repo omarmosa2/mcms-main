@@ -33,7 +33,9 @@ class ClinicController extends Controller
 
         $clinics = Clinic::query()
             ->clinical()
-            ->withCount('employees')
+            ->withCount(['doctorProfiles' => function ($query) {
+                $query->withoutGlobalScope('clinic');
+            }])
             ->with(['workingHours'])
             ->orderByDesc('created_at');
 
@@ -77,7 +79,7 @@ class ClinicController extends Controller
 
             $this->syncWorkingHours($clinic, $workingHours);
 
-            return $clinic->loadCount(['employees' => function ($query) {
+            return $clinic->loadCount(['doctorProfiles' => function ($query) {
                 $query->withoutGlobalScope('clinic');
             }])->load('workingHours');
         });
@@ -115,7 +117,9 @@ class ClinicController extends Controller
     public function show(Request $request, int $clinicId): ClinicResource
     {
         $clinic = Clinic::query()
-            ->withCount('employees')
+            ->withCount(['doctorProfiles' => function ($query) {
+                $query->withoutGlobalScope('clinic');
+            }])
             ->with(['workingHours'])
             ->findOrFail($clinicId);
 
@@ -137,7 +141,7 @@ class ClinicController extends Controller
 
             $this->syncWorkingHours($clinic, $workingHours);
 
-            return $clinic->loadCount(['employees' => function ($query) {
+            return $clinic->loadCount(['doctorProfiles' => function ($query) {
                 $query->withoutGlobalScope('clinic');
             }])->load('workingHours');
         });
@@ -302,8 +306,8 @@ class ClinicController extends Controller
             return;
         }
 
-        if ($sortBy === 'employees_count') {
-            $query->reorder()->orderBy('employees_count', $direction)->orderBy('name');
+        if ($sortBy === 'doctors_count') {
+            $query->reorder()->orderBy('doctor_profiles_count', $direction)->orderBy('name');
 
             return;
         }
@@ -450,7 +454,7 @@ class ClinicController extends Controller
             'name',
             'code',
             'is_active',
-            'employees_count',
+            'doctors_count',
             'created_at',
         ];
 

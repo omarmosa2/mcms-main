@@ -18,7 +18,7 @@ class ClinicResource extends JsonResource
             'code' => $this->code,
             'description' => $this->description,
             'is_active' => (bool) $this->is_active,
-            'employees_count' => (int) ($this->employees_count ?? 0),
+            'doctors_count' => (int) ($this->doctor_profiles_count ?? 0),
             'working_hours' => $this->relationLoaded('workingHours')
                 ? $this->workingHours->map(fn ($wh) => [
                     'day_of_week' => $wh->day_of_week,

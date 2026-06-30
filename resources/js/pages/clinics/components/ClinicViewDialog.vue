@@ -85,7 +85,7 @@ const formatDate = (value: string | null): string => {
                             class="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground"
                         >
                             <UsersRound class="size-4" />
-                            {{ department.employees_count }} موظف
+                            {{ department.doctors_count }} طبيب
                         </span>
                     </div>
 
@@ -114,7 +114,7 @@ const formatDate = (value: string | null): string => {
                             <dd
                                 class="mt-1 font-bold text-foreground tabular-nums"
                             >
-                                 {{ department.employees_count }}
+                                 {{ department.doctors_count }}
                             </dd>
                         </div>
 

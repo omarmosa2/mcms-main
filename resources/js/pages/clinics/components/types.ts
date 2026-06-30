@@ -4,7 +4,7 @@ export type Clinic = {
     code: string | null;
     description: string | null;
     is_active: boolean;
-    employees_count: number;
+    doctors_count: number;
     working_hours?: ClinicWorkingHour[];
     created_at: string | null;
     updated_at: string | null;
@@ -58,7 +58,7 @@ export type ClinicSortField =
     | 'name'
     | 'code'
     | 'is_active'
-    | 'employees_count'
+    | 'doctors_count'
     | 'created_at';
 
 export type SortDirection = 'asc' | 'desc';

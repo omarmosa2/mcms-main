@@ -30,7 +30,9 @@ class ClinicExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMappi
             ->with(['workingHours' => function ($query): void {
                 $query->orderBy('day_of_week');
             }])
-            ->withCount('employees');
+            ->withCount(['doctorProfiles' => function ($query) {
+                $query->withoutGlobalScope('clinic');
+            }]);
 
         if ($this->isActive !== null) {
             $query->where('is_active', $this->isActive);
@@ -59,7 +61,7 @@ class ClinicExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMappi
             'اسم العيادة',
             'رمز العيادة',
             'الحالة',
-            'عدد الموظفين',
+            'عدد الأطباء',
             'اليوم',
             'حالة الدوام',
             'وقت البداية',
@@ -124,8 +126,8 @@ class ClinicExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMappi
             return;
         }
 
-        if ($this->sortBy === 'employees_count') {
-            $query->orderBy('employees_count', $direction)->orderBy('name');
+        if ($this->sortBy === 'doctors_count') {
+            $query->orderBy('doctor_profiles_count', $direction)->orderBy('name');
 
             return;
         }
@@ -142,7 +144,7 @@ class ClinicExport implements FromQuery, ShouldAutoSize, WithHeadings, WithMappi
             $clinic->name,
             $clinic->code ?? '',
             $clinic->is_active ? 'فعالة' : 'غير فعالة',
-            $clinic->employees_count ?? 0,
+            $clinic->doctor_profiles_count ?? 0,
             $workingHour !== null ? WeekDay::arabicName((string) $workingHour->day_of_week) : 'لا يوجد دوام مسجل',
             $workingHour !== null
                 ? ($workingHour->is_active ? 'دوام' : 'مغلق')

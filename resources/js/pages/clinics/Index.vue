@@ -116,7 +116,7 @@ const allowedSortFields: ClinicSortField[] = [
     'name',
     'code',
     'is_active',
-    'employees_count',
+    'doctors_count',
     'created_at',
 ];
 
@@ -150,7 +150,7 @@ const inactiveClinicsOnPage = computed<number>(
 
 const totalDoctors = computed<number>(() =>
     visibleClinics.value.reduce(
-        (sum, clinic) => sum + (clinic.employees_count ?? 0),
+        (sum, clinic) => sum + (clinic.doctors_count ?? 0),
         0,
     ),
 );

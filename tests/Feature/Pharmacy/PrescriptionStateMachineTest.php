@@ -71,11 +71,11 @@ class PrescriptionStateMachineTest extends TestCase
             clinicId: $clinic->id,
             prescriptionId: $prescription->id,
             userId: $user->id,
-            newStatus: Prescription::STATUS_DISPENSED,
+            newStatus: Prescription::STATUS_SENT_TO_PHARMACY,
         );
 
-        $this->assertEquals(Prescription::STATUS_DISPENSED, $result->status);
-        $this->assertNotNull($result->dispensed_at);
+        $this->assertEquals(Prescription::STATUS_SENT_TO_PHARMACY, $result->status);
+        $this->assertNotNull($result->sent_to_pharmacy_at);
     }
 
     public function test_issued_can_transition_to_canceled(): void
@@ -220,8 +220,13 @@ class PrescriptionStateMachineTest extends TestCase
     {
         $expected = [
             Prescription::STATUS_DRAFT => [Prescription::STATUS_ISSUED, Prescription::STATUS_CANCELED],
-            Prescription::STATUS_ISSUED => [Prescription::STATUS_DISPENSED, Prescription::STATUS_CANCELED],
+            Prescription::STATUS_ISSUED => [Prescription::STATUS_SENT_TO_PHARMACY, Prescription::STATUS_CANCELED],
+            Prescription::STATUS_SENT_TO_PHARMACY => [Prescription::STATUS_RECEIVED, Prescription::STATUS_CANCELED],
+            Prescription::STATUS_RECEIVED => [Prescription::STATUS_PREPARING, Prescription::STATUS_CANCELED],
+            Prescription::STATUS_PREPARING => [Prescription::STATUS_READY, Prescription::STATUS_DISPENSED, Prescription::STATUS_PARTIALLY_DISPENSED, Prescription::STATUS_CANCELED],
+            Prescription::STATUS_READY => [Prescription::STATUS_DISPENSED, Prescription::STATUS_PARTIALLY_DISPENSED, Prescription::STATUS_CANCELED],
             Prescription::STATUS_DISPENSED => [],
+            Prescription::STATUS_PARTIALLY_DISPENSED => [Prescription::STATUS_DISPENSED],
             Prescription::STATUS_CANCELED => [],
         ];
 

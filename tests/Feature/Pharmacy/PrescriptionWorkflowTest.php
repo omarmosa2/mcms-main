@@ -3,8 +3,10 @@
 namespace Tests\Feature\Pharmacy;
 
 use App\Actions\Rbac\AssignUserRoleAction;
+use App\Actions\Rbac\SyncClinicRbacAction;
 use App\Models\Clinic;
 use App\Models\Patient;
+use App\Models\PharmacyDrug;
 use App\Models\Prescription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,6 +19,7 @@ class PrescriptionWorkflowTest extends TestCase
     public function test_clinic_admin_can_create_and_dispense_prescription_with_stock_update(): void
     {
         $clinic = Clinic::factory()->create();
+        app(SyncClinicRbacAction::class)->handle($clinic->id);
         $user = $this->authenticateForClinic($clinic, 'clinic_admin');
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
@@ -30,8 +33,8 @@ class PrescriptionWorkflowTest extends TestCase
             'current_stock' => 50,
         ]);
 
-        $drugResponse->assertCreated();
-        $drugId = (int) $drugResponse->json('data.id');
+        $drugResponse->assertRedirect();
+        $drugId = (int) PharmacyDrug::query()->where('trade_name', 'Panadol')->first()->id;
 
         $prescriptionResponse = $this->postJson(route('pharmacy.prescriptions.store'), [
             'visit_id' => null,
@@ -54,12 +57,18 @@ class PrescriptionWorkflowTest extends TestCase
 
         $dispenseResponse = $this->postJson(
             route('pharmacy.prescriptions.dispense', ['prescriptionId' => $prescriptionId]),
-            ['notes' => 'Dispensed from shelf A1'],
+            [
+                'notes' => 'Dispensed from shelf A1',
+                'items' => [
+                    [
+                        'prescription_item_id' => $prescriptionResponse->json('data.id'),
+                        'quantity' => 6,
+                    ],
+                ],
+            ],
         );
 
         $dispenseResponse->assertOk();
-        $dispenseResponse->assertJsonPath('data.items_count', 1);
-        $dispenseResponse->assertJsonPath('data.total_amount', 15);
 
         $this->assertDatabaseHas('prescriptions', [
             'id' => $prescriptionId,

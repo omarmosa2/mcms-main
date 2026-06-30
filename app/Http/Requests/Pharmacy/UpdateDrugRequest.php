@@ -5,7 +5,7 @@ namespace App\Http\Requests\Pharmacy;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreDrugRequest extends FormRequest
+class UpdateDrugRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -13,7 +13,7 @@ class StoreDrugRequest extends FormRequest
 
         return $user !== null
             && $user->clinic_id !== null
-            && ($user->hasPermission('pharmacy.drugs.create') || $user->hasPermission('pharmacy.*'));
+            && ($user->hasPermission('pharmacy.drugs.update') || $user->hasPermission('pharmacy.*'));
     }
 
     /**
@@ -22,8 +22,8 @@ class StoreDrugRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'trade_name' => ['required', 'string', 'max:255'],
-            'generic_name' => ['required', 'string', 'max:255'],
+            'trade_name' => ['sometimes', 'string', 'max:255'],
+            'generic_name' => ['sometimes', 'string', 'max:255'],
             'code' => ['nullable', 'string', 'max:100'],
             'barcode' => ['nullable', 'string', 'max:100'],
             'category' => ['nullable', 'string', 'max:100'],
@@ -35,7 +35,6 @@ class StoreDrugRequest extends FormRequest
             'supplier_name' => ['nullable', 'string', 'max:255'],
             'unit_price' => ['nullable', 'numeric', 'min:0'],
             'min_stock_level' => ['nullable', 'integer', 'min:0'],
-            'current_stock' => ['nullable', 'integer', 'min:0'],
             'expires_at' => ['nullable', 'date'],
             'is_active' => ['nullable', 'boolean'],
         ];

@@ -13,7 +13,7 @@ class DispensePrescriptionRequest extends FormRequest
 
         return $user !== null
             && $user->clinic_id !== null
-            && ($user->hasPermission('billing.generate') || $user->hasPermission('payment.record'));
+            && ($user->hasPermission('pharmacy.prescriptions.dispense') || $user->hasPermission('pharmacy.*'));
     }
 
     /**
@@ -23,6 +23,10 @@ class DispensePrescriptionRequest extends FormRequest
     {
         return [
             'notes' => ['nullable', 'string'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.prescription_item_id' => ['required', 'integer'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.batch_id' => ['nullable', 'integer'],
         ];
     }
 }

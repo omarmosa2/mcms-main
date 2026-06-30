@@ -14,6 +14,7 @@ import {
     LayoutGrid,
     Lock,
     LogOut,
+    Pill,
     Receipt,
     Settings,
     Shield,
@@ -96,6 +97,7 @@ const primaryRole = computed<string>(() => {
         'admin',
         'clinic_admin',
         'doctor',
+        'pharmacy',
         'receptionist',
         'accountant',
     ];
@@ -106,12 +108,14 @@ const primaryRole = computed<string>(() => {
 });
 
 const isDoctor = computed(() => primaryRole.value === 'doctor');
+const isPharmacist = computed(() => primaryRole.value === 'pharmacy');
 
 const roleLabels: Record<string, string> = {
     super_admin: 'مدير عام',
     admin: 'مدير',
     clinic_admin: 'مدير العيادة',
     doctor: 'طبيب',
+    pharmacy: 'الصيدلية',
     receptionist: 'موظف استقبال',
     accountant: 'محاسب',
     staff: 'موظف',
@@ -123,6 +127,7 @@ const roleLabel = computed<string>(
 
 const roleItemOrder: Record<string, string[]> = {
     doctor: ['لوحة التحكم', 'مواعيد اليوم', 'الوصفات الطبية', 'ملفي الشخصي'],
+    pharmacy: ['لوحة التحكم', 'الصيدلية'],
     receptionist: [
         'لوحة التحكم',
         'المرضى',
@@ -138,6 +143,7 @@ const roleItemOrder: Record<string, string[]> = {
         'المواعيد',
         'جدول اليوم',
         'السجلات الطبية',
+        'الصيدلية',
         'إجازات الأطباء',
         'العيادات',
         'الأطباء',
@@ -156,6 +162,7 @@ const roleItemOrder: Record<string, string[]> = {
         'المواعيد',
         'جدول اليوم',
         'السجلات الطبية',
+        'الصيدلية',
         'إجازات الأطباء',
         'العيادات',
         'الأطباء',
@@ -174,6 +181,7 @@ const roleItemOrder: Record<string, string[]> = {
         'المواعيد',
         'جدول اليوم',
         'السجلات الطبية',
+        'الصيدلية',
         'إجازات الأطباء',
         'العيادات',
         'الأطباء',
@@ -252,6 +260,13 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 icon: CalendarOff,
                 group: 'clinical',
                 permission: 'doctor_schedule.view',
+            },
+            {
+                title: 'الصيدلية',
+                href: '/pharmacy',
+                icon: Pill,
+                group: 'clinical',
+                anyPermissions: ['pharmacy.view', 'pharmacy.*'],
             },
             {
                 title: 'العيادات',
@@ -336,6 +351,10 @@ const mainNavItems = computed<MainNavItem[]>(() => {
     ).filter((item) => {
         if (item.doctorOnly) {
             return isDoctor.value;
+        }
+
+        if (isPharmacist.value) {
+            return item.title === 'لوحة التحكم' || item.title === 'الصيدلية';
         }
 
         if (

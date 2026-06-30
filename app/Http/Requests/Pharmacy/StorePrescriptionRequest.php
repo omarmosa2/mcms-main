@@ -14,7 +14,7 @@ class StorePrescriptionRequest extends FormRequest
 
         return $user !== null
             && $user->clinic_id !== null
-            && ($user->hasPermission('visit.update') || $user->hasPermission('medical.notes.create'));
+            && ($user->hasPermission('visit.update') || $user->hasPermission('medical.notes.create') || $user->hasPermission('pharmacy.prescriptions.dispense') || $user->hasPermission('pharmacy.*'));
     }
 
     /**

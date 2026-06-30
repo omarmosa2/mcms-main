@@ -43,6 +43,7 @@ class SyncClinicRbacAction extends BaseAction
             'medical_record.*',
             'patient_card.*',
             'doctor_schedule.*',
+            'pharmacy.*',
         ],
         'admin' => [
             'patients.*',
@@ -72,6 +73,7 @@ class SyncClinicRbacAction extends BaseAction
             'medical_record.*',
             'patient_card.*',
             'doctor_schedule.*',
+            'pharmacy.*',
         ],
         'receptionist' => [
             'patient.create',
@@ -113,6 +115,19 @@ class SyncClinicRbacAction extends BaseAction
             'accounts.update',
             'reports.financial',
         ],
+        'pharmacy' => [
+            'pharmacy.view',
+            'pharmacy.drugs.view',
+            'pharmacy.drugs.create',
+            'pharmacy.drugs.update',
+            'pharmacy.drugs.delete',
+            'pharmacy.prescriptions.view',
+            'pharmacy.prescriptions.dispense',
+            'pharmacy.inventory.view',
+            'pharmacy.inventory.manage',
+            'pharmacy.alerts.view',
+            'pharmacy.reports',
+        ],
     ];
 
     /**
@@ -125,6 +140,7 @@ class SyncClinicRbacAction extends BaseAction
         'receptionist' => 'Front desk access for patients and appointments.',
         'doctor' => 'Clinical access for patient care workflow.',
         'accountant' => 'Financial access for billing, payments, and financial reporting.',
+        'pharmacy' => 'Pharmacy workspace access for drug management, prescription dispensing, and inventory.',
     ];
 
     /**
@@ -231,6 +247,21 @@ class SyncClinicRbacAction extends BaseAction
         'doctor_schedule.update',
         'doctor_schedule.delete',
         'doctor_schedule.*',
+        'pharmacy.view',
+        'pharmacy.drugs.view',
+        'pharmacy.drugs.create',
+        'pharmacy.drugs.update',
+        'pharmacy.drugs.delete',
+        'pharmacy.drugs.*',
+        'pharmacy.prescriptions.view',
+        'pharmacy.prescriptions.dispense',
+        'pharmacy.prescriptions.*',
+        'pharmacy.inventory.view',
+        'pharmacy.inventory.manage',
+        'pharmacy.inventory.*',
+        'pharmacy.alerts.view',
+        'pharmacy.reports',
+        'pharmacy.*',
     ];
 
     public function handle(int $clinicId): void

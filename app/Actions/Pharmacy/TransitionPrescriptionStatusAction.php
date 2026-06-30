@@ -28,12 +28,16 @@ class TransitionPrescriptionStatusAction extends BaseAction
             ]);
         }
 
-        $oldValues = $prescription->only(['status', 'issued_at', 'dispensed_at', 'canceled_at', 'cancel_reason']);
+        $oldValues = $prescription->only(['status', 'issued_at', 'dispensed_at', 'canceled_at', 'cancel_reason', 'sent_to_pharmacy_at']);
 
         $prescription->status = $newStatus;
 
         if ($newStatus === Prescription::STATUS_ISSUED) {
             $prescription->issued_at = now();
+        }
+
+        if ($newStatus === Prescription::STATUS_SENT_TO_PHARMACY) {
+            $prescription->sent_to_pharmacy_at = now();
         }
 
         if ($newStatus === Prescription::STATUS_DISPENSED) {
@@ -57,7 +61,7 @@ class TransitionPrescriptionStatusAction extends BaseAction
             action: 'pharmacy.prescriptions.transition_status',
             auditable: $prescription,
             oldValues: $oldValues,
-            newValues: $prescription->only(['status', 'issued_at', 'dispensed_at', 'canceled_at', 'cancel_reason']),
+            newValues: $prescription->only(['status', 'issued_at', 'dispensed_at', 'canceled_at', 'cancel_reason', 'sent_to_pharmacy_at']),
             metadata: [
                 'from_status' => $currentStatus,
                 'to_status' => $newStatus,

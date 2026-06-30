@@ -15,7 +15,17 @@ class Prescription extends BaseModel
 
     public const STATUS_ISSUED = 'issued';
 
+    public const STATUS_SENT_TO_PHARMACY = 'sent_to_pharmacy';
+
+    public const STATUS_RECEIVED = 'received';
+
+    public const STATUS_PREPARING = 'preparing';
+
+    public const STATUS_READY = 'ready';
+
     public const STATUS_DISPENSED = 'dispensed';
+
+    public const STATUS_PARTIALLY_DISPENSED = 'partially_dispensed';
 
     public const STATUS_CANCELED = 'canceled';
 
@@ -24,11 +34,25 @@ class Prescription extends BaseModel
         self::STATUS_CANCELED,
     ];
 
+    public const PHARMACY_STATUSES = [
+        self::STATUS_SENT_TO_PHARMACY,
+        self::STATUS_RECEIVED,
+        self::STATUS_PREPARING,
+        self::STATUS_READY,
+        self::STATUS_DISPENSED,
+        self::STATUS_PARTIALLY_DISPENSED,
+    ];
+
     /** @var array<string, list<string>> */
     public const ALLOWED_TRANSITIONS = [
         self::STATUS_DRAFT => [self::STATUS_ISSUED, self::STATUS_CANCELED],
-        self::STATUS_ISSUED => [self::STATUS_DISPENSED, self::STATUS_CANCELED],
+        self::STATUS_ISSUED => [self::STATUS_SENT_TO_PHARMACY, self::STATUS_CANCELED],
+        self::STATUS_SENT_TO_PHARMACY => [self::STATUS_RECEIVED, self::STATUS_CANCELED],
+        self::STATUS_RECEIVED => [self::STATUS_PREPARING, self::STATUS_CANCELED],
+        self::STATUS_PREPARING => [self::STATUS_READY, self::STATUS_DISPENSED, self::STATUS_PARTIALLY_DISPENSED, self::STATUS_CANCELED],
+        self::STATUS_READY => [self::STATUS_DISPENSED, self::STATUS_PARTIALLY_DISPENSED, self::STATUS_CANCELED],
         self::STATUS_DISPENSED => [],
+        self::STATUS_PARTIALLY_DISPENSED => [self::STATUS_DISPENSED],
         self::STATUS_CANCELED => [],
     ];
 
@@ -40,6 +64,7 @@ class Prescription extends BaseModel
     {
         return [
             'issued_at' => 'datetime',
+            'sent_to_pharmacy_at' => 'datetime',
             'dispensed_at' => 'datetime',
         ];
     }
@@ -64,6 +89,11 @@ class Prescription extends BaseModel
         return $this->belongsTo(MedicalRecord::class);
     }
 
+    public function dispenser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dispensed_by');
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(PrescriptionItem::class);
@@ -72,5 +102,36 @@ class Prescription extends BaseModel
     public function dispenses(): HasMany
     {
         return $this->hasMany(PharmacyDispense::class);
+    }
+
+    public function isPharmacyPending(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_SENT_TO_PHARMACY,
+            self::STATUS_RECEIVED,
+            self::STATUS_PREPARING,
+            self::STATUS_READY,
+        ], true);
+    }
+
+    public function transitionTo(string $newStatus): bool
+    {
+        $allowed = self::ALLOWED_TRANSITIONS[$this->status] ?? [];
+
+        if (! in_array($newStatus, $allowed, true)) {
+            return false;
+        }
+
+        $this->status = $newStatus;
+
+        if ($newStatus === self::STATUS_SENT_TO_PHARMACY) {
+            $this->sent_to_pharmacy_at = now();
+        }
+
+        if ($newStatus === self::STATUS_DISPENSED) {
+            $this->dispensed_at = now();
+        }
+
+        return $this->save();
     }
 }

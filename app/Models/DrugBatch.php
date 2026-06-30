@@ -21,6 +21,8 @@ class DrugBatch extends BaseModel
             'pharmacy_drug_id' => 'integer',
             'quantity' => 'integer',
             'initial_quantity' => 'integer',
+            'purchase_price' => 'decimal:2',
+            'selling_price' => 'decimal:2',
             'expiry_date' => 'date',
             'received_at' => 'datetime',
         ];
@@ -34,6 +36,11 @@ class DrugBatch extends BaseModel
     public function drug(): BelongsTo
     {
         return $this->belongsTo(PharmacyDrug::class, 'pharmacy_drug_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function scopeNotExpired($query)

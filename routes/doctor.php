@@ -17,4 +17,5 @@ Route::middleware(['auth', 'verified', 'doctor'])->prefix('doctor')->name('docto
     Route::match(['put', 'patch'], '/prescriptions/{prescriptionId}', [DoctorPrescriptionController::class, 'update'])->name('prescriptions.update');
     Route::get('/prescriptions/{prescriptionId}/print', [DoctorPrescriptionController::class, 'print'])->name('prescriptions.print');
     Route::get('/prescriptions/{prescriptionId}/pdf', [DoctorPrescriptionController::class, 'pdf'])->name('prescriptions.pdf');
+    Route::post('/prescriptions/{prescriptionId}/send-to-pharmacy', [DoctorPrescriptionController::class, 'sendToPharmacy'])->name('prescriptions.send-to-pharmacy');
 });

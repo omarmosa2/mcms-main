@@ -8,11 +8,11 @@ use App\Models\MedicalRecord;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class DoctorPrescriptionController extends Controller
 {
@@ -333,7 +333,7 @@ class DoctorPrescriptionController extends Controller
         $clinic = $user->clinic;
         $branding = BrandingSetting::query()->forClinic($clinicId)->first();
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('doctor.prescriptions.print', [
+        $pdf = Pdf::loadView('doctor.prescriptions.print', [
             'prescription' => $prescription,
             'clinic' => $clinic,
             'branding' => $branding,
@@ -341,12 +341,35 @@ class DoctorPrescriptionController extends Controller
 
         $pdf->setPaper('A4', 'portrait');
 
-        $filename = 'prescription-' . $prescription->prescription_number . '.pdf';
+        $filename = 'prescription-'.$prescription->prescription_number.'.pdf';
 
         return $pdf->stream($filename, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
+    }
+
+    public function sendToPharmacy(Request $request, int $prescriptionId)
+    {
+        $user = $request->user();
+        $clinicId = (int) $user->clinic_id;
+        $doctorId = (int) $user->id;
+
+        $prescription = Prescription::query()
+            ->forClinic($clinicId)
+            ->where('prescribed_by', $doctorId)
+            ->whereKey($prescriptionId)
+            ->firstOrFail();
+
+        if ($prescription->status === Prescription::STATUS_DRAFT || $prescription->status === Prescription::STATUS_ISSUED) {
+            $prescription->status = Prescription::STATUS_SENT_TO_PHARMACY;
+            $prescription->sent_to_pharmacy_at = now();
+            $prescription->save();
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'تم إرسال الوصفة إلى الصيدلية بنجاح.']);
+
+        return back();
     }
 
     private function generatePrescriptionNumber(int $clinicId): string

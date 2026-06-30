@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { Plus } from 'lucide-vue-next';
+import { FileSpreadsheet, Plus } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import ClinicController from '@/actions/App/Http/Controllers/Clinics/ClinicController';
+import ClinicController, {
+    exportMethod as exportClinics,
+} from '@/actions/App/Http/Controllers/Clinics/ClinicController';
 import { Button } from '@/components/ui/button';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog/ConfirmationDialog.vue';
 import { useConfirm } from '@/composables/useConfirm';
@@ -197,6 +199,22 @@ const buildIndexQuery = (
         sort_by: overrides.sort_by ?? localSortBy.value,
         sort_direction: overrides.sort_direction ?? localSortDirection.value,
     };
+};
+
+const exportExcel = (): void => {
+    const query = buildIndexQuery({ page: 1 });
+
+    window.open(
+        exportClinics.url({
+            query: {
+                search: query.search,
+                is_active: query.is_active,
+                sort_by: query.sort_by,
+                sort_direction: query.sort_direction,
+            },
+        }),
+        '_blank',
+    );
 };
 
 const reloadClinics = (
@@ -421,6 +439,17 @@ const deleteClinic = async (clinic: Clinic) => {
             </div>
 
             <div class="flex items-center gap-2">
+                <Button
+                    v-if="can('department.view')"
+                    variant="outline"
+                    size="lg"
+                    class="h-12 rounded-2xl px-5 text-sm font-bold"
+                    @click="exportExcel"
+                >
+                    <FileSpreadsheet class="size-4" />
+                    تصدير Excel
+                </Button>
+
                 <Button
                     v-if="can('department.create')"
                     variant="default"

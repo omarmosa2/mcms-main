@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Clinics;
 
+use App\Exports\ClinicExport;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ClinicResource;
 use App\Models\Clinic;
@@ -19,7 +20,10 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ClinicController extends Controller
 {
@@ -89,6 +93,23 @@ class ClinicController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'تم إنشاء العيادة بنجاح.']);
 
         return to_route('clinics.index');
+    }
+
+    public function export(Request $request): BinaryFileResponse|StreamedResponse
+    {
+        $filters = $this->resolveExportFilters($request);
+        $filename = 'clinics_export_'.now()->format('Y-m-d_His').'.xlsx';
+
+        return Excel::download(
+            new ClinicExport(
+                search: $filters['search'],
+                isActive: $filters['is_active'],
+                sortBy: $filters['sort_by'],
+                sortDirection: $filters['sort_direction'],
+            ),
+            $filename,
+            \Maatwebsite\Excel\Excel::XLSX,
+        );
     }
 
     public function show(Request $request, int $clinicId): ClinicResource
@@ -345,6 +366,24 @@ class ClinicController extends Controller
         $request->session()->put($sessionKey, $filters);
 
         return $filters;
+    }
+
+    /**
+     * @return array{
+     *     search: ?string,
+     *     is_active: ?bool,
+     *     sort_by: string,
+     *     sort_direction: string
+     * }
+     */
+    private function resolveExportFilters(Request $request): array
+    {
+        return [
+            'search' => $this->normalizeNullableString($request->query('search')),
+            'is_active' => $this->normalizeNullableBoolean($request->query('is_active')),
+            'sort_by' => $this->normalizeSortBy($request->query('sort_by')),
+            'sort_direction' => $this->normalizeSortDirection($request->query('sort_direction')),
+        ];
     }
 
     private function validatePayload(Request $request, ?int $clinicId = null): array

@@ -1,8 +1,21 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
-import { Eye, Pencil, Plus, Search, Stethoscope, Trash2 } from 'lucide-vue-next';
+import {
+    Eye,
+    FileSpreadsheet,
+    Pencil,
+    Plus,
+    Search,
+    Stethoscope,
+    Trash2,
+} from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
-import { index, show, destroy } from '@/actions/App/Http/Controllers/DoctorController';
+import {
+    destroy,
+    exportMethod as exportDoctors,
+    index,
+    show,
+} from '@/actions/App/Http/Controllers/DoctorController';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/composables/useToast';
@@ -106,10 +119,29 @@ const reload = (): void => {
     );
 };
 
+const exportExcel = (): void => {
+    window.open(
+        exportDoctors.url({
+            query: {
+                search: search.value.trim() || undefined,
+                clinic_id: clinicId.value === 'all' ? undefined : clinicId.value,
+                is_active:
+                    isActive.value === 'all'
+                        ? undefined
+                        : isActive.value === 'active'
+                          ? '1'
+                          : '0',
+            },
+        }),
+        '_blank',
+    );
+};
+
 watch(search, () => {
     if (searchTimer !== null) {
         clearTimeout(searchTimer);
     }
+
     searchTimer = setTimeout(reload, 350);
 });
 
@@ -122,6 +154,7 @@ const openCreate = (): void => {
 
 const openEdit = async (doctor: Doctor): Promise<void> => {
     const full = await loadDoctor(doctor.id);
+
     if (full !== null) {
         editingDoctor.value = full;
         formOpen.value = true;
@@ -130,6 +163,7 @@ const openEdit = async (doctor: Doctor): Promise<void> => {
 
 const openView = async (doctor: Doctor): Promise<void> => {
     const full = await loadDoctor(doctor.id);
+
     if (full !== null) {
         viewingDoctor.value = full;
     }
@@ -183,6 +217,7 @@ const goTo = (url: string | null): void => {
     if (url === null) {
         return;
     }
+
     router.visit(url, { preserveScroll: true, preserveState: true });
 };
 </script>
@@ -209,14 +244,26 @@ const goTo = (url: string | null): void => {
                 </p>
             </div>
 
-            <Button
-                type="button"
-                class="h-12 rounded-lg bg-primary px-6 text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
-                @click="openCreate"
-            >
-                <Plus class="size-5" />
-                إضافة طبيب جديد
-            </Button>
+            <div class="flex flex-wrap items-center gap-2">
+                <Button
+                    type="button"
+                    variant="outline"
+                    class="h-12 rounded-lg px-5 text-base font-bold"
+                    @click="exportExcel"
+                >
+                    <FileSpreadsheet class="size-5" />
+                    تصدير Excel
+                </Button>
+
+                <Button
+                    type="button"
+                    class="h-12 rounded-lg bg-primary px-6 text-base font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90"
+                    @click="openCreate"
+                >
+                    <Plus class="size-5" />
+                    إضافة طبيب جديد
+                </Button>
+            </div>
         </section>
 
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Rbac\AssignUserRoleAction;
+use App\Exports\DoctorExport;
 use App\Http\Requests\StoreDoctorRequest;
 use App\Http\Requests\UpdateDoctorRequest;
 use App\Http\Resources\DoctorResource;
@@ -19,6 +20,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class DoctorController extends Controller
 {
@@ -80,6 +84,22 @@ class DoctorController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'تمت إضافة الطبيب بنجاح.']);
 
         return to_route('doctors.index');
+    }
+
+    public function export(Request $request): BinaryFileResponse|StreamedResponse
+    {
+        $filters = $this->resolveFilters($request);
+        $filename = 'doctors_export_'.now()->format('Y-m-d_His').'.xlsx';
+
+        return Excel::download(
+            new DoctorExport(
+                search: $filters['search'],
+                clinicId: $filters['clinic_id'],
+                isActive: $filters['is_active'],
+            ),
+            $filename,
+            \Maatwebsite\Excel\Excel::XLSX,
+        );
     }
 
     /**

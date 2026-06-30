@@ -193,26 +193,26 @@ onMounted(() => {
 <template>
     <section class="glass-panel-soft overflow-hidden">
         <div
-            class="flex flex-col gap-3 border-b border-border/60 bg-secondary/30 px-5 py-3.5 lg:flex-row lg:items-center lg:justify-between"
+            class="flex flex-col gap-3 border-b border-border/70 bg-secondary/20 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
         >
             <div class="flex items-center gap-3">
                 <div
-                    class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    class="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary"
                 >
                     <Zap class="size-4.5" />
                 </div>
                 <div>
-                    <h2 class="text-sm font-bold text-foreground">
+                    <h2 class="text-base font-bold text-foreground">
                         إضافة سريعة لموعد
                     </h2>
-                    <p class="text-[0.72rem] text-muted-foreground">
+                    <p class="text-xs text-muted-foreground">
                         حقول مختصرة للحجز السريع
                     </p>
                 </div>
             </div>
 
             <div
-                class="inline-flex w-fit items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-[0.68rem] text-muted-foreground"
+                class="inline-flex w-fit items-center gap-1.5 rounded-full border border-border/80 bg-background px-3 py-1.5 text-[0.68rem] text-muted-foreground shadow-sm"
             >
                 <kbd
                     class="rounded border border-border bg-secondary px-1.5 py-0.5 font-mono text-[0.62rem] text-foreground"
@@ -249,7 +249,7 @@ onMounted(() => {
             />
 
             <div class="space-y-4">
-                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="grid gap-3 md:grid-cols-3">
                     <div class="grid gap-1.5">
                         <Label
                             for="quick_patient"
@@ -266,7 +266,7 @@ onMounted(() => {
                         >
                             <SelectTrigger
                                 id="quick_patient"
-                                class="h-10 w-full rounded-xl bg-secondary/50"
+                                class="h-11 w-full rounded-xl bg-secondary/40"
                                 :class="{
                                     'border-destructive': errors.patient_id,
                                 }"
@@ -304,7 +304,7 @@ onMounted(() => {
                         >
                             <SelectTrigger
                                 id="quick_clinic"
-                                class="h-10 w-full rounded-xl bg-secondary/50"
+                                class="h-11 w-full rounded-xl bg-secondary/40"
                             >
                                 <SelectValue placeholder="كل العيادات" />
                             </SelectTrigger>
@@ -349,7 +349,7 @@ onMounted(() => {
                         >
                             <SelectTrigger
                                 id="quick_doctor"
-                                class="h-10 w-full rounded-xl bg-secondary/50"
+                                class="h-11 w-full rounded-xl bg-secondary/40"
                                 :class="{
                                     'border-destructive': errors.doctor_id,
                                 }"
@@ -377,8 +377,8 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div class="grid gap-1.5 sm:col-span-2">
+                <div class="grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(180px,0.55fr)_minmax(180px,0.55fr)]">
+                    <div class="grid gap-1.5">
                         <Label
                             class="flex items-center gap-1 text-xs font-semibold text-foreground"
                         >
@@ -412,7 +412,7 @@ onMounted(() => {
                         <Select name="duration_minutes" required :model-value="selectedDuration" @update:model-value="selectedDuration = String($event ?? '30')">
                             <SelectTrigger
                                 id="quick_duration"
-                                class="h-10 w-full rounded-xl bg-secondary/50"
+                                class="h-11 w-full rounded-xl bg-secondary/40"
                                 :class="{
                                     'border-destructive': errors.duration_minutes,
                                 }"
@@ -441,7 +441,7 @@ onMounted(() => {
                         <Select name="appointment_type" required>
                             <SelectTrigger
                                 id="quick_type"
-                                class="h-10 w-full rounded-xl bg-secondary/50"
+                                class="h-11 w-full rounded-xl bg-secondary/40"
                                 :class="{
                                     'border-destructive': errors.appointment_type,
                                 }"
@@ -459,7 +459,7 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <div class="grid gap-3 sm:grid-cols-2">
+                <div class="grid gap-3 md:grid-cols-[minmax(180px,0.45fr)_minmax(0,1fr)]">
                     <div class="grid gap-1.5">
                         <Label
                             for="quick_cost"
@@ -476,7 +476,7 @@ onMounted(() => {
                             min="0"
                             step="0.01"
                             required
-                            class="pattern-field-clay h-10"
+                            class="pattern-field-clay h-11"
                             placeholder="0"
                             :class="{ 'border-destructive': errors.cost }"
                         />
@@ -494,19 +494,19 @@ onMounted(() => {
                         <Input
                             id="quick_notes"
                             name="notes"
-                            class="pattern-field-clay h-10"
+                            class="pattern-field-clay h-11"
                             placeholder="ملاحظات إضافية..."
                         />
                     </div>
                 </div>
             </div>
 
-            <div class="mt-4 flex items-center justify-end gap-2 border-t border-border/50 pt-4">
+            <div class="mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-4">
                 <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    class="h-9 gap-1.5 rounded-xl px-3 text-xs"
+                    class="h-10 gap-1.5 rounded-xl px-3 text-xs"
                     @click="handleReset"
                 >
                     <RotateCcw class="size-3.5" />
@@ -516,7 +516,7 @@ onMounted(() => {
                     type="submit"
                     variant="default"
                     size="sm"
-                    class="h-9 min-w-28 gap-1.5 rounded-xl px-5 text-xs font-semibold shadow-sm"
+                    class="h-10 min-w-32 gap-1.5 rounded-xl px-5 text-xs font-semibold shadow-sm"
                     :disabled="processing"
                 >
                     <Save v-if="!processing" class="size-3.5" />

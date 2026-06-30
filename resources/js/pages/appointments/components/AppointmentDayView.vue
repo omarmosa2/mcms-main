@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { CalendarDays, Clock, Eye, IdCard, Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { Link } from '@inertiajs/vue3';
+import { CalendarDays, Clock, Eye, IdCard, Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import {
     appointmentStatusClass,
@@ -35,25 +35,25 @@ defineEmits<{
 <template>
     <section class="glass-panel-soft overflow-hidden">
         <div
-            class="flex flex-col gap-2 border-b border-border/60 bg-secondary/30 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+            class="flex flex-col gap-3 border-b border-border/70 bg-secondary/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
         >
             <div class="flex items-center gap-3">
                 <div
-                    class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    class="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary"
                 >
                     <CalendarDays class="size-4.5" />
                 </div>
                 <div>
-                    <h2 class="text-sm font-bold text-foreground">
+                    <h2 class="text-base font-bold text-foreground">
                         جدول اليوم
                     </h2>
-                    <p class="text-[0.72rem] text-muted-foreground">
+                    <p class="text-xs text-muted-foreground">
                         ترتيب المواعيد حسب ساعة الحضور
                     </p>
                 </div>
             </div>
             <span
-                class="inline-flex w-fit items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-[0.72rem] font-medium text-muted-foreground"
+                class="inline-flex w-fit items-center gap-1.5 rounded-full border border-border/80 bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm"
             >
                 <CalendarDays class="size-3.5 text-primary" />
                 {{ todaySummary.total }} موعد
@@ -88,11 +88,11 @@ defineEmits<{
                 </Button>
             </div>
 
-            <div v-else class="space-y-4">
+            <div v-else class="space-y-5">
                 <div v-for="group in groupedByHour" :key="group.hour">
-                    <div class="mb-2.5 flex items-center gap-2">
+                    <div class="mb-3 flex items-center gap-2">
                         <div
-                            class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1"
+                            class="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 shadow-sm"
                         >
                             <Clock class="size-3.5 text-primary" />
                             <span
@@ -113,15 +113,15 @@ defineEmits<{
                         <div class="h-px flex-1 bg-border/60" aria-hidden="true" />
                     </div>
 
-                    <div class="grid gap-2">
+                    <div class="grid gap-2.5">
                         <article
                             v-for="appointment in group.appointments"
                             :key="appointment.id"
-                            class="group flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm transition-all duration-200 hover:border-primary/25 hover:shadow-md lg:flex-row lg:items-center lg:justify-between"
+                            class="group flex flex-col gap-3 rounded-2xl border border-border/80 bg-card px-4 py-3 shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-primary/[0.03] hover:shadow-card lg:flex-row lg:items-center lg:justify-between"
                         >
                             <div class="flex min-w-0 items-center gap-3">
                                 <div
-                                    class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary tabular-nums transition-transform duration-200 group-hover:scale-105"
+                                    class="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-sm font-black text-primary tabular-nums"
                                     dir="ltr"
                                 >
                                     {{
@@ -132,17 +132,13 @@ defineEmits<{
                                 </div>
 
                                 <div class="min-w-0">
-                                    <p
-                                        class="truncate text-sm font-bold text-foreground"
-                                    >
+                                    <p class="truncate text-base font-bold text-foreground">
                                         {{
                                             appointment.patient?.full_name ??
                                             '-'
                                         }}
                                     </p>
-                                    <p
-                                        class="mt-0.5 truncate text-xs text-muted-foreground"
-                                    >
+                                    <p class="mt-1 truncate text-xs text-muted-foreground">
                                         {{
                                             appointment.doctor?.name ??
                                             'بدون طبيب'
@@ -153,9 +149,7 @@ defineEmits<{
                                             · {{ appointment.doctor.specialty }}
                                         </span>
                                     </p>
-                                    <p
-                                        class="mt-0.5 text-[0.68rem] text-muted-foreground"
-                                    >
+                                    <p class="mt-0.5 text-[0.72rem] text-muted-foreground">
                                         {{ appointment.duration_minutes }} دقيقة
                                         <span
                                             v-if="appointment.appointment_type"
@@ -198,11 +192,11 @@ defineEmits<{
                                     }}
                                 </span>
 
-                                <div class="flex items-center gap-0.5">
+                                <div class="flex items-center gap-1 rounded-xl border border-border/60 bg-secondary/20 p-1">
                                     <Link
                                         v-if="appointment.patient?.id"
                                         :href="`/patients/${appointment.patient.id}/card`"
-                                        class="inline-flex size-8 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground"
                                         title="بطاقة المريض"
                                     >
                                         <IdCard class="size-3.5" />
@@ -211,7 +205,7 @@ defineEmits<{
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        class="size-8 rounded-lg"
+                                        class="size-8 rounded-lg text-muted-foreground hover:text-foreground"
                                         aria-label="عرض الموعد"
                                         @click="$emit('view', appointment)"
                                     >
@@ -222,7 +216,7 @@ defineEmits<{
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        class="size-8 rounded-lg"
+                                        class="size-8 rounded-lg text-muted-foreground hover:text-foreground"
                                         aria-label="تعديل الموعد"
                                         @click="$emit('edit', appointment)"
                                     >

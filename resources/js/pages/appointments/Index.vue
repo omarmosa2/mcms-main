@@ -712,98 +712,100 @@ const todaySummary = computed(() => ({
 <template>
     <Head title="المواعيد" />
 
-    <div class="mx-auto w-full max-w-[1680px] space-y-4 p-4 md:p-5" dir="rtl">
+    <div class="container-modern space-y-5 py-5" dir="rtl">
         <section
-            class="glass-panel-soft flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between"
+            class="glass-panel-soft overflow-hidden"
         >
-            <div class="flex items-center gap-4">
-                <div
-                    class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-                >
-                    <CalendarDays class="size-7" />
-                </div>
-                <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-2.5">
-                        <h1 class="page-title leading-tight">المواعيد</h1>
-                        <span
-                            class="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[0.72rem] font-semibold text-primary"
-                        >
-                            {{ activeRoleLabel }}
-                        </span>
+            <div class="flex flex-col gap-5 border-b border-border/70 px-5 py-5 xl:flex-row xl:items-center xl:justify-between">
+                <div class="flex min-w-0 items-center gap-4">
+                    <div
+                        class="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary shadow-sm"
+                    >
+                        <CalendarDays class="size-7" />
                     </div>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        {{ formatArabicDate(today.toISOString()) }}
-                    </p>
-                </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-2">
-                <div
-                    class="inline-flex rounded-xl border border-border bg-secondary/60 p-1"
-                >
-                    <button
-                        type="button"
-                        class="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all"
-                        :class="
-                            viewMode === 'day'
-                                ? 'bg-primary text-primary-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground'
-                        "
-                        @click="viewMode = 'day'"
-                    >
-                        <CalendarDays class="size-3.5" />
-                        اليوم
-                    </button>
-                    <button
-                        type="button"
-                        class="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-all"
-                        :class="
-                            viewMode === 'list'
-                                ? 'bg-primary text-primary-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground'
-                        "
-                        @click="viewMode = 'list'"
-                    >
-                        <Table2 class="size-3.5" />
-                        عرض الكل
-                    </button>
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <h1 class="page-title leading-tight">المواعيد</h1>
+                            <span
+                                class="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[0.72rem] font-semibold text-primary"
+                            >
+                                {{ activeRoleLabel }}
+                            </span>
+                        </div>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            {{ formatArabicDate(today.toISOString()) }}
+                        </p>
+                    </div>
                 </div>
 
-                <a
-                    :href="AppointmentExportController.export.url()"
-                    class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
-                >
-                    <Download class="size-3.5" />
-                    تصدير Excel
-                </a>
-                <a
-                    :href="AppointmentExportController.exportPdf.url()"
-                    class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition hover:border-primary/30 hover:text-foreground"
-                >
-                    <FileText class="size-3.5" />
-                    تصدير PDF
-                </a>
+                <div class="flex flex-wrap items-center gap-2">
+                    <div
+                        class="inline-flex rounded-2xl border border-border/70 bg-secondary/50 p-1 shadow-sm"
+                    >
+                        <button
+                            type="button"
+                            class="inline-flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-xs font-semibold transition-all"
+                            :class="
+                                viewMode === 'day'
+                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'
+                            "
+                            @click="viewMode = 'day'"
+                        >
+                            <CalendarDays class="size-3.5" />
+                            اليوم
+                        </button>
+                        <button
+                            type="button"
+                            class="inline-flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-xs font-semibold transition-all"
+                            :class="
+                                viewMode === 'list'
+                                    ? 'bg-primary text-primary-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:bg-background/70 hover:text-foreground'
+                            "
+                            @click="viewMode = 'list'"
+                        >
+                            <Table2 class="size-3.5" />
+                            عرض الكل
+                        </button>
+                    </div>
 
-                <Button
-                    v-if="can('appointment.create')"
-                    variant="ghost"
-                    size="sm"
-                    class="h-9 gap-1.5 rounded-xl px-3 text-xs"
-                    @click="isQuickAddOpen = !isQuickAddOpen"
-                >
-                    <ListFilter class="size-3.5" />
-                    {{ isQuickAddOpen ? 'إخفاء السريع' : 'إضافة سريعة' }}
-                </Button>
-                <Button
-                    v-if="can('appointment.create')"
-                    variant="default"
-                    size="sm"
-                    class="h-9 gap-1.5 rounded-xl px-4 text-xs"
-                    @click="isCreateSheetOpen = true"
-                >
-                    <Plus class="size-3.5" />
-                    إضافة موعد
-                </Button>
+                    <a
+                        :href="AppointmentExportController.export.url()"
+                        class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/80 bg-background px-3.5 text-xs font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground hover:shadow-sm"
+                    >
+                        <Download class="size-3.5" />
+                        تصدير Excel
+                    </a>
+                    <a
+                        :href="AppointmentExportController.exportPdf.url()"
+                        class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/80 bg-background px-3.5 text-xs font-semibold text-muted-foreground transition hover:border-primary/30 hover:text-foreground hover:shadow-sm"
+                    >
+                        <FileText class="size-3.5" />
+                        تصدير PDF
+                    </a>
+
+                    <Button
+                        v-if="can('appointment.create')"
+                        variant="ghost"
+                        size="sm"
+                        class="h-10 gap-1.5 rounded-xl px-3.5 text-xs"
+                        @click="isQuickAddOpen = !isQuickAddOpen"
+                    >
+                        <ListFilter class="size-3.5" />
+                        {{ isQuickAddOpen ? 'إخفاء السريع' : 'إضافة سريعة' }}
+                    </Button>
+                    <Button
+                        v-if="can('appointment.create')"
+                        variant="default"
+                        size="sm"
+                        class="h-10 gap-1.5 rounded-xl px-5 text-xs font-semibold shadow-sm"
+                        @click="isCreateSheetOpen = true"
+                    >
+                        <Plus class="size-3.5" />
+                        إضافة موعد
+                    </Button>
+                </div>
             </div>
         </section>
 

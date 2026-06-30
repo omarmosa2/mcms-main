@@ -106,25 +106,25 @@ const sortIconFor = (field: AppointmentSortField) => {
 <template>
     <section class="glass-panel-soft overflow-hidden">
         <div
-            class="flex flex-col gap-3 border-b border-border/60 bg-secondary/30 px-5 py-3.5 lg:flex-row lg:items-center lg:justify-between"
+            class="flex flex-col gap-3 border-b border-border/70 bg-secondary/20 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
         >
             <div class="flex items-center gap-3">
                 <div
-                    class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                    class="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary"
                 >
                     <CalendarSearch class="size-4.5" />
                 </div>
                 <div>
-                    <h2 class="text-sm font-bold text-foreground">
+                    <h2 class="text-base font-bold text-foreground">
                         جميع المواعيد
                     </h2>
-                    <p class="text-[0.72rem] text-muted-foreground">
+                    <p class="text-xs text-muted-foreground">
                         بحث وتصفية ومتابعة حالات الحجوزات
                     </p>
                 </div>
             </div>
             <span
-                class="inline-flex w-fit items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-[0.72rem] font-medium text-muted-foreground"
+                class="inline-flex w-fit items-center gap-1.5 rounded-full border border-border/80 bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm"
             >
                 <CalendarSearch class="size-3.5 text-primary" />
                 الإجمالي: {{ appointments.meta.total }}
@@ -132,7 +132,7 @@ const sortIconFor = (field: AppointmentSortField) => {
         </div>
 
         <div class="space-y-4 p-5">
-            <div class="rounded-2xl border border-border/60 bg-secondary/20 p-4">
+            <div class="rounded-2xl border border-border/70 bg-secondary/20 p-4 shadow-sm">
                 <div class="grid gap-3 lg:grid-cols-12 lg:items-end">
                     <div class="grid gap-1.5 lg:col-span-4">
                         <Label
@@ -146,7 +146,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                             id="appointments_search"
                             :model-value="localSearch"
                             placeholder="رقم الموعد، المريض، رقم الملف، الطبيب"
-                            class="h-10 rounded-xl"
+                            class="h-11 rounded-xl"
                             @update:model-value="emit('search', $event)"
                         />
                     </div>
@@ -164,7 +164,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                             :model-value="localStatus"
                             :options="statusOptions"
                             placeholder="جميع الحالات"
-                            class="h-10 rounded-xl"
+                            class="h-11 rounded-xl"
                             @update:model-value="emit('status', $event)"
                         />
                     </div>
@@ -182,7 +182,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                             :model-value="localDoctorId"
                             :options="doctorOptions"
                             placeholder="كل الأطباء"
-                            class="h-10 rounded-xl"
+                            class="h-11 rounded-xl"
                             @update:model-value="emit('doctor', $event)"
                         />
                     </div>
@@ -200,7 +200,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                             :model-value="localClinicId"
                             :options="clinicOptions"
                             placeholder="كل العيادات"
-                            class="h-10 rounded-xl"
+                            class="h-11 rounded-xl"
                             @update:model-value="emit('clinic', $event)"
                         />
                     </div>
@@ -216,7 +216,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                             id="appointments_date_from"
                             type="date"
                             :model-value="localDateFrom"
-                            class="pattern-field-clay h-10 rounded-xl"
+                            class="pattern-field-clay h-11 rounded-xl"
                             @update:model-value="
                                 emit('date-from', String($event ?? ''))
                             "
@@ -234,7 +234,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                             id="appointments_date_to"
                             type="date"
                             :model-value="localDateTo"
-                            class="pattern-field-clay h-10 rounded-xl"
+                            class="pattern-field-clay h-11 rounded-xl"
                             @update:model-value="
                                 emit('date-to', String($event ?? ''))
                             "
@@ -261,7 +261,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                         <select
                             id="appointments_per_page"
                             :value="localRowsPerPage"
-                            class="pattern-field-clay h-10 cursor-pointer rounded-xl px-3 py-1.5"
+                            class="pattern-field-clay h-11 cursor-pointer rounded-xl px-3 py-1.5"
                             @change="
                                 emit(
                                     'rows-per-page',
@@ -281,12 +281,12 @@ const sortIconFor = (field: AppointmentSortField) => {
                 </div>
             </div>
 
-            <div class="overflow-hidden rounded-2xl border border-border/60">
-                <table class="w-full">
+            <div class="overflow-x-auto rounded-2xl border border-border/70 bg-card shadow-sm">
+                <table class="w-full min-w-[1080px] border-separate border-spacing-0">
                     <thead>
-                        <tr class="border-b border-border/60 bg-secondary/40">
+                        <tr class="bg-secondary/50">
                             <th
-                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                                class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground"
                             >
                                 <button
                                     type="button"
@@ -301,32 +301,32 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 </button>
                             </th>
                             <th
-                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                                class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground"
                             >
                                 الوقت
                             </th>
                             <th
-                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                                class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground"
                             >
                                 المريض
                             </th>
                             <th
-                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                                class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground"
                             >
                                 رقم الملف
                             </th>
                             <th
-                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                                class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground"
                             >
                                 العيادة
                             </th>
                             <th
-                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                                class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground"
                             >
                                 الطبيب
                             </th>
                             <th
-                                class="px-4 py-3 text-right text-[0.72rem] font-semibold text-muted-foreground"
+                                class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground"
                             >
                                 <button
                                     type="button"
@@ -341,7 +341,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 </button>
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-[0.72rem] font-semibold text-muted-foreground"
+                                class="border-b border-border px-4 py-3 text-left text-[0.72rem] font-bold text-muted-foreground"
                             >
                                 الإجراءات
                             </th>
@@ -351,39 +351,39 @@ const sortIconFor = (field: AppointmentSortField) => {
                         <tr
                             v-for="appointment in appointments.data"
                             :key="appointment.id"
-                            class="border-b border-border/40 transition-colors last:border-0 hover:bg-secondary/30"
+                            class="transition-colors hover:bg-primary/[0.03]"
                         >
                             <td
-                                class="px-4 py-3 text-sm"
+                                class="border-b border-border/60 px-4 py-3 text-sm"
                                 data-label="التاريخ"
                             >
                                 {{ formatDate(appointment.scheduled_for) }}
                             </td>
                             <td
-                                class="px-4 py-3 text-sm tabular-nums"
+                                class="border-b border-border/60 px-4 py-3 text-sm font-semibold tabular-nums text-foreground"
                                 data-label="الوقت"
                             >
                                 {{ formatTime(appointment.scheduled_for) }}
                             </td>
-                            <td class="px-4 py-3" data-label="المريض">
+                            <td class="border-b border-border/60 px-4 py-3" data-label="المريض">
                                 <div class="text-sm font-semibold text-foreground">
                                     {{ appointment.patient?.full_name ?? '-' }}
                                 </div>
                             </td>
                             <td
-                                class="px-4 py-3 text-sm tabular-nums"
+                                class="border-b border-border/60 px-4 py-3 text-sm tabular-nums"
                                 data-label="رقم الملف"
                             >
                                 {{ appointment.patient?.file_number ?? '-' }}
                             </td>
-                            <td class="px-4 py-3 text-sm" data-label="العيادة">
+                            <td class="border-b border-border/60 px-4 py-3 text-sm" data-label="العيادة">
                                 {{
                                     appointment.clinic?.name ??
                                     appointment.doctor?.clinic?.name ??
                                     '-'
                                 }}
                             </td>
-                            <td class="px-4 py-3" data-label="الطبيب">
+                            <td class="border-b border-border/60 px-4 py-3" data-label="الطبيب">
                                 <div class="text-sm font-semibold text-foreground">
                                     {{ appointment.doctor?.name ?? '-' }}
                                 </div>
@@ -394,7 +394,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                                     {{ appointment.doctor.specialty }}
                                 </div>
                             </td>
-                            <td class="px-4 py-3" data-label="الحالة">
+                            <td class="border-b border-border/60 px-4 py-3" data-label="الحالة">
                                 <span
                                     class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[0.72rem] font-medium"
                                     :class="
@@ -419,17 +419,17 @@ const sortIconFor = (field: AppointmentSortField) => {
                                 </span>
                             </td>
                             <td
-                                class="px-4 py-3"
+                                class="border-b border-border/60 px-4 py-3"
                                 data-label="الإجراءات"
                             >
                                 <div
-                                    class="flex flex-wrap items-center gap-1"
+                                    class="flex flex-wrap items-center gap-1 rounded-xl border border-border/60 bg-secondary/20 p-1"
                                 >
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        class="size-8 rounded-lg text-success"
+                                        class="size-8 rounded-lg text-success hover:bg-success/10"
                                         title="بدء الزيارة"
                                         @click="emit('start-visit', appointment)"
                                     >
@@ -438,7 +438,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                                     <Link
                                         v-if="appointment.patient?.id"
                                         :href="`/patients/${appointment.patient.id}/card`"
-                                        class="inline-flex size-8 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+                                        class="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground"
                                         title="بطاقة المريض"
                                     >
                                         <IdCard class="size-3.5" />
@@ -447,7 +447,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        class="size-8 rounded-lg"
+                                        class="size-8 rounded-lg text-muted-foreground hover:text-foreground"
                                         aria-label="عرض الموعد"
                                         @click="emit('view', appointment)"
                                     >
@@ -458,7 +458,7 @@ const sortIconFor = (field: AppointmentSortField) => {
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        class="size-8 rounded-lg"
+                                        class="size-8 rounded-lg text-muted-foreground hover:text-foreground"
                                         aria-label="تعديل الموعد"
                                         @click="emit('edit', appointment)"
                                     >
@@ -557,7 +557,7 @@ const sortIconFor = (field: AppointmentSortField) => {
             </div>
 
             <div
-                class="flex flex-col gap-3 rounded-2xl border border-border/60 bg-secondary/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                class="flex flex-col gap-3 rounded-2xl border border-border/70 bg-secondary/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
                 <p class="text-[0.72rem] text-muted-foreground">
                     عرض {{ localVisibleFrom }}-{{ localVisibleTo }} من

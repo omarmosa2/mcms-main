@@ -50,12 +50,15 @@ class DoctorController extends Controller
 
         $clinics = $this->resolveClinicOptions();
 
+        $stats = $this->computeStats($filters);
+
         $doctorsResource = DoctorResource::collection($doctors)->response()->getData(true);
 
         return Inertia::render('doctors/Index', [
             'doctors' => $doctorsResource,
             'clinics' => $clinics,
             'filters' => $filters,
+            'stats' => $stats,
         ]);
     }
 
@@ -302,6 +305,41 @@ class DoctorController extends Controller
 
         return array_key_exists('clinic_id', $validated)
             && (int) $validated['clinic_id'] !== (int) $doctor->clinic_id;
+    }
+
+    /**
+     * @param  array{search: ?string, clinic_id: ?int, is_active: ?bool, per_page: int}  $filters
+     * @return array{total: int, active: int, inactive: int, with_accounts: int}
+     */
+    private function computeStats(array $filters): array
+    {
+        $baseQuery = DoctorProfile::query()->withoutGlobalScope('clinic');
+
+        if ($filters['search'] !== null) {
+            $search = $filters['search'];
+            $baseQuery->where(function (Builder $query) use ($search): void {
+                $query->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('specialty', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%");
+            });
+        }
+
+        if ($filters['clinic_id'] !== null) {
+            $baseQuery->where('clinic_id', $filters['clinic_id']);
+        }
+
+        $total = (clone $baseQuery)->count();
+        $active = (clone $baseQuery)->where('is_active', true)->count();
+        $inactive = (clone $baseQuery)->where('is_active', false)->count();
+        $withAccounts = (clone $baseQuery)->whereNotNull('user_id')->count();
+
+        return [
+            'total' => $total,
+            'active' => $active,
+            'inactive' => $inactive,
+            'with_accounts' => $withAccounts,
+        ];
     }
 
     /**

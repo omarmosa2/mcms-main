@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/composables/useToast';
 import DoctorDeleteDialog from './components/DoctorDeleteDialog.vue';
 import DoctorFormModal from './components/DoctorFormModal.vue';
+import DoctorStatsCards from './components/DoctorStatsCards.vue';
 import DoctorViewDialog from './components/DoctorViewDialog.vue';
 import type {
     Clinic,
@@ -34,6 +35,12 @@ const props = defineProps<{
     doctors: PaginatedResponse<Doctor>;
     clinics: Clinic[];
     filters: DoctorFilters;
+    stats: {
+        total: number;
+        active: number;
+        inactive: number;
+        with_accounts: number;
+    };
 }>();
 
 defineOptions({
@@ -265,6 +272,8 @@ const goTo = (url: string | null): void => {
                 </Button>
             </div>
         </section>
+
+        <DoctorStatsCards :stats="props.stats" />
 
         <section class="rounded-xl border border-border bg-card p-5 shadow-sm">
             <div class="grid gap-4 md:grid-cols-[1fr_220px_220px]">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, usePage } from '@inertiajs/vue3';
-import { Plus } from 'lucide-vue-next';
+import { Plus, Stethoscope, UserCheck, Users, UserX } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import UserController from '@/actions/App/Http/Controllers/Security/UserController';
 import { Button } from '@/components/ui/button';
@@ -66,9 +66,16 @@ type UserSortField = 'name' | 'email' | 'is_active' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 type ActiveFilter = 'all' | 'active' | 'inactive';
 
-const { users, roles, filters } = defineProps<{
+const { users, roles, stats, filters } = defineProps<{
     users: PaginatedResponse<User>;
     roles: Role[];
+    stats: {
+        total_users: number;
+        active_users: number;
+        inactive_users: number;
+        doctors_count: number;
+        role_distribution: Record<string, number>;
+    };
     filters: {
         search: string | null;
         role_name: string | null;
@@ -360,6 +367,44 @@ const resetLocalFilters = () => {
                 </Button>
             </div>
         </div>
+
+        <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <article class="rounded-[1.35rem] border border-border bg-card/95 p-5 shadow-card-float">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold text-muted-foreground">إجمالي المستخدمين</p>
+                        <p class="mt-1.5 text-2xl font-extrabold tabular-nums text-foreground">{{ stats.total_users }}</p>
+                    </div>
+                    <div class="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Users class="size-5" />
+                    </div>
+                </div>
+            </article>
+
+            <article class="rounded-[1.35rem] border border-border bg-card/95 p-5 shadow-card-float">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold text-muted-foreground">المستخدمين النشطين</p>
+                        <p class="mt-1.5 text-2xl font-extrabold tabular-nums text-foreground">{{ stats.active_users }}</p>
+                    </div>
+                    <div class="flex size-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700">
+                        <UserCheck class="size-5" />
+                    </div>
+                </div>
+            </article>
+
+            <article class="rounded-[1.35rem] border border-border bg-card/95 p-5 shadow-card-float">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold text-muted-foreground">المستخدمين غير النشطين</p>
+                        <p class="mt-1.5 text-2xl font-extrabold tabular-nums text-foreground">{{ stats.inactive_users }}</p>
+                    </div>
+                    <div class="flex size-11 items-center justify-center rounded-xl bg-rose-500/10 text-rose-700">
+                        <UserX class="size-5" />
+                    </div>
+                </div>
+            </article>
+        </section>
 
         <UserTable
             v-model:search="localSearch"

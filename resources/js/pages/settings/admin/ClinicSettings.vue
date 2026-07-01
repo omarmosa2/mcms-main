@@ -92,16 +92,8 @@ function submit() {
                         <Input id="name" v-model="form.name" placeholder="أدخل اسم المجمع" />
                     </div>
                     <div class="space-y-2">
-                        <Label for="director_name">اسم المدير</Label>
-                        <Input id="director_name" v-model="form.director_name" placeholder="أدخل اسم المدير" />
-                    </div>
-                    <div class="space-y-2">
                         <Label for="phone">رقم الهاتف</Label>
                         <Input id="phone" v-model="form.phone" placeholder="أدخل رقم الهاتف" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="email">البريد الإلكتروني</Label>
-                        <Input id="email" v-model="form.email" type="email" placeholder="أدخل البريد الإلكتروني" />
                     </div>
                     <div class="space-y-2 sm:col-span-2">
                         <Label for="address">العنوان الكامل</Label>
@@ -109,32 +101,11 @@ function submit() {
                     </div>
                 </div>
             </div>
-
-            <div class="glass-panel-soft space-y-5 p-5">
-                <h3 class="text-sm font-semibold text-foreground">إعدادات الفواتير</h3>
-
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="space-y-2">
-                        <Label for="invoice_clinic_name">اسم العيادة على الفاتورة</Label>
-                        <Input id="invoice_clinic_name" v-model="form.invoice_clinic_name" placeholder="الاسم المعروض على الفواتير" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="invoice_footer">نص تذييل الفاتورة</Label>
-                        <Input id="invoice_footer" v-model="form.invoice_footer" placeholder="نص التذييل" />
-                    </div>
-                    <div class="space-y-2 sm:col-span-2">
-                        <Label for="invoice_default_notes">ملاحظات الفاتورة الافتراضية</Label>
-                        <Input id="invoice_default_notes" v-model="form.invoice_default_notes" placeholder="ملاحظات افتراضية تظهر على كل فاتورة" />
-                    </div>
-                </div>
-            </div>
-
             <div class="glass-panel-soft space-y-5 p-5">
                 <h3 class="text-sm font-semibold text-foreground">إعدادات العملات</h3>
 
                 <div class="grid gap-4 sm:grid-cols-2">
                     <div class="space-y-2">
-                        <Label>?????? ???????? ?? ??????</Label>
                         <Select v-model="form.currency">
                             <SelectTrigger>
                                 <SelectValue placeholder="???? ??????" />
@@ -152,22 +123,6 @@ function submit() {
                     </div>
                 </div>
             </div>
-
-            <div class="glass-panel-soft space-y-5 p-5">
-                <h3 class="text-sm font-semibold text-foreground">تنسيق الأرقام</h3>
-
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="space-y-2">
-                        <Label for="thousands_separator">فاصل الآلاف</Label>
-                        <Input id="thousands_separator" v-model="form.thousands_separator" maxlength="1" />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="decimal_places">عدد الخانات العشرية</Label>
-                        <Input id="decimal_places" v-model="form.decimal_places" type="number" min="0" max="6" />
-                    </div>
-                </div>
-            </div>
-
             <div class="flex items-center justify-end gap-3">
                 <span v-if="isDirty" class="text-sm text-amber-600">لديك تغييرات غير محفوظة</span>
                 <Button type="submit" :disabled="form.processing">

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Security;
 use App\Actions\Rbac\ListRolesAction;
 use App\Actions\Security\CreateUserAction;
 use App\Actions\Security\DeleteUserAction;
+use App\Actions\Security\GetUserStatsAction;
 use App\Actions\Security\ListUsersAction;
 use App\Actions\Security\ResetUserPasswordAction;
 use App\Actions\Security\UpdateUserAction;
@@ -23,6 +24,7 @@ class UserController extends Controller
     public function __construct(
         private ListUsersAction $listUsersAction,
         private ListRolesAction $listRolesAction,
+        private GetUserStatsAction $getUserStatsAction,
         private CreateUserAction $createUserAction,
         private UpdateUserAction $updateUserAction,
         private ResetUserPasswordAction $resetUserPasswordAction,
@@ -46,6 +48,7 @@ class UserController extends Controller
         );
 
         $roles = $this->listRolesAction->handle($clinicId);
+        $stats = $this->getUserStatsAction->handle();
 
         $usersResource = UserResource::collection($users);
 
@@ -56,6 +59,7 @@ class UserController extends Controller
         return Inertia::render('users/Index', [
             'users' => $usersResource->response()->getData(true),
             'roles' => $roles,
+            'stats' => $stats,
             'filters' => $filters,
         ]);
     }

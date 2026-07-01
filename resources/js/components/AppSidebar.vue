@@ -341,13 +341,6 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 permission: 'settings.view',
             },
             {
-                title: 'الأمان',
-                href: adminSecurityUrl(),
-                icon: Lock,
-                group: 'system',
-                permission: 'settings.view',
-            },
-            {
                 title: 'المستخدمون',
                 href: UserController.index(),
                 icon: Shield,

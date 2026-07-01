@@ -47,11 +47,11 @@ defineOptions({
                 </div>
                 <div class="flex-1">
                     <p class="text-sm font-semibold text-foreground">رقم التواصل</p>
-                    <p class="mt-1 text-lg font-bold text-foreground" dir="ltr">00963959669628</p>
+                    <p class="mt-1 text-lg font-bold text-foreground" dir="ltr">00963940046997</p>
                     <p class="text-sm text-muted-foreground">متاح للدعم الفني من 9 صباحاً إلى 6 مساءً</p>
                 </div>
                 <a
-                    href="https://wa.me/00963959669628"
+                    href="https://wa.me/00963940046997"
                     target="_blank"
                     rel="noopener"
                 >

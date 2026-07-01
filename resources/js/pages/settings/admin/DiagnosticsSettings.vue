@@ -110,22 +110,6 @@ defineOptions({
                     <p class="text-xs text-muted-foreground">إصدار Laravel</p>
                     <p class="mt-1 text-sm font-semibold">{{ diagnostics.application.laravel_version }}</p>
                 </div>
-                <div class="rounded-xl border border-border/50 bg-muted/20 p-3">
-                    <p class="text-xs text-muted-foreground">عدد المستخدمين</p>
-                    <p class="mt-1 text-sm font-semibold">{{ diagnostics.application.user_count }}</p>
-                </div>
-                <div class="rounded-xl border border-border/50 bg-muted/20 p-3">
-                    <p class="text-xs text-muted-foreground">عدد الأطباء</p>
-                    <p class="mt-1 text-sm font-semibold">{{ diagnostics.application.doctor_count }}</p>
-                </div>
-                <div class="rounded-xl border border-border/50 bg-muted/20 p-3">
-                    <p class="text-xs text-muted-foreground">عدد المرضى</p>
-                    <p class="mt-1 text-sm font-semibold">{{ diagnostics.application.patient_count }}</p>
-                </div>
-                <div class="rounded-xl border border-border/50 bg-muted/20 p-3">
-                    <p class="text-xs text-muted-foreground">عدد الموظفين</p>
-                    <p class="mt-1 text-sm font-semibold">{{ diagnostics.application.employee_count }}</p>
-                </div>
             </div>
         </div>
 

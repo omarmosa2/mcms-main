@@ -123,14 +123,6 @@ const emit = defineEmits<{ 'update:open': [value: boolean] }>();
                         حساب نشط
                     </Label>
                 </div>
-
-                <Button
-                    :disabled="processing"
-                    variant="default"
-                    class="w-full h-10 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
-                >
-                    إنشاء مستخدم
-                </Button>
             </Form>
 
             <DialogFooter class="p-6 pt-4 border-t border-border">

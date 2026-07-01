@@ -7,21 +7,15 @@ import {
     FileText,
     Package,
     PackageCheck,
-    PackageX,
     Pill,
     Plus,
-    RefreshCw,
     Trash2,
     Truck,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import InternalPageHero from '@/components/InternalPageHero.vue';
-import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
-    DialogBody,
     DialogContent,
     DialogDescription,
     DialogFooter,
@@ -30,7 +24,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { usePermissions } from '@/composables/usePermissions';
 import { useMoneyFormatter } from '@/lib/money';
 
 type Summary = {
@@ -120,16 +113,13 @@ defineOptions({
     },
 });
 
-const { can } = usePermissions();
 const { formatMoney } = useMoneyFormatter();
 
 const activeTab = ref<string>('dashboard');
 
 const tabs = computed(() => [
-    { key: 'dashboard', label: 'لوحة الصيدلية', icon: Pill },
     { key: 'prescriptions', label: 'الوصفات الواردة', icon: FileText, href: '/pharmacy/prescriptions' },
-    { key: 'drugs', label: 'الأدوية', icon: Package },
-    { key: 'movements', label: 'حركات المخزون', icon: RefreshCw, href: '/pharmacy/stock-movements' },
+    { key: 'drugs', label: 'الأدوية', icon: Package }
 ]);
 
 const statCards = computed(() => [
@@ -137,49 +127,49 @@ const statCards = computed(() => [
         label: 'الوصفات الواردة اليوم',
         value: summary.prescriptions_today,
         icon: FileText,
-        color: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/30',
+        tone: 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/25 dark:text-sky-200',
     },
     {
         label: 'وصفات قيد التحضير',
         value: summary.prescriptions_preparing + summary.prescriptions_ready,
         icon: Clock,
-        color: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/30',
+        tone: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-200',
     },
     {
         label: 'وصفات مصروفة اليوم',
         value: summary.prescriptions_dispensed_today,
         icon: PackageCheck,
-        color: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/30',
+        tone: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-200',
     },
     {
         label: 'وصفات معلقة',
         value: summary.prescriptions_pending,
         icon: Package,
-        color: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-950/30',
+        tone: 'border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-900/50 dark:bg-orange-950/25 dark:text-orange-200',
     },
     {
         label: 'أدوية منخفضة المخزون',
         value: summary.low_stock_total,
         icon: AlertTriangle,
-        color: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/30',
+        tone: 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/25 dark:text-rose-200',
     },
     {
         label: 'أدوية قريبة الانتهاء',
         value: summary.near_expiry_total,
         icon: Truck,
-        color: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-950/30',
+        tone: 'border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-900/50 dark:bg-purple-950/25 dark:text-purple-200',
     },
     {
         label: 'إجمالي الأدوية النشطة',
         value: summary.drugs_total,
         icon: Pill,
-        color: 'text-teal-600 bg-teal-50 dark:text-teal-400 dark:bg-teal-950/30',
+        tone: 'border-teal-200 bg-teal-50 text-teal-800 dark:border-teal-900/50 dark:bg-teal-950/25 dark:text-teal-200',
     },
     {
         label: 'تنبيهات مفتوحة',
         value: summary.open_alerts_total,
         icon: AlertTriangle,
-        color: 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-950/30',
+        tone: 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-950/25 dark:text-red-200',
     },
 ]);
 
@@ -282,7 +272,10 @@ const openEditDialog = (drug: Drug) => {
 };
 
 const submitEdit = () => {
-    if (!editingDrug.value) return;
+    if (!editingDrug.value) {
+return;
+}
+
     editForm.put(`/pharmacy/drugs/${editingDrug.value.id}`, {
         preserveScroll: true,
         onSuccess: () => {
@@ -293,7 +286,10 @@ const submitEdit = () => {
 };
 
 const deleteDrug = (drug: Drug) => {
-    if (!confirm(`هل أنت متأكد من حذف/تعطيل الدواء "${drug.trade_name}"؟`)) return;
+    if (!confirm(`هل أنت متأكد من حذف/تعطيل الدواء "${drug.trade_name}"؟`)) {
+return;
+}
+
     router.delete(`/pharmacy/drugs/${drug.id}`, {
         preserveScroll: true,
         onSuccess: () => router.reload({ only: ['drugs', 'summary'] }),
@@ -301,14 +297,22 @@ const deleteDrug = (drug: Drug) => {
 };
 
 const formLabel = (value: string | null): string => {
-    if (!value) return '-';
+    if (!value) {
+return '-';
+}
+
     const found = formOptions.forms.find(f => f.value === value);
+
     return found?.label ?? value;
 };
 
 const unitLabel = (value: string | null): string => {
-    if (!value) return '-';
+    if (!value) {
+return '-';
+}
+
     const found = formOptions.units.find(u => u.value === value);
+
     return found?.label ?? value;
 };
 
@@ -322,6 +326,7 @@ const statusLabel = (status: string): string => {
         partially_dispensed: 'مصروفة جزئياً',
         canceled: 'ملغية',
     };
+
     return map[status] ?? status;
 };
 
@@ -335,6 +340,7 @@ const statusClass = (status: string): string => {
         partially_dispensed: 'border-warning-300/70 bg-warning-50 text-warning-800 dark:border-warning-500/40 dark:bg-warning-500/15 dark:text-warning-100',
         canceled: 'border-destructive/70 bg-destructive/10 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive-foreground',
     };
+
     return map[status] ?? 'border-border/70 bg-background/80 text-muted-foreground';
 };
 
@@ -344,6 +350,7 @@ const alertTypeLabel = (type: string): string => {
         near_expiry: 'قريب الانتهاء',
         expired: 'منتهي الصلاحية',
     };
+
     return map[type] ?? type;
 };
 
@@ -353,6 +360,7 @@ const alertSeverityClass = (severity: string): string => {
         medium: 'border-warning-300/70 bg-warning-50 text-warning-800 dark:border-warning-500/40 dark:bg-warning-500/15 dark:text-warning-100',
         high: 'border-destructive/70 bg-destructive/10 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive-foreground',
     };
+
     return map[severity] ?? 'border-border/70 bg-background/80 text-muted-foreground';
 };
 
@@ -364,47 +372,97 @@ const navigateTo = (href: string) => {
 <template>
     <Head title="الصيدلية" />
 
-    <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6">
-        <InternalPageHero
-            kicker="مساحة عمل"
-            title="الصيدلية"
-            description="إدارة الأدوية والوصفات الطبية والمخزون وتنبيهات الصلاحية."
-            :metrics="[
-                { label: 'الوصفات المعلقة', value: String(summary.prescriptions_pending), hint: 'بانتظار التجهيز' },
-                { label: 'مخزون منخفض', value: String(summary.low_stock_total), hint: 'يحتاج إعادة طلب' },
-                { label: 'الأدوية النشطة', value: String(summary.drugs_total), hint: 'إجمالي الأدوية' },
-            ]"
-        />
+    <div class="mx-auto w-full max-w-[1680px] space-y-7 p-4 md:p-6" dir="rtl">
+        <section class="glass-panel-soft overflow-hidden">
+            <div class="flex flex-col gap-4 border-b border-border/70 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+                <div class="space-y-1">
+                    <h1 class="page-title mt-2">الصيدلية</h1>
+                    <p class="page-subtitle max-w-3xl">
+                        إدارة الأدوية والوصفات الطبية والمخزون وتنبيهات الصلاحية.
+                    </p>
+                </div>
+            </div>
 
-        <div class="flex gap-2 overflow-x-auto pb-1">
-            <button
-                v-for="tab in tabs"
-                :key="tab.key"
-                type="button"
-                class="inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all"
-                :class="activeTab === tab.key ? 'border-primary/50 bg-primary/10 text-primary shadow-sm' : 'border-border/60 bg-background/60 text-muted-foreground hover:bg-accent/50 hover:text-foreground'"
-                @click="tab.href ? navigateTo(tab.href) : activeTab = tab.key"
-            >
-                <component :is="tab.icon" class="size-4" />
-                {{ tab.label }}
-            </button>
-        </div>
+            <div class="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
+                <article
+                    class="rounded-2xl border border-sky-200 bg-sky-50 p-4 shadow-sm dark:border-sky-900/50 dark:bg-sky-950/25"
+                >
+                    <p class="text-xs font-semibold text-muted-foreground">الوصفات المعلقة</p>
+                    <p class="mt-2 min-h-8 text-xl font-black tabular-nums leading-tight text-sky-800 dark:text-sky-200">
+                        {{ summary.prescriptions_pending }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">بانتظار التجهيز</p>
+                </article>
+                <article
+                    class="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm dark:border-rose-900/50 dark:bg-rose-950/25"
+                >
+                    <p class="text-xs font-semibold text-muted-foreground">مخزون منخفض</p>
+                    <p class="mt-2 min-h-8 text-xl font-black tabular-nums leading-tight text-rose-800 dark:text-rose-200">
+                        {{ summary.low_stock_total }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">يحتاج إعادة طلب</p>
+                </article>
+                <article
+                    class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/25"
+                >
+                    <p class="text-xs font-semibold text-muted-foreground">الأدوية النشطة</p>
+                    <p class="mt-2 min-h-8 text-xl font-black tabular-nums leading-tight text-emerald-800 dark:text-emerald-200">
+                        {{ summary.drugs_total }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">إجمالي الأدوية</p>
+                </article>
+                <article
+                    class="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm dark:border-amber-900/50 dark:bg-amber-950/25"
+                >
+                    <p class="text-xs font-semibold text-muted-foreground">وصفات اليوم</p>
+                    <p class="mt-2 min-h-8 text-xl font-black tabular-nums leading-tight text-amber-800 dark:text-amber-200">
+                        {{ summary.prescriptions_today }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">الوصفات الواردة اليوم</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="glass-panel-soft p-3">
+            <div class="inline-flex w-fit rounded-xl border border-border bg-muted/70 p-1">
+                <button
+                    v-for="tab in tabs"
+                    :key="tab.key"
+                    type="button"
+                    class="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold transition-colors"
+                    :class="
+                        activeTab === tab.key
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                    "
+                    @click="tab.href ? navigateTo(tab.href) : activeTab = tab.key"
+                >
+                    <component :is="tab.icon" class="size-4" />
+                    {{ tab.label }}
+                </button>
+            </div>
+        </section>
 
         <div v-if="activeTab === 'dashboard'" class="space-y-5">
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div
+            <div class="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
+                <article
                     v-for="card in statCards"
                     :key="card.label"
-                    class="glass-panel-soft flex items-center gap-4 p-4"
+                    class="rounded-2xl border p-4 shadow-sm"
+                    :class="card.tone"
                 >
-                    <div class="flex size-11 shrink-0 items-center justify-center rounded-xl" :class="card.color">
-                        <component :is="card.icon" class="size-5" />
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/60 dark:bg-black/20">
+                            <component :is="card.icon" class="size-5" />
+                        </div>
+                        <div class="min-w-0">
+                            <p class="truncate text-xs font-semibold text-muted-foreground">{{ card.label }}</p>
+                            <p class="mt-1 text-xl font-black tabular-nums leading-tight">
+                                {{ card.value }}
+                            </p>
+                        </div>
                     </div>
-                    <div class="min-w-0">
-                        <p class="truncate text-xs text-muted-foreground">{{ card.label }}</p>
-                        <p class="text-xl font-bold tracking-tight">{{ card.value }}</p>
-                    </div>
-                </div>
+                </article>
             </div>
 
             <div class="grid gap-5 lg:grid-cols-2">
@@ -526,39 +584,43 @@ const navigateTo = (href: string) => {
         </div>
 
         <div v-if="activeTab === 'drugs'" class="space-y-4">
-            <section class="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
-                <div class="flex items-center justify-between border-b border-border/60 px-4 py-3">
-                    <h3 class="text-sm font-semibold text-foreground">قائمة الأدوية</h3>
+            <section class="glass-panel-soft overflow-hidden p-5">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+                    <h3 class="pattern-typographic-title text-[0.76rem]">قائمة الأدوية</h3>
                     <div class="flex items-center gap-3">
                         <span class="text-xs text-muted-foreground">الإجمالي: {{ drugs.length }}</span>
-                        <Button type="button" size="sm" class="h-9 rounded-lg px-4 text-xs" @click="openAddDialog">
+                        <Button type="button" variant="clay" size="sm" class="h-9 rounded-xl px-4 text-xs" @click="openAddDialog">
                             <Plus class="size-3.5" />
                             إضافة دواء
                         </Button>
                     </div>
                 </div>
 
-                <div class="w-full overflow-x-auto">
-                    <table class="w-full border-separate border-spacing-0">
+                <div class="ui-table-shell">
+                    <table class="ui-table w-full">
                         <thead>
-                            <tr class="border-b border-border/60 bg-muted/40">
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">#</th>
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">الكود</th>
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">الاسم التجاري</th>
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">الاسم العلمي</th>
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">الشكل</th>
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">التركيز</th>
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">الوحدة</th>
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">المخزون</th>
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">السعر</th>
-                                <th class="px-3 py-2.5 text-right text-xs font-semibold text-muted-foreground">الإجراءات</th>
+                            <tr>
+                                <th class="px-3 py-2">#</th>
+                                <th class="px-3 py-2">الكود</th>
+                                <th class="px-3 py-2">الاسم التجاري</th>
+                                <th class="px-3 py-2">الاسم العلمي</th>
+                                <th class="px-3 py-2">الشكل</th>
+                                <th class="px-3 py-2">التركيز</th>
+                                <th class="px-3 py-2">الوحدة</th>
+                                <th class="px-3 py-2">المخزون</th>
+                                <th class="px-3 py-2">السعر</th>
+                                <th class="px-3 py-2 text-end">الإجراءات</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="(drug, index) in drugs" :key="drug.id" class="group border-b border-border/40 transition-colors last:border-b-0 hover:bg-muted/30">
-                                <td class="px-3 py-2.5 text-sm font-medium text-muted-foreground">{{ index + 1 }}</td>
-                                <td class="px-3 py-2.5 text-sm text-muted-foreground">{{ drug.code ?? '-' }}</td>
-                                <td class="px-3 py-2.5">
+                            <tr v-for="(drug, index) in drugs" :key="drug.id" class="ui-table-row">
+                                <td class="px-3 py-2 text-sm font-medium text-muted-foreground" data-label="#">
+                                    {{ index + 1 }}
+                                </td>
+                                <td class="px-3 py-2 text-sm text-muted-foreground" data-label="الكود">
+                                    {{ drug.code ?? '-' }}
+                                </td>
+                                <td class="px-3 py-2" data-label="الاسم التجاري">
                                     <div class="flex min-w-0 items-center gap-2.5">
                                         <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
                                             {{ drug.trade_name?.charAt(0) ?? '?' }}
@@ -566,11 +628,19 @@ const navigateTo = (href: string) => {
                                         <span class="truncate text-sm font-medium text-foreground">{{ drug.trade_name }}</span>
                                     </div>
                                 </td>
-                                <td class="px-3 py-2.5 text-sm text-muted-foreground">{{ drug.generic_name }}</td>
-                                <td class="px-3 py-2.5 text-sm text-muted-foreground">{{ formLabel(drug.form) }}</td>
-                                <td class="px-3 py-2.5 text-sm text-muted-foreground">{{ drug.strength ?? '-' }}</td>
-                                <td class="px-3 py-2.5 text-sm text-muted-foreground">{{ unitLabel(drug.unit) }}</td>
-                                <td class="px-3 py-2.5">
+                                <td class="px-3 py-2 text-sm text-muted-foreground" data-label="الاسم العلمي">
+                                    {{ drug.generic_name }}
+                                </td>
+                                <td class="px-3 py-2 text-sm text-muted-foreground" data-label="الشكل">
+                                    {{ formLabel(drug.form) }}
+                                </td>
+                                <td class="px-3 py-2 text-sm text-muted-foreground" data-label="التركيز">
+                                    {{ drug.strength ?? '-' }}
+                                </td>
+                                <td class="px-3 py-2 text-sm text-muted-foreground" data-label="الوحدة">
+                                    {{ unitLabel(drug.unit) }}
+                                </td>
+                                <td class="px-3 py-2" data-label="المخزون">
                                     <div class="flex items-center gap-1.5">
                                         <span class="text-sm font-medium text-foreground">{{ drug.current_stock }}</span>
                                         <span v-if="drug.is_low_stock" class="inline-flex items-center gap-1 rounded-full border border-destructive/70 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
@@ -578,29 +648,35 @@ const navigateTo = (href: string) => {
                                         </span>
                                     </div>
                                 </td>
-                                <td class="px-3 py-2.5 text-sm font-mono text-muted-foreground">{{ formatMoney(drug.unit_price) }}</td>
-                                <td class="px-3 py-2.5">
+                                <td class="px-3 py-2 text-sm font-mono text-muted-foreground" data-label="السعر">
+                                    {{ formatMoney(drug.unit_price) }}
+                                </td>
+                                <td class="px-3 py-2 text-end" data-label="الإجراءات">
                                     <div class="flex items-center justify-end gap-1">
-                                        <button type="button" class="inline-flex size-7 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10 dark:text-sky-300 dark:hover:bg-primary/20" title="تعديل" @click="openEditDialog(drug)">
+                                        <Button
+                                            variant="neumorphic"
+                                            size="icon"
+                                            class="size-7"
+                                            title="تعديل"
+                                            @click="openEditDialog(drug)"
+                                        >
                                             <Edit class="size-3.5" />
-                                        </button>
-                                        <button type="button" class="inline-flex size-7 items-center justify-center rounded-md text-destructive transition-colors hover:bg-destructive/10 dark:text-red-400 dark:hover:bg-destructive/20" title="حذف/تعطيل" @click="deleteDrug(drug)">
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            class="size-7 text-destructive hover:text-destructive"
+                                            title="حذف/تعطيل"
+                                            @click="deleteDrug(drug)"
+                                        >
                                             <Trash2 class="size-3.5" />
-                                        </button>
+                                        </Button>
                                     </div>
                                 </td>
                             </tr>
-                            <tr v-if="drugs.length === 0">
-                                <td colspan="10" class="px-5">
-                                    <div class="py-16 text-center">
-                                        <Package class="mx-auto mb-3 size-12 text-muted-foreground/40" />
-                                        <h3 class="mb-1 text-sm font-semibold text-foreground">لا توجد أدوية</h3>
-                                        <p class="mb-4 text-xs text-muted-foreground">اضغط "إضافة دواء" للبدء</p>
-                                        <Button variant="default" size="sm" class="h-9 rounded-lg px-4 text-xs" @click="openAddDialog">
-                                            <Plus class="size-3.5" />
-                                            إضافة أول دواء
-                                        </Button>
-                                    </div>
+                            <tr v-if="drugs.length === 0" class="table-empty-state">
+                                <td colspan="10" class="px-3 py-10 text-center text-muted-foreground">
+                                    لا توجد أدوية مسجلة.
                                 </td>
                             </tr>
                         </tbody>
@@ -610,147 +686,136 @@ const navigateTo = (href: string) => {
         </div>
 
         <Dialog v-model:open="showAddDialog">
-            <DialogContent class="max-w-[520px] bg-card rounded-xl">
-                <DialogHeader class="p-6 pb-4 border-b border-border">
-                    <DialogTitle class="text-base font-medium text-foreground">إضافة دواء جديد</DialogTitle>
+            <DialogContent class="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>إضافة دواء جديد</DialogTitle>
+                    <DialogDescription>أدخل بيانات الدواء الجديد لإضافته إلى المخزون.</DialogDescription>
                 </DialogHeader>
 
-                <DialogBody class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_trade_name" class="text-sm font-medium text-foreground">الاسم التجاري *</Label>
-                            <Input
-                                id="add_trade_name"
-                                v-model="addForm.trade_name"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                            <p v-if="addForm.errors.trade_name" class="text-xs text-destructive">{{ addForm.errors.trade_name }}</p>
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_generic_name" class="text-sm font-medium text-foreground">الاسم العلمي *</Label>
-                            <Input
-                                id="add_generic_name"
-                                v-model="addForm.generic_name"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                            <p v-if="addForm.errors.generic_name" class="text-xs text-destructive">{{ addForm.errors.generic_name }}</p>
-                        </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-2">
+                        <Label for="add_trade_name">الاسم التجاري *</Label>
+                        <Input
+                            id="add_trade_name"
+                            v-model="addForm.trade_name"
+                            class="pattern-field-clay h-10"
+                        />
+                        <p v-if="addForm.errors.trade_name" class="text-xs text-destructive">{{ addForm.errors.trade_name }}</p>
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="add_generic_name">الاسم العلمي *</Label>
+                        <Input
+                            id="add_generic_name"
+                            v-model="addForm.generic_name"
+                            class="pattern-field-clay h-10"
+                        />
+                        <p v-if="addForm.errors.generic_name" class="text-xs text-destructive">{{ addForm.errors.generic_name }}</p>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_code" class="text-sm font-medium text-foreground">الكود</Label>
-                            <Input
-                                id="add_code"
-                                v-model="addForm.code"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_barcode" class="text-sm font-medium text-foreground">الباركود</Label>
-                            <Input
-                                id="add_barcode"
-                                v-model="addForm.barcode"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
+                    <div class="grid gap-2">
+                        <Label for="add_code">الكود</Label>
+                        <Input
+                            id="add_code"
+                            v-model="addForm.code"
+                            class="pattern-field-clay h-10"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="add_barcode">الباركود</Label>
+                        <Input
+                            id="add_barcode"
+                            v-model="addForm.barcode"
+                            class="pattern-field-clay h-10"
+                        />
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_category" class="text-sm font-medium text-foreground">التصنيف</Label>
-                            <Input
-                                id="add_category"
-                                v-model="addForm.category"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_form" class="text-sm font-medium text-foreground">الشكل الدوائي</Label>
-                            <select
-                                id="add_form"
-                                v-model="addForm.form"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors appearance-none cursor-pointer"
-                            >
-                                <option value="">اختر</option>
-                                <option v-for="f in formOptions.forms" :key="f.value" :value="f.value">{{ f.label }}</option>
-                            </select>
-                        </div>
+                    <div class="grid gap-2">
+                        <Label for="add_category">التصنيف</Label>
+                        <Input
+                            id="add_category"
+                            v-model="addForm.category"
+                            class="pattern-field-clay h-10"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="add_form">الشكل الدوائي</Label>
+                        <select
+                            id="add_form"
+                            v-model="addForm.form"
+                            class="pattern-field-clay h-10"
+                        >
+                            <option value="">اختر</option>
+                            <option v-for="f in formOptions.forms" :key="f.value" :value="f.value">{{ f.label }}</option>
+                        </select>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_unit" class="text-sm font-medium text-foreground">الوحدة</Label>
-                            <select
-                                id="add_unit"
-                                v-model="addForm.unit"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors appearance-none cursor-pointer"
-                            >
-                                <option value="">اختر</option>
-                                <option v-for="u in formOptions.units" :key="u.value" :value="u.value">{{ u.label }}</option>
-                            </select>
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_strength" class="text-sm font-medium text-foreground">التركيز</Label>
-                            <Input
-                                id="add_strength"
-                                v-model="addForm.strength"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
+                    <div class="grid gap-2">
+                        <Label for="add_unit">الوحدة</Label>
+                        <select
+                            id="add_unit"
+                            v-model="addForm.unit"
+                            class="pattern-field-clay h-10"
+                        >
+                            <option value="">اختر</option>
+                            <option v-for="u in formOptions.units" :key="u.value" :value="u.value">{{ u.label }}</option>
+                        </select>
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="add_strength">التركيز</Label>
+                        <Input
+                            id="add_strength"
+                            v-model="addForm.strength"
+                            class="pattern-field-clay h-10"
+                        />
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_manufacturer" class="text-sm font-medium text-foreground">الشركة المصنعة</Label>
-                            <Input
-                                id="add_manufacturer"
-                                v-model="addForm.manufacturer"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_price" class="text-sm font-medium text-foreground">السعر</Label>
-                            <Input
-                                id="add_price"
-                                v-model.number="addForm.unit_price"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
+                    <div class="grid gap-2">
+                        <Label for="add_manufacturer">الشركة المصنعة</Label>
+                        <Input
+                            id="add_manufacturer"
+                            v-model="addForm.manufacturer"
+                            class="pattern-field-clay h-10"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="add_price">السعر</Label>
+                        <Input
+                            id="add_price"
+                            v-model.number="addForm.unit_price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="pattern-field-clay h-10"
+                        />
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_min_stock" class="text-sm font-medium text-foreground">الحد الأدنى للمخزون</Label>
-                            <Input
-                                id="add_min_stock"
-                                v-model.number="addForm.min_stock_level"
-                                type="number"
-                                min="0"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="add_stock" class="text-sm font-medium text-foreground">المخزون الحالي</Label>
-                            <Input
-                                id="add_stock"
-                                v-model.number="addForm.current_stock"
-                                type="number"
-                                min="0"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
+                    <div class="grid gap-2">
+                        <Label for="add_min_stock">الحد الأدنى للمخزون</Label>
+                        <Input
+                            id="add_min_stock"
+                            v-model.number="addForm.min_stock_level"
+                            type="number"
+                            min="0"
+                            class="pattern-field-clay h-10"
+                        />
                     </div>
-                </DialogBody>
+                    <div class="grid gap-2">
+                        <Label for="add_stock">المخزون الحالي</Label>
+                        <Input
+                            id="add_stock"
+                            v-model.number="addForm.current_stock"
+                            type="number"
+                            min="0"
+                            class="pattern-field-clay h-10"
+                        />
+                    </div>
+                </div>
 
-                <DialogFooter class="flex items-center justify-between p-6 pt-4 gap-2">
-                    <Button type="button" variant="ghost" class="h-9 px-4 rounded-lg text-muted-foreground text-sm font-medium hover:bg-muted hover:text-foreground transition-colors duration-150 active:scale-[0.98]" :disabled="addForm.processing" @click="showAddDialog = false">إلغاء</Button>
+                <DialogFooter>
+                    <Button type="button" variant="ghost" :disabled="addForm.processing" @click="showAddDialog = false">إلغاء</Button>
                     <Button
                         type="button"
-                        variant="default"
+                        variant="clay"
                         :disabled="addForm.processing"
                         @click="submitAdd"
                     >
@@ -761,103 +826,95 @@ const navigateTo = (href: string) => {
         </Dialog>
 
         <Dialog v-model:open="showEditDialog">
-            <DialogContent class="max-w-[520px] bg-card rounded-xl">
-                <DialogHeader class="p-6 pb-4 border-b border-border">
-                    <DialogTitle class="text-base font-medium text-foreground">تعديل الدواء</DialogTitle>
-                    <DialogDescription class="text-sm text-muted-foreground mt-0.5">تعديل بيانات الدواء {{ editingDrug?.trade_name }}</DialogDescription>
+            <DialogContent class="sm:max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>تعديل الدواء</DialogTitle>
+                    <DialogDescription>تعديل بيانات الدواء {{ editingDrug?.trade_name }}</DialogDescription>
                 </DialogHeader>
 
-                <DialogBody class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="edit_trade_name" class="text-sm font-medium text-foreground">الاسم التجاري</Label>
-                            <Input
-                                id="edit_trade_name"
-                                v-model="editForm.trade_name"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="edit_generic_name" class="text-sm font-medium text-foreground">الاسم العلمي</Label>
-                            <Input
-                                id="edit_generic_name"
-                                v-model="editForm.generic_name"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="grid gap-2">
+                        <Label for="edit_trade_name">الاسم التجاري</Label>
+                        <Input
+                            id="edit_trade_name"
+                            v-model="editForm.trade_name"
+                            class="pattern-field-clay h-10"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="edit_generic_name">الاسم العلمي</Label>
+                        <Input
+                            id="edit_generic_name"
+                            v-model="editForm.generic_name"
+                            class="pattern-field-clay h-10"
+                        />
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="edit_code" class="text-sm font-medium text-foreground">الكود</Label>
-                            <Input
-                                id="edit_code"
-                                v-model="editForm.code"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="edit_form" class="text-sm font-medium text-foreground">الشكل الدوائي</Label>
-                            <select
-                                id="edit_form"
-                                v-model="editForm.form"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors appearance-none cursor-pointer"
-                            >
-                                <option value="">اختر</option>
-                                <option v-for="f in formOptions.forms" :key="f.value" :value="f.value">{{ f.label }}</option>
-                            </select>
-                        </div>
+                    <div class="grid gap-2">
+                        <Label for="edit_code">الكود</Label>
+                        <Input
+                            id="edit_code"
+                            v-model="editForm.code"
+                            class="pattern-field-clay h-10"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="edit_form">الشكل الدوائي</Label>
+                        <select
+                            id="edit_form"
+                            v-model="editForm.form"
+                            class="pattern-field-clay h-10"
+                        >
+                            <option value="">اختر</option>
+                            <option v-for="f in formOptions.forms" :key="f.value" :value="f.value">{{ f.label }}</option>
+                        </select>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="edit_strength" class="text-sm font-medium text-foreground">التركيز</Label>
-                            <Input
-                                id="edit_strength"
-                                v-model="editForm.strength"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="edit_price" class="text-sm font-medium text-foreground">السعر</Label>
-                            <Input
-                                id="edit_price"
-                                v-model.number="editForm.unit_price"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
+                    <div class="grid gap-2">
+                        <Label for="edit_strength">التركيز</Label>
+                        <Input
+                            id="edit_strength"
+                            v-model="editForm.strength"
+                            class="pattern-field-clay h-10"
+                        />
+                    </div>
+                    <div class="grid gap-2">
+                        <Label for="edit_price">السعر</Label>
+                        <Input
+                            id="edit_price"
+                            v-model.number="editForm.unit_price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="pattern-field-clay h-10"
+                        />
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="edit_min_stock" class="text-sm font-medium text-foreground">الحد الأدنى</Label>
-                            <Input
-                                id="edit_min_stock"
-                                v-model.number="editForm.min_stock_level"
-                                type="number"
-                                min="0"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <Label for="edit_manufacturer" class="text-sm font-medium text-foreground">الشركة المصنعة</Label>
-                            <Input
-                                id="edit_manufacturer"
-                                v-model="editForm.manufacturer"
-                                class="w-full h-10 rounded-lg border border-input bg-secondary/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
-                            />
-                        </div>
+                    <div class="grid gap-2">
+                        <Label for="edit_min_stock">الحد الأدنى</Label>
+                        <Input
+                            id="edit_min_stock"
+                            v-model.number="editForm.min_stock_level"
+                            type="number"
+                            min="0"
+                            class="pattern-field-clay h-10"
+                        />
                     </div>
-                </DialogBody>
+                    <div class="grid gap-2">
+                        <Label for="edit_manufacturer">الشركة المصنعة</Label>
+                        <Input
+                            id="edit_manufacturer"
+                            v-model="editForm.manufacturer"
+                            class="pattern-field-clay h-10"
+                        />
+                    </div>
+                </div>
 
-                <DialogFooter class="flex items-center justify-between p-6 pt-4 gap-2">
-                    <Button type="button" variant="ghost" class="h-9 px-4 rounded-lg text-muted-foreground text-sm font-medium hover:bg-muted hover:text-foreground transition-colors duration-150 active:scale-[0.98]" :disabled="editForm.processing" @click="showEditDialog = false">إلغاء</Button>
+                <DialogFooter>
+                    <Button type="button" variant="ghost" :disabled="editForm.processing" @click="showEditDialog = false">إلغاء</Button>
                     <Button
                         type="button"
-                        variant="default"
+                        variant="clay"
                         :disabled="editForm.processing"
                         @click="submitEdit"
                     >

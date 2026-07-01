@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { ArrowDown, ArrowUp, ArrowUpDown, Eye, FlaskConical, PackageCheck, XCircle } from 'lucide-vue-next';
+import { Head, router } from '@inertiajs/vue3';
+import { Eye, FlaskConical, FileText, PackageCheck, XCircle } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import PrescriptionController from '@/actions/App/Http/Controllers/Pharmacy/PrescriptionController';
-import InternalPageHero from '@/components/InternalPageHero.vue';
 import { Button } from '@/components/ui/button';
-import { FilterBar, FilterSearch } from '@/components/ui/filter';
-import { Label } from '@/components/ui/label';
 import {
     Dialog,
     DialogContent,
@@ -15,6 +12,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { FilterBar, FilterSearch } from '@/components/ui/filter';
+import { Label } from '@/components/ui/label';
 
 type PrescriptionItem = {
     id: number;
@@ -118,6 +117,7 @@ const statusLabel = (status: string): string => {
         issued: 'صادرة',
         draft: 'مسودة',
     };
+
     return map[status] ?? status;
 };
 
@@ -133,6 +133,7 @@ const statusClass = (status: string): string => {
         issued: 'border-border/70 bg-background/80 text-muted-foreground',
         draft: 'border-border/70 bg-background/80 text-muted-foreground',
     };
+
     return map[status] ?? 'border-border/70 bg-background/80 text-muted-foreground';
 };
 
@@ -146,6 +147,7 @@ const statusDotClass = (status: string): string => {
         partially_dispensed: 'bg-warning-500',
         canceled: 'bg-destructive',
     };
+
     return map[status] ?? 'bg-muted-foreground';
 };
 
@@ -159,9 +161,15 @@ const reload = (overrides: Record<string, any> = {}) => {
     }, { only: ['prescriptions', 'filters'], preserveState: true, preserveScroll: true, replace: true });
 };
 
-watch(() => localSearch.value, () => { localPage.value = 1; reload({ page: 1 }); });
-watch(() => localRowsPerPage.value, () => { localPage.value = 1; reload({ page: 1 }); });
-watch(() => localStatus.value, () => { localPage.value = 1; reload({ page: 1 }); });
+watch(() => localSearch.value, () => {
+ localPage.value = 1; reload({ page: 1 }); 
+});
+watch(() => localRowsPerPage.value, () => {
+ localPage.value = 1; reload({ page: 1 }); 
+});
+watch(() => localStatus.value, () => {
+ localPage.value = 1; reload({ page: 1 }); 
+});
 
 const viewPrescription = (rx: Prescription) => {
     selectedPrescription.value = rx;
@@ -176,6 +184,7 @@ const fetchPrescriptionDetail = (id: number) => {
         only: [] as string[],
         onSuccess: (page) => {
             const data = page.props as unknown as { data?: Prescription };
+
             if (data?.data) {
                 selectedPrescriptionDetail.value = data.data;
             }
@@ -205,6 +214,7 @@ const markReady = (rx: Prescription) => {
 
 const openDispenseDialog = (rx: Prescription) => {
     selectedPrescription.value = rx;
+
     if (rx.items) {
         dispenseItems.value = rx.items
             .filter(item => item.status !== 'dispensed' || item.remaining_quantity > 0)
@@ -214,12 +224,15 @@ const openDispenseDialog = (rx: Prescription) => {
                 batch_id: item.available_batches.length > 0 ? item.available_batches[0].id : null,
             }));
     }
+
     dispenseNotes.value = '';
     showDispenseDialog.value = true;
 };
 
 const confirmDispense = () => {
-    if (!selectedPrescription.value) return;
+    if (!selectedPrescription.value) {
+return;
+}
 
     router.post(`/pharmacy/prescriptions/${selectedPrescription.value.id}/dispense`, {
         items: dispenseItems.value,
@@ -235,7 +248,9 @@ const confirmDispense = () => {
 };
 
 const cancelPrescription = (rx: Prescription) => {
-    if (!confirm('هل أنت متأكد من إلغاء هذه الوصفة؟')) return;
+    if (!confirm('هل أنت متأكد من إلغاء هذه الوصفة؟')) {
+return;
+}
 
     router.patch(`/pharmacy/prescriptions/${rx.id}/status`, {
         status: 'canceled',
@@ -248,12 +263,15 @@ const cancelPrescription = (rx: Prescription) => {
 
 const activeFilters = computed(() => {
     const list: { key: string; label: string; value: string | null }[] = [];
+
     if (localSearch.value.trim()) {
         list.push({ key: 'search', label: 'بحث', value: localSearch.value.trim() });
     }
+
     if (localStatus.value) {
         list.push({ key: 'status', label: 'الحالة', value: statusLabel(localStatus.value) });
     }
+
     return list;
 });
 
@@ -264,25 +282,70 @@ const resetFilters = () => {
     reload({ page: 1, search: '', status: null });
 };
 
-const heroMetrics = computed(() => [
-    { label: 'إجمالي الوصفات', value: String(prescriptions?.meta?.total ?? 0), hint: 'جميع الوصفات' },
-    { label: 'مرئي', value: String(visiblePrescriptions.value.length), hint: 'الصفحة الحالية' },
+const rxStatCards = computed(() => [
+    {
+        label: 'إجمالي الوصفات',
+        value: String(prescriptions?.meta?.total ?? 0),
+        hint: 'جميع الوصفات',
+        tone: 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/25 dark:text-sky-200',
+    },
+    {
+        label: 'مرئية',
+        value: String(visiblePrescriptions.value.length),
+        hint: 'الصفحة الحالية',
+        tone: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-200',
+    },
+    {
+        label: 'معلقة',
+        value: String((prescriptions?.data ?? []).filter(rx => ['sent_to_pharmacy', 'received', 'preparing'].includes(rx.status)).length),
+        hint: 'بانتظار التجهيز',
+        tone: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-200',
+    },
+    {
+        label: 'مصروفة',
+        value: String((prescriptions?.data ?? []).filter(rx => rx.status === 'dispensed').length),
+        hint: 'تم صرفها',
+        tone: 'border-purple-200 bg-purple-50 text-purple-800 dark:border-purple-900/50 dark:bg-purple-950/25 dark:text-purple-200',
+    },
 ]);
 </script>
 
 <template>
     <Head title="الوصفات الطبية - الصيدلية" />
 
-    <div class="mx-auto w-full max-w-[1680px] space-y-5 p-4 md:p-6">
-        <InternalPageHero
-            kicker="وصفات طبية"
-            title="الوصفات الواردة"
-            description="إدارة الوصفات الطبية الواردة من الأطباء وتجهيزها وصرفها."
-            :metrics="heroMetrics"
-        />
+    <div class="mx-auto w-full max-w-[1680px] space-y-7 p-4 md:p-6" dir="rtl">
+        <section class="glass-panel-soft overflow-hidden">
+            <div class="flex flex-col gap-4 border-b border-border/70 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+                <div class="space-y-1">
+                    <div class="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                        <FileText class="size-4" />
+                        وصفات طبية
+                    </div>
+                    <h1 class="page-title mt-2">الوصفات الواردة</h1>
+                    <p class="page-subtitle max-w-3xl">
+                        إدارة الوصفات الطبية الواردة من الأطباء وتجهيزها وصرفها.
+                    </p>
+                </div>
+            </div>
 
-        <section class="glass-panel-soft p-5">
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+            <div class="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
+                <article
+                    v-for="card in rxStatCards"
+                    :key="card.label"
+                    class="rounded-2xl border p-4 shadow-sm"
+                    :class="card.tone"
+                >
+                    <p class="text-xs font-semibold text-muted-foreground">{{ card.label }}</p>
+                    <p class="mt-2 min-h-8 text-xl font-black tabular-nums leading-tight">
+                        {{ card.value }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">{{ card.hint }}</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="glass-panel-soft overflow-hidden p-5">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
                 <h3 class="pattern-typographic-title text-[0.76rem]">قائمة الوصفات</h3>
                 <span class="text-xs text-muted-foreground">الإجمالي: {{ prescriptions?.meta?.total ?? 0 }}</span>
             </div>
@@ -329,33 +392,33 @@ const heroMetrics = computed(() => [
                             <th class="px-3 py-2">العناصر</th>
                             <th class="px-3 py-2">الحالة</th>
                             <th class="px-3 py-2">التاريخ</th>
-                            <th class="px-3 py-2">الإجراءات</th>
+                            <th class="px-3 py-2 text-end">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr v-for="rx in (prescriptions?.data ?? [])" :key="rx.id" class="ui-table-row">
-                            <td class="px-3 py-2 font-mono text-sm font-medium">{{ rx.prescription_number }}</td>
-                            <td class="px-3 py-2">{{ rx.patient?.full_name ?? rx.patient?.first_name ?? '-' }}</td>
-                            <td class="px-3 py-2">{{ rx.prescriber?.name ?? '-' }}</td>
-                            <td class="px-3 py-2 text-sm">{{ rx.items_count ?? rx.items?.length ?? '-' }}</td>
-                            <td class="px-3 py-2">
+                            <td class="px-3 py-2 font-mono text-sm font-medium" data-label="رقم الوصفة">{{ rx.prescription_number }}</td>
+                            <td class="px-3 py-2" data-label="المريض">{{ rx.patient?.full_name ?? rx.patient?.first_name ?? '-' }}</td>
+                            <td class="px-3 py-2" data-label="الطبيب">{{ rx.prescriber?.name ?? '-' }}</td>
+                            <td class="px-3 py-2 text-sm" data-label="العناصر">{{ rx.items_count ?? rx.items?.length ?? '-' }}</td>
+                            <td class="px-3 py-2" data-label="الحالة">
                                 <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold" :class="statusClass(rx.status)">
                                     <span class="size-1.5 rounded-full" :class="statusDotClass(rx.status)"></span>
                                     {{ statusLabel(rx.status) }}
                                 </span>
                             </td>
-                            <td class="px-3 py-2 text-sm text-muted-foreground">
+                            <td class="px-3 py-2 text-sm text-muted-foreground" data-label="التاريخ">
                                 {{ rx.sent_to_pharmacy_at ? new Date(rx.sent_to_pharmacy_at).toLocaleString() : rx.issued_at ? new Date(rx.issued_at).toLocaleString() : '-' }}
                             </td>
-                            <td class="px-3 py-2">
-                                <div class="flex items-center gap-1">
-                                    <Button type="button" variant="neumorphic" size="sm" class="size-7 p-0" title="عرض" @click="viewPrescription(rx)">
+                            <td class="px-3 py-2 text-end" data-label="الإجراءات">
+                                <div class="flex items-center justify-end gap-1">
+                                    <Button type="button" variant="neumorphic" size="icon" class="size-7" title="عرض" @click="viewPrescription(rx)">
                                         <Eye class="size-3.5" />
                                     </Button>
                                     <Button
                                         v-if="['sent_to_pharmacy', 'received'].includes(rx.status)"
                                         type="button"
-                                        variant="neumorphic"
+                                        variant="clay"
                                         size="sm"
                                         class="h-7 px-2 text-xs"
                                         @click="startPreparing(rx)"
@@ -366,7 +429,7 @@ const heroMetrics = computed(() => [
                                     <Button
                                         v-if="rx.status === 'preparing'"
                                         type="button"
-                                        variant="neumorphic"
+                                        variant="clay"
                                         size="sm"
                                         class="h-7 px-2 text-xs"
                                         @click="markReady(rx)"
@@ -377,7 +440,7 @@ const heroMetrics = computed(() => [
                                     <Button
                                         v-if="['ready', 'preparing', 'partially_dispensed'].includes(rx.status)"
                                         type="button"
-                                        variant="default"
+                                        variant="clay"
                                         size="sm"
                                         class="h-7 px-2 text-xs"
                                         @click="openDispenseDialog(rx)"
@@ -387,9 +450,9 @@ const heroMetrics = computed(() => [
                                     <Button
                                         v-if="!['dispensed', 'canceled'].includes(rx.status)"
                                         type="button"
-                                        variant="neumorphic"
-                                        size="sm"
-                                        class="size-7 p-0 text-destructive hover:text-destructive"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-7 text-destructive hover:text-destructive"
                                         title="إلغاء"
                                         @click="cancelPrescription(rx)"
                                     >
@@ -408,15 +471,15 @@ const heroMetrics = computed(() => [
             <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2">
                 <p class="text-xs text-muted-foreground">عرض {{ prescriptions?.meta?.from ?? 0 }}-{{ prescriptions?.meta?.to ?? 0 }} من {{ prescriptions?.meta?.total ?? 0 }}</p>
                 <div class="flex items-center gap-2">
-                    <Button type="button" variant="neumorphic" size="sm" class="h-8 px-3 text-xs" :disabled="localPage === 1" @click="localPage--; reload({ page: localPage })">السابق</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-8 rounded-lg px-3 text-xs" :disabled="localPage === 1" @click="localPage--; reload({ page: localPage })">السابق</Button>
                     <span class="text-xs font-semibold">صفحة {{ localPage }} / {{ prescriptions?.meta?.last_page ?? 1 }}</span>
-                    <Button type="button" variant="neumorphic" size="sm" class="h-8 px-3 text-xs" :disabled="localPage >= (prescriptions?.meta?.last_page ?? 1)" @click="localPage++; reload({ page: localPage })">التالي</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-8 rounded-lg px-3 text-xs" :disabled="localPage >= (prescriptions?.meta?.last_page ?? 1)" @click="localPage++; reload({ page: localPage })">التالي</Button>
                 </div>
             </div>
         </section>
 
         <Dialog v-model:open="showDetailDialog">
-            <DialogContent class="max-w-2xl">
+            <DialogContent class="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>تفاصيل الوصفة {{ selectedPrescription?.prescription_number }}</DialogTitle>
                     <DialogDescription>
@@ -459,7 +522,7 @@ const heroMetrics = computed(() => [
                                 <p v-if="item.instructions" class="mt-1 text-xs italic">{{ item.instructions }}</p>
                                 <div v-if="item.drug" class="mt-1 text-xs">
                                     <span class="text-muted-foreground">المخزون المتاح:</span>
-                                    <span class="ms-1 font-mono font-bold" :class="item.drug.current_stock > 0 ? 'text-emerald-600' : 'text-destructive'">{{ item.drug.current_stock }}</span>
+                                    <span class="ms-1 font-mono font-bold" :class="item.drug.current_stock > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'">{{ item.drug.current_stock }}</span>
                                 </div>
                             </div>
                         </div>
@@ -469,7 +532,7 @@ const heroMetrics = computed(() => [
         </Dialog>
 
         <Dialog v-model:open="showDispenseDialog">
-            <DialogContent class="max-w-3xl">
+            <DialogContent class="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>صرف الوصفة {{ selectedPrescription?.prescription_number }}</DialogTitle>
                     <DialogDescription>تحقق من الكميات واختر الدفعة المناسبة لكل دواء.</DialogDescription>
@@ -503,7 +566,7 @@ const heroMetrics = computed(() => [
                             </div>
                             <div>
                                 <span class="text-muted-foreground">المتاح:</span>
-                                <span class="ms-1 font-mono font-bold" :class="item.drug.current_stock > 0 ? 'text-emerald-600' : 'text-destructive'">{{ item.drug.current_stock }}</span>
+                                <span class="ms-1 font-mono font-bold" :class="item.drug.current_stock > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'">{{ item.drug.current_stock }}</span>
                             </div>
                         </div>
                     </div>
@@ -513,8 +576,8 @@ const heroMetrics = computed(() => [
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button type="button" variant="neumorphic" @click="showDispenseDialog = false">إلغاء</Button>
-                    <Button type="button" @click="confirmDispense">تأكيد الصرف</Button>
+                    <Button type="button" variant="ghost" @click="showDispenseDialog = false">إلغاء</Button>
+                    <Button type="button" variant="clay" @click="confirmDispense">تأكيد الصرف</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

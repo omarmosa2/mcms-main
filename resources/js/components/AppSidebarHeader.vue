@@ -73,30 +73,7 @@ router.visit(first.href);
             </div>
 
             <div class="flex w-full flex-col-reverse gap-2 sm:flex-row lg:w-auto lg:items-center">
-                <div class="relative w-full sm:w-72 xl:w-80">
-                    <Search class="pointer-events-none absolute top-1/2 inset-inline-start-3.5 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                        v-model="jumpQuery"
-                        class="h-10 rounded-2xl border-input bg-card/90 ps-10 text-sm shadow-sm focus-visible:border-primary focus-visible:ring-primary/15"
-                        placeholder="بحث سريع..."
-                        @keydown.enter.prevent="jumpToFirstMatch"
-                    />
-
-                    <div
-                        v-if="jumpResults.length > 0"
-                        class="absolute inset-x-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-border bg-card shadow-dropdown"
-                    >
-                        <Link
-                            v-for="item in jumpResults"
-                            :key="item.title"
-                            :href="item.href"
-                            class="block px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
-                            @click="jumpQuery = ''"
-                        >
-                            {{ item.title }}
-                        </Link>
-                    </div>
-                </div>
+                
 
                 <div class="flex items-center gap-2">
                     <div class="hidden items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-2 text-xs font-semibold text-muted-foreground sm:flex">
@@ -106,7 +83,7 @@ router.visit(first.href);
 
                     <div class="hidden items-center gap-2 rounded-full border border-primary/20 bg-accent px-3 py-2 text-xs font-bold text-accent-foreground lg:flex">
                         <Activity class="size-3.5 text-primary" />
-                        <span>مباشر</span>
+                        <span>متصل</span>
                     </div>
 
                     <button

@@ -320,17 +320,7 @@ const alertClass = (type: 'warning' | 'danger' | 'info'): string => {
                 </div>
             </article>
 
-            <article v-if="!isDoctor" class="rounded-xl border border-border bg-card p-4 shadow-sm">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-bold text-muted-foreground">إيراد 7 أيام</p>
-                        <p class="mt-1 text-xl font-extrabold tabular-nums text-foreground">{{ formatMoney(totalRevenue7Days) }}</p>
-                    </div>
-                    <div class="flex size-10 items-center justify-center rounded-xl bg-teal-500/10 text-teal-700">
-                        <Banknote class="size-5" />
-                    </div>
-                </div>
-            </article>
+            
 
             <article class="rounded-xl border border-border bg-card p-4 shadow-sm">
                 <div class="flex items-center justify-between gap-3">

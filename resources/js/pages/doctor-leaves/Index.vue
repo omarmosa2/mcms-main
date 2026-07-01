@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
-import { Ban, CalendarOff, Clock, Pencil, Plus, Save, Trash2 } from 'lucide-vue-next';
+import { Ban, Clock, Pencil, Save, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import DoctorLeaveController from '@/actions/App/Http/Controllers/DoctorLeaves/DoctorLeaveController';
 import InputError from '@/components/InputError.vue';
+import InternalPageHero from '@/components/InternalPageHero.vue';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -74,6 +74,12 @@ defineOptions({
     },
 });
 
+const leaveHeroMetrics = computed(() => [
+    { label: 'إجمالي الإجازات', value: String(props.leaves.data.length), hint: 'جميع الإجازات المسجلة' },
+    { label: 'نشطة', value: String(props.leaves.data.filter((l) => l.status === 'active').length), hint: 'إجازات سارية المفعول' },
+    { label: 'ملغاة', value: String(props.leaves.data.filter((l) => l.status === 'canceled').length), hint: 'إجازات تم إلغاؤها' },
+]);
+
 const selectedDoctorId = ref('');
 const selectedClinicId = ref('');
 const leaveType = ref<'full_day' | 'hourly'>('full_day');
@@ -92,6 +98,7 @@ const doctorOptions = computed(() =>
 watch(selectedDoctorId, (doctorId) => {
     if (!doctorId) {
         selectedClinicId.value = '';
+
         return;
     }
 
@@ -150,239 +157,230 @@ function formatTime(time: string | null): string {
 <template>
     <Head title="إجازات الأطباء" />
 
-    <div class="space-y-6" dir="rtl">
-        <div
-            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-        >
-            <div>
-                <h1 class="page-title">إجازات الأطباء</h1>
-                <p class="mt-1 text-sm text-muted-foreground">
-                    إدارة الإجازات الكاملة والساعية بدون تعديل الدوام الأساسي
-                    للطبيب.
-                </p>
-            </div>
-        </div>
+    <div class="mx-auto w-full max-w-[1680px] space-y-7 p-4 md:p-6" dir="rtl">
+        <InternalPageHero
+            kicker="إدارة الدوام"
+            title="إجازات الأطباء"
+            description="إدارة الإجازات الكاملة والساعية بدون تعديل الدوام الأساسي للطبيب."
+            :metrics="leaveHeroMetrics"
+        />
 
-        <Card>
-            <CardHeader>
-                <CardTitle class="flex items-center gap-2 text-base">
-                    <Plus class="size-4 text-[var(--accent-mint)]" />
-                    إضافة إجازة
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <Form
-                    v-bind="DoctorLeaveController.store.form()"
-                    class="grid gap-4 lg:grid-cols-6"
-                    @success="toast.success('تمت إضافة الإجازة بنجاح')"
-                    v-slot="{ errors, processing }"
-                >
-                    <input type="hidden" name="clinic_id" :value="selectedClinicId" />
+        <section class="glass-panel-soft p-5">
+            <h3 class="pattern-typographic-title mb-4 text-[0.76rem]">
+                إضافة إجازة
+            </h3>
 
-                    <div class="grid gap-2 lg:col-span-2">
-                        <Label>الطبيب</Label>
-                        <select
-                            v-model="selectedDoctorId"
-                            name="doctor_id"
-                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
+            <Form
+                v-bind="DoctorLeaveController.store.form()"
+                class="grid gap-4 lg:grid-cols-6"
+                @success="toast.success('تمت إضافة الإجازة بنجاح')"
+                v-slot="{ errors, processing }"
+            >
+                <input type="hidden" name="clinic_id" :value="selectedClinicId" />
+
+                <div class="grid gap-2 lg:col-span-2">
+                    <Label>الطبيب</Label>
+                    <select
+                        v-model="selectedDoctorId"
+                        name="doctor_id"
+                        class="pattern-field-clay h-10"
+                    >
+                        <option value="">اختر الطبيب</option>
+                        <option
+                            v-for="doctor in doctorOptions"
+                            :key="doctor.id"
+                            :value="doctor.id"
                         >
-                            <option value="">اختر الطبيب</option>
-                            <option
-                                v-for="doctor in doctorOptions"
-                                :key="doctor.id"
-                                :value="doctor.id"
-                            >
-                                {{ doctor.label }}
-                            </option>
-                        </select>
-                        <InputError :message="errors.doctor_id" />
-                    </div>
+                            {{ doctor.label }}
+                        </option>
+                    </select>
+                    <InputError :message="errors.doctor_id" />
+                </div>
 
-                    <div class="grid gap-2 lg:col-span-2">
-                        <Label>العيادة</Label>
-                        <select
-                            v-model="selectedClinicId"
-                            name="clinic_id"
-                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
+                <div class="grid gap-2 lg:col-span-2">
+                    <Label>العيادة</Label>
+                    <select
+                        v-model="selectedClinicId"
+                        name="clinic_id"
+                        class="pattern-field-clay h-10"
+                    >
+                        <option value="">اختر العيادة</option>
+                        <option
+                            v-for="clinic in clinics"
+                            :key="clinic.id"
+                            :value="clinic.id"
                         >
-                            <option value="">اختر العيادة</option>
-                            <option
-                                v-for="clinic in clinics"
-                                :key="clinic.id"
-                                :value="clinic.id"
-                            >
-                                {{ clinic.name }}
-                            </option>
-                        </select>
-                        <InputError :message="errors.clinic_id" />
-                    </div>
+                            {{ clinic.name }}
+                        </option>
+                    </select>
+                    <InputError :message="errors.clinic_id" />
+                </div>
 
-                    <div class="grid gap-2">
-                        <Label>نوع الإجازة</Label>
-                        <select
-                            v-model="leaveType"
-                            name="type"
-                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
-                        >
-                            <option value="full_day">كاملة</option>
-                            <option value="hourly">ساعية</option>
-                        </select>
-                        <InputError :message="errors.type" />
-                    </div>
+                <div class="grid gap-2">
+                    <Label>نوع الإجازة</Label>
+                    <select
+                        v-model="leaveType"
+                        name="type"
+                        class="pattern-field-clay h-10"
+                    >
+                        <option value="full_day">كاملة</option>
+                        <option value="hourly">ساعية</option>
+                    </select>
+                    <InputError :message="errors.type" />
+                </div>
 
-                    <div class="grid gap-2">
-                        <Label>التاريخ</Label>
-                        <Input name="leave_date" type="date" class="h-10" />
-                        <InputError :message="errors.leave_date" />
-                    </div>
+                <div class="grid gap-2">
+                    <Label>التاريخ</Label>
+                    <Input name="leave_date" type="date" class="pattern-field-clay h-10" />
+                    <InputError :message="errors.leave_date" />
+                </div>
 
-                    <div v-if="leaveType === 'hourly'" class="grid gap-2">
-                        <Label>وقت البداية</Label>
-                        <Input name="start_time" type="time" class="h-10" />
-                        <InputError :message="errors.start_time" />
-                    </div>
+                <div v-if="leaveType === 'hourly'" class="grid gap-2">
+                    <Label>وقت البداية</Label>
+                    <Input name="start_time" type="time" class="pattern-field-clay h-10" />
+                    <InputError :message="errors.start_time" />
+                </div>
 
-                    <div v-if="leaveType === 'hourly'" class="grid gap-2">
-                        <Label>وقت النهاية</Label>
-                        <Input name="end_time" type="time" class="h-10" />
-                        <InputError :message="errors.end_time" />
-                    </div>
+                <div v-if="leaveType === 'hourly'" class="grid gap-2">
+                    <Label>وقت النهاية</Label>
+                    <Input name="end_time" type="time" class="pattern-field-clay h-10" />
+                    <InputError :message="errors.end_time" />
+                </div>
 
-                    <div class="grid gap-2 lg:col-span-4">
-                        <Label>السبب</Label>
-                        <Input name="reason" placeholder="اختياري" class="h-10" />
-                        <InputError :message="errors.reason" />
-                    </div>
+                <div class="grid gap-2 lg:col-span-4">
+                    <Label>السبب</Label>
+                    <Input name="reason" placeholder="اختياري" class="pattern-field-clay h-10" />
+                    <InputError :message="errors.reason" />
+                </div>
 
-                    <div class="flex items-end">
-                        <Button
-                            type="submit"
-                            :disabled="processing"
-                            class="h-10"
-                        >
-                            <Save class="ms-2 size-4" />
-                            حفظ
-                        </Button>
-                    </div>
-                </Form>
-            </CardContent>
-        </Card>
+                <div class="flex items-end">
+                    <Button
+                        type="submit"
+                        :disabled="processing"
+                        variant="clay"
+                        class="h-10 rounded-xl"
+                    >
+                        <Save class="ms-2 size-4" />
+                        حفظ
+                    </Button>
+                </div>
+            </Form>
+        </section>
 
-        <Card>
-            <CardHeader>
-                <CardTitle class="flex items-center gap-2 text-base">
-                    <CalendarOff class="size-4 text-[var(--accent-teal)]" />
+        <section class="glass-panel-soft overflow-hidden p-5">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+                <h3 class="pattern-typographic-title text-[0.76rem]">
                     الإجازات المسجلة
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div class="ui-table-shell">
-                    <table class="ui-table w-full">
-                        <thead>
-                            <tr>
-                                <th class="px-3 py-2">الطبيب</th>
-                                <th class="px-3 py-2">العيادة</th>
-                                <th class="px-3 py-2">النوع</th>
-                                <th class="px-3 py-2">التاريخ</th>
-                                <th class="px-3 py-2">الفترة</th>
-                                <th class="px-3 py-2">الحالة</th>
-                                <th class="px-3 py-2">تنبيه</th>
-                                <th class="px-3 py-2 text-end">الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="leave in leaves.data"
-                                :key="leave.id"
-                                class="ui-table-row"
-                            >
-                                <td class="px-3 py-2 font-medium" data-label="الطبيب">
-                                    {{ leave.doctor?.name ?? '-' }}
-                                </td>
-                                <td class="px-3 py-2 text-sm" data-label="العيادة">
-                                    {{ leave.clinic?.name ?? '-' }}
-                                </td>
-                                <td class="px-3 py-2 text-sm" data-label="النوع">
-                                    {{ typeLabel(leave.type) }}
-                                </td>
-                                <td class="px-3 py-2 font-mono text-xs" data-label="التاريخ">
-                                    {{ leave.leave_date }}
-                                </td>
-                                <td class="px-3 py-2 tabular-nums text-sm" data-label="الفترة">
-                                    <span v-if="leave.type === 'hourly'">
-                                        {{ formatTime(leave.start_time) }} -
-                                        {{ formatTime(leave.end_time) }}
-                                    </span>
-                                    <span v-else class="text-muted-foreground">طوال اليوم</span>
-                                </td>
-                                <td class="px-3 py-2" data-label="الحالة">
-                                    <span
-                                        class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
-                                        :class="
-                                            leave.status === 'active'
-                                                ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400'
-                                                : 'bg-muted text-muted-foreground'
-                                        "
-                                    >
-                                        {{ statusLabel(leave.status) }}
-                                    </span>
-                                </td>
-                                <td class="px-3 py-2" data-label="تنبيه">
-                                    <span
-                                        v-if="leave.appointments_count > 0"
-                                        class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
-                                    >
-                                        <Clock class="size-3" />
-                                        {{ leave.appointments_count }} موعد
-                                    </span>
-                                    <span
-                                        v-else
-                                        class="text-sm text-muted-foreground"
-                                        >-</span
-                                    >
-                                </td>
-                                <td class="px-3 py-2 text-end" data-label="الإجراءات">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <Button
-                                            variant="neumorphic"
-                                            size="icon"
-                                            class="size-8"
-                                            @click="openEditDialog(leave)"
-                                        >
-                                            <Pencil class="size-4" />
-                                        </Button>
-                                        <Button
-                                            v-if="leave.status === 'active'"
-                                            variant="ghost"
-                                            size="icon"
-                                            class="size-8 text-destructive hover:text-destructive"
-                                            @click="cancelLeave(leave)"
-                                        >
-                                            <Ban class="size-4" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            class="size-8 text-destructive hover:text-destructive"
-                                            @click="deleteLeave(leave)"
-                                        >
-                                            <Trash2 class="size-4" />
-                                        </Button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                </h3>
+                <span class="text-xs text-muted-foreground">
+                    الإجمالي: {{ leaves.data.length }}
+                </span>
+            </div>
 
-                <div
-                    v-if="leaves.data.length === 0"
-                    class="py-10 text-center text-sm text-muted-foreground"
-                >
-                    لا توجد إجازات مسجلة حتى الآن.
-                </div>
-            </CardContent>
-        </Card>
+            <div class="ui-table-shell">
+                <table class="ui-table w-full">
+                    <thead>
+                        <tr>
+                            <th class="px-3 py-2">الطبيب</th>
+                            <th class="px-3 py-2">العيادة</th>
+                            <th class="px-3 py-2">النوع</th>
+                            <th class="px-3 py-2">التاريخ</th>
+                            <th class="px-3 py-2">الفترة</th>
+                            <th class="px-3 py-2">الحالة</th>
+                            <th class="px-3 py-2">تنبيه</th>
+                            <th class="px-3 py-2 text-end">الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr
+                            v-for="leave in leaves.data"
+                            :key="leave.id"
+                            class="ui-table-row"
+                        >
+                            <td class="px-3 py-2 font-medium" data-label="الطبيب">
+                                {{ leave.doctor?.name ?? '-' }}
+                            </td>
+                            <td class="px-3 py-2 text-sm text-muted-foreground" data-label="العيادة">
+                                {{ leave.clinic?.name ?? '-' }}
+                            </td>
+                            <td class="px-3 py-2 text-sm" data-label="النوع">
+                                {{ typeLabel(leave.type) }}
+                            </td>
+                            <td class="px-3 py-2 font-mono text-xs" data-label="التاريخ">
+                                {{ leave.leave_date }}
+                            </td>
+                            <td class="px-3 py-2 tabular-nums text-sm" data-label="الفترة">
+                                <span v-if="leave.type === 'hourly'">
+                                    {{ formatTime(leave.start_time) }} -
+                                    {{ formatTime(leave.end_time) }}
+                                </span>
+                                <span v-else class="text-muted-foreground">طوال اليوم</span>
+                            </td>
+                            <td class="px-3 py-2" data-label="الحالة">
+                                <span
+                                    class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+                                    :class="
+                                        leave.status === 'active'
+                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                            : 'bg-muted text-muted-foreground'
+                                    "
+                                >
+                                    {{ statusLabel(leave.status) }}
+                                </span>
+                            </td>
+                            <td class="px-3 py-2" data-label="تنبيه">
+                                <span
+                                    v-if="leave.appointments_count > 0"
+                                    class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-300"
+                                >
+                                    <Clock class="size-3" />
+                                    {{ leave.appointments_count }} موعد
+                                </span>
+                                <span
+                                    v-else
+                                    class="text-sm text-muted-foreground"
+                                    >-</span
+                                >
+                            </td>
+                            <td class="px-3 py-2 text-end" data-label="الإجراءات">
+                                <div class="flex items-center justify-end gap-2">
+                                    <Button
+                                        variant="neumorphic"
+                                        size="icon"
+                                        class="size-8"
+                                        @click="openEditDialog(leave)"
+                                    >
+                                        <Pencil class="size-4" />
+                                    </Button>
+                                    <Button
+                                        v-if="leave.status === 'active'"
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8 text-destructive hover:text-destructive"
+                                        @click="cancelLeave(leave)"
+                                    >
+                                        <Ban class="size-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        class="size-8 text-destructive hover:text-destructive"
+                                        @click="deleteLeave(leave)"
+                                    >
+                                        <Trash2 class="size-4" />
+                                    </Button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="leaves.data.length === 0" class="table-empty-state">
+                            <td colspan="8" class="px-3 py-10 text-center text-muted-foreground">
+                                لا توجد إجازات مسجلة حتى الآن.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
         <Dialog
             :open="isEditDialogOpen"
@@ -410,7 +408,7 @@ function formatTime(time: string | null): string {
                         <Label>الطبيب</Label>
                         <select
                             name="doctor_id"
-                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
+                            class="pattern-field-clay h-10"
                         >
                             <option
                                 v-for="doctor in doctorOptions"
@@ -428,7 +426,7 @@ function formatTime(time: string | null): string {
                         <Label>العيادة</Label>
                         <select
                             name="clinic_id"
-                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
+                            class="pattern-field-clay h-10"
                         >
                             <option
                                 v-for="clinic in clinics"
@@ -448,7 +446,7 @@ function formatTime(time: string | null): string {
                         <Label>نوع الإجازة</Label>
                         <select
                             name="type"
-                            class="h-10 w-full rounded-lg border border-input bg-muted px-3 text-sm"
+                            class="pattern-field-clay h-10"
                         >
                             <option
                                 value="full_day"
@@ -472,7 +470,7 @@ function formatTime(time: string | null): string {
                             name="leave_date"
                             type="date"
                             :default-value="editingLeave.leave_date"
-                            class="h-10"
+                            class="pattern-field-clay h-10"
                         />
                         <InputError :message="errors.leave_date" />
                     </div>
@@ -485,7 +483,7 @@ function formatTime(time: string | null): string {
                             :default-value="
                                 editingLeave.start_time ?? undefined
                             "
-                            class="h-10"
+                            class="pattern-field-clay h-10"
                         />
                         <InputError :message="errors.start_time" />
                     </div>
@@ -496,7 +494,7 @@ function formatTime(time: string | null): string {
                             name="end_time"
                             type="time"
                             :default-value="editingLeave.end_time ?? undefined"
-                            class="h-10"
+                            class="pattern-field-clay h-10"
                         />
                         <InputError :message="errors.end_time" />
                     </div>
@@ -506,7 +504,7 @@ function formatTime(time: string | null): string {
                         <Input
                             name="reason"
                             :default-value="editingLeave.reason ?? ''"
-                            class="h-10"
+                            class="pattern-field-clay h-10"
                         />
                         <InputError :message="errors.reason" />
                     </div>

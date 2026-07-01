@@ -44,11 +44,11 @@ const allSidebarNavItems: SettingsNavItem[] = [
         href: editProfile(),
         icon: UserRound,
     },
-    {
-        title: 'الأمان',
-        href: editSecurity(),
-        icon: Shield,
-    },
+    // {
+    //     title: 'الأمان',
+    //     href: editSecurity(),
+    //     icon: Shield,
+    // },
     {
         title: 'المظهر',
         href: editAppearance(),
@@ -61,12 +61,12 @@ const allSidebarNavItems: SettingsNavItem[] = [
         adminOnly: true,
     },
     
-    {
-        title: 'الأمان والنسخ',
-        href: adminSecurityUrl(),
-        icon: Activity,
-        adminOnly: true,
-    },
+    // {
+    //     title: 'الأمان والنسخ',
+    //     href: adminSecurityUrl(),
+    //     icon: Activity,
+    //     adminOnly: true,
+    // },
     {
         title: 'تشخيص النظام',
         href: diagnosticsUrl(),

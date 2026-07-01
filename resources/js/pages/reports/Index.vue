@@ -2,9 +2,12 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import {
     Activity,
+    AlertCircle,
     Banknote,
     BarChart3,
     CalendarDays,
+    CheckCircle2,
+    Clock,
     Download,
     FileSpreadsheet,
     FileText,
@@ -13,9 +16,12 @@ import {
     Printer,
     Receipt,
     Stethoscope,
+    TrendingDown,
+    TrendingUp,
     Users,
     Wallet,
     Wifi,
+    XCircle,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import AuditReportController from '@/actions/App/Http/Controllers/Reports/AuditReportController';
@@ -58,11 +64,11 @@ type ReportData = {
     overview?: Record<string, string | number>;
     financial?: Record<string, number>;
     payroll?: Record<string, unknown> & { rows?: TableRow[] };
-    clinics?: { rows?: TableRow[] };
-    doctors?: { rows?: TableRow[] };
+    clinics?: { rows?: TableRow[]; active_count?: number };
+    doctors?: { rows?: TableRow[]; active_count?: number };
     appointments?: { rows?: TableRow[] };
     patients?: { rows?: TableRow[] };
-    expenses?: { rows?: TableRow[] };
+    expenses?: { rows?: TableRow[]; total?: number };
     pharmacy?: Record<string, string | number | boolean>;
 };
 
@@ -165,14 +171,14 @@ const labels: Record<string, string> = {
 };
 
 const tabs = [
-    { key: 'overview', title: 'التقرير الشامل المفصل', subtitle: 'نظرة شاملة على أداء العيادة', icon: Activity },
+    { key: 'overview', title: 'التقرير الشامل', subtitle: 'نظرة شاملة على أداء العيادة', icon: Activity },
     { key: 'financial', title: 'المالية', subtitle: 'الدخل والمصاريف والسيولة', icon: Wallet },
     { key: 'patients', title: 'المرضى', subtitle: 'المرضى الجدد وحركة الزيارات', icon: Users },
     { key: 'appointments', title: 'المواعيد', subtitle: 'الحجوزات وحالاتها', icon: CalendarDays },
     { key: 'doctors', title: 'الأطباء', subtitle: 'تقارير الأطباء والإيرادات', icon: Stethoscope },
     { key: 'payroll', title: 'الرواتب', subtitle: 'مستحقات الأطباء والموظفين', icon: Banknote },
     { key: 'expenses', title: 'المصاريف', subtitle: 'تصنيف المصاريف وسجلها', icon: Receipt },
-    { key: 'clinics', title: 'احتياجات العيادة', subtitle: 'أداء العيادات والمؤشرات العامة', icon: BarChart3 },
+    { key: 'clinics', title: 'العيادات', subtitle: 'أداء العيادات والمؤشرات العامة', icon: BarChart3 },
     { key: 'pharmacy', title: 'المخزون', subtitle: 'الصيدلية وتنبيهات المخزون', icon: Pill },
 ];
 
@@ -262,7 +268,7 @@ const monthlyProfitChart = computed(() => {
                 borderWidth: 1,
             },
             {
-                label: 'الخروج',
+                label: 'المصاريف',
                 data: rows.map((row) => row.outflow ?? Number(row.expenses ?? 0) + Number(row.payroll ?? 0)),
                 backgroundColor: 'rgba(239, 68, 68, 0.52)',
                 borderColor: 'rgba(239, 68, 68, 1)',
@@ -332,9 +338,10 @@ const auditExportUrl = computed(() => AuditReportController.export.url({ query: 
 </script>
 
 <template>
-    <Head title="التقارير" />
+    <Head title="التقارير والتحليلات" />
 
     <div class="mx-auto w-full max-w-[1680px] space-y-6 p-4 md:p-6" dir="rtl">
+        <!-- Header -->
         <section class="space-y-4">
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div class="space-y-2 text-right">
@@ -342,37 +349,38 @@ const auditExportUrl = computed(() => AuditReportController.export.url({ query: 
                         <Wifi class="size-3.5" />
                         متصل
                     </div>
-                    <h1 class="text-4xl font-extrabold tracking-normal text-foreground">
+                    <h1 class="text-3xl font-extrabold tracking-tight text-foreground">
                         التقارير والتحليلات
                     </h1>
-                    <p class="text-base text-muted-foreground">
+                    <p class="text-sm text-muted-foreground">
                         تقارير شاملة ومفصلة لجميع جوانب العيادة - تحديث تلقائي في الوقت الفعلي
                     </p>
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                    <a :href="exportExcelUrl" class="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-bold shadow-sm hover:bg-muted">
+                    <a :href="exportExcelUrl" class="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold shadow-sm hover:bg-muted">
                         <FileSpreadsheet class="size-4" />
                         Excel
                     </a>
-                    <a :href="exportPdfUrl" class="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-bold shadow-sm hover:bg-muted">
+                    <a :href="exportPdfUrl" class="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold shadow-sm hover:bg-muted">
                         <Printer class="size-4" />
                         PDF
                     </a>
-                    <a :href="auditExportUrl" class="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-bold shadow-sm hover:bg-muted">
+                    <a :href="auditExportUrl" class="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold shadow-sm hover:bg-muted">
                         <Download class="size-4" />
-                        تصدير التقرير
+                        تصدير
                     </a>
                 </div>
             </div>
 
-            <div class="overflow-x-auto rounded-full bg-muted/60 p-1 [scrollbar-width:none]">
+            <!-- Tabs -->
+            <div class="overflow-x-auto rounded-2xl bg-muted/60 p-1.5 [scrollbar-width:none]">
                 <div class="flex min-w-max items-center gap-1">
                     <button
                         v-for="tab in tabs"
                         :key="tab.key"
                         type="button"
-                        class="inline-flex h-11 min-w-36 items-center justify-center gap-2 rounded-full px-4 text-sm font-bold transition-all"
+                        class="inline-flex h-10 min-w-32 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-all"
                         :class="activeTab === tab.key
                             ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
                             : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'"
@@ -385,53 +393,55 @@ const auditExportUrl = computed(() => AuditReportController.export.url({ query: 
             </div>
         </section>
 
+        <!-- Page Title -->
         <section class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div class="space-y-1">
-                <h2 class="text-3xl font-extrabold text-foreground">
+                <h2 class="text-2xl font-bold text-foreground">
                     {{ activeTabMeta.title }}
                 </h2>
                 <p class="text-sm text-muted-foreground">
                     {{ activeTabMeta.subtitle }}
                 </p>
             </div>
-            <Link :href="AuditReportController.index()" class="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-bold shadow-sm hover:bg-muted">
+            <Link :href="AuditReportController.index()" class="inline-flex h-10 w-fit items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold shadow-sm hover:bg-muted">
                 <FileText class="size-4" />
                 سجل التدقيق
             </Link>
         </section>
 
-        <section class="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <div class="mb-5 flex items-center gap-2">
+        <!-- Filters -->
+        <section class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
+            <div class="mb-4 flex items-center gap-2">
                 <Filter class="size-5 text-primary" />
                 <div>
-                    <h3 class="text-lg font-extrabold text-foreground">فلترة التقرير</h3>
-                    <p class="text-sm text-muted-foreground">اختر الفترة والعيادة والطبيب لعرض التقرير الحالي</p>
+                    <h3 class="text-base font-bold text-foreground">فلترة التقرير</h3>
+                    <p class="text-xs text-muted-foreground">اختر الفترة والعيادة والطبيب لعرض البيانات</p>
                 </div>
             </div>
 
             <div class="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
                 <div class="grid gap-1.5">
                     <Label>الشهر</Label>
-                    <Input v-model="month" type="month" />
+                    <Input v-model="month" type="month" class="pattern-field-clay" />
                 </div>
                 <div class="grid gap-1.5">
                     <Label>من تاريخ</Label>
-                    <Input v-model="from" type="date" />
+                    <Input v-model="from" type="date" class="pattern-field-clay" />
                 </div>
                 <div class="grid gap-1.5">
                     <Label>إلى تاريخ</Label>
-                    <Input v-model="to" type="date" />
+                    <Input v-model="to" type="date" class="pattern-field-clay" />
                 </div>
                 <div class="grid gap-1.5">
                     <Label>العيادة</Label>
-                    <select v-model="clinicId" class="h-10 rounded-md border border-input bg-background px-3 text-sm">
+                    <select v-model="clinicId" class="pattern-field-clay h-10">
                         <option value="">العيادة الحالية</option>
                         <option v-for="clinic in clinics" :key="clinic.id" :value="clinic.id">{{ clinic.name }}</option>
                     </select>
                 </div>
                 <div class="grid gap-1.5">
                     <Label>الطبيب</Label>
-                    <select v-model="doctorId" class="h-10 rounded-md border border-input bg-background px-3 text-sm">
+                    <select v-model="doctorId" class="pattern-field-clay h-10">
                         <option value="">كل الأطباء</option>
                         <option v-for="doctor in doctors" :key="doctor.id" :value="doctor.id">{{ doctor.name }}</option>
                     </select>
@@ -439,118 +449,233 @@ const auditExportUrl = computed(() => AuditReportController.export.url({ query: 
             </div>
         </section>
 
-        <section v-if="activeTab === 'overview'" class="space-y-4">
-            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <article class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-bold text-muted-foreground">إجمالي الدخل</p>
-                    <p class="mt-2 text-2xl font-extrabold text-emerald-700">{{ moneyValue(overview.total_income) }}</p>
+        <!-- Overview Tab -->
+        <section v-if="activeTab === 'overview'" class="space-y-6">
+            <!-- Stats Cards -->
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <article class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm hover-lift">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-muted-foreground">إجمالي الدخل</p>
+                            <p class="text-2xl font-bold text-emerald-600">{{ moneyValue(overview.total_income) }}</p>
+                        </div>
+                        <div class="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600">
+                            <TrendingUp class="size-5" />
+                        </div>
+                    </div>
                 </article>
-                <article class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-bold text-muted-foreground">المقبوض</p>
-                    <p class="mt-2 text-2xl font-extrabold text-sky-700">{{ moneyValue(overview.total_collected) }}</p>
+
+                <article class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm hover-lift">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-muted-foreground">المقبوض</p>
+                            <p class="text-2xl font-bold text-sky-600">{{ moneyValue(overview.total_collected) }}</p>
+                        </div>
+                        <div class="flex size-12 items-center justify-center rounded-2xl bg-sky-500/15 text-sky-600">
+                            <Wallet class="size-5" />
+                        </div>
+                    </div>
                 </article>
-                <article class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-bold text-muted-foreground">المواعيد</p>
-                    <p class="mt-2 text-2xl font-extrabold text-foreground">{{ overview.appointments_total ?? 0 }}</p>
+
+                <article class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm hover-lift">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-muted-foreground">إجمالي المواعيد</p>
+                            <p class="text-2xl font-bold text-foreground">{{ overview.appointments_total ?? 0 }}</p>
+                        </div>
+                        <div class="flex size-12 items-center justify-center rounded-2xl bg-violet-500/15 text-violet-600">
+                            <CalendarDays class="size-5" />
+                        </div>
+                    </div>
                 </article>
-                <article class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-bold text-muted-foreground">صافي الربح</p>
-                    <p class="mt-2 text-2xl font-extrabold text-foreground">{{ moneyValue(overview.net_profit) }}</p>
+
+                <article class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm hover-lift">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-muted-foreground">صافي الربح</p>
+                            <p class="text-2xl font-bold" :class="Number(overview.net_profit ?? 0) >= 0 ? 'text-emerald-600' : 'text-red-600'">
+                                {{ moneyValue(overview.net_profit) }}
+                            </p>
+                        </div>
+                        <div class="flex size-12 items-center justify-center rounded-2xl" :class="Number(overview.net_profit ?? 0) >= 0 ? 'bg-emerald-500/15 text-emerald-600' : 'bg-red-500/15 text-red-600'">
+                            <component :is="Number(overview.net_profit ?? 0) >= 0 ? TrendingUp : TrendingDown" class="size-5" />
+                        </div>
+                    </div>
                 </article>
             </div>
 
+            <!-- Additional Stats -->
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <article class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-muted-foreground">المرضى الجدد</p>
+                            <p class="text-2xl font-bold text-foreground">{{ overview.new_patients ?? 0 }}</p>
+                        </div>
+                        <div class="flex size-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600">
+                            <Users class="size-5" />
+                        </div>
+                    </div>
+                </article>
+
+                <article class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-muted-foreground">مواعيد اليوم</p>
+                            <p class="text-2xl font-bold text-foreground">{{ overview.today_appointments ?? 0 }}</p>
+                        </div>
+                        <div class="flex size-12 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-600">
+                            <Clock class="size-5" />
+                        </div>
+                    </div>
+                </article>
+
+                <article class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-muted-foreground">إجمالي المصاريف</p>
+                            <p class="text-2xl font-bold text-red-600">{{ moneyValue(overview.total_expenses) }}</p>
+                        </div>
+                        <div class="flex size-12 items-center justify-center rounded-2xl bg-red-500/15 text-red-600">
+                            <Receipt class="size-5" />
+                        </div>
+                    </div>
+                </article>
+
+                <article class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
+                    <div class="flex items-start justify-between">
+                        <div class="space-y-2">
+                            <p class="text-xs font-semibold text-muted-foreground">المتبقي</p>
+                            <p class="text-2xl font-bold text-amber-600">{{ moneyValue(overview.total_remaining) }}</p>
+                        </div>
+                        <div class="flex size-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600">
+                            <AlertCircle class="size-5" />
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Charts -->
             <div class="grid gap-4 xl:grid-cols-2">
-                <div class="rounded-xl border border-border bg-card p-4">
+                <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="line" v-bind="dailyIncomeChart" title="الدخل اليومي" />
                 </div>
-                <div class="rounded-xl border border-border bg-card p-4">
-                    <Chart v-bind="monthlyProfitChart" title="الدخل والخروج وصافي الربح" />
+                <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
+                    <Chart v-bind="monthlyProfitChart" title="الدخل والمصاريف وصافي الربح" />
                 </div>
-                <div class="rounded-xl border border-border bg-card p-4">
+                <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="pie" v-bind="appointmentsStatusChart" title="حالات المواعيد" />
                 </div>
-                <div class="rounded-xl border border-border bg-card p-4">
+                <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="pie" v-bind="paymentStatusChart" title="حالات الدفع" />
                 </div>
             </div>
         </section>
 
-        <section v-else-if="activeTab === 'financial'" class="space-y-4">
-            <div class="grid gap-3 md:grid-cols-3">
-                <div v-for="(value, key) in financial" :key="key" class="rounded-xl border border-border bg-card p-4">
-                    <p class="text-xs font-bold text-muted-foreground">{{ labelFor(key) }}</p>
-                    <p class="mt-2 text-xl font-extrabold">{{ moneyValue(value) }}</p>
+        <!-- Financial Tab -->
+        <section v-else-if="activeTab === 'financial'" class="space-y-6">
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div v-for="(value, key) in financial" :key="key" class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm hover-lift">
+                    <p class="text-xs font-semibold text-muted-foreground">{{ labelFor(key) }}</p>
+                    <p class="mt-2 text-2xl font-bold text-foreground">{{ moneyValue(value) }}</p>
                 </div>
             </div>
             <div class="grid gap-4 xl:grid-cols-2">
-                <div class="rounded-xl border border-border bg-card p-4">
+                <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="bar" v-bind="dailyIncomeChart" title="الدخل اليومي" />
                 </div>
-                <div class="rounded-xl border border-border bg-card p-4">
+                <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="bar" v-bind="clinicIncomeChart" title="الدخل حسب العيادة" />
                 </div>
-                <div class="rounded-xl border border-border bg-card p-4">
+                <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="bar" v-bind="doctorIncomeChart" title="الدخل حسب الطبيب" />
                 </div>
-                <div class="rounded-xl border border-border bg-card p-4">
+                <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="bar" v-bind="expenseCategoryChart" title="المصاريف حسب التصنيف" />
                 </div>
-                <div class="rounded-xl border border-border bg-card p-4 xl:col-span-2">
+                <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm xl:col-span-2">
                     <Chart type="line" v-bind="monthlyProfitChart" title="صافي الربح شهريا (آخر 6 أشهر)" />
                 </div>
             </div>
         </section>
 
-        <section v-else-if="activeTab === 'pharmacy'" class="grid gap-3 md:grid-cols-3">
-            <div class="rounded-xl border border-border bg-card p-4">
-                <p class="text-xs font-bold text-muted-foreground">الأدوية</p>
-                <p class="mt-2 text-2xl font-extrabold">{{ reportData.pharmacy?.drugs_count ?? 0 }}</p>
+        <!-- Pharmacy Tab -->
+        <section v-else-if="activeTab === 'pharmacy'" class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm hover-lift">
+                <div class="flex items-start justify-between">
+                    <div class="space-y-2">
+                        <p class="text-xs font-semibold text-muted-foreground">الأدوية</p>
+                        <p class="text-3xl font-bold text-foreground">{{ reportData.pharmacy?.drugs_count ?? 0 }}</p>
+                    </div>
+                    <div class="flex size-12 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-600">
+                        <Pill class="size-5" />
+                    </div>
+                </div>
             </div>
-            <div class="rounded-xl border border-border bg-card p-4">
-                <p class="text-xs font-bold text-muted-foreground">الصرف</p>
-                <p class="mt-2 text-2xl font-extrabold">{{ reportData.pharmacy?.dispenses_count ?? 0 }}</p>
+            <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm hover-lift">
+                <div class="flex items-start justify-between">
+                    <div class="space-y-2">
+                        <p class="text-xs font-semibold text-muted-foreground">عمليات الصرف</p>
+                        <p class="text-3xl font-bold text-foreground">{{ reportData.pharmacy?.dispenses_count ?? 0 }}</p>
+                    </div>
+                    <div class="flex size-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600">
+                        <Activity class="size-5" />
+                    </div>
+                </div>
             </div>
-            <div class="rounded-xl border border-border bg-card p-4">
-                <p class="text-xs font-bold text-muted-foreground">تنبيهات المخزون</p>
-                <p class="mt-2 text-2xl font-extrabold">{{ reportData.pharmacy?.low_stock_count ?? 0 }}</p>
+            <div class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm hover-lift">
+                <div class="flex items-start justify-between">
+                    <div class="space-y-2">
+                        <p class="text-xs font-semibold text-muted-foreground">تنبيهات المخزون</p>
+                        <p class="text-3xl font-bold text-amber-600">{{ reportData.pharmacy?.low_stock_count ?? 0 }}</p>
+                    </div>
+                    <div class="flex size-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600">
+                        <AlertCircle class="size-5" />
+                    </div>
+                </div>
             </div>
         </section>
 
-        <section v-else class="space-y-4">
+        <!-- Other Tabs -->
+        <section v-else class="space-y-6">
+            <!-- Charts -->
             <div class="grid gap-4 xl:grid-cols-2">
-                <div v-if="activeTab === 'doctors'" class="rounded-xl border border-border bg-card p-4">
+                <div v-if="activeTab === 'doctors'" class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart v-bind="doctorIncomeChart" title="الدخل حسب الطبيب" />
                 </div>
-                <div v-if="activeTab === 'appointments'" class="rounded-xl border border-border bg-card p-4">
+                <div v-if="activeTab === 'appointments'" class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="line" v-bind="appointmentsDayChart" title="المواعيد اليومية" />
                 </div>
-                <div v-if="activeTab === 'appointments'" class="rounded-xl border border-border bg-card p-4">
+                <div v-if="activeTab === 'appointments'" class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="pie" v-bind="appointmentsStatusChart" title="حالات المواعيد" />
                 </div>
-                <div v-if="activeTab === 'expenses'" class="rounded-xl border border-border bg-card p-4">
+                <div v-if="activeTab === 'expenses'" class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart type="pie" v-bind="expenseCategoryChart" title="المصاريف حسب التصنيف" />
                 </div>
-                <div v-if="activeTab === 'clinics'" class="rounded-xl border border-border bg-card p-4">
+                <div v-if="activeTab === 'clinics'" class="rounded-2xl border border-border/70 bg-card p-5 shadow-sm">
                     <Chart v-bind="clinicIncomeChart" title="الدخل حسب العيادة" />
                 </div>
             </div>
 
-            <div class="overflow-x-auto rounded-2xl border border-border bg-card">
-                <table class="w-full min-w-[960px] text-right text-sm">
-                    <thead class="bg-muted/80 text-xs text-muted-foreground">
-                        <tr>
-                            <th v-for="column in tableColumns" :key="column" class="px-3 py-3">{{ labelFor(column) }}</th>
+            <!-- Table -->
+            <div class="overflow-x-auto rounded-2xl border border-border/70 bg-card shadow-sm">
+                <table class="w-full min-w-[1080px] border-separate border-spacing-0 text-sm">
+                    <thead>
+                        <tr class="bg-secondary/50">
+                            <th v-for="column in tableColumns" :key="column" class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">
+                                {{ labelFor(column) }}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(row, index) in currentRows" :key="index" class="border-t border-border">
-                            <td v-for="column in tableColumns" :key="column" class="px-3 py-3">
-                                <span v-if="isMoneyColumn(column)">{{ moneyValue(row[column]) }}</span>
+                        <tr v-for="(row, index) in currentRows" :key="index" class="transition-colors hover:bg-primary/[0.03]">
+                            <td v-for="column in tableColumns" :key="column" class="border-b border-border/60 px-4 py-3">
+                                <span v-if="isMoneyColumn(column)" class="font-semibold tabular-nums">{{ moneyValue(row[column]) }}</span>
                                 <span v-else>{{ labelFor(row[column]) }}</span>
                             </td>
                         </tr>
                         <tr v-if="currentRows.length === 0">
-                            <td :colspan="Math.max(tableColumns.length, 1)" class="px-4 py-10 text-center text-muted-foreground">
+                            <td :colspan="Math.max(tableColumns.length, 1)" class="px-4 py-14 text-center text-muted-foreground">
                                 لا توجد بيانات ضمن الفلاتر الحالية.
                             </td>
                         </tr>

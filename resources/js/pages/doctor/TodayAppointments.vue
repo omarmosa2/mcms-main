@@ -6,8 +6,11 @@ import {
     Clock,
     FileText,
     IdCard,
+    ListChecks,
     Search,
     Stethoscope,
+    UserCheck,
+    XCircle,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
@@ -59,32 +62,7 @@ const statusOptions = [
     { label: 'مكتمل', value: 'completed' },
 ];
 
-const filteredAppointments = computed(() => {
-    let results = props.appointments;
-
-    if (statusFilter.value === 'pending') {
-        results = results.filter((a) => ['scheduled', 'confirmed', 'arrived'].includes(a.status));
-    } else if (statusFilter.value === 'completed') {
-        results = results.filter((a) => a.status === 'completed');
-    }
-
-    if (!search.value) {
-        return results;
-    }
-
-    const term = search.value.toLowerCase();
-
-    return results.filter((apt) => {
-        const fullName = patientName(apt.patient).toLowerCase();
-        const fileNumber = apt.patient?.file_number
-            ? String(apt.patient.file_number)
-            : '';
-
-        return fullName.includes(term) || fileNumber.includes(term);
-    });
-});
-
-const formatTime = (dateTime: string) => {
+const formatTime = (dateTime: string): string => {
     const date = new Date(dateTime);
 
     return date.toLocaleTimeString('ar-SA', {
@@ -93,7 +71,7 @@ const formatTime = (dateTime: string) => {
     });
 };
 
-const getStatusLabel = (status: string) => {
+const getStatusLabel = (status: string): string => {
     const statusMap: Record<string, string> = {
         scheduled: 'مجدول',
         confirmed: 'مؤكد',
@@ -106,20 +84,20 @@ const getStatusLabel = (status: string) => {
     return statusMap[status] ?? status;
 };
 
-const getStatusBadgeClass = (status: string) => {
+const getStatusBadgeClass = (status: string): string => {
     const statusMap: Record<string, string> = {
-        scheduled: 'bg-blue-50 text-blue-700 border-blue-200',
-        confirmed: 'bg-sky-50 text-sky-700 border-sky-200',
-        arrived: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        completed: 'bg-teal-50 text-teal-700 border-teal-200',
-        canceled: 'bg-red-50 text-red-700 border-red-200',
-        no_show: 'bg-amber-50 text-amber-700 border-amber-200',
+        scheduled: 'border-info/25 bg-info/10 text-info',
+        confirmed: 'border-info/25 bg-info/10 text-info',
+        arrived: 'border-primary/25 bg-primary/10 text-primary',
+        completed: 'border-success/25 bg-success/10 text-success',
+        canceled: 'border-destructive/25 bg-destructive/10 text-destructive',
+        no_show: 'border-warning/25 bg-warning/10 text-warning',
     };
 
-    return statusMap[status] ?? 'bg-slate-50 text-slate-700 border-slate-200';
+    return statusMap[status] ?? 'border-border bg-secondary text-muted-foreground';
 };
 
-const getVisitTypeLabel = (type: string | null) => {
+const getVisitTypeLabel = (type: string | null): string => {
     if (type === 'first_visit') {
         return 'زيارة أولى';
     }
@@ -131,7 +109,7 @@ const getVisitTypeLabel = (type: string | null) => {
     return '—';
 };
 
-const getGenderLabel = (gender: string | null) => {
+const getGenderLabel = (gender: string | null): string => {
     if (gender === 'male') {
         return 'ذكر';
     }
@@ -155,31 +133,31 @@ const patientFileNumber = (patient: Patient | null): string => {
     return patient?.file_number ? `ملف #${patient.file_number}` : 'بدون رقم ملف';
 };
 
-const medicalRecordHref = (apt: Appointment): string => {
-    if (apt.medical_record_id) {
-        return `/medical-records/${apt.medical_record_id}`;
+const medicalRecordHref = (appointment: Appointment): string => {
+    if (appointment.medical_record_id) {
+        return `/medical-records/${appointment.medical_record_id}`;
     }
 
-    if (apt.patient?.id) {
-        return `/medical-records/create?patient_id=${apt.patient.id}`;
+    if (appointment.patient?.id) {
+        return `/medical-records/create?patient_id=${appointment.patient.id}`;
     }
 
     return '/medical-records';
 };
 
-const canCompleteAppointment = (apt: Appointment): boolean => {
-    return ['scheduled', 'confirmed', 'arrived'].includes(apt.status);
+const canCompleteAppointment = (appointment: Appointment): boolean => {
+    return ['scheduled', 'confirmed', 'arrived'].includes(appointment.status);
 };
 
-const completeAppointment = (apt: Appointment): void => {
-    if (!canCompleteAppointment(apt) || completingAppointmentId.value !== null) {
+const completeAppointment = (appointment: Appointment): void => {
+    if (!canCompleteAppointment(appointment) || completingAppointmentId.value !== null) {
         return;
     }
 
-    completingAppointmentId.value = apt.id;
+    completingAppointmentId.value = appointment.id;
 
     router.patch(
-        AppointmentController.transitionStatus.url(apt.id),
+        AppointmentController.transitionStatus.url(appointment.id),
         { status: 'completed' },
         {
             preserveScroll: true,
@@ -190,12 +168,12 @@ const completeAppointment = (apt: Appointment): void => {
     );
 };
 
-const calculateAge = (dob: string | null) => {
-    if (!dob) {
+const calculateAge = (dateOfBirth: string | null): number | null => {
+    if (!dateOfBirth) {
         return null;
     }
 
-    const birthDate = new Date(dob);
+    const birthDate = new Date(dateOfBirth);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -206,6 +184,33 @@ const calculateAge = (dob: string | null) => {
 
     return age;
 };
+
+const filteredAppointments = computed<Appointment[]>(() => {
+    let results = props.appointments;
+
+    if (statusFilter.value === 'pending') {
+        results = results.filter((appointment) =>
+            ['scheduled', 'confirmed', 'arrived'].includes(appointment.status),
+        );
+    } else if (statusFilter.value === 'completed') {
+        results = results.filter((appointment) => appointment.status === 'completed');
+    }
+
+    if (!search.value.trim()) {
+        return results;
+    }
+
+    const term = search.value.trim().toLowerCase();
+
+    return results.filter((appointment) => {
+        const fullName = patientName(appointment.patient).toLowerCase();
+        const fileNumber = appointment.patient?.file_number
+            ? String(appointment.patient.file_number)
+            : '';
+
+        return fullName.includes(term) || fileNumber.includes(term);
+    });
+});
 
 const displayDate = computed(() => {
     const date = new Date(props.date);
@@ -220,165 +225,239 @@ const displayDate = computed(() => {
 
 const stats = computed(() => ({
     total: props.appointments.length,
-    completed: props.appointments.filter((a) => a.status === 'completed').length,
-    arrived: props.appointments.filter((a) => a.status === 'arrived').length,
-    pending: props.appointments.filter((a) => ['scheduled', 'confirmed', 'arrived'].includes(a.status)).length,
+    pending: props.appointments.filter((appointment) =>
+        ['scheduled', 'confirmed', 'arrived'].includes(appointment.status),
+    ).length,
+    arrived: props.appointments.filter((appointment) => appointment.status === 'arrived').length,
+    completed: props.appointments.filter((appointment) => appointment.status === 'completed').length,
 }));
+
+const visibleCount = computed(() => filteredAppointments.value.length);
 </script>
 
 <template>
     <Head title="مواعيد اليوم" />
 
-    <div class="container-modern space-y-6 py-6" dir="rtl">
-        <!-- Header -->
-        <section class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-                <div class="flex items-center gap-2 text-sm text-[#0284C7]">
-                    <CalendarClock class="size-4" />
-                    <span class="font-medium">مواعيد اليوم</span>
+    <div class="container-modern space-y-5 py-5" dir="rtl">
+        <section class="glass-panel-soft overflow-hidden">
+            <div class="flex flex-col gap-5 border-b border-border/70 px-5 py-5 xl:flex-row xl:items-center xl:justify-between">
+                <div class="flex min-w-0 items-center gap-4">
+                    <div class="flex size-14 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary shadow-sm">
+                        <CalendarClock class="size-7" />
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <h1 class="page-title leading-tight">مواعيد اليوم</h1>
+                            <span class="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 text-[0.72rem] font-semibold text-primary">
+                                صلاحيات الطبيب
+                            </span>
+                        </div>
+                        <p class="mt-1 text-sm font-medium text-muted-foreground">
+                            {{ displayDate }}
+                        </p>
+                    </div>
                 </div>
-                <h1 class="mt-1 text-2xl font-bold text-[#111827]">
-                    {{ displayDate }}
-                </h1>
-            </div>
 
-        <!-- Filters -->
-        <section class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-center gap-2">
-                <select
-                    v-model="statusFilter"
-                    class="h-9 rounded-lg border border-border bg-background px-3 text-sm"
-                >
-                    <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                        {{ opt.label }}
-                    </option>
-                </select>
-            </div>
-            <div class="relative">
-                <Search class="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-                <Input
-                    v-model="search"
-                    placeholder="بحث بالاسم أو رقم الملف..."
-                    class="h-10 w-64 pr-9"
-                />
-            </div>
-        </section>
-        </section>
-
-        <!-- Stats -->
-        <section class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-xl border border-[#E2ECF6] bg-white p-3">
-                <p class="text-xs text-slate-500">الإجمالي</p>
-                <p class="mt-1 text-xl font-bold text-slate-900">{{ stats.total }}</p>
-            </div>
-            <div class="rounded-xl border border-[#E2ECF6] bg-white p-3">
-                <p class="text-xs text-slate-500">في الانتظار</p>
-                <p class="mt-1 text-xl font-bold text-blue-600">{{ stats.pending }}</p>
-            </div>
-            <div class="rounded-xl border border-[#E2ECF6] bg-white p-3">
-                <p class="text-xs text-slate-500">حضر</p>
-                <p class="mt-1 text-xl font-bold text-emerald-600">{{ stats.arrived }}</p>
-            </div>
-            <div class="rounded-xl border border-[#E2ECF6] bg-white p-3">
-                <p class="text-xs text-slate-500">مكتمل</p>
-                <p class="mt-1 text-xl font-bold text-teal-600">{{ stats.completed }}</p>
+                <div class="grid gap-3 sm:grid-cols-[minmax(11rem,12rem)_minmax(16rem,22rem)] sm:items-center">
+                    <select
+                        v-model="statusFilter"
+                        class="pattern-field-clay h-11 cursor-pointer rounded-xl px-3 py-1.5 text-sm"
+                        aria-label="تصفية حالة الموعد"
+                    >
+                        <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                            {{ option.label }}
+                        </option>
+                    </select>
+                    <div class="relative">
+                        <Search class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            v-model="search"
+                            placeholder="بحث بالاسم أو رقم الملف..."
+                            class="pattern-field-clay h-11 rounded-xl pr-9"
+                        />
+                    </div>
+                </div>
             </div>
         </section>
 
-        <!-- Appointments Table -->
-        <section class="card-float overflow-hidden">
-            <div v-if="filteredAppointments.length > 0" class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-[#E2ECF6] bg-[#F8FAFC]">
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">الوقت</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">المريض</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">نوع الزيارة</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">الحالة</th>
-                            <th class="px-4 py-3 text-right text-xs font-semibold text-slate-500">الإجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="apt in filteredAppointments"
-                            :key="apt.id"
-                            class="border-b border-[#F1F5F9] transition-colors hover:bg-[#F8FAFC]"
-                        >
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <Clock class="size-3.5 text-slate-400" />
-                                    <span class="font-semibold tabular-nums text-slate-900">{{ formatTime(apt.scheduled_for) }}</span>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div>
-                                    <p class="font-medium text-slate-900">
-                                        {{ patientName(apt.patient) }}
-                                    </p>
-                                    <p class="text-xs text-slate-500">
-                                        {{ patientFileNumber(apt.patient) }}
-                                        <span v-if="apt.patient?.gender" class="mx-1">•</span>
-                                        <span v-if="apt.patient?.gender">{{ getGenderLabel(apt.patient.gender) }}</span>
-                                        <template v-if="calculateAge(apt.patient?.date_of_birth ?? null)">
-                                            <span class="mx-1">•</span>
-                                            {{ calculateAge(apt.patient?.date_of_birth ?? null) }} سنة
-                                        </template>
-                                    </p>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3">
-                                <span class="text-slate-600">{{ getVisitTypeLabel(apt.appointment_type) }}</span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <span
-                                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium"
-                                    :class="getStatusBadgeClass(apt.status)"
-                                >
-                                    {{ getStatusLabel(apt.status) }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-1.5">
-                                    <button
-                                        v-if="canCompleteAppointment(apt)"
-                                        type="button"
-                                        class="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                        :disabled="completingAppointmentId !== null"
-                                        aria-label="طھط­ظˆظٹظ„ ط§ظ„ظ…ظˆط¹ط¯ ط¥ظ„ظ‰ ظ…ظƒطھظ…ظ„"
-                                        @click="completeAppointment(apt)"
-                                    >
-                                        <CheckCircle2 class="size-3.5" />
-                                        مكتمل
-                                    </button>
-                                    <Link
-                                        :href="medicalRecordHref(apt)"
-                                        class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition"
-                                        :class="apt.status === 'completed'
-                                            ? 'bg-teal-50 text-teal-700 hover:bg-teal-100'
-                                            : 'bg-[#EAF7FE] text-[#0284C7] hover:bg-[#D7F1FE]'"
-                                    >
-                                        <component :is="apt.status === 'completed' ? FileText : Stethoscope" class="size-3.5" />
-                                        {{ apt.status === 'completed' ? 'عرض السجل' : 'فتح السجل' }}
-                                    </Link>
-                                    <Link
-                                        v-if="apt.patient?.id"
-                                        :href="`/patients/${apt.patient.id}/card`"
-                                        class="inline-flex items-center gap-1 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100"
-                                    >
-                                        <IdCard class="size-3.5" />
-                                        بطاقة المريض
-                                    </Link>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+        <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <article class="rounded-2xl border border-border bg-card/95 p-4 shadow-card">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-bold text-muted-foreground">الإجمالي</p>
+                    <span class="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <CalendarClock class="size-4.5" />
+                    </span>
+                </div>
+                <p class="mt-3 text-2xl font-black text-foreground tabular-nums">{{ stats.total }}</p>
+            </article>
+
+            <article class="rounded-2xl border border-info/20 bg-info/5 p-4 shadow-card">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-bold text-muted-foreground">في الانتظار</p>
+                    <span class="flex size-9 items-center justify-center rounded-xl bg-info/10 text-info">
+                        <Clock class="size-4.5" />
+                    </span>
+                </div>
+                <p class="mt-3 text-2xl font-black text-info tabular-nums">{{ stats.pending }}</p>
+            </article>
+
+            <article class="rounded-2xl border border-primary/20 bg-primary/5 p-4 shadow-card">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-bold text-muted-foreground">حضر</p>
+                    <span class="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <UserCheck class="size-4.5" />
+                    </span>
+                </div>
+                <p class="mt-3 text-2xl font-black text-primary tabular-nums">{{ stats.arrived }}</p>
+            </article>
+
+            <article class="rounded-2xl border border-success/20 bg-success/5 p-4 shadow-card">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-bold text-muted-foreground">مكتمل</p>
+                    <span class="flex size-9 items-center justify-center rounded-xl bg-success/10 text-success">
+                        <CheckCircle2 class="size-4.5" />
+                    </span>
+                </div>
+                <p class="mt-3 text-2xl font-black text-success tabular-nums">{{ stats.completed }}</p>
+            </article>
+        </section>
+
+        <section class="glass-panel-soft overflow-hidden">
+            <div class="flex flex-col gap-3 border-b border-border/70 bg-secondary/20 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
+                        <ListChecks class="size-4.5" />
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-foreground">جدول المواعيد</h2>
+                        <p class="text-xs text-muted-foreground">
+                            {{ visibleCount }} من {{ stats.total }} موعد ظاهر
+                        </p>
+                    </div>
+                </div>
+                <span class="inline-flex w-fit items-center gap-1.5 rounded-full border border-border/80 bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm">
+                    <Stethoscope class="size-3.5 text-primary" />
+                    إجراءات الطبيب فقط
+                </span>
             </div>
-            <div v-else class="py-16 text-center">
-                <CalendarClock class="mx-auto size-12 text-slate-200 mb-4" />
-                <p class="text-sm font-medium text-slate-500">
-                    {{ search ? 'لا توجد نتائج مطابقة' : 'لا توجد مواعيد اليوم' }}
-                </p>
+
+            <div v-if="filteredAppointments.length > 0" class="p-5">
+                <div class="overflow-x-auto rounded-2xl border border-border/70 bg-card shadow-sm">
+                    <table class="w-full min-w-[920px] border-separate border-spacing-0 text-sm">
+                        <thead>
+                            <tr class="bg-secondary/50">
+                                <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">
+                                    الوقت
+                                </th>
+                                <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">
+                                    المريض
+                                </th>
+                                <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">
+                                    نوع الزيارة
+                                </th>
+                                <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">
+                                    الحالة
+                                </th>
+                                <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">
+                                    الإجراءات
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr
+                                v-for="appointment in filteredAppointments"
+                                :key="appointment.id"
+                                class="transition-colors hover:bg-primary/[0.03]"
+                            >
+                                <td class="border-b border-border/60 px-4 py-3">
+                                    <div class="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-secondary/30 px-2.5 py-1.5">
+                                        <Clock class="size-3.5 text-primary" />
+                                        <span class="font-semibold tabular-nums text-foreground">
+                                            {{ formatTime(appointment.scheduled_for) }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="border-b border-border/60 px-4 py-3">
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-foreground">
+                                            {{ patientName(appointment.patient) }}
+                                        </p>
+                                        <p class="mt-0.5 text-xs text-muted-foreground">
+                                            {{ patientFileNumber(appointment.patient) }}
+                                            <span v-if="appointment.patient?.gender" class="mx-1">•</span>
+                                            <span v-if="appointment.patient?.gender">{{ getGenderLabel(appointment.patient.gender) }}</span>
+                                            <template v-if="calculateAge(appointment.patient?.date_of_birth ?? null)">
+                                                <span class="mx-1">•</span>
+                                                {{ calculateAge(appointment.patient?.date_of_birth ?? null) }} سنة
+                                            </template>
+                                        </p>
+                                    </div>
+                                </td>
+                                <td class="border-b border-border/60 px-4 py-3">
+                                    <span class="font-medium text-foreground/85">
+                                        {{ getVisitTypeLabel(appointment.appointment_type) }}
+                                    </span>
+                                </td>
+                                <td class="border-b border-border/60 px-4 py-3">
+                                    <span
+                                        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[0.72rem] font-medium"
+                                        :class="getStatusBadgeClass(appointment.status)"
+                                    >
+                                        <span class="size-1.5 rounded-full bg-current" />
+                                        {{ getStatusLabel(appointment.status) }}
+                                    </span>
+                                </td>
+                                <td class="border-b border-border/60 px-4 py-3">
+                                    <div class="flex flex-wrap items-center gap-1 rounded-xl border border-border/60 bg-secondary/20 p-1">
+                                        <button
+                                            v-if="canCompleteAppointment(appointment)"
+                                            type="button"
+                                            class="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-success transition hover:bg-success/10 disabled:cursor-not-allowed disabled:opacity-60"
+                                            :disabled="completingAppointmentId !== null"
+                                            aria-label="تحويل الموعد إلى مكتمل"
+                                            @click="completeAppointment(appointment)"
+                                        >
+                                            <CheckCircle2 class="size-3.5" />
+                                            مكتمل
+                                        </button>
+                                        <Link
+                                            :href="medicalRecordHref(appointment)"
+                                            class="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold transition"
+                                            :class="appointment.status === 'completed'
+                                                ? 'text-success hover:bg-success/10'
+                                                : 'text-primary hover:bg-primary/10'"
+                                        >
+                                            <component :is="appointment.status === 'completed' ? FileText : Stethoscope" class="size-3.5" />
+                                            {{ appointment.status === 'completed' ? 'عرض السجل' : 'فتح السجل' }}
+                                        </Link>
+                                        <Link
+                                            v-if="appointment.patient?.id"
+                                            :href="`/patients/${appointment.patient.id}/card`"
+                                            class="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-semibold text-muted-foreground transition hover:bg-background hover:text-foreground"
+                                        >
+                                            <IdCard class="size-3.5" />
+                                            بطاقة المريض
+                                        </Link>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div v-else class="px-5 py-16 text-center">
+                <div class="mx-auto flex max-w-md flex-col items-center gap-2 text-muted-foreground">
+                    <div class="flex size-14 items-center justify-center rounded-2xl bg-background shadow-sm">
+                        <XCircle class="size-7" />
+                    </div>
+                    <p class="text-sm font-bold text-foreground">
+                        {{ search ? 'لا توجد نتائج مطابقة' : 'لا توجد مواعيد اليوم' }}
+                    </p>
+                    <p class="text-xs">
+                        غيّر التصفية أو البحث لعرض مواعيد أخرى ضمن جدول اليوم.
+                    </p>
+                </div>
             </div>
         </section>
     </div>

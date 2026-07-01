@@ -59,6 +59,9 @@ type DoctorDueRow = {
     clinic_id: number | null;
     clinic: string | null;
     payment_type: string;
+    payment_period_type: string;
+    period_start: string;
+    period_end: string;
     percentage: number | null;
     fixed_weekly_amount: number | null;
     fixed_monthly_amount: number | null;
@@ -109,6 +112,16 @@ const { formatMoney } = useMoneyFormatter();
 const activeTab = ref<'employees' | 'doctors'>(
     props.filters.person_type === 'doctor' ? 'doctors' : 'employees',
 );
+const activeDoctorTab = ref<'percentage' | 'fixed_weekly' | 'fixed_monthly'>(
+    ['percentage', 'fixed_weekly', 'fixed_monthly'].includes(
+        String(props.filters.doctor_payment_type ?? ''),
+    )
+        ? (String(props.filters.doctor_payment_type) as
+              | 'percentage'
+              | 'fixed_weekly'
+              | 'fixed_monthly')
+        : 'percentage',
+);
 const paymentDialogOpen = ref(false);
 const paymentTarget = ref<EmployeeSalaryRow | DoctorDueRow | null>(null);
 const paymentKind = ref<'employee' | 'doctor'>('employee');
@@ -119,7 +132,9 @@ const personType = ref(String(props.filters.person_type ?? ''));
 const status = ref(String(props.filters.status ?? ''));
 const clinicId = ref(String(props.filters.clinic_id ?? ''));
 const employeeType = ref(String(props.filters.employee_type ?? ''));
-const doctorPaymentType = ref('');
+const doctorPaymentType = ref(
+    String(props.filters.doctor_payment_type ?? activeDoctorTab.value),
+);
 const dateFrom = ref(String(props.filters.date_from ?? ''));
 const dateTo = ref(String(props.filters.date_to ?? ''));
 const expandedDoctorDueId = ref<number | null>(null);
@@ -149,6 +164,8 @@ const paymentForm = useForm({
     employee_monthly_salary_id: 0,
     doctor_monthly_due_id: 0,
     amount: '',
+    period_start: '',
+    period_end: '',
     payment_method: 'cash',
     payment_date: new Date().toISOString().slice(0, 10),
     notes: '',
@@ -219,22 +236,39 @@ const reload = (): void => {
             status: status.value || undefined,
             clinic_id: clinicId.value || undefined,
             employee_type: employeeType.value || undefined,
+            doctor_payment_type: doctorPaymentType.value || undefined,
         },
         { preserveScroll: true, preserveState: true, replace: true },
     );
 };
 
-watch([month, personType, status, clinicId, employeeType, dateFrom, dateTo], () => {
-    if (personType.value === 'employee') {
-        activeTab.value = 'employees';
-    }
-
-    if (personType.value === 'doctor') {
-        activeTab.value = 'doctors';
-    }
-
-    reload();
+watch(activeDoctorTab, (value) => {
+    doctorPaymentType.value = value;
 });
+
+watch(
+    [
+        month,
+        personType,
+        status,
+        clinicId,
+        employeeType,
+        dateFrom,
+        dateTo,
+        doctorPaymentType,
+    ],
+    () => {
+        if (personType.value === 'employee') {
+            activeTab.value = 'employees';
+        }
+
+        if (personType.value === 'doctor') {
+            activeTab.value = 'doctors';
+        }
+
+        reload();
+    },
+);
 
 const openEmployeePayment = (row: EmployeeSalaryRow): void => {
     paymentKind.value = 'employee';
@@ -244,6 +278,8 @@ const openEmployeePayment = (row: EmployeeSalaryRow): void => {
     paymentForm.employee_monthly_salary_id = row.employee_monthly_salary_id;
     paymentForm.doctor_monthly_due_id = 0;
     paymentForm.amount = String(row.remaining_amount);
+    paymentForm.period_start = '';
+    paymentForm.period_end = '';
     paymentDialogOpen.value = true;
 };
 
@@ -255,6 +291,8 @@ const openDoctorPayment = (row: DoctorDueRow): void => {
     paymentForm.employee_monthly_salary_id = 0;
     paymentForm.doctor_monthly_due_id = row.doctor_monthly_due_id;
     paymentForm.amount = String(row.remaining_amount);
+    paymentForm.period_start = row.period_start;
+    paymentForm.period_end = row.period_end;
     paymentDialogOpen.value = true;
 };
 
@@ -316,6 +354,11 @@ const doctorPaymentActionLabel = (row: DoctorDueRow): string => {
 
     return 'تسديد مستحقات الطبيب';
 };
+
+const doctorPeriodLabel = (row: DoctorDueRow): string =>
+    row.period_start === row.period_end
+        ? row.period_start
+        : `${row.period_start} - ${row.period_end}`;
 
 const toggleDoctorDetails = (row: DoctorDueRow): void => {
     expandedDoctorDueId.value =
@@ -527,7 +570,7 @@ const paymentHelpText = computed(() =>
                             <tr>
                                 <th class="px-3 py-3">الموظف</th>
                                 <th class="px-3 py-3">الوظيفة</th>
-                                <th class="px-3 py-3">القسم</th>
+                                <th class="px-3 py-3">العيادة</th>
                                 <th class="px-3 py-3">الراتب الأساسي</th>
                                 <th class="px-3 py-3">المستحق</th>
                                 <th class="px-3 py-3">المدفوع</th>
@@ -702,8 +745,55 @@ const paymentHelpText = computed(() =>
                     </div>
 
                     <div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <div class="grid gap-1.5 md:col-span-2 xl:col-span-4">
+                            <Label>تبويب مستحقات الأطباء</Label>
+                            <div
+                                class="inline-flex w-fit rounded-xl border border-border bg-muted/70 p-1"
+                            >
+                                <button
+                                    type="button"
+                                    class="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold transition-colors"
+                                    :class="
+                                        activeDoctorTab === 'percentage'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    "
+                                    @click="activeDoctorTab = 'percentage'"
+                                >
+                                    نسبة
+                                </button>
+                                <button
+                                    type="button"
+                                    class="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold transition-colors"
+                                    :class="
+                                        activeDoctorTab === 'fixed_weekly'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    "
+                                    @click="activeDoctorTab = 'fixed_weekly'"
+                                >
+                                    أسبوعي
+                                </button>
+                                <button
+                                    type="button"
+                                    class="inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-bold transition-colors"
+                                    :class="
+                                        activeDoctorTab === 'fixed_monthly'
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    "
+                                    @click="activeDoctorTab = 'fixed_monthly'"
+                                >
+                                    شهري
+                                </button>
+                            </div>
+                        </div>
                         <div class="grid gap-1.5">
-                            <Label>من تاريخ</Label>
+                            <Label>{{
+                                activeDoctorTab === 'fixed_weekly'
+                                    ? 'بداية الأسبوع'
+                                    : 'من تاريخ'
+                            }}</Label>
                             <Input
                                 v-model="dateFrom"
                                 type="date"
@@ -711,7 +801,11 @@ const paymentHelpText = computed(() =>
                             />
                         </div>
                         <div class="grid gap-1.5">
-                            <Label>إلى تاريخ</Label>
+                            <Label>{{
+                                activeDoctorTab === 'fixed_weekly'
+                                    ? 'نهاية الأسبوع'
+                                    : 'إلى تاريخ'
+                            }}</Label>
                             <Input
                                 v-model="dateTo"
                                 type="date"
@@ -734,7 +828,7 @@ const paymentHelpText = computed(() =>
                                 </option>
                             </select>
                         </div>
-                        <div class="grid gap-1.5">
+                        <div class="hidden gap-1.5">
                             <Label>نوع الأجر</Label>
                             <select
                                 v-model="doctorPaymentType"
@@ -769,11 +863,12 @@ const paymentHelpText = computed(() =>
                             <col class="w-[15%]" />
                             <col class="w-[11%]" />
                             <col class="w-[10%]" />
+                            <col class="w-[12%]" />
                             <col class="w-[8%]" />
                             <col class="w-[8%]" />
-                            <col class="w-[10%]" />
-                            <col class="w-[10%]" />
-                            <col class="w-[10%]" />
+                            <col class="w-[9%]" />
+                            <col class="w-[9%]" />
+                            <col class="w-[9%]" />
                             <col class="w-[9%]" />
                             <col class="w-[9%]" />
                         </colgroup>
@@ -784,6 +879,7 @@ const paymentHelpText = computed(() =>
                                 <th class="px-4 py-3">الطبيب</th>
                                 <th class="px-4 py-3">العيادة</th>
                                 <th class="px-4 py-3">نوع الأجر</th>
+                                <th class="px-4 py-3">الفترة</th>
                                 <th class="px-4 py-3">عدد الزيارات</th>
                                 <th class="px-4 py-3">الخصومات</th>
                                 <th class="px-4 py-3">المستحق</th>
@@ -818,6 +914,9 @@ const paymentHelpText = computed(() =>
                                     class="px-4 py-3 font-semibold text-foreground"
                                 >
                                     {{ doctorCompensationDisplay(row) }}
+                                </td>
+                                <td class="px-4 py-3 text-muted-foreground">
+                                    {{ doctorPeriodLabel(row) }}
                                 </td>
                                 <td class="px-4 py-3 font-mono tabular-nums">
                                     {{ row.visits_count }}
@@ -925,6 +1024,16 @@ const paymentHelpText = computed(() =>
                                 class="flex items-center justify-between gap-3"
                             >
                                 <span class="font-bold text-muted-foreground">
+                                    الفترة
+                                </span>
+                                <span class="font-bold text-foreground">
+                                    {{ doctorPeriodLabel(row) }}
+                                </span>
+                            </div>
+                            <div
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <span class="font-bold text-muted-foreground">
                                     عدد الزيارات
                                 </span>
                                 <span
@@ -1005,6 +1114,16 @@ const paymentHelpText = computed(() =>
                                 class="flex items-center justify-between gap-3"
                             >
                                 <span class="font-bold text-muted-foreground">
+                                    الفترة
+                                </span>
+                                <span class="font-bold text-foreground">
+                                    {{ doctorPeriodLabel(row) }}
+                                </span>
+                            </div>
+                            <div
+                                class="flex items-center justify-between gap-3"
+                            >
+                                <span class="font-bold text-muted-foreground">
                                     طريقة الحساب
                                 </span>
                                 <span class="font-bold text-foreground">
@@ -1066,7 +1185,15 @@ const paymentHelpText = computed(() =>
                             {{ paymentTarget.name }}
                         </p>
                         <p class="mt-1 text-muted-foreground">
-                            الشهر: {{ paymentTarget.salary_month }}، المستحق:
+                            الفترة:
+                            {{
+                                paymentKind === 'doctor'
+                                    ? doctorPeriodLabel(
+                                          paymentTarget as DoctorDueRow,
+                                      )
+                                    : (paymentTarget as EmployeeSalaryRow)
+                                          .salary_month
+                            }}، المستحق:
                             {{
                                 formatMoney(
                                     paymentKind === 'employee'

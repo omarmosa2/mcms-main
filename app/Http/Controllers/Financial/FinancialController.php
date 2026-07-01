@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\DoctorMonthlyDue;
+use App\Models\DoctorPayment;
 use App\Models\DoctorProfile;
 use App\Models\EmployeeMonthlySalary;
 use App\Models\Expense;
@@ -439,7 +440,7 @@ class FinancialController extends Controller
         $totalRemaining = (float) $incomeRows->sum('remaining_amount');
 
         $doctorDue = (float) $doctorEntitlements->sum('due_amount');
-        $doctorPaid = (float) $doctorEntitlements->sum('paid_amount');
+        $doctorPaid = $this->doctorSalaryPaidAmount($clinicId, $periodStart, $periodEnd, $includeAllClinics);
 
         $employeeDue = (float) $employeeSalaries->sum('due_amount');
         $employeePaid = (float) $employeeSalaries->sum('paid_amount');
@@ -467,6 +468,19 @@ class FinancialController extends Controller
             'unpaid_count' => $incomeRows->where('payment_status', 'unpaid')->count(),
             'partially_paid_count' => $incomeRows->where('payment_status', 'partially_paid')->count(),
         ];
+    }
+
+    private function doctorSalaryPaidAmount(int $clinicId, CarbonImmutable $periodStart, CarbonImmutable $periodEnd, bool $includeAllClinics): float
+    {
+        $query = DoctorPayment::query()
+            ->withoutGlobalScope('clinic')
+            ->whereBetween('paid_at', [$periodStart, $periodEnd]);
+
+        if (! $includeAllClinics) {
+            $query->where('clinic_id', $clinicId);
+        }
+
+        return (float) $query->sum('amount');
     }
 
     /**

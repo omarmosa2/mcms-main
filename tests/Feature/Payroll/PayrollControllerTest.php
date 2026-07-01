@@ -575,6 +575,76 @@ class PayrollControllerTest extends TestCase
             ->assertJsonValidationErrors('doctor_monthly_due_id');
     }
 
+    public function test_weekly_doctor_payment_status_is_scoped_to_the_selected_week(): void
+    {
+        Carbon::setTestNow('2026-06-29 09:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $doctorUser = User::factory()->create(['clinic_id' => $clinic->id]);
+        $doctor = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'compensation_type' => DoctorProfile::COMPENSATION_WEEKLY_FIXED,
+            'compensation_value' => 300,
+            'is_active' => true,
+        ]);
+
+        $this->get(route('salaries.index', [
+            'date_from' => '2026-07-01',
+            'date_to' => '2026-07-07',
+            'person_type' => 'doctor',
+            'doctor_payment_type' => DoctorProfile::COMPENSATION_WEEKLY_FIXED,
+        ]));
+
+        $monthlyDue = DoctorMonthlyDue::query()
+            ->withoutGlobalScope('clinic')
+            ->where('doctor_id', $doctor->id)
+            ->where('salary_month', '2026-07')
+            ->first();
+
+        $this->postJson(route('salaries.doctor-payments.store'), [
+            'doctor_monthly_due_id' => $monthlyDue->id,
+            'period_start' => '2026-07-01',
+            'period_end' => '2026-07-07',
+            'payment_method' => 'cash',
+            'payment_date' => '2026-07-01',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('doctor_payments', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'payment_type' => DoctorPayment::TYPE_WEEKLY,
+            'period_start' => '2026-07-01 00:00:00',
+            'period_end' => '2026-07-07 00:00:00',
+            'amount' => 300,
+        ]);
+
+        $paidWeek = $this->getJson(route('salaries.index', [
+            'date_from' => '2026-07-01',
+            'date_to' => '2026-07-07',
+            'person_type' => 'doctor',
+            'doctor_payment_type' => DoctorProfile::COMPENSATION_WEEKLY_FIXED,
+        ]));
+
+        $paidWeek->assertOk();
+        $paidWeek->assertJsonPath('doctor_dues.0.status', DoctorMonthlyDue::STATUS_PAID);
+        $paidWeek->assertJsonPath('doctor_dues.0.paid_amount', 300);
+        $paidWeek->assertJsonPath('doctor_dues.0.remaining_amount', 0);
+
+        $nextWeek = $this->getJson(route('salaries.index', [
+            'date_from' => '2026-07-08',
+            'date_to' => '2026-07-14',
+            'person_type' => 'doctor',
+            'doctor_payment_type' => DoctorProfile::COMPENSATION_WEEKLY_FIXED,
+        ]));
+
+        $nextWeek->assertOk();
+        $nextWeek->assertJsonPath('doctor_dues.0.status', DoctorMonthlyDue::STATUS_UNPAID);
+        $nextWeek->assertJsonPath('doctor_dues.0.paid_amount', 0);
+        $nextWeek->assertJsonPath('doctor_dues.0.remaining_amount', 300);
+    }
+
     public function test_monthly_doctor_payment_can_only_be_recorded_once_for_current_month(): void
     {
         Carbon::setTestNow('2026-06-29 09:00:00');
@@ -618,6 +688,69 @@ class PayrollControllerTest extends TestCase
         $this->postJson(route('salaries.doctor-payments.store'), $payload)
             ->assertUnprocessable()
             ->assertJsonValidationErrors('doctor_monthly_due_id');
+    }
+
+    public function test_monthly_doctor_payment_uses_the_selected_month_not_the_current_month(): void
+    {
+        Carbon::setTestNow('2026-06-29 09:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $doctorUser = User::factory()->create(['clinic_id' => $clinic->id]);
+        $doctor = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'user_id' => $doctorUser->id,
+            'compensation_type' => DoctorProfile::COMPENSATION_MONTHLY_FIXED,
+            'compensation_value' => 1500,
+            'is_active' => true,
+        ]);
+
+        $this->get(route('salaries.index', [
+            'month' => '2026-07',
+            'person_type' => 'doctor',
+            'doctor_payment_type' => DoctorProfile::COMPENSATION_MONTHLY_FIXED,
+        ]));
+
+        $monthlyDue = DoctorMonthlyDue::query()
+            ->where('doctor_id', $doctor->id)
+            ->where('salary_month', '2026-07')
+            ->first();
+
+        $this->postJson(route('salaries.doctor-payments.store'), [
+            'doctor_monthly_due_id' => $monthlyDue->id,
+            'period_start' => '2026-07-01',
+            'period_end' => '2026-07-31',
+            'payment_method' => 'cash',
+            'payment_date' => '2026-07-01',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('doctor_payments', [
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'payment_type' => DoctorPayment::TYPE_MONTHLY,
+            'period_start' => '2026-07-01 00:00:00',
+            'period_end' => '2026-07-31 00:00:00',
+            'amount' => 1500,
+        ]);
+
+        $july = $this->getJson(route('salaries.index', [
+            'month' => '2026-07',
+            'person_type' => 'doctor',
+            'doctor_payment_type' => DoctorProfile::COMPENSATION_MONTHLY_FIXED,
+        ]));
+
+        $july->assertOk();
+        $july->assertJsonPath('doctor_dues.0.status', DoctorMonthlyDue::STATUS_PAID);
+
+        $august = $this->getJson(route('salaries.index', [
+            'month' => '2026-08',
+            'person_type' => 'doctor',
+            'doctor_payment_type' => DoctorProfile::COMPENSATION_MONTHLY_FIXED,
+        ]));
+
+        $august->assertOk();
+        $august->assertJsonPath('doctor_dues.0.status', DoctorMonthlyDue::STATUS_UNPAID);
+        $august->assertJsonPath('doctor_dues.0.remaining_amount', 1500);
     }
 
     public function test_doctor_dues_with_date_range_filter(): void

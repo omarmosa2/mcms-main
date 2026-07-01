@@ -6,6 +6,7 @@ use App\Actions\Rbac\AssignUserRoleAction;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\ClinicWorkingHour;
+use App\Models\DoctorPayment;
 use App\Models\DoctorProfile;
 use App\Models\DoctorSchedule;
 use App\Models\Invoice;
@@ -246,6 +247,39 @@ class FinancialControllerTest extends TestCase
             'doctors' => [['id', 'name']],
             'patients' => [['id', 'full_name']],
         ]);
+    }
+
+    public function test_financial_summary_reads_actual_doctor_salary_payments(): void
+    {
+        Carbon::setTestNow('2026-07-10 08:00:00');
+
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic);
+        $doctor = DoctorProfile::factory()->create([
+            'clinic_id' => $clinic->id,
+            'compensation_type' => DoctorProfile::COMPENSATION_WEEKLY_FIXED,
+            'compensation_value' => 300,
+            'is_active' => true,
+        ]);
+
+        DoctorPayment::factory()->create([
+            'clinic_id' => $clinic->id,
+            'doctor_id' => $doctor->id,
+            'payment_type' => DoctorPayment::TYPE_WEEKLY,
+            'period_start' => '2026-07-01',
+            'period_end' => '2026-07-07',
+            'amount' => 300,
+            'paid_at' => '2026-07-01 10:00:00',
+        ]);
+
+        $response = $this->getJson(route('financial.index', [
+            'date_from' => '2026-07-01',
+            'date_to' => '2026-07-31',
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('summaries.doctor_paid', 300);
+        $response->assertJsonPath('summaries.net_liquidity', -300);
     }
 
     public function test_appointment_with_cost_creates_invoice_automatically(): void

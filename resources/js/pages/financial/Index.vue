@@ -650,29 +650,29 @@ const exportPdf = (): void => {
                 <div class="space-y-4">
                     <div class="grid gap-2">
                         <Label>عنوان المصروف</Label>
-                        <Input v-model="expenseForm.title" placeholder="عنوان المصروف" />
+                        <Input v-model="expenseForm.title" placeholder="عنوان المصروف" class="pattern-field-clay" />
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="grid gap-2">
                             <Label>المبلغ</Label>
-                            <Input v-model="expenseForm.amount" type="number" min="0.01" step="0.01" />
+                            <Input v-model="expenseForm.amount" type="number" min="0.01" step="0.01" class="pattern-field-clay" />
                         </div>
                         <div class="grid gap-2">
                             <Label>التاريخ</Label>
-                            <Input v-model="expenseForm.expense_date" type="date" />
+                            <Input v-model="expenseForm.expense_date" type="date" class="pattern-field-clay" />
                         </div>
                     </div>
                     <div class="grid grid-cols-3 gap-4">
                         <div class="grid gap-2">
                             <Label>التصنيف</Label>
-                            <select v-model="expenseForm.category_id" class="h-10 rounded-md border border-input bg-muted px-3 text-sm">
+                            <select v-model="expenseForm.category_id" class="pattern-field-clay h-10">
                                 <option :value="null">بدون تصنيف</option>
                                 <option v-for="cat in expense_categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                             </select>
                         </div>
                         <div class="grid gap-2">
                             <Label>طريقة الدفع</Label>
-                            <select v-model="expenseForm.payment_method" class="h-10 rounded-md border border-input bg-muted px-3 text-sm">
+                            <select v-model="expenseForm.payment_method" class="pattern-field-clay h-10">
                                 <option value="cash">نقداً</option>
                                 <option value="transfer">تحويل</option>
                                 <option value="card">بطاقة</option>
@@ -681,7 +681,7 @@ const exportPdf = (): void => {
                         </div>
                         <div class="grid gap-2">
                             <Label>الحالة</Label>
-                            <select v-model="expenseForm.status" class="h-10 rounded-md border border-input bg-muted px-3 text-sm">
+                            <select v-model="expenseForm.status" class="pattern-field-clay h-10">
                                 <option value="pending">معلق</option>
                                 <option value="paid">مدفوع</option>
                                 <option value="cancelled">ملغي</option>
@@ -691,16 +691,16 @@ const exportPdf = (): void => {
                     <div class="grid grid-cols-2 gap-4">
                         <div class="grid gap-2">
                             <Label>الجهة المستلمة</Label>
-                            <Input v-model="expenseForm.paid_to" placeholder="اسم الشخص أو الجهة" />
+                            <Input v-model="expenseForm.paid_to" placeholder="اسم الشخص أو الجهة" class="pattern-field-clay" />
                         </div>
                         <div class="grid gap-2">
                             <Label>الرقم المرجعي</Label>
-                            <Input v-model="expenseForm.reference_number" placeholder="رقم الفاتورة أو المرجع" />
+                            <Input v-model="expenseForm.reference_number" placeholder="رقم الفاتورة أو المرجع" class="pattern-field-clay" />
                         </div>
                     </div>
                     <div class="grid gap-2">
                         <Label>ملاحظات</Label>
-                        <Input v-model="expenseForm.notes" placeholder="ملاحظات اختيارية" />
+                        <Input v-model="expenseForm.notes" placeholder="ملاحظات اختيارية" class="pattern-field-clay" />
                     </div>
                 </div>
                 <DialogFooter>

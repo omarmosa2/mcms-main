@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowUp, ArrowUpDown, Eye, Pencil, Trash2 } from 'lucide-vue-next';
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, Pencil, Trash2, Wallet, Search, Filter } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import {
     FilterBar,
@@ -139,12 +139,17 @@ return '-';
 
 <template>
     <section class="glass-panel-soft overflow-hidden">
-        <div class="flex flex-col gap-3 border-b border-border/70 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-                <h2 class="text-base font-bold text-foreground">قائمة المصاريف</h2>
-                <p class="text-xs text-muted-foreground">
-                    عرض {{ visibleFrom }}-{{ visibleTo }} من {{ total }} مصروف
-                </p>
+        <div class="flex flex-col gap-3 border-b border-border/70 bg-secondary/20 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-3">
+                <div class="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-primary/10 text-primary">
+                    <Wallet class="size-4.5" />
+                </div>
+                <div>
+                    <h2 class="text-base font-bold text-foreground">قائمة المصاريف</h2>
+                    <p class="text-xs text-muted-foreground">
+                        عرض {{ visibleFrom }}-{{ visibleTo }} من {{ total }} مصروف
+                    </p>
+                </div>
             </div>
             <div class="flex items-center gap-2 rounded-xl border border-border/70 bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
                 <span>الصفحة</span>
@@ -155,182 +160,204 @@ return '-';
         </div>
 
         <div class="border-b border-border/70 bg-secondary/20 p-5">
-            <div class="grid gap-3 lg:grid-cols-12 lg:items-end">
-                <div class="grid gap-2 lg:col-span-4">
-                    <Label for="expenses_search">بحث</Label>
-                    <FilterSearch
-                        id="expenses_search"
-                        :model-value="localSearch"
-                        placeholder="العنوان، الجهة، الرقم المرجعي..."
-                        @update:model-value="(value) => emit('update-search', value)"
-                    />
+            <div class="rounded-2xl border border-border/70 bg-secondary/20 p-4 shadow-sm">
+                <div class="grid gap-3 lg:grid-cols-12 lg:items-end">
+                    <div class="grid gap-1.5 lg:col-span-4">
+                        <Label for="expenses_search" class="flex items-center gap-1 text-xs font-semibold text-foreground">
+                            <Search class="size-3.5 text-primary" />
+                            بحث
+                        </Label>
+                        <FilterSearch
+                            id="expenses_search"
+                            :model-value="localSearch"
+                            placeholder="العنوان، الجهة، الرقم المرجعي..."
+                            class="h-11 rounded-xl"
+                            @update:model-value="(value) => emit('update-search', value)"
+                        />
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-3">
+                        <div class="grid gap-1.5">
+                            <Label for="expenses_status" class="flex items-center gap-1 text-xs font-semibold text-foreground">
+                                <Filter class="size-3.5 text-primary" />
+                                الحالة
+                            </Label>
+                            <FilterSelect
+                                id="expenses_status"
+                                :model-value="localStatus"
+                                :options="statusOptions"
+                                placeholder="الكل"
+                                class="h-11 rounded-xl"
+                                @update:model-value="(value) => emit('update-status', String(value ?? 'all'))"
+                            />
+                        </div>
+                        <div class="grid gap-1.5">
+                            <Label for="expenses_category" class="flex items-center gap-1 text-xs font-semibold text-foreground">
+                                <Filter class="size-3.5 text-primary" />
+                                التصنيف
+                            </Label>
+                            <FilterSelect
+                                id="expenses_category"
+                                :model-value="localCategoryId"
+                                :options="categoryOptions"
+                                placeholder="الكل"
+                                class="h-11 rounded-xl"
+                                @update:model-value="(value) => emit('update-category-id', value === null ? null : Number(value))"
+                            />
+                        </div>
+                        <div class="grid gap-1.5">
+                            <Label for="expenses_clinic" class="flex items-center gap-1 text-xs font-semibold text-foreground">
+                                <Filter class="size-3.5 text-primary" />
+                                العيادة
+                            </Label>
+                            <FilterSelect
+                                id="expenses_clinic"
+                                :model-value="localClinicId"
+                                :options="clinicOptions"
+                                placeholder="الكل"
+                                class="h-11 rounded-xl"
+                                @update:model-value="(value) => emit('update-clinic-id', value === null ? null : Number(value))"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2 lg:col-span-3">
+                        <div class="grid gap-1.5">
+                            <Label for="expenses_payment_method" class="flex items-center gap-1 text-xs font-semibold text-foreground">
+                                <Filter class="size-3.5 text-primary" />
+                                طريقة الدفع
+                            </Label>
+                            <FilterSelect
+                                id="expenses_payment_method"
+                                :model-value="localPaymentMethod"
+                                :options="paymentMethodOptions"
+                                placeholder="الكل"
+                                class="h-11 rounded-xl"
+                                @update:model-value="(value) => emit('update-payment-method', String(value ?? ''))"
+                            />
+                        </div>
+                        <div class="grid gap-1.5">
+                            <Label for="expenses_per_page" class="text-xs font-semibold text-foreground">الصفوف</Label>
+                            <select
+                                id="expenses_per_page"
+                                :value="localRowsPerPage"
+                                class="pattern-field-clay h-11 cursor-pointer rounded-xl px-3 py-1.5"
+                                @change="emit('change-rows-per-page', Number(($event.target as HTMLSelectElement).value))"
+                            >
+                                <option :value="10">10</option>
+                                <option :value="15">15</option>
+                                <option :value="25">25</option>
+                                <option :value="50">50</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="grid gap-2 sm:grid-cols-2 lg:col-span-5 lg:grid-cols-3">
-                    <div class="grid gap-2">
-                        <Label for="expenses_status">الحالة</Label>
-                        <FilterSelect
-                            id="expenses_status"
-                            :model-value="localStatus"
-                            :options="statusOptions"
-                            placeholder="الكل"
-                            @update:model-value="(value) => emit('update-status', String(value ?? 'all'))"
+                <div class="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                    <div class="grid gap-1.5">
+                        <Label class="text-xs font-semibold text-foreground">نطاق التاريخ</Label>
+                        <FilterDateRange
+                            :from="localDateFrom"
+                            :to="localDateTo"
+                            @update:from="(value) => emit('update-date-from', value)"
+                            @update:to="(value) => emit('update-date-to', value)"
                         />
                     </div>
-                    <div class="grid gap-2">
-                        <Label for="expenses_category">التصنيف</Label>
-                        <FilterSelect
-                            id="expenses_category"
-                            :model-value="localCategoryId"
-                            :options="categoryOptions"
-                            placeholder="الكل"
-                            @update:model-value="(value) => emit('update-category-id', value === null ? null : Number(value))"
-                        />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="expenses_clinic">العيادة</Label>
-                        <FilterSelect
-                            id="expenses_clinic"
-                            :model-value="localClinicId"
-                            :options="clinicOptions"
-                            placeholder="الكل"
-                            @update:model-value="(value) => emit('update-clinic-id', value === null ? null : Number(value))"
-                        />
-                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        class="h-11 rounded-xl px-4 text-xs"
+                        @click="emit('clear-filters')"
+                    >
+                        تصفية جديدة
+                    </Button>
                 </div>
 
-                <div class="grid gap-2 sm:grid-cols-2 lg:col-span-3">
-                    <div class="grid gap-2">
-                        <Label for="expenses_payment_method">طريقة الدفع</Label>
-                        <FilterSelect
-                            id="expenses_payment_method"
-                            :model-value="localPaymentMethod"
-                            :options="paymentMethodOptions"
-                            placeholder="الكل"
-                            @update:model-value="(value) => emit('update-payment-method', String(value ?? ''))"
-                        />
-                    </div>
-                    <div class="grid gap-2">
-                        <Label for="expenses_per_page">الصفوف</Label>
-                        <select
-                            id="expenses_per_page"
-                            :value="localRowsPerPage"
-                            class="pattern-field-clay h-9 px-3 py-1.5"
-                            @change="emit('change-rows-per-page', Number(($event.target as HTMLSelectElement).value))"
-                        >
-                            <option :value="10">10</option>
-                            <option :value="15">15</option>
-                            <option :value="25">25</option>
-                            <option :value="50">50</option>
-                        </select>
-                    </div>
-                </div>
+                <FilterBar
+                    v-if="activeFilters.length > 0"
+                    class="mt-3"
+                    :active-filters="activeFilters"
+                    @remove="(key) => emit('remove-filter', key)"
+                    @clear-all="emit('clear-filters')"
+                />
             </div>
-
-            <div class="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-                <div class="grid gap-2">
-                    <Label>نطاق التاريخ</Label>
-                    <FilterDateRange
-                        :from="localDateFrom"
-                        :to="localDateTo"
-                        @update:from="(value) => emit('update-date-from', value)"
-                        @update:to="(value) => emit('update-date-to', value)"
-                    />
-                </div>
-                <Button
-                    type="button"
-                    variant="outline"
-                    class="h-9 rounded-xl px-4 text-xs"
-                    @click="emit('clear-filters')"
-                >
-                    تصفية جديدة
-                </Button>
-            </div>
-
-            <FilterBar
-                v-if="activeFilters.length > 0"
-                class="mt-3"
-                :active-filters="activeFilters"
-                @remove="(key) => emit('remove-filter', key)"
-                @clear-all="emit('clear-filters')"
-            />
         </div>
 
-        <div class="overflow-x-auto px-5 py-4">
-            <table class="w-full min-w-[960px] border-separate border-spacing-0 text-sm">
+        <div class="overflow-x-auto rounded-2xl border border-border/70 bg-card shadow-sm mx-5 mb-5">
+            <table class="w-full min-w-[1080px] border-separate border-spacing-0">
                 <thead>
-                    <tr class="text-xs font-bold text-muted-foreground">
-                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start first:rounded-s-xl">#</th>
-                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">
+                    <tr class="bg-secondary/50">
+                        <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">#</th>
+                        <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
+                                class="inline-flex items-center gap-1.5 transition hover:text-foreground"
                                 @click="emit('toggle-sort', 'expense_date')"
                             >
                                 التاريخ
                                 <component :is="sortIconFor('expense_date')" class="size-3.5" />
                             </button>
                         </th>
-                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">العنوان</th>
-                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">العيادة</th>
-                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">
+                        <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">العنوان</th>
+                        <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">العيادة</th>
+                        <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
+                                class="inline-flex items-center gap-1.5 transition hover:text-foreground"
                                 @click="emit('toggle-sort', 'amount')"
                             >
                                 المبلغ
                                 <component :is="sortIconFor('amount')" class="size-3.5" />
                             </button>
                         </th>
-                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">طريقة الدفع</th>
-                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">
+                        <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">طريقة الدفع</th>
+                        <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">
                             <button
                                 type="button"
-                                class="inline-flex items-center gap-1.5 font-semibold transition hover:text-foreground"
+                                class="inline-flex items-center gap-1.5 transition hover:text-foreground"
                                 @click="emit('toggle-sort', 'status')"
                             >
                                 الحالة
                                 <component :is="sortIconFor('status')" class="size-3.5" />
                             </button>
                         </th>
-                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-start">أضيف بواسطة</th>
-                        <th class="border-b border-border bg-secondary/50 px-3 py-3 text-end last:rounded-e-xl">الإجراءات</th>
+                        <th class="border-b border-border px-4 py-3 text-right text-[0.72rem] font-bold text-muted-foreground">أضيف بواسطة</th>
+                        <th class="border-b border-border px-4 py-3 text-left text-[0.72rem] font-bold text-muted-foreground">الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr
                         v-for="(expense, index) in expenses"
                         :key="expense.id"
-                        class="group border-b border-border/60 transition-colors hover:bg-primary/5"
+                        class="transition-colors hover:bg-primary/[0.03]"
                     >
-                        <td class="border-b border-border/60 px-3 py-3 align-middle font-mono text-xs tabular-nums" data-label="الرقم">
+                        <td class="border-b border-border/60 px-4 py-3 text-sm font-mono tabular-nums" data-label="الرقم">
                             {{ visibleFrom + index }}
                         </td>
-                        <td class="border-b border-border/60 px-3 py-3 align-middle tabular-nums" data-label="التاريخ">
+                        <td class="border-b border-border/60 px-4 py-3 text-sm tabular-nums" data-label="التاريخ">
                             {{ expense.expense_date ?? '-' }}
                         </td>
-                        <td class="border-b border-border/60 px-3 py-3 align-middle" data-label="العنوان">
-                            <div class="max-w-[190px]">
-                                <p class="font-semibold text-foreground">{{ expense.title }}</p>
+                        <td class="border-b border-border/60 px-4 py-3" data-label="العنوان">
+                            <div class="max-w-[200px]">
+                                <p class="text-sm font-semibold text-foreground">{{ expense.title }}</p>
                                 <p v-if="expense.reference_number" class="text-xs text-muted-foreground">
                                     {{ expense.reference_number }}
                                 </p>
                             </div>
                         </td>
-                        <td class="border-b border-border/60 px-3 py-3 align-middle" data-label="العيادة">
+                        <td class="border-b border-border/60 px-4 py-3 text-sm" data-label="العيادة">
                             <span v-if="expense.clinic" class="text-sm">
                                 {{ expense.clinic.name }}
                             </span>
                             <span v-else class="text-xs text-muted-foreground">عام</span>
                         </td>
-                        <td class="border-b border-border/60 px-3 py-3 align-middle font-mono font-semibold tabular-nums" data-label="المبلغ">
+                        <td class="border-b border-border/60 px-4 py-3 text-sm font-mono font-semibold tabular-nums" data-label="المبلغ">
                             {{ formatAmount(expense.amount) }}
                         </td>
-                        <td class="border-b border-border/60 px-3 py-3 align-middle text-sm" data-label="طريقة الدفع">
+                        <td class="border-b border-border/60 px-4 py-3 text-sm" data-label="طريقة الدفع">
                             {{ paymentMethodLabel(expense.payment_method) }}
                         </td>
-                        <td class="border-b border-border/60 px-3 py-3 align-middle" data-label="الحالة">
+                        <td class="border-b border-border/60 px-4 py-3" data-label="الحالة">
                             <span
                                 class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold capitalize"
                                 :class="statusClass(expense.status)"
@@ -339,10 +366,10 @@ return '-';
                                 {{ statusLabel(expense.status) }}
                             </span>
                         </td>
-                        <td class="border-b border-border/60 px-3 py-3 align-middle text-sm" data-label="أضيف بواسطة">
+                        <td class="border-b border-border/60 px-4 py-3 text-sm" data-label="أضيف بواسطة">
                             {{ expense.creator?.name ?? expense.user?.name ?? '-' }}
                         </td>
-                        <td class="border-b border-border/60 px-3 py-3 align-middle text-end" data-label="الإجراءات">
+                        <td class="border-b border-border/60 px-4 py-3 text-left" data-label="الإجراءات">
                             <div class="flex flex-wrap justify-end gap-1.5">
                                 <Button
                                     v-if="canView"
@@ -383,7 +410,7 @@ return '-';
                     <tr v-if="expenses.length === 0" class="table-empty-state">
                         <td
                             colspan="9"
-                            class="px-3 py-14 text-center text-muted-foreground"
+                            class="px-4 py-14 text-center text-muted-foreground"
                         >
                             لا توجد مصاريف مطابقة للفلاتر الحالية.
                         </td>
@@ -392,29 +419,29 @@ return '-';
             </table>
         </div>
 
-        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 bg-secondary/20 px-5 py-4">
-            <p class="text-xs text-muted-foreground">
+        <div class="flex flex-col gap-3 rounded-2xl border border-border/70 bg-secondary/20 px-4 py-3 mx-5 mb-5 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-[0.72rem] text-muted-foreground">
                 عرض {{ visibleFrom }}-{{ visibleTo }} من {{ total }}
             </p>
             <div class="flex items-center gap-2">
                 <Button
                     type="button"
-                    variant="neumorphic"
+                    variant="outline"
                     size="sm"
-                    class="h-8 px-3 text-xs"
+                    class="h-8 rounded-lg px-3 text-[0.72rem]"
                     :disabled="localPage === 1"
                     @click="emit('change-page', localPage - 1)"
                 >
                     السابق
                 </Button>
-                <span class="text-xs font-semibold text-foreground/85">
+                <span class="text-[0.72rem] font-semibold text-foreground/85">
                     صفحة {{ localPage }} / {{ totalPages }}
                 </span>
                 <Button
                     type="button"
-                    variant="neumorphic"
+                    variant="outline"
                     size="sm"
-                    class="h-8 px-3 text-xs"
+                    class="h-8 rounded-lg px-3 text-[0.72rem]"
                     :disabled="localPage >= totalPages"
                     @click="emit('change-page', localPage + 1)"
                 >

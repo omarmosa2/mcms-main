@@ -90,6 +90,8 @@ class SyncClinicRbacAction extends BaseAction
         'doctor' => [
             'patient.view',
             'appointment.view',
+            'appointment.update',
+            'appointment.arrival',
             'medical.notes.create',
             'patient_card.view',
             'patient_card.update',

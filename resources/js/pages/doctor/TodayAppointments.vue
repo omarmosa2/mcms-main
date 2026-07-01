@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import {
     CalendarClock,
+    CheckCircle2,
     Clock,
     FileText,
     IdCard,
@@ -9,6 +10,7 @@ import {
     Stethoscope,
 } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import AppointmentController from '@/actions/App/Http/Controllers/Appointments/AppointmentController';
 import { Input } from '@/components/ui/input';
 
 type Patient = {
@@ -49,6 +51,7 @@ defineOptions({
 
 const search = ref('');
 const statusFilter = ref('');
+const completingAppointmentId = ref<number | null>(null);
 
 const statusOptions = [
     { label: 'الكل', value: '' },
@@ -162,6 +165,29 @@ const medicalRecordHref = (apt: Appointment): string => {
     }
 
     return '/medical-records';
+};
+
+const canCompleteAppointment = (apt: Appointment): boolean => {
+    return ['scheduled', 'confirmed', 'arrived'].includes(apt.status);
+};
+
+const completeAppointment = (apt: Appointment): void => {
+    if (!canCompleteAppointment(apt) || completingAppointmentId.value !== null) {
+        return;
+    }
+
+    completingAppointmentId.value = apt.id;
+
+    router.patch(
+        AppointmentController.transitionStatus.url(apt.id),
+        { status: 'completed' },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                completingAppointmentId.value = null;
+            },
+        },
+    );
 };
 
 const calculateAge = (dob: string | null) => {
@@ -313,6 +339,17 @@ const stats = computed(() => ({
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-1.5">
+                                    <button
+                                        v-if="canCompleteAppointment(apt)"
+                                        type="button"
+                                        class="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                        :disabled="completingAppointmentId !== null"
+                                        aria-label="طھط­ظˆظٹظ„ ط§ظ„ظ…ظˆط¹ط¯ ط¥ظ„ظ‰ ظ…ظƒطھظ…ظ„"
+                                        @click="completeAppointment(apt)"
+                                    >
+                                        <CheckCircle2 class="size-3.5" />
+                                        مكتمل
+                                    </button>
                                     <Link
                                         :href="medicalRecordHref(apt)"
                                         class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition"

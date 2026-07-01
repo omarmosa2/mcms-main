@@ -48,6 +48,10 @@ class TransitionAppointmentStatusAction extends BaseAction
         }
 
         if ($nextStatus === Appointment::STATUS_COMPLETED) {
+            if ($appointment->arrived_at === null) {
+                $appointment->arrived_at = now();
+            }
+
             $appointment->completed_at = now();
         }
 
@@ -93,11 +97,13 @@ class TransitionAppointmentStatusAction extends BaseAction
             Appointment::STATUS_SCHEDULED => [
                 Appointment::STATUS_CONFIRMED,
                 Appointment::STATUS_ARRIVED,
+                Appointment::STATUS_COMPLETED,
                 Appointment::STATUS_CANCELED,
                 Appointment::STATUS_NO_SHOW,
             ],
             Appointment::STATUS_CONFIRMED => [
                 Appointment::STATUS_ARRIVED,
+                Appointment::STATUS_COMPLETED,
                 Appointment::STATUS_CANCELED,
                 Appointment::STATUS_NO_SHOW,
             ],

@@ -102,4 +102,44 @@ class DoctorWorkspaceControllerTest extends TestCase
             Carbon::setTestNow();
         }
     }
+
+    public function test_doctor_can_complete_today_appointment_from_today_appointments_page(): void
+    {
+        Carbon::setTestNow('2026-06-28 08:00:00');
+
+        try {
+            $clinic = Clinic::factory()->create();
+            $doctor = User::factory()->create(['clinic_id' => $clinic->id]);
+            app(AssignUserRoleAction::class)->handle($doctor, 'doctor');
+
+            $patient = Patient::factory()->create(['clinic_id' => $clinic->id]);
+
+            $appointment = Appointment::factory()->create([
+                'clinic_id' => $clinic->id,
+                'patient_id' => $patient->id,
+                'doctor_id' => $doctor->id,
+                'scheduled_for' => '2026-06-28 12:00:00',
+                'status' => Appointment::STATUS_SCHEDULED,
+                'arrived_at' => null,
+                'completed_at' => null,
+            ]);
+
+            $response = $this
+                ->actingAs($doctor)
+                ->from(route('doctor.today-appointments'))
+                ->patch(route('appointments.transition-status', ['appointmentId' => $appointment->id]), [
+                    'status' => Appointment::STATUS_COMPLETED,
+                ]);
+
+            $response->assertRedirect(route('doctor.today-appointments'));
+
+            $appointment->refresh();
+
+            $this->assertSame(Appointment::STATUS_COMPLETED, $appointment->status);
+            $this->assertNotNull($appointment->arrived_at);
+            $this->assertNotNull($appointment->completed_at);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
 }

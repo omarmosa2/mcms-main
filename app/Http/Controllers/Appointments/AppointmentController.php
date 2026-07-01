@@ -227,7 +227,7 @@ class AppointmentController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Appointment status updated successfully.']);
 
-        return to_route('appointments.index');
+        return back();
     }
 
     public function destroy(Request $request, int $appointmentId): Response|RedirectResponse

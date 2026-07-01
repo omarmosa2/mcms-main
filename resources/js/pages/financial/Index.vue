@@ -13,8 +13,7 @@ import {
     ArrowUpRight,
     UsersRound,
 } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
-import Chart from '@/components/Chart.vue';
+import { ref, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -105,13 +104,6 @@ const props = defineProps<{
         unpaid_count: number;
         partially_paid_count: number;
     };
-    chart_data: {
-        daily_income: { date: string; amount: number }[];
-        income_by_clinic: { clinic_name: string; amount: number }[];
-        income_by_doctor: { doctor_name: string; amount: number }[];
-        expenses_by_category: { category_name: string; amount: number }[];
-        monthly_profit: { month: string; income: number; outflow: number; profit: number }[];
-    };
     filters: Record<string, string | number | null>;
     clinics: ClinicOption[];
     doctors: DoctorOption[];
@@ -180,8 +172,14 @@ const labelFor = (value: string | null): string =>
     value !== null ? (labels[value] ?? value) : '-';
 
 const statusClass = (value: string): string => {
-    if (value === 'paid') return 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/25';
-    if (value === 'partially_paid') return 'bg-amber-500/10 text-amber-700 ring-amber-500/20';
+    if (value === 'paid') {
+        return 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/25';
+    }
+
+    if (value === 'partially_paid') {
+        return 'bg-amber-500/10 text-amber-700 ring-amber-500/20';
+    }
+
     return 'bg-rose-500/10 text-rose-700 ring-rose-500/20';
 };
 
@@ -207,7 +205,9 @@ const reload = (): void => {
 
 watch(
     [month, dateFrom, dateTo, status, clinicId, appointmentType, doctorId, patientId, paymentMethod, transactionType, expenseCategoryId],
-    () => { reload(); },
+    () => {
+        reload();
+    },
 );
 
 const openAddExpense = (): void => {
@@ -287,7 +287,10 @@ const confirmDeleteExpense = (id: number): void => {
 };
 
 const doDeleteExpense = (): void => {
-    if (!deletingExpenseId.value) return;
+    if (!deletingExpenseId.value) {
+        return;
+    }
+
     router.delete(`/financial/expenses/${deletingExpenseId.value}`, {
         preserveScroll: true,
         preserveState: false,
@@ -299,100 +302,6 @@ const doDeleteExpense = (): void => {
         onError: () => toast.error('تعذر حذف المصروف'),
     });
 };
-
-const dailyIncomeChartData = computed(() => {
-    const data = props.chart_data.daily_income;
-    return {
-        labels: data.map((d) => d.date),
-        datasets: [
-            {
-                label: 'الدخل اليومي',
-                data: data.map((d) => d.amount),
-                backgroundColor: 'rgba(16, 185, 129, 0.5)',
-                borderColor: 'rgba(16, 185, 129, 1)',
-                borderWidth: 2,
-            },
-        ],
-    };
-});
-
-const clinicIncomeChartData = computed(() => {
-    const data = props.chart_data.income_by_clinic;
-    return {
-        labels: data.map((d) => d.clinic_name),
-        datasets: [
-            {
-                label: 'الدخل حسب العيادة',
-                data: data.map((d) => d.amount),
-                backgroundColor: ['rgba(59, 130, 246, 0.5)', 'rgba(168, 85, 247, 0.5)', 'rgba(245, 158, 11, 0.5)', 'rgba(239, 68, 68, 0.5)', 'rgba(20, 184, 166, 0.5)'],
-                borderColor: ['rgba(59, 130, 246, 1)', 'rgba(168, 85, 247, 1)', 'rgba(245, 158, 11, 1)', 'rgba(239, 68, 68, 1)', 'rgba(20, 184, 166, 1)'],
-                borderWidth: 1,
-            },
-        ],
-    };
-});
-
-const doctorIncomeChartData = computed(() => {
-    const data = props.chart_data.income_by_doctor;
-    return {
-        labels: data.map((d) => d.doctor_name),
-        datasets: [
-            {
-                label: 'الدخل حسب الطبيب',
-                data: data.map((d) => d.amount),
-                backgroundColor: 'rgba(139, 92, 246, 0.5)',
-                borderColor: 'rgba(139, 92, 246, 1)',
-                borderWidth: 2,
-            },
-        ],
-    };
-});
-
-const expenseCategoryChartData = computed(() => {
-    const data = props.chart_data.expenses_by_category;
-    return {
-        labels: data.map((d) => d.category_name),
-        datasets: [
-            {
-                label: 'المصروفات حسب النوع',
-                data: data.map((d) => d.amount),
-                backgroundColor: ['rgba(239, 68, 68, 0.5)', 'rgba(245, 158, 11, 0.5)', 'rgba(59, 130, 246, 0.5)', 'rgba(168, 85, 247, 0.5)', 'rgba(20, 184, 166, 0.5)'],
-                borderColor: ['rgba(239, 68, 68, 1)', 'rgba(245, 158, 11, 1)', 'rgba(59, 130, 246, 1)', 'rgba(168, 85, 247, 1)', 'rgba(20, 184, 166, 1)'],
-                borderWidth: 1,
-            },
-        ],
-    };
-});
-
-const monthlyProfitChartData = computed(() => {
-    const data = props.chart_data.monthly_profit;
-    return {
-        labels: data.map((d) => d.month),
-        datasets: [
-            {
-                label: 'الدخل',
-                data: data.map((d) => d.income),
-                backgroundColor: 'rgba(16, 185, 129, 0.5)',
-                borderColor: 'rgba(16, 185, 129, 1)',
-                borderWidth: 2,
-            },
-            {
-                label: 'الخرج',
-                data: data.map((d) => d.outflow),
-                backgroundColor: 'rgba(239, 68, 68, 0.5)',
-                borderColor: 'rgba(239, 68, 68, 1)',
-                borderWidth: 2,
-            },
-            {
-                label: 'صافي الربح',
-                data: data.map((d) => d.profit),
-                backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                borderColor: 'rgba(59, 130, 246, 1)',
-                borderWidth: 2,
-            },
-        ],
-    };
-});
 
 const exportExcel = (): void => {
     window.open(financialIndex({ query: { export: 'excel' } }).url, '_blank');
@@ -516,29 +425,6 @@ const exportPdf = (): void => {
                         <option v-for="cat in expense_categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                     </select>
                 </div>
-            </div>
-        </section>
-
-        <section class="grid gap-4 lg:grid-cols-2">
-            <div class="rounded-[1.2rem] border border-border bg-card/95 p-4 shadow-card">
-                <h3 class="mb-3 text-sm font-bold text-foreground">الدخل اليومي</h3>
-                <Chart type="bar" :labels="dailyIncomeChartData.labels" :datasets="dailyIncomeChartData.datasets" />
-            </div>
-            <div class="rounded-[1.2rem] border border-border bg-card/95 p-4 shadow-card">
-                <h3 class="mb-3 text-sm font-bold text-foreground">الدخل حسب العيادة</h3>
-                <Chart type="bar" :labels="clinicIncomeChartData.labels" :datasets="clinicIncomeChartData.datasets" />
-            </div>
-            <div class="rounded-[1.2rem] border border-border bg-card/95 p-4 shadow-card">
-                <h3 class="mb-3 text-sm font-bold text-foreground">الدخل حسب الطبيب</h3>
-                <Chart type="bar" :labels="doctorIncomeChartData.labels" :datasets="doctorIncomeChartData.datasets" />
-            </div>
-            <div class="rounded-[1.2rem] border border-border bg-card/95 p-4 shadow-card">
-                <h3 class="mb-3 text-sm font-bold text-foreground">المصروفات حسب النوع</h3>
-                <Chart type="bar" :labels="expenseCategoryChartData.labels" :datasets="expenseCategoryChartData.datasets" />
-            </div>
-            <div class="rounded-[1.2rem] border border-border bg-card/95 p-4 shadow-card lg:col-span-2">
-                <h3 class="mb-3 text-sm font-bold text-foreground">صافي الربح شهرياً (آخر 6 أشهر)</h3>
-                <Chart type="line" :labels="monthlyProfitChartData.labels" :datasets="monthlyProfitChartData.datasets" />
             </div>
         </section>
 

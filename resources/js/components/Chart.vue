@@ -4,6 +4,7 @@ import {
     CategoryScale,
     Chart as ChartJS,
     Filler,
+    ArcElement,
     Legend,
     LinearScale,
     LineElement,
@@ -12,11 +13,11 @@ import {
     Tooltip,
 } from 'chart.js';
 import { computed, ref, watch } from 'vue';
-import { Bar, Line } from 'vue-chartjs';
+import { Bar, Line, Pie } from 'vue-chartjs';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, ArcElement, Title, Tooltip, Legend, Filler);
 
-type ChartType = 'bar' | 'line';
+type ChartType = 'bar' | 'line' | 'pie';
 
 type ChartDataset = {
     label: string;
@@ -101,7 +102,17 @@ const chartOptions = computed(() => ({
     },
 }));
 
-const chartComponent = computed(() => (props.type === 'line' ? Line : Bar));
+const chartComponent = computed(() => {
+    if (props.type === 'line') {
+        return Line;
+    }
+
+    if (props.type === 'pie') {
+        return Pie;
+    }
+
+    return Bar;
+});
 </script>
 
 <template>

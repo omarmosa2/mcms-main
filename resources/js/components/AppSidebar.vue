@@ -2,6 +2,7 @@
 import { Link, router, usePage } from '@inertiajs/vue3';
 import {
     BadgeDollarSign,
+    BarChart3,
     Building2,
     CalendarClock,
     CalendarDays,
@@ -29,10 +30,12 @@ import AppointmentController from '@/actions/App/Http/Controllers/Appointments/A
 import ClinicController from '@/actions/App/Http/Controllers/Clinics/ClinicController';
 import DoctorController from '@/actions/App/Http/Controllers/DoctorController';
 import EmployeeController from '@/actions/App/Http/Controllers/Employees/EmployeeController';
+import ExpenseController from '@/actions/App/Http/Controllers/Expenses/ExpenseController';
 import MedicalRecordController from '@/actions/App/Http/Controllers/MedicalRecords/MedicalRecordController';
 import PatientController from '@/actions/App/Http/Controllers/Patients/PatientController';
 import PayrollController from '@/actions/App/Http/Controllers/Payroll/PayrollController';
 import RoleController from '@/actions/App/Http/Controllers/Rbac/RoleController';
+import ReportController from '@/actions/App/Http/Controllers/Reports/ReportController';
 import UserController from '@/actions/App/Http/Controllers/Security/UserController';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -54,7 +57,6 @@ import {
 } from '@/routes/admin-settings';
 import { index as doctorLeavesIndex } from '@/routes/doctor-leaves';
 import { index as financialIndex } from '@/routes/financial';
-import ExpenseController from '@/actions/App/Http/Controllers/Expenses/ExpenseController';
 import type { NavItem, NavSection, User } from '@/types';
 
 type MainNavItem = NavItem & {
@@ -62,6 +64,7 @@ type MainNavItem = NavItem & {
     permission?: string;
     anyPermissions?: string[];
     doctorOnly?: boolean;
+    adminOnly?: boolean;
 };
 
 const { can } = usePermissions();
@@ -109,6 +112,9 @@ const primaryRole = computed<string>(() => {
 
 const isDoctor = computed(() => primaryRole.value === 'doctor');
 const isPharmacist = computed(() => primaryRole.value === 'pharmacy');
+const isAdminRole = computed(() =>
+    ['super_admin', 'admin', 'clinic_admin'].includes(primaryRole.value),
+);
 
 const roleLabels: Record<string, string> = {
     super_admin: 'مدير عام',
@@ -320,6 +326,14 @@ const mainNavItems = computed<MainNavItem[]>(() => {
                 permission: 'expenses.view',
             },
             {
+                title: 'التقارير',
+                href: ReportController.index(),
+                icon: BarChart3,
+                group: 'management',
+                adminOnly: true,
+                anyPermissions: ['reports.view', 'reports.financial'],
+            },
+            {
                 title: 'الإعدادات',
                 href: adminSettingsUrl(),
                 icon: Settings,
@@ -351,6 +365,10 @@ const mainNavItems = computed<MainNavItem[]>(() => {
     ).filter((item) => {
         if (item.doctorOnly) {
             return isDoctor.value;
+        }
+
+        if (item.adminOnly && !isAdminRole.value) {
+            return false;
         }
 
         if (isPharmacist.value) {

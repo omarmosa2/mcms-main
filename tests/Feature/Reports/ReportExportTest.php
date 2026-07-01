@@ -15,10 +15,10 @@ class ReportExportTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_accountant_can_export_reports_as_excel_and_pdf(): void
+    public function test_admin_can_export_reports_as_excel_and_pdf(): void
     {
         $clinic = Clinic::factory()->create();
-        $user = $this->authenticateForClinic($clinic, 'accountant');
+        $user = $this->authenticateForClinic($clinic, 'admin');
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
         ]);

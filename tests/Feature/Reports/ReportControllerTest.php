@@ -29,20 +29,23 @@ class ReportControllerTest extends TestCase
         $response->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('reports/Index')
             ->where('can_view_operational', true)
-            ->where('can_view_financial', false)
+            ->where('can_view_financial', true)
             ->missing('operational_summary')
-            ->where('financial_summary', null)
+            ->missing('financial_summary')
             ->loadDeferredProps('reports', fn (Assert $page) => $page
                 ->has('operational_summary')
+                ->has('financial_summary')
                 ->has('doctor_performance')
-                ->has('diagnostics_summary')));
+                ->has('diagnostics_summary')
+                ->has('report_data')
+                ->has('chart_data')));
     }
 
-    public function test_accountant_can_view_financial_report_page(): void
+    public function test_admin_can_view_financial_report_page(): void
     {
         $clinic = Clinic::factory()->create();
         $otherClinic = Clinic::factory()->create();
-        $user = $this->authenticateForClinic($clinic, 'accountant');
+        $user = $this->authenticateForClinic($clinic, 'admin');
 
         $patient = Patient::factory()->create([
             'clinic_id' => $clinic->id,
@@ -59,7 +62,7 @@ class ReportControllerTest extends TestCase
             'total_amount' => 300,
             'paid_amount' => 250,
             'balance_amount' => 50,
-            'created_at' => now()->subDay(),
+            'created_at' => now(),
         ]);
 
         Invoice::factory()->create([
@@ -69,7 +72,7 @@ class ReportControllerTest extends TestCase
             'total_amount' => 1000,
             'paid_amount' => 1000,
             'balance_amount' => 0,
-            'created_at' => now()->subDay(),
+            'created_at' => now(),
         ]);
 
         Payment::factory()->create([
@@ -79,8 +82,8 @@ class ReportControllerTest extends TestCase
             'status' => Payment::STATUS_REFUNDED,
             'amount' => 250,
             'refund_amount' => 50,
-            'paid_at' => now()->subDay(),
-            'refunded_at' => now()->subDay(),
+            'paid_at' => now(),
+            'refunded_at' => now(),
         ]);
 
         $response = $this->get(route('reports.index', [
@@ -90,16 +93,18 @@ class ReportControllerTest extends TestCase
 
         $response->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('reports/Index')
-            ->where('can_view_operational', false)
+            ->where('can_view_operational', true)
             ->where('can_view_financial', true)
-            ->where('operational_summary', null)
+            ->missing('operational_summary')
             ->missing('financial_summary')
             ->loadDeferredProps('reports', fn (Assert $page) => $page
                 ->where('financial_summary.invoices.total_amount', 300)
                 ->where('financial_summary.payments.gross_collections', 250)
                 ->where('financial_summary.payments.refund_amount', 50)
                 ->where('financial_summary.payments.net_collections', 200)
-                ->has('financial_statements')));
+                ->has('financial_statements')
+                ->has('report_data.financial')
+                ->has('chart_data.daily_income')));
 
         $this->assertDatabaseHas('audit_logs', [
             'clinic_id' => $clinic->id,
@@ -143,9 +148,11 @@ class ReportControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('data.can_view_operational', true);
-        $response->assertJsonPath('data.can_view_financial', false);
+        $response->assertJsonPath('data.can_view_financial', true);
         $response->assertJsonPath('data.operational_summary.patients_total', 1);
         $response->assertJsonPath('data.operational_summary.appointments.total', 1);
+        $response->assertJsonPath('data.report_data.overview.appointments_total', 1);
+        $response->assertJsonCount(1, 'data.chart_data.appointments_by_day');
 
         $this->assertDatabaseHas('audit_logs', [
             'clinic_id' => $clinic->id,
@@ -154,10 +161,51 @@ class ReportControllerTest extends TestCase
         ]);
     }
 
+    public function test_each_reports_tab_returns_its_payload_and_financial_charts(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'clinic_admin');
+
+        foreach (['overview', 'financial', 'payroll', 'clinics', 'doctors', 'appointments', 'patients', 'expenses', 'pharmacy'] as $reportType) {
+            $response = $this->getJson(route('reports.index', [
+                'from' => '2026-04-01',
+                'to' => '2026-04-30',
+                'report_type' => $reportType,
+            ]));
+
+            $response->assertOk();
+            $response->assertJsonPath('data.filters.report_type', $reportType);
+            $response->assertJsonStructure([
+                'data' => [
+                    'report_data' => [$reportType],
+                ],
+            ]);
+        }
+
+        $financialResponse = $this->getJson(route('reports.index', [
+            'from' => '2026-04-01',
+            'to' => '2026-04-30',
+            'report_type' => 'financial',
+        ]));
+
+        $financialResponse->assertOk();
+        $financialResponse->assertJsonStructure([
+            'data' => [
+                'chart_data' => [
+                    'daily_income',
+                    'income_by_clinic',
+                    'income_by_doctor',
+                    'expenses_by_category',
+                    'monthly_profit',
+                ],
+            ],
+        ]);
+    }
+
     public function test_financial_statements_include_new_employee_and_doctor_payroll_payments(): void
     {
         $clinic = Clinic::factory()->create();
-        $this->authenticateForClinic($clinic, 'accountant');
+        $this->authenticateForClinic($clinic, 'admin');
 
         EmployeeSalaryPayment::factory()->create([
             'clinic_id' => $clinic->id,
@@ -188,6 +236,14 @@ class ReportControllerTest extends TestCase
         $response = $this->get(route('reports.index'));
 
         $response->assertForbidden();
+    }
+
+    public function test_accountant_is_forbidden_from_admin_reports_page(): void
+    {
+        $clinic = Clinic::factory()->create();
+        $this->authenticateForClinic($clinic, 'accountant');
+
+        $this->get(route('reports.index'))->assertForbidden();
     }
 
     private function authenticateForClinic(Clinic $clinic, string $roleName): User

@@ -28,14 +28,19 @@ class PatientCardController extends Controller
         $clinicId = $this->resolveClinicId($request);
         $user = $request->user();
         $includeAllClinics = $this->canViewAllClinics($request);
+        $isDoctorWithAppointment = $this->isDoctorWithAppointment($request, $patientId);
 
         $this->authorizeView($request);
 
-        $patient = $this->patientQuery($clinicId, $includeAllClinics)
+        $patient = $this->patientQuery($clinicId, $includeAllClinics, $isDoctorWithAppointment, $user?->id)
             ->whereKey($patientId)
-            ->firstOrFail();
+            ->first();
 
-        $visits = $this->visitsQuery($clinicId, $patientId, $includeAllClinics)
+        if (! $patient) {
+            abort(404, 'Patient not found');
+        }
+
+        $visits = $this->visitsQuery($clinicId, $patientId, $includeAllClinics, $isDoctorWithAppointment, $user?->id)
             ->get();
 
         $activeAppointment = $this->activeAppointment($request, $clinicId, $patientId, $includeAllClinics);
@@ -61,7 +66,8 @@ class PatientCardController extends Controller
     {
         $clinicId = $this->resolveClinicId($request);
         $includeAllClinics = $this->canViewAllClinics($request);
-        $patient = $this->patientQuery($clinicId, $includeAllClinics)->whereKey($patientId)->firstOrFail();
+        $isDoctorWithAppointment = $this->isDoctorWithAppointment($request, $patientId);
+        $patient = $this->patientQuery($clinicId, $includeAllClinics, $isDoctorWithAppointment, $request->user()?->id)->whereKey($patientId)->firstOrFail();
         $payload = $this->normalizedPayload($request, $request->validated());
 
         $appointmentId = $request->validated('appointment_id');
@@ -114,7 +120,8 @@ class PatientCardController extends Controller
     {
         $clinicId = $this->resolveClinicId($request);
         $includeAllClinics = $this->canViewAllClinics($request);
-        $this->patientQuery($clinicId, $includeAllClinics)->whereKey($patientId)->firstOrFail();
+        $isDoctorWithAppointment = $this->isDoctorWithAppointment($request, $patientId);
+        $this->patientQuery($clinicId, $includeAllClinics, $isDoctorWithAppointment, $request->user()?->id)->whereKey($patientId)->firstOrFail();
 
         $visitQuery = $includeAllClinics
             ? PatientCardVisit::query()->withoutGlobalScope('clinic')
@@ -139,12 +146,13 @@ class PatientCardController extends Controller
     {
         $clinicId = $this->resolveClinicId($request);
         $includeAllClinics = $this->canViewAllClinics($request);
+        $isDoctorWithAppointment = $this->isDoctorWithAppointment($request, $patientId);
 
         if (! $this->canManageVisits($request)) {
             abort(SymfonyResponse::HTTP_FORBIDDEN, 'You do not have the required permission.');
         }
 
-        $this->patientQuery($clinicId, $includeAllClinics)->whereKey($patientId)->firstOrFail();
+        $this->patientQuery($clinicId, $includeAllClinics, $isDoctorWithAppointment, $request->user()?->id)->whereKey($patientId)->firstOrFail();
 
         $visitQuery = $includeAllClinics
             ? PatientCardVisit::query()->withoutGlobalScope('clinic')
@@ -170,13 +178,14 @@ class PatientCardController extends Controller
     {
         $clinicId = $this->resolveClinicId($request);
         $includeAllClinics = $this->canViewAllClinics($request);
+        $isDoctorWithAppointment = $this->isDoctorWithAppointment($request, $patientId);
         $this->authorizeView($request);
 
-        $patient = $this->patientQuery($clinicId, $includeAllClinics)
+        $patient = $this->patientQuery($clinicId, $includeAllClinics, $isDoctorWithAppointment, $request->user()?->id)
             ->whereKey($patientId)
             ->firstOrFail();
 
-        $visits = $this->visitsQuery($clinicId, $patientId, $includeAllClinics)->get();
+        $visits = $this->visitsQuery($clinicId, $patientId, $includeAllClinics, $isDoctorWithAppointment, $request->user()?->id)->get();
 
         $pdf = Pdf::loadView('exports.patient-card', [
             'patient' => $patient,
@@ -231,11 +240,30 @@ class PatientCardController extends Controller
             && ($user->hasRole('super_admin') || $user->hasRole('admin') || $user->hasRole('clinic_admin') || $user->hasRole('receptionist'));
     }
 
-    private function patientQuery(int $clinicId, bool $includeAllClinics = false)
+    private function isDoctorWithAppointment(Request $request, int $patientId): bool
     {
-        $query = $includeAllClinics
-            ? Patient::query()->withoutGlobalScope('clinic')
-            : Patient::query()->forClinic($clinicId);
+        $user = $request->user();
+
+        if ($user === null || ! $user->hasRole('doctor')) {
+            return false;
+        }
+
+        return Appointment::query()
+            ->withoutGlobalScope('clinic')
+            ->where('doctor_id', $user->id)
+            ->where('patient_id', $patientId)
+            ->exists();
+    }
+
+    private function patientQuery(int $clinicId, bool $includeAllClinics = false, bool $isDoctorWithAppointment = false, ?int $doctorId = null)
+    {
+        if ($includeAllClinics) {
+            $query = Patient::query()->withoutGlobalScope('clinic');
+        } elseif ($isDoctorWithAppointment && $doctorId !== null) {
+            $query = Patient::query()->withoutGlobalScope('clinic');
+        } else {
+            $query = Patient::query()->forClinic($clinicId);
+        }
 
         return $query->with([
             'appointments' => fn ($query) => $query
@@ -250,11 +278,13 @@ class PatientCardController extends Controller
         ]);
     }
 
-    private function visitsQuery(int $clinicId, int $patientId, bool $includeAllClinics = false)
+    private function visitsQuery(int $clinicId, int $patientId, bool $includeAllClinics = false, bool $isDoctorWithAppointment = false, ?int $doctorId = null)
     {
-        $query = $includeAllClinics
-            ? PatientCardVisit::query()->withoutGlobalScope('clinic')
-            : PatientCardVisit::query()->forClinic($clinicId);
+        if ($includeAllClinics || ($isDoctorWithAppointment && $doctorId !== null)) {
+            $query = PatientCardVisit::query()->withoutGlobalScope('clinic');
+        } else {
+            $query = PatientCardVisit::query()->forClinic($clinicId);
+        }
 
         return $query
             ->where('patient_id', $patientId)

@@ -317,12 +317,17 @@ class FinancialController extends Controller
         $query = Expense::query()
             ->withoutGlobalScope('clinic')
             ->where('status', Expense::STATUS_PAID)
-            ->whereBetween('expense_date', [$periodStart->toDateString(), $periodEnd->toDateString()])
             ->with([
                 'category:id,name',
                 'user:id,name',
                 'clinic:id,name',
             ]);
+
+        if ($filters['date_from'] !== null && $filters['date_to'] !== null) {
+            $query->whereBetween('expense_date', [$filters['date_from'], $filters['date_to']]);
+        } elseif ($filters['month'] !== null) {
+            $query->where('expense_date', 'like', $filters['month'].'%');
+        }
 
         if (! $includeAllClinics) {
             $query->where('clinic_id', $clinicId);

@@ -8,8 +8,11 @@ import {
     Eye,
     Filter,
     HandCoins,
+    QrCode,
     Stethoscope,
+    Upload,
     UsersRound,
+    X,
 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import PayrollController from '@/actions/App/Http/Controllers/Payroll/PayrollController';
@@ -174,6 +177,13 @@ const paymentForm = useForm({
     payment_date: new Date().toISOString().slice(0, 10),
     notes: '',
 });
+
+const qrUploadDialogOpen = ref(false);
+const qrUploadForm = useForm({
+    sham_cash_qr: null as File | null,
+    notes: '',
+});
+const qrUploadError = ref<string | null>(null);
 
 const labelFor = (value: string | null): string =>
     value !== null ? (labels[value] ?? value) : '-';
@@ -408,6 +418,77 @@ const paymentQrMissingMessage = computed(() => {
 
     return null;
 });
+
+const openQrUploadDialog = (): void => {
+    qrUploadForm.reset();
+    qrUploadForm.clearErrors();
+    qrUploadError.value = null;
+    qrUploadDialogOpen.value = true;
+};
+
+const submitQrUpload = (): void => {
+    if (!paymentTarget.value) {
+        return;
+    }
+
+    if (!qrUploadForm.sham_cash_qr) {
+        qrUploadError.value = 'يرجى اختيار صورة رمز QR.';
+        return;
+    }
+
+    const type = paymentKind.value;
+    const id =
+        type === 'doctor'
+            ? (paymentTarget.value as DoctorDueRow).doctor_id
+            : (paymentTarget.value as EmployeeSalaryRow).employee_id;
+
+    const formData = new FormData();
+    formData.append('sham_cash_qr', qrUploadForm.sham_cash_qr);
+    if (qrUploadForm.notes) {
+        formData.append('notes', qrUploadForm.notes);
+    }
+
+    const url = `/salaries/beneficiaries/${type}/${id}/sham-cash-qr`;
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN':
+                document.querySelector<HTMLMetaElement>(
+                    'meta[name="csrf-token"]',
+                )?.content ?? '',
+            Accept: 'application/json',
+        },
+        body: formData,
+    })
+        .then((res) => {
+            if (!res.ok) {
+                return res.json().then((data) => {
+                    throw new Error(data.message || 'فشل في رفع رمز QR.');
+                });
+            }
+            return res.json();
+        })
+        .then((data) => {
+            if (paymentTarget.value) {
+                (
+                    paymentTarget.value as EmployeeSalaryRow | DoctorDueRow
+                ).sham_cash_qr_url = data.sham_cash_qr_url;
+            }
+            qrUploadDialogOpen.value = false;
+            toast.success('تم حفظ رمز شام كاش بنجاح.');
+        })
+        .catch((err: Error) => {
+            qrUploadError.value = err.message;
+        });
+};
+
+const onQrFileSelected = (event: Event): void => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0] ?? null;
+    qrUploadForm.sham_cash_qr = file;
+    qrUploadError.value = null;
+};
 </script>
 
 <template>
@@ -1325,9 +1406,20 @@ const paymentQrMissingMessage = computed(() => {
                             </div>
                             <div
                                 v-else-if="paymentQrMissingMessage"
-                                class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-800"
+                                class="flex flex-col items-center gap-4 rounded-xl border border-amber-200 bg-amber-50 p-6"
                             >
-                                {{ paymentQrMissingMessage }}
+                                <p class="text-center text-sm text-amber-800">
+                                    {{ paymentQrMissingMessage }}
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    class="border-amber-300 bg-white text-amber-800 hover:bg-amber-50"
+                                    @click="openQrUploadDialog"
+                                >
+                                    <QrCode class="size-4" />
+                                    إضافة حساب شام كاش
+                                </Button>
                             </div>
                         </div>
                         <div class="grid gap-2">
@@ -1367,6 +1459,100 @@ const paymentQrMissingMessage = computed(() => {
                     >
                         <CalendarDays class="size-4" />
                         حفظ الدفعة
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog
+            :open="qrUploadDialogOpen"
+            @update:open="qrUploadDialogOpen = $event"
+        >
+            <DialogContent
+                class="w-[95vw] rounded-xl bg-card sm:max-w-md"
+                dir="rtl"
+            >
+                <DialogHeader class="text-right">
+                    <DialogTitle
+                        class="flex items-center gap-2 text-foreground"
+                    >
+                        <QrCode class="size-5" />
+                        إضافة حساب شام كاش
+                    </DialogTitle>
+                </DialogHeader>
+                <div class="space-y-4">
+                    <div class="grid gap-2">
+                        <Label>صورة رمز QR شام كاش</Label>
+                        <div
+                            class="flex items-center gap-3 rounded-lg border border-dashed border-border bg-muted/40 p-4"
+                        >
+                            <label
+                                for="qr-upload-input"
+                                class="flex flex-1 cursor-pointer items-center gap-3"
+                            >
+                                <div
+                                    class="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                                >
+                                    <Upload class="size-5" />
+                                </div>
+                                <div class="flex-1">
+                                    <p
+                                        class="text-sm font-medium text-foreground"
+                                    >
+                                        {{
+                                            qrUploadForm.sham_cash_qr
+                                                ? qrUploadForm.sham_cash_qr.name
+                                                : 'اختر صورة QR'
+                                        }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        PNG, JPG, JPEG, WebP - الحد الأقصى 2MB
+                                    </p>
+                                </div>
+                            </label>
+                            <input
+                                id="qr-upload-input"
+                                type="file"
+                                accept="image/png,image/jpeg,image/jpg,image/webp"
+                                class="hidden"
+                                @change="onQrFileSelected"
+                            />
+                            <Button
+                                v-if="qrUploadForm.sham_cash_qr"
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                @click="
+                                    qrUploadForm.sham_cash_qr = null;
+                                    qrUploadError = null;
+                                "
+                            >
+                                <X class="size-4" />
+                            </Button>
+                        </div>
+                        <div
+                            v-if="qrUploadError"
+                            class="rounded-lg bg-rose-50 p-3 text-sm text-rose-700"
+                        >
+                            {{ qrUploadError }}
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter class="gap-3">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="qrUploadDialogOpen = false"
+                        >إلغاء</Button
+                    >
+                    <Button
+                        type="button"
+                        class="bg-primary text-primary-foreground hover:bg-primary/90"
+                        :disabled="!qrUploadForm.sham_cash_qr"
+                        @click="submitQrUpload"
+                    >
+                        <Upload class="size-4" />
+                        حفظ رمز QR
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -20,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -260,6 +261,58 @@ class PayrollController extends Controller
         });
 
         return $this->paymentResponse($request, 'تم تسجيل دفعة المستحقات بنجاح.');
+    }
+
+    public function updateBeneficiaryShamCashQr(Request $request, string $type, int $id): JsonResponse
+    {
+        if (! in_array($type, ['doctor', 'employee'], true)) {
+            abort(Response::HTTP_NOT_FOUND);
+        }
+
+        $validated = $request->validate([
+            'sham_cash_qr' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        if ($type === 'doctor') {
+            $doctor = DoctorProfile::query()
+                ->withoutClinicScope()
+                ->findOrFail($id);
+
+            $this->authorizePayrollRecordAccess($request, (int) $doctor->clinic_id);
+
+            $oldPath = $doctor->sham_cash_qr_path;
+            $newPath = $validated['sham_cash_qr']->store('doctors/sham-cash-qr', 'public');
+
+            $doctor->update(['sham_cash_qr_path' => $newPath]);
+
+            if ($oldPath !== null) {
+                Storage::disk('public')->delete($oldPath);
+            }
+
+            return response()->json([
+                'sham_cash_qr_url' => asset('storage/'.$newPath),
+            ]);
+        }
+
+        $employee = Employee::query()
+            ->withoutClinicScope()
+            ->findOrFail($id);
+
+        $this->authorizePayrollRecordAccess($request, (int) $employee->clinic_id);
+
+        $oldPath = $employee->sham_cash_qr_path;
+        $newPath = $validated['sham_cash_qr']->store('employees/sham-cash-qr', 'public');
+
+        $employee->update(['sham_cash_qr_path' => $newPath]);
+
+        if ($oldPath !== null) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        return response()->json([
+            'sham_cash_qr_url' => asset('storage/'.$newPath),
+        ]);
     }
 
     private function ensureEmployeeMonthlySalaries(int $clinicId, string $month): void

@@ -12,6 +12,9 @@ Route::middleware(['auth', 'verified'])->prefix('salaries')->name('salaries.')->
     Route::post('/employee-payments', [PayrollController::class, 'storeEmployeePayment'])->middleware('permission:salaries.pay')->name('employee-payments.store');
     Route::get('/doctor-payments', fn (): RedirectResponse => redirect()->route('salaries.index'))->middleware('permission:salaries.view');
     Route::post('/doctor-payments', [PayrollController::class, 'storeDoctorPayment'])->middleware('permission:salaries.pay')->name('doctor-payments.store');
+    Route::post('/beneficiaries/{type}/{id}/sham-cash-qr', [PayrollController::class, 'updateBeneficiaryShamCashQr'])
+        ->middleware('permission:salaries.pay')
+        ->name('beneficiaries.sham-cash-qr');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

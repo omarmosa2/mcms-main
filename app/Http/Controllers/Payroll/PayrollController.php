@@ -484,7 +484,7 @@ class PayrollController extends Controller
             ->withoutGlobalScope('clinic')
             ->where('salary_month', $month)
             ->with([
-                'employee' => fn ($q) => $q->withoutClinicScope()->select('id', 'clinic_id', 'full_name', 'employee_type', 'job_title'),
+                'employee' => fn ($q) => $q->withoutClinicScope()->select('id', 'clinic_id', 'full_name', 'employee_type', 'job_title', 'sham_cash_qr_path'),
                 'employee.clinic:id,name',
             ])
             ->withCount([
@@ -522,6 +522,9 @@ class PayrollController extends Controller
                 'status' => $record->status,
                 'payments_count' => (int) ($record->payments_count ?? 0),
                 'can_pay' => $record->status !== EmployeeMonthlySalary::STATUS_PAID && (int) ($record->payments_count ?? 0) === 0,
+                'sham_cash_qr_url' => $record->employee?->sham_cash_qr_path !== null
+                    ? asset('storage/'.$record->employee->sham_cash_qr_path)
+                    : null,
             ]);
     }
 
@@ -599,6 +602,9 @@ class PayrollController extends Controller
                     'name' => $doctor->user?->name ?? $doctor->full_name ?? 'Doctor #'.$doctor->id,
                     'clinic_id' => $doctor->clinic_id,
                     'clinic' => $doctor->clinic?->name,
+                    'sham_cash_qr_url' => $doctor->sham_cash_qr_path !== null
+                        ? asset('storage/'.$doctor->sham_cash_qr_path)
+                        : null,
                     'payment_type' => $doctor->compensation_type,
                     'payment_period_type' => $period['type'],
                     'period_start' => $period['start']->toDateString(),

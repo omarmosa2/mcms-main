@@ -56,6 +56,34 @@ class Employee extends BaseModel
 
     public const MARITAL_WIDOWED = 'widowed';
 
+    protected $fillable = [
+        'clinic_id',
+        'department_id',
+        'user_id',
+        'full_name',
+        'gender',
+        'birth_date',
+        'phone',
+        'address',
+        'national_id',
+        'marital_status',
+        'hire_date',
+        'status',
+        'job_title',
+        'employee_type',
+        'specialty',
+        'job_description',
+        'education_level',
+        'certificate_name',
+        'education_specialty',
+        'graduation_year',
+        'issuing_institution',
+        'base_salary',
+        'additional_allowance',
+        'salary_notes',
+        'sham_cash_qr_path',
+    ];
+
     protected $attributes = [
         'status' => self::STATUS_ACTIVE,
         'base_salary' => 0,

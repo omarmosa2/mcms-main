@@ -3,7 +3,9 @@ import { Head, router, useForm } from '@inertiajs/vue3';
 import {
     Banknote,
     CalendarDays,
+    CheckCircle2,
     CircleDollarSign,
+    Eye,
     Filter,
     HandCoins,
     Stethoscope,
@@ -49,6 +51,7 @@ type EmployeeSalaryRow = {
     status: SalaryStatus;
     payments_count: number;
     can_pay: boolean;
+    sham_cash_qr_url: string | null;
 };
 
 type DoctorDueRow = {
@@ -73,6 +76,7 @@ type DoctorDueRow = {
     remaining_amount: number;
     salary_month: string;
     status: SalaryStatus;
+    sham_cash_qr_url: string | null;
 };
 
 const props = defineProps<{
@@ -156,7 +160,7 @@ const labels: Record<string, string> = {
     partially_paid: 'مدفوع جزئيا',
     paid: 'مدفوع بالكامل',
     cash: 'نقدا',
-    bank_transfer: 'حوالة بنكية',
+    bank_transfer: 'شام كاش',
     card: 'بطاقة',
 };
 
@@ -376,6 +380,34 @@ const paymentHelpText = computed(() =>
         ? 'راتب الموظف يسدد دفعة واحدة كاملة لهذا الشهر، ولا يمكن تسجيل دفعة ثانية لنفس الشهر.'
         : 'يمكن تسديد مستحقات الطبيب كدفعة كاملة أو جزئية حسب المتبقي.',
 );
+
+const paymentQrUrl = computed(() => {
+    if (
+        paymentForm.payment_method !== 'bank_transfer' ||
+        !paymentTarget.value
+    ) {
+        return null;
+    }
+
+    return paymentTarget.value.sham_cash_qr_url ?? null;
+});
+
+const paymentQrMissingMessage = computed(() => {
+    if (
+        paymentForm.payment_method !== 'bank_transfer' ||
+        !paymentTarget.value
+    ) {
+        return null;
+    }
+
+    if (!paymentTarget.value.sham_cash_qr_url) {
+        return paymentKind.value === 'doctor'
+            ? 'لا يوجد رمز شام كاش مسجل لهذا الطبيب.'
+            : 'لا يوجد رمز شام كاش مسجل لهذا الموظف.';
+    }
+
+    return null;
+});
 </script>
 
 <template>
@@ -604,7 +636,9 @@ const paymentHelpText = computed(() =>
                                 </td>
                                 <td class="px-3 py-3 align-top text-foreground">
                                     <span class="block truncate">
-                                        {{ row.clinic ?? unassignedClinicLabel }}
+                                        {{
+                                            row.clinic ?? unassignedClinicLabel
+                                        }}
                                     </span>
                                 </td>
                                 <td
@@ -860,17 +894,17 @@ const paymentHelpText = computed(() =>
                 <div class="hidden xl:block">
                     <table class="w-full table-fixed text-right text-sm">
                         <colgroup>
-                            <col class="w-[15%]" />
-                            <col class="w-[11%]" />
+                            <col class="w-[14%]" />
+                            <col class="w-[9%]" />
+                            <col class="w-[8%]" />
                             <col class="w-[10%]" />
-                            <col class="w-[12%]" />
+                            <col class="w-[7%]" />
+                            <col class="w-[7%]" />
                             <col class="w-[8%]" />
                             <col class="w-[8%]" />
-                            <col class="w-[9%]" />
-                            <col class="w-[9%]" />
-                            <col class="w-[9%]" />
-                            <col class="w-[9%]" />
-                            <col class="w-[9%]" />
+                            <col class="w-[8%]" />
+                            <col class="w-[8%]" />
+                            <col class="w-[13%]" />
                         </colgroup>
                         <thead
                             class="bg-muted/60 text-[11px] font-bold text-muted-foreground"
@@ -904,7 +938,9 @@ const paymentHelpText = computed(() =>
                                     <p
                                         class="truncate text-xs text-muted-foreground"
                                     >
-                                        {{ row.clinic ?? unassignedClinicLabel }}
+                                        {{
+                                            row.clinic ?? unassignedClinicLabel
+                                        }}
                                     </p>
                                 </td>
                                 <td class="px-4 py-3 text-muted-foreground">
@@ -953,27 +989,42 @@ const paymentHelpText = computed(() =>
                                         {{ labelFor(row.status) }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3">
+                                <td class="px-3 py-3">
                                     <div class="flex flex-col gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            class="h-8 rounded-lg text-xs"
-                                            @click="toggleDoctorDetails(row)"
-                                        >
-                                            عرض التفاصيل
-                                        </Button>
                                         <Button
                                             v-if="
                                                 can('salaries.pay') &&
                                                 row.remaining_amount > 0
                                             "
                                             size="sm"
-                                            class="h-8 rounded-lg bg-primary text-xs text-primary-foreground hover:bg-primary/90"
+                                            class="h-9 w-full rounded-xl bg-[#0EA5E9] px-3 text-xs font-extrabold text-white shadow-[0_10px_20px_-14px_rgb(14_165_233_/_0.85)] hover:bg-[#0284C7]"
                                             @click="openDoctorPayment(row)"
                                         >
-                                            {{ doctorPaymentActionLabel(row) }}
+                                            <CircleDollarSign class="size-4" />
+                                            <span class="truncate">
+                                                {{
+                                                    doctorPaymentActionLabel(
+                                                        row,
+                                                    )
+                                                }}
+                                            </span>
+                                        </Button>
+                                        <div
+                                            v-else-if="can('salaries.pay')"
+                                            class="inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-xs font-extrabold text-emerald-700"
+                                        >
+                                            <CheckCircle2 class="size-4" />
+                                            مسدد بالكامل
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            class="h-9 w-full rounded-xl border-[#DDE9F3] bg-white text-xs font-bold text-[#47677F] hover:border-[#BFE3F5] hover:bg-[#F7FBFE] hover:text-[#075985]"
+                                            @click="toggleDoctorDetails(row)"
+                                        >
+                                            <Eye class="size-4" />
+                                            عرض التفاصيل
                                         </Button>
                                     </div>
                                 </td>
@@ -1134,25 +1185,33 @@ const paymentHelpText = computed(() =>
 
                         <div class="mt-auto grid gap-2 sm:grid-cols-2">
                             <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                class="h-10 rounded-lg"
-                                @click="toggleDoctorDetails(row)"
-                            >
-                                عرض التفاصيل
-                            </Button>
-                            <Button
                                 v-if="
                                     can('salaries.pay') &&
                                     row.remaining_amount > 0
                                 "
                                 size="sm"
-                                class="h-10 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
+                                class="h-10 rounded-xl bg-[#0EA5E9] font-extrabold text-white shadow-[0_10px_20px_-14px_rgb(14_165_233_/_0.85)] hover:bg-[#0284C7]"
                                 @click="openDoctorPayment(row)"
                             >
                                 <CircleDollarSign class="size-4" />
                                 {{ doctorPaymentActionLabel(row) }}
+                            </Button>
+                            <div
+                                v-else-if="can('salaries.pay')"
+                                class="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 text-sm font-extrabold text-emerald-700"
+                            >
+                                <CheckCircle2 class="size-4" />
+                                مسدد بالكامل
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                class="h-10 rounded-xl border-[#DDE9F3] bg-white font-bold text-[#47677F] hover:border-[#BFE3F5] hover:bg-[#F7FBFE] hover:text-[#075985]"
+                                @click="toggleDoctorDetails(row)"
+                            >
+                                <Eye class="size-4" />
+                                عرض التفاصيل
                             </Button>
                         </div>
                     </article>
@@ -1171,13 +1230,16 @@ const paymentHelpText = computed(() =>
             :open="paymentDialogOpen"
             @update:open="paymentDialogOpen = $event"
         >
-            <DialogContent class="max-w-2xl rounded-xl bg-card" dir="rtl">
+            <DialogContent
+                class="max-h-[calc(100vh-2rem)] w-[95vw] overflow-y-auto rounded-xl bg-card sm:max-w-2xl lg:max-w-4xl"
+                dir="rtl"
+            >
                 <DialogHeader class="text-right">
                     <DialogTitle class="text-foreground">{{
                         paymentTitle
                     }}</DialogTitle>
                 </DialogHeader>
-                <div v-if="paymentTarget" class="space-y-4">
+                <div v-if="paymentTarget" class="space-y-5">
                     <div
                         class="rounded-xl border border-border bg-muted/60 p-4 text-sm"
                     >
@@ -1212,7 +1274,7 @@ const paymentHelpText = computed(() =>
                         </p>
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
-                        <div class="grid gap-2">
+                        <div class="grid min-w-0 gap-2">
                             <Label>المبلغ المراد دفعه</Label>
                             <Input
                                 v-model="paymentForm.amount"
@@ -1231,18 +1293,42 @@ const paymentHelpText = computed(() =>
                             />
                             <InputError :message="paymentForm.errors.amount" />
                         </div>
-                        <div class="grid gap-2">
+                        <div class="grid min-w-0 gap-2">
                             <Label>طريقة الدفع</Label>
                             <select
                                 v-model="paymentForm.payment_method"
-                                class="h-10 rounded-md border border-input bg-muted px-3"
+                                class="h-10 w-full max-w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none"
                             >
-                                <option value="cash">نقدا</option>
-                                <option value="bank_transfer">
-                                    حوالة بنكية
-                                </option>
+                                <option value="cash">نقداً</option>
+                                <option value="bank_transfer">شام كاش</option>
                                 <option value="card">بطاقة</option>
                             </select>
+                        </div>
+                        <div
+                            v-if="
+                                paymentForm.payment_method === 'bank_transfer'
+                            "
+                            class="md:col-span-2"
+                        >
+                            <div
+                                v-if="paymentQrUrl"
+                                class="flex flex-col items-center gap-4 rounded-xl border border-border bg-muted/40 p-6"
+                            >
+                                <p class="text-base font-bold text-foreground">
+                                    رمز شام كاش
+                                </p>
+                                <img
+                                    :src="paymentQrUrl"
+                                    alt="رمز شام كاش"
+                                    class="h-52 w-52 rounded-lg border border-border bg-white object-contain p-3 shadow-sm"
+                                />
+                            </div>
+                            <div
+                                v-else-if="paymentQrMissingMessage"
+                                class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-800"
+                            >
+                                {{ paymentQrMissingMessage }}
+                            </div>
                         </div>
                         <div class="grid gap-2">
                             <Label>تاريخ الدفع</Label>
@@ -1266,7 +1352,7 @@ const paymentHelpText = computed(() =>
                         </div>
                     </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter class="gap-3">
                     <Button
                         type="button"
                         variant="outline"

@@ -160,7 +160,7 @@ const labels: Record<string, string> = {
     paid: 'مدفوع',
     cash: 'نقداً',
     card: 'بطاقة',
-    bank_transfer: 'حوالة بنكية',
+    bank_transfer: 'شام كاش',
     insurance: 'تأمين',
     online: 'إلكتروني',
     percentage: 'نسبة',
@@ -413,7 +413,7 @@ const exportPdf = (): void => {
                         <option value="">الكل</option>
                         <option value="cash">نقداً</option>
                         <option value="card">بطاقة</option>
-                        <option value="bank_transfer">حوالة بنكية</option>
+                        <option value="bank_transfer">شام كاش</option>
                         <option value="insurance">تأمين</option>
                         <option value="online">إلكتروني</option>
                     </select>

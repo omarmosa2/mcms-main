@@ -56,6 +56,8 @@ class UpdateDoctorRequest extends FormRequest
             'currency' => ['sometimes', 'nullable', 'string', 'size:3'],
             'is_active' => ['sometimes', 'boolean'],
             'notes' => ['sometimes', 'nullable', 'string'],
+            'sham_cash_qr' => ['sometimes', 'nullable', 'image', 'max:2048'],
+            'remove_sham_cash_qr' => ['sometimes', 'boolean'],
             'schedules' => ['sometimes', 'array'],
             'schedules.*.day_of_week' => ['required_with:schedules', 'integer', 'between:0,6', 'distinct'],
             'schedules.*.is_available' => ['required_with:schedules', 'boolean'],

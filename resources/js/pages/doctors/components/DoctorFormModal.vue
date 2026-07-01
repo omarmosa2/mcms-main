@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { KeyRound, Save, Stethoscope, UserPlus, X } from 'lucide-vue-next';
+import {
+    KeyRound,
+    QrCode,
+    Save,
+    Stethoscope,
+    Trash2,
+    Upload,
+    UserPlus,
+    X,
+} from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { store, update } from '@/actions/App/Http/Controllers/DoctorController';
 import InputError from '@/components/InputError.vue';
@@ -76,13 +85,21 @@ const defaultsFor = (doctor: Doctor | null): DoctorFormData => ({
     currency: doctor?.currency ?? currency.value,
     is_active: doctor?.is_active ?? true,
     notes: doctor?.notes ?? '',
+    sham_cash_qr: null,
+    remove_sham_cash_qr: false,
     schedules: doctor?.schedules ?? [],
 });
 
 const form = useForm<DoctorFormData>(defaultsFor(props.doctor));
 const isHydrating = ref(false);
+const shamCashQrInput = ref<HTMLInputElement | null>(null);
+const shamCashPreviewUrl = ref<string | null>(null);
 
 const isEditing = computed(() => props.doctor !== null);
+const currentShamCashQrUrl = computed(() =>
+    shamCashPreviewUrl.value ??
+    (form.remove_sham_cash_qr ? null : (props.doctor?.sham_cash_qr_url ?? null)),
+);
 
 const compensationLabel = computed(() => {
     switch (form.compensation_type) {
@@ -110,6 +127,7 @@ watch(
         form.reset();
         Object.assign(form, next);
         form.clearErrors();
+        clearShamCashPreview();
         isHydrating.value = false;
     },
 );
@@ -131,6 +149,36 @@ const activeCompensationField = computed(() => {
 
 const syncLegacyCompensationValue = (): void => {
     form.compensation_value = String(form[activeCompensationField.value] ?? '');
+};
+
+const clearShamCashPreview = (): void => {
+    if (shamCashPreviewUrl.value !== null) {
+        URL.revokeObjectURL(shamCashPreviewUrl.value);
+        shamCashPreviewUrl.value = null;
+    }
+};
+
+const handleShamCashQrChange = (event: Event): void => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    clearShamCashPreview();
+    form.sham_cash_qr = file;
+    form.remove_sham_cash_qr = false;
+
+    if (file !== null) {
+        shamCashPreviewUrl.value = URL.createObjectURL(file);
+    }
+};
+
+const removeShamCashQr = (): void => {
+    clearShamCashPreview();
+    form.sham_cash_qr = null;
+    form.remove_sham_cash_qr = true;
+
+    if (shamCashQrInput.value !== null) {
+        shamCashQrInput.value.value = '';
+    }
 };
 
 watch(
@@ -159,12 +207,17 @@ const submit = (): void => {
     };
 
     if (props.doctor !== null) {
-        form.put(update.url(props.doctor.id), options);
+        form
+            .transform((data) => ({
+                ...data,
+                _method: 'put',
+            }))
+            .post(update.url(props.doctor.id), options);
 
         return;
     }
 
-    form.post(store.url(), options);
+    form.transform((data) => data).post(store.url(), options);
 };
 </script>
 
@@ -410,6 +463,59 @@ const submit = (): void => {
                                     form.errors.compensation_value
                                 "
                             />
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. شام كاش -->
+                <section
+                    class="space-y-3 rounded-lg border border-border bg-card p-4"
+                >
+                    <div class="flex items-center gap-2">
+                        <QrCode class="size-4 text-primary" />
+                        <h3 class="text-sm font-bold text-foreground">رمز QR لشام كاش</h3>
+                    </div>
+                    <div class="grid gap-4 md:grid-cols-[1fr_180px]">
+                        <div class="grid gap-2">
+                            <Label for="doctor_sham_cash_qr">رمز QR لشام كاش (اختياري)</Label>
+                            <Input
+                                id="doctor_sham_cash_qr"
+                                ref="shamCashQrInput"
+                                type="file"
+                                accept="image/*"
+                                class="h-11 rounded-lg"
+                                @change="handleShamCashQrChange"
+                            />
+                            <p class="text-xs text-muted-foreground">
+                                ارفع صورة رمز الطبيب ليظهر مباشرة عند اختيار شام كاش في تسديد المستحقات.
+                            </p>
+                            <InputError :message="form.errors.sham_cash_qr" />
+                        </div>
+
+                        <div
+                            class="flex min-h-40 items-center justify-center overflow-hidden rounded-xl border border-dashed border-border bg-muted/35 p-3"
+                        >
+                            <div v-if="currentShamCashQrUrl" class="space-y-3 text-center">
+                                <img
+                                    :src="currentShamCashQrUrl"
+                                    alt="رمز QR لشام كاش"
+                                    class="mx-auto size-28 rounded-lg border border-border bg-white object-contain p-1"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    class="h-8 rounded-lg text-xs"
+                                    @click="removeShamCashQr"
+                                >
+                                    <Trash2 class="size-3.5" />
+                                    حذف الرمز
+                                </Button>
+                            </div>
+                            <div v-else class="text-center text-sm text-muted-foreground">
+                                <Upload class="mx-auto mb-2 size-7 opacity-50" />
+                                لا يوجد رمز مرفوع
+                            </div>
                         </div>
                     </div>
                 </section>

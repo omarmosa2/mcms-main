@@ -48,6 +48,7 @@ export type Doctor = {
     currency: string;
     is_active: boolean;
     notes: string | null;
+    sham_cash_qr_url: string | null;
     schedules: DoctorSchedule[];
     created_at: string | null;
     updated_at: string | null;
@@ -72,6 +73,8 @@ export type DoctorFormData = {
     currency: string;
     is_active: boolean;
     notes: string;
+    sham_cash_qr: File | null;
+    remove_sham_cash_qr: boolean;
     schedules: DoctorSchedule[];
 };
 

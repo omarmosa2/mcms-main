@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -67,8 +68,9 @@ class EmployeeController extends Controller
         $clinicId = (int) $payload['clinic_id'];
         $createAccount = $request->boolean('create_account');
         $accountData = $createAccount ? $this->validatedAccountPayload($request, $clinicId) : null;
+        $shamCashQrPath = $this->storeShamCashQr($request);
 
-        $employee = DB::transaction(function () use ($payload, $accountData, $clinicId, $request): Employee {
+        $employee = DB::transaction(function () use ($payload, $accountData, $clinicId, $request, $shamCashQrPath): Employee {
             $userId = null;
 
             if ($accountData !== null) {
@@ -88,6 +90,7 @@ class EmployeeController extends Controller
             return Employee::query()->create([
                 ...$payload,
                 'user_id' => $userId,
+                'sham_cash_qr_path' => $shamCashQrPath,
             ]);
         });
 
@@ -104,8 +107,22 @@ class EmployeeController extends Controller
     {
         $employee = Employee::query()->withoutClinicScope()->findOrFail($employeeId);
         $payload = $this->validatedPayload($request, $employee->id);
+        $oldShamCashQrPath = $employee->sham_cash_qr_path;
+        $newShamCashQrPath = $this->storeShamCashQr($request);
+        $removeShamCashQr = (bool) ($payload['remove_sham_cash_qr'] ?? false);
 
-        $employee->update($payload);
+        $updatePayload = $payload;
+        unset($updatePayload['remove_sham_cash_qr']);
+
+        if ($newShamCashQrPath !== null || $removeShamCashQr) {
+            $updatePayload['sham_cash_qr_path'] = $newShamCashQrPath;
+        }
+
+        $employee->update($updatePayload);
+
+        if (($newShamCashQrPath !== null || $removeShamCashQr) && $oldShamCashQrPath !== null) {
+            Storage::disk('public')->delete($oldShamCashQrPath);
+        }
 
         if ($request->expectsJson()) {
             return response()->json(['data' => $this->employeePayload($employee->refresh()->load(['user']))]);
@@ -210,6 +227,8 @@ class EmployeeController extends Controller
             'base_salary' => ['required', 'numeric', 'min:0'],
             'additional_allowance' => ['nullable', 'numeric', 'min:0'],
             'salary_notes' => ['nullable', 'string', 'max:1000'],
+            'sham_cash_qr' => ['sometimes', 'nullable', 'image', 'max:2048'],
+            'remove_sham_cash_qr' => ['sometimes', 'boolean'],
         ]);
 
         return [
@@ -234,6 +253,17 @@ class EmployeeController extends Controller
             'password' => ['required', 'string', 'min:8'],
             'role_name' => ['required', Rule::in($this->accountRoles())],
         ]);
+    }
+
+    private function storeShamCashQr(Request $request): ?string
+    {
+        $file = $request->file('sham_cash_qr');
+
+        if ($file === null) {
+            return null;
+        }
+
+        return $file->store('employees/sham-cash-qr', 'public');
     }
 
     private function employeePayload(Employee $employee): array
@@ -266,6 +296,9 @@ class EmployeeController extends Controller
             'additional_allowance' => $employee->additional_allowance !== null ? (float) $employee->additional_allowance : null,
             'salary_notes' => $employee->salary_notes,
             'salary_payments_count' => (int) ($employee->salary_payments_count ?? 0),
+            'sham_cash_qr_url' => $employee->sham_cash_qr_path !== null
+                ? asset('storage/'.$employee->sham_cash_qr_path)
+                : null,
             'user' => $employee->user !== null ? [
                 'id' => $employee->user->id,
                 'name' => $employee->user->name,

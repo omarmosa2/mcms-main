@@ -48,6 +48,9 @@ class DoctorResource extends JsonResource
             'currency' => $this->currency ?? MoneyFormatter::DefaultCurrency,
             'is_active' => (bool) $this->is_active,
             'notes' => $this->notes,
+            'sham_cash_qr_url' => $this->sham_cash_qr_path !== null
+                ? asset('storage/'.$this->sham_cash_qr_path)
+                : null,
             'schedules' => $this->whenLoaded('schedules', fn () => $this->schedulesCollection()),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),

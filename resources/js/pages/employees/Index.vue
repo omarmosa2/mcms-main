@@ -5,8 +5,10 @@ import {
     FileSpreadsheet,
     Pencil,
     Plus,
+    QrCode,
     Search,
     Trash2,
+    Upload,
     UsersRound,
     X,
 } from 'lucide-vue-next';
@@ -57,6 +59,7 @@ type Employee = {
     additional_allowance: number | null;
     salary_notes: string | null;
     salary_payments_count: number;
+    sham_cash_qr_url: string | null;
     user: UserBrief | null;
 };
 type Paginated<T> = {
@@ -167,6 +170,8 @@ type EmployeeForm = {
     base_salary: string;
     additional_allowance: string;
     salary_notes: string;
+    sham_cash_qr: File | null;
+    remove_sham_cash_qr: boolean;
     create_account: boolean;
     email: string;
     password: string;
@@ -200,6 +205,8 @@ const defaults = (employee: Employee | null = null): EmployeeForm => ({
             ? String(employee.additional_allowance)
             : '',
     salary_notes: employee?.salary_notes ?? '',
+    sham_cash_qr: null,
+    remove_sham_cash_qr: false,
     create_account: false,
     email: '',
     password: '',
@@ -211,6 +218,44 @@ const isEditing = computed(() => editing.value !== null);
 const { formatMoney } = useMoneyFormatter();
 const labelFor = (value: string | null): string =>
     value !== null ? (labels[value] ?? value) : '-';
+
+const shamCashQrInput = ref<HTMLInputElement | null>(null);
+const shamCashPreviewUrl = ref<string | null>(null);
+
+const currentShamCashQrUrl = computed(() =>
+    shamCashPreviewUrl.value ??
+    (form.remove_sham_cash_qr ? null : (editing.value?.sham_cash_qr_url ?? null)),
+);
+
+const clearShamCashPreview = (): void => {
+    if (shamCashPreviewUrl.value !== null) {
+        URL.revokeObjectURL(shamCashPreviewUrl.value);
+        shamCashPreviewUrl.value = null;
+    }
+};
+
+const handleShamCashQrChange = (event: Event): void => {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+
+    clearShamCashPreview();
+    form.sham_cash_qr = file;
+    form.remove_sham_cash_qr = false;
+
+    if (file !== null) {
+        shamCashPreviewUrl.value = URL.createObjectURL(file);
+    }
+};
+
+const removeShamCashQr = (): void => {
+    clearShamCashPreview();
+    form.sham_cash_qr = null;
+    form.remove_sham_cash_qr = true;
+
+    if (shamCashQrInput.value !== null) {
+        shamCashQrInput.value.value = '';
+    }
+};
 
 let timer: ReturnType<typeof setTimeout> | null = null;
 const reload = (): void => {
@@ -253,6 +298,7 @@ const openCreate = (): void => {
     form.defaults(defaults());
     form.reset();
     form.clearErrors();
+    clearShamCashPreview();
     showForm.value = true;
 };
 
@@ -261,6 +307,7 @@ const openEdit = (employee: Employee): void => {
     form.defaults(defaults(employee));
     form.reset();
     form.clearErrors();
+    clearShamCashPreview();
     showForm.value = true;
 };
 
@@ -279,30 +326,43 @@ const exportExcel = (): void => {
 };
 
 const submit = (): void => {
-    const data: Record<string, unknown> = { ...form };
-
-    if (!data.create_account) {
-        delete data.email;
-        delete data.password;
-        delete data.role_name;
-    }
-
     const options = {
         preserveScroll: true,
         onSuccess: () => {
             showForm.value = false;
             editing.value = null;
+            clearShamCashPreview();
             toast.success('تم حفظ بيانات الموظف بنجاح');
         },
     };
 
     if (editing.value !== null) {
-        form.put(EmployeeController.update.url(editing.value.id), options);
+        form
+            .transform((data) => {
+                const payload: Record<string, unknown> = { ...data, _method: 'put' };
+                if (!data.create_account) {
+                    delete payload.email;
+                    delete payload.password;
+                    delete payload.role_name;
+                }
+                return payload;
+            })
+            .post(EmployeeController.update.url(editing.value.id), options);
 
         return;
     }
 
-    form.post(EmployeeController.store.url(), options);
+    form
+        .transform((data) => {
+            const payload: Record<string, unknown> = { ...data };
+            if (!data.create_account) {
+                delete payload.email;
+                delete payload.password;
+                delete payload.role_name;
+            }
+            return payload;
+        })
+        .post(EmployeeController.store.url(), options);
 };
 
 const deleteEmployee = async (employee: Employee): Promise<void> => {
@@ -881,6 +941,55 @@ const deleteEmployee = async (employee: Employee): Promise<void> => {
                                 /><InputError
                                     :message="form.errors.salary_notes"
                                 />
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="space-y-3">
+                        <legend
+                            class="mb-2 border-b border-border pb-2 text-sm font-bold text-primary"
+                        >
+                            رمز QR لشام كاش
+                        </legend>
+                        <div class="grid gap-4 md:grid-cols-[1fr_180px]">
+                            <div class="grid gap-2">
+                                <Label>رمز QR لشام كاش (اختياري)</Label>
+                                <Input
+                                    ref="shamCashQrInput"
+                                    type="file"
+                                    accept="image/*"
+                                    class="h-10"
+                                    @change="handleShamCashQrChange"
+                                />
+                                <p class="text-xs text-muted-foreground">
+                                    ارفع صورة رمز الموظف ليظهر مباشرة عند اختيار شام كاش في تسديد الرواتب.
+                                </p>
+                                <InputError :message="form.errors.sham_cash_qr" />
+                            </div>
+                            <div
+                                class="flex min-h-40 items-center justify-center overflow-hidden rounded-xl border border-dashed border-border bg-muted/35 p-3"
+                            >
+                                <div v-if="currentShamCashQrUrl" class="space-y-3 text-center">
+                                    <img
+                                        :src="currentShamCashQrUrl"
+                                        alt="رمز QR لشام كاش"
+                                        class="mx-auto size-28 rounded-lg border border-border bg-white object-contain p-1"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        class="h-8 rounded-lg text-xs"
+                                        @click="removeShamCashQr"
+                                    >
+                                        <Trash2 class="size-3.5" />
+                                        حذف الرمز
+                                    </Button>
+                                </div>
+                                <div v-else class="text-center text-sm text-muted-foreground">
+                                    <Upload class="mx-auto mb-2 size-7 opacity-50" />
+                                    لا يوجد رمز مرفوع
+                                </div>
                             </div>
                         </div>
                     </fieldset>

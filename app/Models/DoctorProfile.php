@@ -41,6 +41,7 @@ class DoctorProfile extends BaseModel
         'currency',
         'is_active',
         'notes',
+        'sham_cash_qr_path',
     ];
 
     protected function casts(): array

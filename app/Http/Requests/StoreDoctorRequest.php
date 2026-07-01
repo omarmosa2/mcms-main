@@ -53,6 +53,7 @@ class StoreDoctorRequest extends FormRequest
             'currency' => ['nullable', 'string', 'size:3'],
             'is_active' => ['boolean'],
             'notes' => ['nullable', 'string'],
+            'sham_cash_qr' => ['nullable', 'image', 'max:2048'],
             'schedules' => ['present', 'array'],
             'schedules.*.day_of_week' => ['required', 'integer', 'between:0,6', 'distinct'],
             'schedules.*.is_available' => ['required', 'boolean'],

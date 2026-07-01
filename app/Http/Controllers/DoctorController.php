@@ -18,6 +18,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Maatwebsite\Excel\Facades\Excel;
@@ -65,8 +66,9 @@ class DoctorController extends Controller
     public function store(StoreDoctorRequest $request, AssignUserRoleAction $assignUserRoleAction): RedirectResponse
     {
         $validated = $this->normalizeCompensation($request->validated());
+        $shamCashQrPath = $this->storeShamCashQr($request);
 
-        $doctor = DB::transaction(function () use ($assignUserRoleAction, $request, $validated): DoctorProfile {
+        $doctor = DB::transaction(function () use ($assignUserRoleAction, $request, $validated, $shamCashQrPath): DoctorProfile {
             $scheduleData = collect($validated['schedules'] ?? [])
                 ->filter(fn ($schedule): bool => filter_var($schedule['is_available'] ?? false, FILTER_VALIDATE_BOOLEAN))
                 ->values()
@@ -75,8 +77,11 @@ class DoctorController extends Controller
             $account = $this->createDoctorAccount($validated, $request->user(), $assignUserRoleAction);
 
             $doctor = DoctorProfile::create(collect($validated)
-                ->except(['schedules', 'password'])
-                ->merge(['user_id' => $account?->id])
+                ->except(['schedules', 'password', 'sham_cash_qr'])
+                ->merge([
+                    'user_id' => $account?->id,
+                    'sham_cash_qr_path' => $shamCashQrPath,
+                ])
                 ->toArray());
 
             $this->createSchedules($doctor, $scheduleData);
@@ -134,14 +139,21 @@ class DoctorController extends Controller
     {
         $doctor = $this->resolveDoctor($doctorId);
         $validated = $this->normalizeCompensation($request->validated(), $doctor);
+        $oldShamCashQrPath = $doctor->sham_cash_qr_path;
+        $newShamCashQrPath = $this->storeShamCashQr($request);
+        $removeShamCashQr = (bool) ($validated['remove_sham_cash_qr'] ?? false);
 
-        DB::transaction(function () use ($assignUserRoleAction, $request, $validated, $doctor): void {
+        DB::transaction(function () use ($assignUserRoleAction, $request, $validated, $doctor, $newShamCashQrPath, $removeShamCashQr): void {
             $account = $this->syncDoctorAccount($doctor, $validated, $request->user(), $assignUserRoleAction);
+            $profileUpdates = collect($validated)
+                ->except(['schedules', 'password', 'user_id', 'sham_cash_qr', 'remove_sham_cash_qr'])
+                ->merge(['user_id' => $account?->id ?? $doctor->user_id]);
 
-            $doctor->update(collect($validated)
-                ->except(['schedules', 'password', 'user_id'])
-                ->merge(['user_id' => $account?->id ?? $doctor->user_id])
-                ->toArray());
+            if ($newShamCashQrPath !== null || $removeShamCashQr) {
+                $profileUpdates->put('sham_cash_qr_path', $newShamCashQrPath);
+            }
+
+            $doctor->update($profileUpdates->toArray());
 
             if ($this->shouldUpdateSchedules($validated, $doctor)) {
                 DoctorSchedule::query()
@@ -156,9 +168,24 @@ class DoctorController extends Controller
             }
         });
 
+        if (($newShamCashQrPath !== null || $removeShamCashQr) && $oldShamCashQrPath !== null) {
+            Storage::disk('public')->delete($oldShamCashQrPath);
+        }
+
         Inertia::flash('toast', ['type' => 'success', 'message' => 'تم تحديث بيانات الطبيب بنجاح.']);
 
         return to_route('doctors.index');
+    }
+
+    private function storeShamCashQr(Request $request): ?string
+    {
+        $file = $request->file('sham_cash_qr');
+
+        if ($file === null) {
+            return null;
+        }
+
+        return $file->store('doctors/sham-cash-qr', 'public');
     }
 
     /**

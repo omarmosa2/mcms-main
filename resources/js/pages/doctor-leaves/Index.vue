@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Form, Head, router } from '@inertiajs/vue3';
-import { Ban, Clock, Pencil, Save, Trash2 } from 'lucide-vue-next';
+import { Ban, CalendarOff, Clock, Pencil, Save, Trash2 } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
 import DoctorLeaveController from '@/actions/App/Http/Controllers/DoctorLeaves/DoctorLeaveController';
 import InputError from '@/components/InputError.vue';
-import InternalPageHero from '@/components/InternalPageHero.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -74,10 +73,25 @@ defineOptions({
     },
 });
 
-const leaveHeroMetrics = computed(() => [
-    { label: 'إجمالي الإجازات', value: String(props.leaves.data.length), hint: 'جميع الإجازات المسجلة' },
-    { label: 'نشطة', value: String(props.leaves.data.filter((l) => l.status === 'active').length), hint: 'إجازات سارية المفعول' },
-    { label: 'ملغاة', value: String(props.leaves.data.filter((l) => l.status === 'canceled').length), hint: 'إجازات تم إلغاؤها' },
+const leaveStatCards = computed(() => [
+    {
+        label: 'إجمالي الإجازات',
+        value: String(props.leaves.data.length),
+        hint: 'جميع الإجازات المسجلة',
+        tone: 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/25 dark:text-sky-200',
+    },
+    {
+        label: 'نشطة',
+        value: String(props.leaves.data.filter((l) => l.status === 'active').length),
+        hint: 'إجازات سارية المفعول',
+        tone: 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/25 dark:text-emerald-200',
+    },
+    {
+        label: 'ملغاة',
+        value: String(props.leaves.data.filter((l) => l.status === 'canceled').length),
+        hint: 'إجازات تم إلغاؤها',
+        tone: 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/25 dark:text-rose-200',
+    },
 ]);
 
 const selectedDoctorId = ref('');
@@ -158,12 +172,35 @@ function formatTime(time: string | null): string {
     <Head title="إجازات الأطباء" />
 
     <div class="mx-auto w-full max-w-[1680px] space-y-7 p-4 md:p-6" dir="rtl">
-        <InternalPageHero
-            kicker="إدارة الدوام"
-            title="إجازات الأطباء"
-            description="إدارة الإجازات الكاملة والساعية بدون تعديل الدوام الأساسي للطبيب."
-            :metrics="leaveHeroMetrics"
-        />
+        <section class="glass-panel-soft overflow-hidden">
+            <div class="flex flex-col gap-4 border-b border-border/70 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+                <div class="space-y-1">
+                    <div class="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                        <CalendarOff class="size-4" />
+                        إدارة الدوام
+                    </div>
+                    <h1 class="page-title mt-2">إجازات الأطباء</h1>
+                    <p class="page-subtitle max-w-3xl">
+                        إدارة الإجازات الكاملة والساعية بدون تعديل الدوام الأساسي للطبيب.
+                    </p>
+                </div>
+            </div>
+
+            <div class="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3">
+                <article
+                    v-for="card in leaveStatCards"
+                    :key="card.label"
+                    class="rounded-2xl border p-4 shadow-sm"
+                    :class="card.tone"
+                >
+                    <p class="text-xs font-semibold text-muted-foreground">{{ card.label }}</p>
+                    <p class="mt-2 min-h-8 text-xl font-black tabular-nums leading-tight">
+                        {{ card.value }}
+                    </p>
+                    <p class="mt-1 text-xs text-muted-foreground">{{ card.hint }}</p>
+                </article>
+            </div>
+        </section>
 
         <section class="glass-panel-soft p-5">
             <h3 class="pattern-typographic-title mb-4 text-[0.76rem]">
